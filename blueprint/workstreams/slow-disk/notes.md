@@ -40,6 +40,16 @@ said in design/roots.md § The index, "Not done", and in issue #46. This workstr
 - **The start.** The only read that's neither a key's nor a timer's is the start's `openGraph`; SD-D9 moves it after
   the screen comes up, as home's start already is.
 
+## The questions answered (2026-11-09)
+
+- The maintainer answered the seven questions, each with the option recommended: one pool of disk threads; a note
+  opened on a slow disk holds the keys after it, `esc` giving it up; the screen as it was while the vault is built
+  again; no write moved; the screen first at the start; what drawing a note reads in, as the last code task; a minute
+  for a look and a key's read, ten for a walk and a listing.
+- That agrees SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9, and SD-D1's last part. No question asked SD-D1's order,
+  SD-D5, SD-D8 or SD-D10: they stay proposed.
+
 ## Open
 
-The questions for the maintainer are in README.md § Open questions; each task's own are in its file.
+SD-D1's order, SD-D5, SD-D8 and SD-D10, for the maintainer to agree; each task's own questions are in its file
+(SD-T8's on a rename's build, asked when it starts).

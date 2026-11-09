@@ -11,13 +11,14 @@ vault open's disk, or slipbox's own folders under home, still reads it on the sc
 drive asleep or a FUSE mount that answers slowly, the screen and the keys stop for as long as each read takes, every
 two seconds while the watcher looks. This workstream moves those reads off it.
 
-**A draft, for the maintainer's approval: design only, nothing built.** Its decisions are proposed, none recorded; its
-tasks wait for the design to be agreed, and the questions at the end to be answered.
+**A draft: design only, nothing built.** The maintainer answered its seven questions on 2026-11-09, each with the
+option recommended (§ Questions answered), which agrees six of its decisions; four stay proposed (§ Decisions). Its
+tasks wait for the design to be agreed.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design, with what each task leaves **Open**.
-- [decisions.md](decisions.md): SD-D1 to SD-D10, proposed.
+- [decisions.md](decisions.md): SD-D1 to SD-D10; six agreed on 2026-11-09, four proposed.
 - [tasks/](tasks/README.md): SD-T1 to SD-T12, in order, each `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
@@ -171,7 +172,7 @@ disk that folds case (macOS's), a name's case found by listing each folder on it
 
 ## Approach
 
-The rules, each a proposed decision:
+The rules, each a decision, agreed or proposed as § Decisions says:
 
 - **Where reads go (SD-D2).** The two listing threads T12 made become *the disk threads*: one pool, light (no index,
   no parser), each slot's worker started on its first request, one line, a request going to a thread once one is free
@@ -227,8 +228,8 @@ By area:
 - **§ 6, slipbox's own folders** (SD-T9): what's read of them on a timer or at a switch, on a disk thread; their
   writes stay (SD-D7, question 4).
 - **§ 7, the start** (SD-T10): SD-D9.
-- **§ 8, drawing a note** (SD-T11): the answers a layout needs kept and asked of a disk thread; scope for the
-  maintainer (question 6).
+- **§ 8, drawing a note** (SD-T11): the answers a layout needs kept and asked of a disk thread; in this workstream as
+  its last code task, measured first (question 6).
 
 ## Tasks
 
@@ -250,19 +251,26 @@ request into `dev`, its test, its terminal check, its design text.
 - [SD-T11](tasks/drawing.md): what drawing a note reads: links' targets, pictures, the Problems' notes. `todo`
 - [SD-T12](tasks/docs.md): the user docs, the design consolidated, the workstream closed. `todo`
 
-## Proposed decisions
+## Decisions
 
-None is recorded until the maintainer agrees ([decisions.md](decisions.md)):
+In [decisions.md](decisions.md). Agreed on 2026-11-09, by the answers below:
 
-- **SD-D1**, the parts and their order: the inventory above, moved in the tasks' order; what stays named.
-- **SD-D2**, one pool: the listing threads become the disk threads; a walk holds one of them at most.
-- **SD-D3**, nobody asked, nothing waits: the screen's thread keeps what it knew, marked where you act on it.
-- **SD-D4**, a key's own read: the key waits, the screen draws, `esc` gives it up.
+- **SD-D2**, one pool: the listing threads become the disk threads; a walk holds one of them at most (question 1).
+- **SD-D3**, nobody asked, nothing waits: the screen's thread keeps what it knew, marked where you act on it
+  (question 3).
+- **SD-D4**, a key's own read: the key waits, the screen draws, `esc` gives it up (question 2).
+- **SD-D6**, deadlines: a look or a key's read a minute, a walk or a listing ten; never done on the screen's thread
+  instead (question 7).
+- **SD-D7**, writes stay on the screen's thread: saves, file operations, the scratch, exports (question 4).
+- **SD-D9**, the start takes the screen first; its note waits for the graph (question 5).
+
+Still proposed, no question having asked them:
+
+- **SD-D1**, the parts and their order: the inventory above, moved in the tasks' order; what stays named. Its last
+  part is settled (question 6: what drawing a note reads is in, as the last code task); the order and what stays out
+  aren't.
 - **SD-D5**, every answer checked against what it was asked under; changes meanwhile applied again.
-- **SD-D6**, deadlines: a look or a key's read a minute, a walk ten; never done on the screen's thread instead.
-- **SD-D7**, writes stay on the screen's thread: saves, file operations, the scratch, exports.
 - **SD-D8**, the watcher's state and logic stay; its reads go, one batch per look.
-- **SD-D9**, the start takes the screen first; its note waits for the graph.
 - **SD-D10**, one seam for the tests; a test's App reads here unless asked.
 
 ## Test strategy
@@ -314,9 +322,10 @@ None is recorded until the maintainer agrees ([decisions.md](decisions.md)):
   thousands of tests as they are, but they then don't run the shipped path: each moved read's own tests and the
   terminal checks do (T12 made the same choice).
 
-## Open questions for the maintainer
+## Questions answered
 
-Each can be asked as one question; the recommendation first.
+The maintainer answered each on 2026-11-09 with the option recommended, (a) in every one. A task's own questions stay
+in its file: SD-T8's, on a rename's and a folder operation's build, is asked when it starts.
 
 1. **Which threads read for the screen?** (a) The listing threads become the disk threads, one pool for every read of
    the vault open, a walk holding one at most (recommended: no new worker, one set of deadlines, already never behind
@@ -324,26 +333,46 @@ Each can be asked as one question; the recommendation first.
    heap, against #56); (c) the runtime's own asynchronous reads (`fs.promises`, as the followed links' probe does):
    no worker, but a read a hung disk never answers keeps one of the runtime's threads for good, can't be given up on
    per request, and the walk's code is synchronous, shared with the CLI.
+
+   **Answered: (a)**, one pool: the listing threads become the disk threads, a walk holding one at most (SD-D2).
+
 2. **When you open a note on a slow disk, what do the keys do?** (a) They wait for it, the screen drawing
    `reading <note>…`, `esc` giving it up (recommended: what you type lands in the note you opened, as with a big
    note's parse, D120); (b) they act on the window you were in until it's read, the tab appearing then; (c) as now,
    the screen stopped until it's read.
+
+   **Answered: (a)**, the keys wait, `reading <note>…` drawn, `esc` giving it up (SD-D4).
+
 3. **While the vault is built again, what does the screen show?** (a) Everything as it was, a background task's row
    saying `reading the vault…` (recommended: links, backlinks and the tree stay usable); (b) the explorer and
    backlinks emptied until it's built; (c) as now, the screen stopped.
+
+   **Answered: (a)**, everything as it was, a background task's row saying `reading the vault…` (SD-D3).
+
 4. **Should anything slipbox writes move off the screen's thread?** (a) Nothing in this workstream: saves, file
    operations, the scratch, exports and slipbox's own state are written as now, a save's cost on a slow disk said as
    a limit (recommended: a write's order against the watcher and a quit is what keeps a note safe; asynchronous saves
    are the roadmap's Later item on gateway execution); (b) slipbox's own state written on a timer (what you're
    reading, positions, the index) moves to a disk thread, notes' saves stay; (c) everything, saves included.
+
+   **Answered: (a)**, nothing in this workstream; a save on a slow disk is a known limit (SD-D7).
+
 5. **What does the start show while it reads the vault?** (a) The screen at once, the note waiting for its graph
    (`reading the vault…`), `q` quitting (recommended: no half-drawn note, its links checked when it's drawn); (b) the
    screen at once, the note drawn at once, its links drawn unchecked (dim) until the graph comes; (c) as now, nothing
    on the screen until the vault is read.
+
+   **Answered: (a)**, the screen at once, the note waiting for its graph, `q` quitting (SD-D9).
+
 6. **Is what drawing a note reads this workstream's?** (a) Yes, as its last code task, after measuring how often it
    reads a slow disk (recommended: a picture or a `/…` link on a share stops every frame that draws it); (b) a
    follow-up issue, this workstream ending at the start.
+
+   **Answered: (a)**, yes, as the last code task, measured first (SD-T11; SD-D1's last part).
+
 7. **A deadline for a look and for a key's read: how long?** (a) A minute each, a walk ten as T12's (recommended: a
    look is due every two seconds and stale long before a minute, and a person waiting on a note gives up before it
    with `esc`); (b) five minutes, as a slice of home's walk; (c) three seconds, as a followed link's probe (VV-D6),
    which a share waking up can miss.
+
+   **Answered: (a)**, a minute for a look and a key's read, ten for a walk and a listing (SD-D6).

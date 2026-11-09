@@ -10,7 +10,7 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 - Active: [EG](editor-gaps/README.md), what LazyVim and Helix users reach for; settled item by item on 2026-11-08,
   being built.
 - Draft: [SD](slow-disk/README.md), issue #46: what still reads a slow disk on the screen's thread, and how it moves
-  off; for approval, not built.
+  off; its questions answered 2026-11-09, four decisions still proposed; not built.
 - Consolidated before 2026-10-26: [DOC](archive/user-docs/README.md),
   [DF](archive/doc-findings/README.md), [GR](archive/greenrepo/README.md),
   [DS](archive/docs-site/README.md), [VV](archive/vaults-and-view/README.md),

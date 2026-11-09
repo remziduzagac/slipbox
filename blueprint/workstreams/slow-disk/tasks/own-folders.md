@@ -21,7 +21,7 @@ index, home's walk kept).
   moved).
 - Each read asked of a disk thread, what's kept here used meanwhile (SD-D3): a vault gone into opens with its
   positions once they're read; the Vaults window lists what it last read, then what's on disk.
-- Writes stay (SD-D7, question 4 of README.md).
+- Writes stay (SD-D7, agreed: question 4 of README.md).
 
 ## Acceptance criteria
 

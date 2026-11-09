@@ -1,11 +1,15 @@
 # Decisions: a slow disk never freezes the screen
 
-**Proposed, none recorded.** Each entry below is what this draft proposes, with what could have been chosen instead.
-A decision is recorded only once the maintainer agrees (blueprint/README.md § How things are recorded): then each is
-dated, its "Proposed" mark goes, and the open questions in [README.md](README.md) it settles are said under it. Until
-then they may change; after, they're never rewritten, only noted.
+**Six agreed, four proposed.** Each entry says what was chosen, or is proposed, with what could have been chosen
+instead. The maintainer's answers of 2026-11-09 ([README.md](README.md) § Questions answered, the option recommended
+in each) agree SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9: each is dated and names the question it settles, and is
+never rewritten, only noted. No question asked SD-D5, SD-D8 or SD-D10, nor SD-D1's order: they stay proposed, and may
+change until the maintainer agrees them (blueprint/README.md § How things are recorded).
 
 ## SD-D1: The parts, in order (proposed)
+
+Its last part agreed on 2026-11-09: question 6, answered (a), what drawing a note reads in this workstream as its
+last code task, measured first. The order and what stays out are still proposed.
 
 **Decision:** The workstream moves off the screen's thread every read README.md § The inventory lists, but writes
 (SD-D7), in this order: the tests' seam (SD-T1) and the disk threads (SD-T2), which everything uses; the watcher's look
@@ -23,7 +27,9 @@ unfolded), less often. Small steps keep each review to one kind of read, and eac
 **Not chosen:** one change for all of it (one review of everything, nothing shipped until all is); the start first,
 as the issue lists it last (it's felt once a session, the looks every two seconds).
 
-## SD-D2: One pool, the disk threads (proposed)
+## SD-D2: One pool, the disk threads (2026-11-09)
+
+Agreed: question 1, answered (a).
 
 **Decision:** The two listing threads T12 made (`ListThreads`, `src/core/workspace/walk/walk-thread.ts:193`, served by
 `list-worker.ts`) become the disk threads, and take every read this workstream moves, as requests: `list` (as now),
@@ -48,7 +54,9 @@ followed links' probe uses, `src/core/workspace/vaults/symlinks.ts:401`): a read
 of the runtime's own threads, which can't be given up on per request (*memory*, research.md), and the walk's, the
 listing's and the watcher's code is synchronous and shared with the CLI (T12: the same code wherever it runs).
 
-## SD-D3: Nobody asked, nothing waits (proposed)
+## SD-D3: Nobody asked, nothing waits (2026-11-09)
+
+Agreed: question 3, answered (a).
 
 **Decision:** A read on a timer or in the background — a look, a build, the background parse, a folder of the tree
 read again — never holds a key. The screen's thread keeps what it last knew and shows it: the watcher's stamps, the
@@ -64,7 +72,9 @@ out, not what it will find.
 
 **Not chosen:** emptying what's being read until it answers; a window saying the disk is being waited for.
 
-## SD-D4: A key's own read: the key waits, the screen draws (proposed)
+## SD-D4: A key's own read: the key waits, the screen draws (2026-11-09)
+
+Agreed: question 2, answered (a).
 
 **Decision:** A read a key asks for and acts on — a note opened (as a tab, by a link, from a list, at the start), a
 folder zoomed into or unfolded (`folderUnreadable`), `:e!` and a reload by hand — is made on a disk thread. The key
@@ -101,7 +111,9 @@ is read. Comparing when it comes keeps a save made meanwhile from being taken fo
 **Not chosen:** taking every answer, the next look or build putting it right (a note shown stale, a save taken for a
 conflict).
 
-## SD-D6: Deadlines, and giving up (proposed)
+## SD-D6: Deadlines, and giving up (2026-11-09)
+
+Agreed: question 7, answered (a).
 
 **Decision:** A request a thread doesn't answer in time is failed, the thread started afresh for the requests behind
 it (`WorkerRequests`), and the read never made on the screen's thread instead. A look's batch, a key's read and a
@@ -121,7 +133,9 @@ the screen's thread is T12's rule: falling back is the freeze.
 **Not chosen:** five minutes for everything, as a slice of home's walk; three seconds, as a followed link's probe
 (VV-D6), which a disk waking up can miss.
 
-## SD-D7: Writes stay on the screen's thread (proposed)
+## SD-D7: Writes stay on the screen's thread (2026-11-09)
+
+Agreed: question 4, answered (a).
 
 **Decision:** A note's save (`App.writeBuffer`: its check that the file is as it was read, its atomic write, D220's
 write through a link, its stamp told to the watcher), a file operation and the checks its guards make just before
@@ -156,7 +170,9 @@ batch.
 **Not chosen:** the whole watcher on a thread of its own, its batches sent here (its state mirrored, own writes
 crossing threads before their events).
 
-## SD-D9: The start takes the screen first (proposed)
+## SD-D9: The start takes the screen first (2026-11-09)
+
+Agreed: question 5, answered (a).
 
 **Decision:** `prepare` (`src/tui/shell/terminal/run.ts:62`) no longer builds the vault's graph: the screen is taken
 first, and the vault's walk and index read on a disk thread (SD-T8's build), home's as now with the folders its tabs

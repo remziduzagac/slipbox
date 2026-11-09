@@ -748,7 +748,7 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 
 ## A slow disk never freezes the screen (#46)
 
-*Not a phase. Drafted 2026-11-09, for the maintainer's approval; not built.*
+*Not a phase. Drafted 2026-11-09; its questions answered the same day, four decisions still proposed; not built.*
 
 - [ ] **[A slow disk never freezes the screen](workstreams/slow-disk/README.md)** (SD): what still reads the disk on
   the screen's thread moved off it, onto the listing threads grown into disk threads — the watcher's look and the TUI's

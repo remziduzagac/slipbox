@@ -565,3 +565,6 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   what the issue didn't name: the `.gitignore` stamped every look, the events' settle by stat, the config's and git's
   stamps every second, the activity file, what drawing a note reads, the Problems panel's notes.
 - Nothing is decided: its decisions are proposed (SD-D1 to SD-D10) and its questions open, for the maintainer.
+- The same day, the maintainer answered its seven questions, each with the option recommended: SD-D2, SD-D3, SD-D4,
+  SD-D6, SD-D7 and SD-D9 are agreed, and what drawing a note reads is in, as the last code task. SD-D1's order, SD-D5,
+  SD-D8 and SD-D10 stay proposed.

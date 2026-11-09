@@ -8,8 +8,8 @@ created: "2026-11-09"
 
 # SD-T11: What drawing a note reads, and the Problems panel's notes
 
-SD-D3, SD-D5. Found while drafting, not in #46; in this workstream if the maintainer agrees (question 6 of
-README.md).
+SD-D3, SD-D5. Found while drafting, not in #46; in this workstream as its last code task, measured first (question 6
+of README.md, answered 2026-11-09).
 
 ## Description
 

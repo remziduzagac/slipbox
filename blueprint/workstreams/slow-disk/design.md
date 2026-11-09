@@ -82,14 +82,16 @@ gave up: a folder didn't answer in time` and the graph stays as it was.
 - **The vault built again** (SD-T8). A reindex, the watcher's rescan, a setting of the walk changed, a vault gone into,
   a branch's tabs and the folders asked for in home read the walk and the index on a disk thread (`walk`); the graph
   stays as it was meanwhile, `reading the vault…` among the background tasks. **Open** (SD-T8): a rename's and a folder
-  operation's build (question for the maintainer: on the thread, the key waiting as an open does, or as now).
+  operation's build (asked of the maintainer when SD-T8 starts: on the thread, the key waiting as an open does, or as
+  now).
 - **slipbox's own folders** (SD-T9). What's read of them on a timer or at a vault gone into — the positions, the
   session, the machine's lists, the background index's place, the answers kept for links — is read there.
 - **The start** (SD-D9, SD-T10). The screen is taken first; the vault's walk and index are read on a disk thread, the
   note waiting for its graph (`reading the vault…`), `q` and `ctrl+c` quitting meanwhile. Your config, the path named
   and `--base` are read before, as they say what the screen is.
-- **Drawing a note** (SD-T11). **Open**: what a layout asks of the disk (a `/…` link's first folder, a nested vault's
-  file, a name's case on macOS, a picture) answered from what's kept, asked of a disk thread when it isn't.
+- **Drawing a note** (SD-T11, the last code task, measured first). **Open**: what a layout asks of the disk (a `/…`
+  link's first folder, a nested vault's file, a name's case on macOS, a picture) answered from what's kept, asked of a
+  disk thread when it isn't.
 
 **What stays on the screen's thread** (SD-D7). A note's save (`App.writeBuffer`: its check that the file is as read,
 its atomic write, its write through a link, D220, its stamp told to the watcher), a file operation with the checks its
