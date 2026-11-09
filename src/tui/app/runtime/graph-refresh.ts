@@ -1,5 +1,5 @@
 // Background parsing and home refresh; watcher delivery stays in Watch.
-import { existsSync, statSync } from "node:fs";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 import { basename, join } from "node:path";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
@@ -174,7 +174,7 @@ export class GraphRefresh {
     const quiet = this.app.config.index.idle_seconds * 1000;
     if (now - this.app.lastInputAt < quiet) return false;
     try {
-      if (now - statSync(activityFile()).mtimeMs < quiet) return false;
+      if (now - disk.stat(activityFile()).mtimeMs < quiet) return false;
     } catch {}
     return true;
   }
@@ -300,7 +300,7 @@ export class GraphRefresh {
     // A file the walk leaves out, reached by a link or by being opened, that the build didn't keep: reached as it was,
     // never taken in as one of home's own.
     const changed = since.filter(
-      (rel) => !(reached.has(rel) && !graph.known(rel) && existsSync(join(graph.root, rel)) && graph.reachFile(rel)),
+      (rel) => !(reached.has(rel) && !graph.known(rel) && disk.exists(join(graph.root, rel)) && graph.reachFile(rel)),
     );
     if (changed.length)
       applyToGraph(
@@ -308,7 +308,7 @@ export class GraphRefresh {
         {
           changes: changed.map((rel) => ({
             rel,
-            kind: existsSync(join(graph.root, rel)) ? "changed" : "deleted",
+            kind: disk.exists(join(graph.root, rel)) ? "changed" : "deleted",
             isNote: graph.filter.isNoteName(basename(rel)),
           })),
           rescan: false,

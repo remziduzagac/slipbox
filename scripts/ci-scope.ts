@@ -94,7 +94,9 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Spelling, off unless asked for.
   [/^src\/core\/documents\/diagnostics\/(spell|spell-thread|spell-worker|hunspell)\.ts$/, ["spelling"]],
   [/^src\/tui\/documents\/diagnostics\/spelling\.ts$/, ["spelling"]],
-  // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings.
+  // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings. The seam
+  // every read goes through (SD-D10), where the slow disk is stood in for.
+  [/^src\/core\/foundation\/platform\/disk\.ts$/, ["slow disk"]],
   [
     /^src\/core\/(?:workspace\/walk\/(?:walk-thread|walk-jobs|walk-worker|walkers)|workspace\/graph\/index-job)\.ts$/,
     ["slow disk", "home", "view"],

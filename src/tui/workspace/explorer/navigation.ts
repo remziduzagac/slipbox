@@ -1,5 +1,5 @@
 // Explorer zoom, reveal and selection transitions keep their live state in the owning controller.
-import { statSync } from "node:fs";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { folderUnreadable } from "../../../core/foundation/platform/fsutil.ts";
 import { tildePath } from "../../../core/workspace/vaults/names.ts";
@@ -215,7 +215,7 @@ export class ExplorerNavigation {
     // Gone: not there, or a file now. One that can't be asked (no permission on its way) is left as it is.
     const there = (dir: string) => {
       try {
-        return statSync(dir).isDirectory();
+        return disk.stat(dir).isDirectory();
       } catch (err) {
         const code = (err as NodeJS.ErrnoException).code;
         return code !== "ENOENT" && code !== "ENOTDIR";

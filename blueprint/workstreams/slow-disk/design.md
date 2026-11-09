@@ -30,7 +30,7 @@ other is left for the rest. They answer, with what the asking thread knows and t
   now, `homeWalk`), with its index's text and stamp.
 
 Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
-`lstat`, a file's bytes. The CLI reads through it too, on its own thread.
+`lstat` (its real path, whether anything is there), a file's bytes. The CLI reads through it too, on its own thread.
 
 **Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
 thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
@@ -192,20 +192,33 @@ Previously: the section's two bullets alone.
 
 ## MODIFIED design/testing.md § The terminal tests
 
-In "A slow disk, stood in for", "makes a folder of that name take so long to list, on whichever thread lists it
-(`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the
-third" becomes "makes a folder of that name take so long to list, on whichever thread reads it (`slowDisk`, through
-the seam: `core/foundation/platform/disk.ts`), and shortens the walk's and the disk threads' deadlines to the third; a
-fourth part, when given, makes each stat and read under it take so long too"; and "the unit tests hold a folder up on
-a thread of their own (`setFolderReader`, …)" holds a listing, a stat or a read alike, on every thread, the main
-thread's included. `check:boundary` holds a list of the files of the inventory still allowed to import `node:fs`'s
-reads, each with why, and fails on one that reads and isn't listed, or is listed and no longer reads; it sees direct
-imports only, and a read left on the main thread through a helper or the seam is found by the held tests
-(`gaveUp`).
+In "A slow disk, stood in for" (built by SD-T1, but the disk threads, SD-T2's):
 
-Previously: "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk` in
-`core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the third"; "the unit
-tests hold a folder up on a thread of their own (`setFolderReader`, a worker of their own: `tests/fixtures/walk/`)".
+- "`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]`" becomes
+  "`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`".
+- "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk` in
+  `core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the third" becomes
+  "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk`, in the seam every read
+  goes through: `core/foundation/platform/disk.ts`), and shortens the walk's and the disk threads' deadlines to the
+  third; a fourth part, when given, makes each stat and read of a path with that folder on its way take so long too
+  (`<name>:<ms>::<stat ms>` gives one without a deadline)".
+- "the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of their own:
+  `tests/fixtures/walk/`)" becomes "the unit tests hold a folder up on a thread of their own and on the main thread
+  (`setFolderReader` for its listing, `setReadWait` for a stat or a read through the seam of a path under it; a worker
+  of their own: `tests/fixtures/walk/`)"; and "(`Hold`, on every thread at once)" becomes "(`Hold`, a listing, a stat
+  or a read alike, on every thread at once)".
+- Added after that paragraph: "`check:boundary` keeps the files whose reads a slow disk would hold up to the seam
+  (SD-D12): those that read through it alone (`SEAM_READERS`, `scripts/check-boundary.ts`), and those still allowed
+  to import `node:fs`'s reads, each with why (`DISK_READERS`). It fails on a file of the list that imports a read and
+  isn't allowed to, on one allowed that no longer does, and on one that isn't there. It sees direct imports only: a
+  read through a helper (`readText`, `stamp`, `readJson`), or a call to the seam made on the main thread, is found by
+  the held tests, a read left on the main thread holding their key past the hold's deadline (`gaveUp`)."
+
+Previously: "`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]`"; "makes a folder of that name take so long to
+list, on whichever thread lists it (`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the walk's and the
+listings' threads' deadlines to the third"; "the unit tests hold a folder up on a thread of their own
+(`setFolderReader`, a worker of their own: `tests/fixtures/walk/`)"; "(`Hold`, on every thread at once)"; no paragraph
+on `check:boundary`'s list.
 
 ## MODIFIED design/how-it-works.md § The parts
 
@@ -220,7 +233,8 @@ Previously: "the TUI makes its own walks, and lists the explorer's folders, on t
 - The row for `walk-thread.ts` says "the walk's thread and the two disk threads (`walk-worker.ts`, `list-worker.ts`):
   asked", and cites SD-D2 beside T12.
 - A row added after `fsutil.ts`'s: "`core/foundation/platform/disk.ts` | SD-D10 | the one seam every read of the
-  disk goes through: a listing, a stat, a file's bytes; the slow disk stood in for".
+  disk goes through: a listing, a stat, a file's bytes; the slow disk stood in for, and a test's hold" (built by
+  SD-T1).
 
 Previously: "the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked"; no row for
 `disk.ts`.

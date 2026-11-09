@@ -11,17 +11,17 @@ vault open's disk, or slipbox's own folders under home, still reads it on the sc
 drive asleep or a FUSE mount that answers slowly, the screen and the keys stop for as long as each read takes, every
 two seconds while the watcher looks. This workstream moves those reads off it.
 
-**Agreed on 2026-11-09; nothing built yet.** The maintainer answered its seven questions that day, each with the
+**Agreed on 2026-11-09; being built.** The maintainer answered its seven questions that day, each with the
 option recommended (§ Questions answered), and agreed its other decisions as proposed; the questions its tasks had
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
-decisions they change and as SD-D13 and SD-D14. Its tasks are `todo`.
+decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, is done (2026-11-10); the other tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order, each `todo`.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -309,7 +309,8 @@ any order; SD-T10 once SD-T5 and SD-T8 are in; SD-T11 last of the code; SD-T12 a
 says the same. Each is shippable alone: its own pull request into `dev`, its test, its terminal check run before it
 merges (SD-D14), its design text.
 
-- [SD-T1](tasks/seam.md): every read the workstream moves through one seam the stand-in and the hold reach. `todo`
+- [SD-T1](tasks/archive/seam.md): every read the workstream moves through one seam the stand-in and the hold reach.
+  `done`
 - [SD-T2](tasks/disk-threads.md): the listing threads become the disk threads: stat, read, access, walk. `todo`
 - [SD-T3](tasks/watcher-look.md): the watcher's look every two seconds, and its settle, on the disk threads. `todo`
 - [SD-T4](tasks/tui-look.md): the TUI's look every second, what's drawn of git, and the activity file. `todo`

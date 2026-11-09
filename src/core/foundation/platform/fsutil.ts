@@ -24,6 +24,10 @@ import {
 import { randomBytes } from "node:crypto";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { threadId } from "node:worker_threads";
+import * as disk from "./disk.ts";
+
+/** A file's bytes, only when it's a regular file of at most a size: the seam's (disk.ts), importable from here. */
+export { readRegular } from "./disk.ts";
 
 export function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
@@ -232,9 +236,10 @@ export interface Stamp {
   size: number;
 }
 
+/** A file's mtime and size, through the seam (disk.ts); null when it can't be statted. */
 export function stamp(path: string): Stamp | null {
   try {
-    const st = statSync(path);
+    const st = disk.stat(path);
     return { mtimeMs: st.mtimeMs, size: st.size };
   } catch {
     return null;
@@ -251,26 +256,10 @@ export interface DecodedFile {
 const decoder = new TextDecoder("utf-8", { fatal: false, ignoreBOM: true });
 const strictDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
-/** Read as UTF-8 (0.11): invalid bytes become U+FFFD and are flagged; the BOM is noted. */
+/** Read as UTF-8 (0.11), through the seam (`readRegular`): invalid bytes become U+FFFD and are flagged; the BOM is
+ *  noted. */
 export function readText(path: string): DecodedFile {
-  return decodeText(readRegular(path));
-}
-
-/**
- * A file's bytes, only when it is a regular file of at most `max` bytes. A cloned or unpacked vault
- * can hold a symlink to /dev/zero, a FIFO or a tty: reading one would never end (or never start).
- * Opened without blocking, so a FIFO is refused rather than waited on.
- */
-export function readRegular(path: string, max = Number.POSITIVE_INFINITY): Buffer {
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
-  try {
-    const st = fstatSync(fd);
-    if (!st.isFile()) throw Object.assign(new Error(`${path}: not a regular file`), { code: "ENOTREG" });
-    if (st.size > max) throw Object.assign(new Error(`${path}: larger than ${max} bytes`), { code: "EFBIG" });
-    return readFileSync(fd);
-  } finally {
-    closeSync(fd);
-  }
+  return decodeText(disk.readRegular(path));
 }
 
 /** The small files a vault controls (config, .gitignore, version): 1 MB is far more than any needs. */

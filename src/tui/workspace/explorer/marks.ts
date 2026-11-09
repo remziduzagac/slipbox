@@ -6,7 +6,8 @@
 // the rule that made it so: on the status line while the cursor is on it, and in Info for the file on screen
 // (`why`, `whyAt`).
 
-import { constants as fsConstants, existsSync, lstatSync, statSync } from "node:fs";
+import { constants as fsConstants } from "node:fs";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 import { basename, join, relative, sep } from "node:path";
 import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
 import { denied, type ListedEntry, type VaultHead, vaultHead } from "../../../core/workspace/walk/listing.ts";
@@ -308,10 +309,10 @@ export class Marks {
     f = { unreadable: false, broken: false, big: false };
     if (row.kind === "note") {
       try {
-        if (lstatSync(abs).isSymbolicLink() && !existsSync(abs)) f.broken = true;
+        if (disk.lstat(abs).isSymbolicLink() && !disk.exists(abs)) f.broken = true;
         else if (denied(abs, fsConstants.R_OK)) f.unreadable = true;
         else if (!row.outside && !this.app.graph.notes.has(row.path))
-          f.big = statSync(abs).size > this.app.graph.filter.maxFileSize && this.app.graph.filter.isNoteName(row.name);
+          f.big = disk.stat(abs).size > this.app.graph.filter.maxFileSize && this.app.graph.filter.isNoteName(row.name);
       } catch {}
     } else {
       f.unreadable = denied(abs, fsConstants.R_OK | fsConstants.X_OK);
@@ -337,7 +338,7 @@ export class Marks {
 
   /** A vault's row's facts: whether its index is on the disk, and its branch, a worktree's said with its glyph. */
   private vaultMarks(key: string, h: VaultHead | null): NonNullable<Facts["vault"]> {
-    const indexed = existsSync(join(cacheDir({ key }), "index.json"));
+    const indexed = disk.exists(join(cacheDir({ key }), "index.json"));
     return { indexed, branch: h ? (h.worktree ? `${this.app.glyphs.branch} ${h.name}` : h.name) : null };
   }
 }

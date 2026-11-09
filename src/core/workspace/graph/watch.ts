@@ -16,7 +16,8 @@
 // added or removed), so each tick stats the watched directories, and one whose mtime moved since it
 // was last looked at is listed again: what came or went there is settled as its events would have been.
 
-import { type Dirent, readdirSync, realpathSync, statSync } from "node:fs";
+import type { Dirent } from "node:fs";
+import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
 import { parentOf, settled } from "../walk/io/stamps.ts";
 import type { WatcherOptions, Settling } from "./watch/contracts.ts";
@@ -37,7 +38,7 @@ export class VaultWatcher {
   constructor(private readonly opts: WatcherOptions) {
     let realRoot = opts.root;
     try {
-      realRoot = realpathSync(opts.root);
+      realRoot = disk.realpath(opts.root);
     } catch {}
     this.realRoot = realRoot;
     const owner = this;
@@ -120,7 +121,7 @@ export class VaultWatcher {
   /** Our own write of `rel`, stamped as written (`written`), else as it is on disk now: not reacted to. */
   noteOwnWrite(rel: string, written?: { mtimeMs: number; size: number }): void {
     try {
-      const st = written ?? statSync(join(this.opts.root, rel));
+      const st = written ?? disk.stat(join(this.opts.root, rel));
       this.state.ownWrites.set(rel, st.mtimeMs);
       // Known at this stamp too, so a later sighting (a polled directory, a sweep) sees no change.
       if (this.opts.filter.isNoteName(rel.slice(rel.lastIndexOf("/") + 1))) {
@@ -198,7 +199,7 @@ export class VaultWatcher {
     for (const dirRel of this.state.polled) {
       let entries: Dirent[] = [];
       try {
-        entries = readdirSync(join(root, dirRel), { withFileTypes: true });
+        entries = disk.readFolder(join(root, dirRel));
       } catch {
         this.state.polled.delete(dirRel);
         continue;
@@ -223,7 +224,7 @@ export class VaultWatcher {
         seen.add(rel);
         let mtime: number | undefined;
         try {
-          mtime = statSync(join(root, rel)).mtimeMs;
+          mtime = disk.stat(join(root, rel)).mtimeMs;
         } catch {}
         if (mtime !== undefined && mtime !== known.get(rel)) this.state.pending.add(rel);
       }
@@ -259,7 +260,7 @@ export class VaultWatcher {
     for (const [d, mtime] of moved) {
       let entries: Dirent[];
       try {
-        entries = readdirSync(join(root, d), { withFileTypes: true });
+        entries = disk.readFolder(join(root, d));
       } catch {
         continue; // gone since: the next tick reports it
       }

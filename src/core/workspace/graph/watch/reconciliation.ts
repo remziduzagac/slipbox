@@ -1,5 +1,6 @@
-// Pending file changes and move reconciliation over the original watcher state.
-import { type Dirent, existsSync, readdirSync, statSync } from "node:fs";
+// Pending file changes and move reconciliation over the original watcher state, read through the seam (disk.ts).
+import type { Dirent, Stats } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import { join } from "node:path";
 import { under, walksInto } from "../../vaults/home/paths.ts";
 import { parentOf, SETTLE_MS } from "../../walk/io/stamps.ts";
@@ -61,7 +62,7 @@ export class WatchReconciliation {
           const rel = at(f);
           if (
             !this.state.attachments.get(parentOf(rel))?.has(rel) &&
-            existsSync(join(root, rel)) &&
+            disk.exists(join(root, rel)) &&
             walks(parentOf(rel))
           )
             there.add(rel); // not found there before (a later batch in the tick looks again)
@@ -69,7 +70,7 @@ export class WatchReconciliation {
       }
       let entries: Dirent[] = [];
       try {
-        entries = readdirSync(join(root, d), { withFileTypes: true });
+        entries = disk.readFolder(join(root, d));
       } catch {}
       for (const e of entries) {
         if (!e.isFile()) continue;
@@ -95,9 +96,9 @@ export class WatchReconciliation {
         batch.rescan = true;
         continue;
       }
-      let st: ReturnType<typeof statSync> | null = null;
+      let st: Stats | null = null;
       try {
-        st = statSync(join(root, rel));
+        st = disk.stat(join(root, rel));
       } catch {}
       // A symlink as the walk takes it (0.11, VV-D6): a folder within the root never followed, nothing outside
       // adopted unless you follow it.

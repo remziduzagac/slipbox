@@ -3,7 +3,7 @@
 // and the files a branch switch brings and takes not taken for moves. The TUI keeps its graph by
 // one; what it does with the news is its own.
 
-import { existsSync, statSync } from "node:fs";
+import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
 import { type Checkout, headCommit, headOf } from "../git/git.ts";
 import type { Graph } from "../graph/graph.ts";
@@ -56,7 +56,7 @@ export function applyToGraph(
     const abs = join(graph.root, c.rel);
     let st: { size: number; mtimeMs: number } | null = null;
     try {
-      st = statSync(abs);
+      st = disk.stat(abs);
     } catch {}
     if (!st) continue;
     // The walk's size cap holds for notes that appear or grow later too: out of the index; back in
@@ -124,14 +124,14 @@ export class VaultFeed {
   gitLocked(): boolean {
     if (this.o.locked) return this.o.locked();
     const c = this.o.checkout();
-    return !!c && existsSync(join(c.gitDir, "index.lock"));
+    return !!c && disk.exists(join(c.gitDir, "index.lock"));
   }
 
   /** git is mid-rebase in the checkout: HEAD detached between its steps (or stopped on a conflict)
    *  — not where the branch is going, so not a move of HEAD yet. */
   rebasing(): boolean {
     const c = this.o.checkout();
-    return !!c && (existsSync(join(c.gitDir, "rebase-merge")) || existsSync(join(c.gitDir, "rebase-apply")));
+    return !!c && (disk.exists(join(c.gitDir, "rebase-merge")) || disk.exists(join(c.gitDir, "rebase-apply")));
   }
 
   /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */

@@ -1,5 +1,6 @@
 // Directory registration/admission and attachment tracking through live watcher capabilities.
-import { type Dirent, existsSync, readdirSync, statSync, watch } from "node:fs";
+import { type Dirent, watch } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import { join, relative, sep } from "node:path";
 import { under } from "../../vaults/home/paths.ts";
 import { parentOf, settled } from "../../walk/io/stamps.ts";
@@ -15,7 +16,7 @@ export class WatchDirectories {
   ) {}
   gitignoreStamp(dirRel: string): number {
     try {
-      return statSync(join(this.opts.root, dirRel, ".gitignore")).mtimeMs;
+      return disk.stat(join(this.opts.root, dirRel, ".gitignore")).mtimeMs;
     } catch {
       return -1;
     }
@@ -44,7 +45,7 @@ export class WatchDirectories {
       this.watchDir(d);
       let entries: Dirent[] = [];
       try {
-        entries = readdirSync(join(this.opts.root, d), { withFileTypes: true });
+        entries = disk.readFolder(join(this.opts.root, d));
       } catch {
         return;
       }
@@ -138,7 +139,7 @@ export class WatchDirectories {
         w.close();
         this.state.watchers.delete(dirRel);
         // Gone: a parent event reports the deletion. Still there: never go quiet — poll it.
-        if (existsSync(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
+        if (disk.exists(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
       });
       this.state.watchers.set(dirRel, w);
       this.state.gitignores.set(dirRel, this.gitignoreStamp(dirRel));
@@ -149,7 +150,7 @@ export class WatchDirectories {
         this.host.degrade(
           `${code}: the system watch limit is exhausted (${this.state.watchers.size} directories watched)`,
         );
-      else if (existsSync(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
+      else if (disk.exists(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
     }
   }
 
@@ -162,7 +163,7 @@ export class WatchDirectories {
     const seen = this.opts.dirStamps?.().get(dirRel);
     if (!seen) return settled(dirMtime(abs), readAt);
     try {
-      const st = statSync(abs);
+      const st = disk.stat(abs);
       return st.mtimeMs === seen[0] && st.ctimeMs === seen[1] ? st.mtimeMs : -1;
     } catch {
       return -1;

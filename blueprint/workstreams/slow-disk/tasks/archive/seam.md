@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: []
 tracker: [gh:#46]
@@ -59,6 +59,27 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
 - The stand-in's delays apart: a stat's and a read's a fourth part, so T12's checks run unchanged and a walk doesn't
   take a listing's delay per file.
 - The CLI's cost: measured with `bench.ts`, as above.
+
+## Open
+
+What the description left open, settled here for the maintainer to confirm; design.md's sections it delivers say
+how.
+
+- The seam holds more than the description names: whether anything is at a path (`exists`, `existsSync`'s answer), a
+  path's real path (`realpath`) and a file's whole bytes (`readFile`, as git's `HEAD` is read), each waiting as a stat
+  does, since the check counts an existence check and a real path as reads. `readRegular` lives there, `fsutil.ts`
+  re-exporting it; `readText` and `stamp` read through it.
+- A file the description names went to the seam whole: `vault-feed.ts`'s note stats and git's lock and rebase folders
+  beside `HEAD`; `git.ts`'s checkout reads beside `HEAD`'s; `graph-refresh.ts`'s two checks of a file reached beside
+  the activity file's stat. The TUI's `watch.ts` (§ 2 and § 4: `asRead`'s `existsSync`) stays listed, for SD-T6.
+- The check's list is every source file README.md § The inventory names, and `watch/*.ts`: `SEAM_READERS`, those that
+  read through the seam alone (moved here, or importing no read of their own), and `DISK_READERS`, the rest, each with
+  why. It holds in a tree with the seam: the boundary tests' small trees, which write some of the same files for the
+  other rules, aren't held to it; in one with the seam, a file of the list that isn't there fails it too.
+- A stat or a read is slowed, and held, when a folder of the name is anywhere on the path's way, the path itself
+  included; a listing as before, by the folder's own name. A test's wait for a stat or a read (`setReadWait`) is apart
+  from its folder reader (`setFolderReader`): a test's App on the main thread takes it only when the test asks, so the
+  existing tests run as they did; `slow-worker.ts` takes both.
 
 ## References
 

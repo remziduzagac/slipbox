@@ -3,6 +3,7 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeCoreSandbox } from "../support/core-sandbox.ts";
+import { DISK_READERS, DISK_SEAM, SEAM_READERS } from "../../scripts/check-boundary.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -620,5 +621,75 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
       "src/core/rendering/layout/markdown/render.ts: imports ../../media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
       "src/tui/app/runtime/app.ts: imports ../../../core/rendering/media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
     ]);
+  });
+
+  describe("the slow-disk inventory's reads (SD-T1, SD-D12)", () => {
+    /** The inventory as listed: the seam; each file that reads through it importing what isn't a read (a type,
+     *  `constants`, `watch`); each one listed, a read. */
+    const inventory = (): Record<string, string> => ({
+      [DISK_SEAM]: 'import { statSync } from "node:fs";\nexport const stat = statSync;\n',
+      ...Object.fromEntries(
+        SEAM_READERS.map((f) => [
+          f,
+          'import type { Stats } from "node:fs";\nimport { constants, type Dirent, watch } from "node:fs";\n' +
+            "export const w = [watch, constants];\nexport type D = [Dirent, Stats];\n",
+        ]),
+      ),
+      ...Object.fromEntries(
+        Object.keys(DISK_READERS).map((f) => [f, 'import { statSync } from "node:fs";\nexport const s = statSync;\n']),
+      ),
+    });
+    const said = (err: string) =>
+      err
+        .split("\n")
+        .filter((l) => l.startsWith("  "))
+        .map((l) => l.trim());
+
+    test("the inventory as listed passes: what reads through the seam imports no read, each one listed does", () => {
+      const r = check(inventory());
+      expect(r.err).toBe("");
+      expect(r.code).toBe(0);
+    });
+
+    test("a read imported in a file of the inventory not listed fails it, however it's imported", () => {
+      const marks = "src/tui/workspace/explorer/marks.ts";
+      for (const [source, read] of [
+        ['import { constants, existsSync } from "node:fs";', "existsSync"],
+        ['import {\n  type Dirent,\n  lstatSync as lstat,\n} from "fs";', "lstatSync"],
+        ['import * as fs from "node:fs";\nexport const s = fs.statSync;', "statSync"],
+        ['import { readFile } from "node:fs/promises";', "readFile"],
+        ['import { promises } from "node:fs";\nexport const r = promises.readdir;', "readdir"],
+      ]) {
+        const r = check({ ...inventory(), [marks]: source! });
+        expect(r.code).toBe(1);
+        expect(said(r.err)).toEqual([
+          `${marks}: imports node:fs's ${read} (the slow-disk inventory reads through ${DISK_SEAM}, SD-D10; or DISK_READERS lists it, with why)`,
+        ]);
+      }
+    });
+
+    test("an entry left for a file that reads nothing fails it, and so does one for a file not there", () => {
+      const refresh = "src/core/workspace/graph/refresh.ts";
+      const stale = check({
+        ...inventory(),
+        [refresh]: 'import { type Stats, writeFileSync } from "node:fs";\nexport const w = writeFileSync;\n',
+      });
+      expect(stale.code).toBe(1);
+      expect(said(stale.err)).toEqual([
+        `${refresh}: imports no read of node:fs, but DISK_READERS lists it (${DISK_READERS[refresh]}): take its entry out`,
+      ]);
+      const { [refresh]: _, ...gone } = inventory();
+      const moved = check(gone);
+      expect(moved.code).toBe(1);
+      expect(said(moved.err)).toEqual([
+        `${refresh}: in the slow-disk inventory, but not there (moved or renamed: its entry follows it)`,
+      ]);
+    });
+
+    test("a tree without the seam isn't held to it: the other rules' small trees", () => {
+      const { [DISK_SEAM]: _, ...without } = inventory();
+      const r = check({ ...without, "src/tui/workspace/explorer/marks.ts": 'import { statSync } from "node:fs";\n' });
+      expect(r.code).toBe(0);
+    });
   });
 });

@@ -7,8 +7,9 @@
 //   src/cli/   may not import src/tui/ or @opentui/*
 // src/main.ts may import src/tui/ lazily — the dynamic import is how the CLI avoids loading it.
 // And by module: what runs only in a worker is imported, for more than its types, by that worker alone.
+// And by the slow-disk workstream's inventory (SD-D12): its files read the disk through the seam, or say why not.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -756,6 +757,178 @@ export function fixtureViolations(from: string, text: string): string[] {
   });
 }
 
+/** The seam every read the slow-disk workstream moves goes through (SD-D10). */
+export const DISK_SEAM = "src/core/foundation/platform/disk.ts";
+
+/** node:fs's reads (SD-D12): a stat, a listing, a file's text, an existence or access check — sync, callback or
+ *  promised. Its writes, `watch` (a folder's watch registered), `constants` and its types are none. */
+export const DISK_READS = new Set([
+  "access",
+  "accessSync",
+  "exists",
+  "existsSync",
+  "fstat",
+  "fstatSync",
+  "lstat",
+  "lstatSync",
+  "opendir",
+  "opendirSync",
+  "read",
+  "readdir",
+  "readdirSync",
+  "readFile",
+  "readFileSync",
+  "readlink",
+  "readlinkSync",
+  "readSync",
+  "realpath",
+  "realpathSync",
+  "stat",
+  "statfs",
+  "statfsSync",
+  "statSync",
+]);
+
+const FS_MODULE = /^(?:node:)?fs(?:\/promises)?$/;
+
+/**
+ * The reads of node:fs a file's text imports (`DISK_READS`): by name (`statSync`; fs/promises' `readFile`), or used of
+ * a module imported whole (`fs.statSync`, `promises.readFile`); one loaded at run time (`require`, `await import`)
+ * counts as reading. `import type` and a name imported as a type load nothing.
+ */
+export function diskReadsOf(text: string): string[] {
+  const reads = new Set<string>();
+  const wholes: string[] = [];
+  for (const m of text.matchAll(/\bimport\s+(?!type\s)([^;'"]*?)\s*from\s*["']([^"']+)["']/g)) {
+    if (!FS_MODULE.test(m[2]!)) continue;
+    const named = /\{([^}]*)\}/.exec(m[1]!);
+    for (const part of named?.[1]?.split(",") ?? []) {
+      const [name, local] = part.trim().split(/\s+as\s+/);
+      if (!name || name.startsWith("type ")) continue;
+      if (name === "promises") wholes.push(local ?? name);
+      else if (DISK_READS.has(name)) reads.add(name);
+    }
+    const whole = m[1]!
+      .replace(/\{[^}]*\}/, "")
+      .replace(/,/g, " ")
+      .trim();
+    const local = /\*\s*as\s+(\w+)/.exec(whole)?.[1] ?? /^(\w+)/.exec(whole)?.[1];
+    if (local) wholes.push(local);
+  }
+  for (const w of wholes)
+    for (const m of text.matchAll(new RegExp(`\\b${w}\\.(\\w+)`, "g"))) if (DISK_READS.has(m[1]!)) reads.add(m[1]!);
+  if (/(?:\brequire|\bawait\s+import)\s*\(\s*["'](?:node:)?fs(?:\/promises)?["']/.test(text)) reads.add("node:fs");
+  return [...reads].sort();
+}
+
+/**
+ * The slow-disk inventory (blueprint/workstreams/slow-disk/README.md § The inventory) that reads the disk through the
+ * seam alone (`DISK_SEAM`): SD-T1 moved their reads there, or they make none of their own. An import of a read of
+ * node:fs in one fails the check. Each later task moves its files here from `DISK_READERS`.
+ */
+export const SEAM_READERS = [
+  "src/core/workspace/git/branches/operation-status.ts",
+  "src/core/workspace/git/git.ts",
+  "src/core/workspace/graph/autoindex.ts",
+  "src/core/workspace/graph/feed.ts",
+  "src/core/workspace/graph/graph.ts",
+  "src/core/workspace/graph/moves/reconcile.ts",
+  "src/core/workspace/graph/watch.ts",
+  "src/core/workspace/graph/watch/contracts.ts",
+  "src/core/workspace/graph/watch/directories.ts",
+  "src/core/workspace/graph/watch/io.ts",
+  "src/core/workspace/graph/watch/reconciliation.ts",
+  "src/core/workspace/graph/watch/state.ts",
+  "src/core/workspace/vaults/vault-feed.ts",
+  "src/tui/actions/documents/actions-edit.ts",
+  "src/tui/app/runtime/graph-refresh.ts",
+  "src/tui/app/runtime/startup.ts",
+  "src/tui/app/settings/settings.ts",
+  "src/tui/documents/buffers/buffer.ts",
+  "src/tui/documents/diagnostics/draw-problems.ts",
+  "src/tui/documents/diagnostics/problems.ts",
+  "src/tui/documents/navigation/peek/opening.ts",
+  "src/tui/documents/tools/info/info.ts",
+  "src/tui/shell/screen/topbar/where.ts",
+  "src/tui/workspace/explorer/actions/items.ts",
+  "src/tui/workspace/explorer/explorer-disk.ts",
+  "src/tui/workspace/explorer/explorer.ts",
+  "src/tui/workspace/explorer/marks.ts",
+  "src/tui/workspace/explorer/navigation.ts",
+  "src/tui/workspace/explorer/renaming.ts",
+  "src/tui/workspace/git/views/panel/draw-git.ts",
+  "src/tui/workspace/session/session.ts",
+] as const;
+
+/**
+ * The inventory's files still allowed to import node:fs's reads, each with why: the task that moves them, or the
+ * decision that keeps them. One that no longer imports a read fails the check until its entry goes.
+ *
+ * What the check doesn't see: it reads imports alone. A read through a helper (fsutil.ts's `readText`, `stamp`,
+ * `readJson`) passes it, and so does a call to the seam made synchronously on the screen's thread. Those the held-folder
+ * tests find: the hold reaches the seam on every thread (tests/fixtures/walk/slow.ts), so a read left on the screen's
+ * thread holds the test's key past the hold's deadline, and the test sees `gaveUp`. The check keeps the list honest; the
+ * tests show the reads moved.
+ */
+export const DISK_READERS: Record<string, string> = {
+  "src/core/application/distribution/install.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
+  "src/core/foundation/platform/fsutil.ts":
+    "`folderUnreadable`, asked as `access` (SD-T7); `readJson`'s callers (SD-T8, SD-T9); a write's own reads (SD-D7)",
+  "src/core/workspace/git/branches/gitrebase.ts": "the operation under way, kept from the TUI's look (SD-T4, SD-D13)",
+  "src/core/workspace/graph/graph-lookup.ts": "a link into a nested vault, as it's drawn (SD-T11)",
+  "src/core/workspace/graph/graph-resolve.ts": "a `/…` link's first folder, as it's drawn (SD-T11)",
+  "src/core/workspace/graph/refresh.ts":
+    "a build's walk and index read on a disk thread (SD-T8); a file reached (SD-T6)",
+  "src/core/workspace/links/convention.ts": "Obsidian's or zk's settings, read with the TUI's look (SD-T4)",
+  "src/core/workspace/links/links.ts": "a name's case on a disk that folds it (`onDisk`), as it's drawn (SD-T11)",
+  "src/core/workspace/mutations/files.ts": "a file operation's guards before it writes: kept (SD-D7)",
+  "src/core/workspace/mutations/rename/rename-apply.ts": "a rename's guards before it writes: kept (SD-D7)",
+  "src/core/workspace/session/position.ts": "the positions at a vault gone into (SD-T9)",
+  "src/core/workspace/vaults/folders.ts": "the machine's named folders (SD-T9)",
+  "src/core/workspace/vaults/home/cache.ts": "home's walk kept, brought up to now by a disk thread's `walk` (SD-T8)",
+  "src/core/workspace/vaults/registry.ts": "the machine's list of vaults (SD-T9)",
+  "src/core/workspace/vaults/symlinks.ts":
+    "a way checked for a link not followed, with the look (SD-T4) and an open (SD-T5); the answers kept (SD-T9)",
+  "src/core/workspace/walk/filtering/filter.ts": "the walk's filter, judged with each listing on a disk thread (SD-T3)",
+  "src/core/workspace/walk/listing.ts": "a nested vault's name and branch, read with the tree's listing (SD-T7)",
+  "src/core/workspace/walk/traversal/symlinks.ts": "a link's verdict, judged with the watcher's listings (SD-T3)",
+  "src/tui/actions/workspace/actions-files.ts": "a file opened by its path (`isFile`), a key's own read (SD-T5)",
+  "src/tui/app/distribution/update-observation.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
+  "src/tui/app/runtime/watch.ts": "an open note the watcher's batch names, checked with a disk thread's `read` (SD-T6)",
+  "src/tui/app/scratch/scratch.ts": "the scratch's places, kept and asked of a disk thread (SD-T11)",
+  "src/tui/documents/buffers/opening.ts": "an open's writability (`lockedSaid`), asked with its read (SD-T5)",
+  "src/tui/documents/editing/completion/items.ts": "link completion's other vaults (SD-T9)",
+  "src/tui/documents/media/images.ts": "a picture's file, as it's drawn (SD-T11)",
+  "src/tui/documents/saving/saving.ts": "a save's own checks: kept (SD-D7)",
+  "src/tui/shell/overlays/preview.ts": "a list's preview, read on a disk thread (SD-T5)",
+  "src/tui/shell/terminal/run.ts": "what's read before the screen is taken: kept (SD-D9)",
+  "src/tui/workspace/explorer/rows/paths.ts": "whether a row is left out, from the tree's listings (SD-T7)",
+  "src/tui/workspace/explorer/rows/tree.ts": "Elsewhere's top and the nested vaults' names, listed (SD-T7)",
+  "src/tui/workspace/git/git.ts": "a file looked for before the git panel or a merge opens it (SD-T5)",
+  "src/tui/workspace/git/gitquery.ts": "the stats before a git read, a key's own (SD-T5)",
+  "src/tui/workspace/git/views/log/log.ts": "a file looked for before the log opens it (SD-T5)",
+  "src/tui/workspace/git/views/panel/gitview.ts":
+    "a file looked for before it's opened (SD-T5); a file read for its diff (`readForDiff`), a key's own",
+  "src/tui/workspace/vaults/vaults.ts": "a vault gone into and a branch's tabs, from a disk thread's `walk` (SD-T8)",
+};
+
+/** A file of the slow-disk inventory: a read of node:fs imported where it isn't listed (`DISK_READERS`), or listed
+ *  where it imports none. */
+export function diskReadViolations(from: string, text: string): string[] {
+  const listed = Object.hasOwn(DISK_READERS, from);
+  if (!listed && !(SEAM_READERS as readonly string[]).includes(from)) return [];
+  const reads = diskReadsOf(text);
+  if (reads.length && !listed)
+    return [
+      `${from}: imports node:fs's ${reads.join(", ")} (the slow-disk inventory reads through ${DISK_SEAM}, SD-D10; or DISK_READERS lists it, with why)`,
+    ];
+  if (!reads.length && listed)
+    return [
+      `${from}: imports no read of node:fs, but DISK_READERS lists it (${DISK_READERS[from]}): take its entry out`,
+    ];
+  return [];
+}
+
 function files(dir: string): string[] {
   const out: string[] = [];
   let entries: string[] = [];
@@ -817,6 +990,7 @@ if (import.meta.main) {
     violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
     violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
     violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));
+    if (existsSync(join(ROOT, DISK_SEAM))) violations.push(...diskReadViolations(from, readFileSync(file, "utf8")));
     for (const spec of valueImportsOf(readFileSync(file, "utf8"))) {
       if (!spec.startsWith(".")) continue;
       const target = relative(ROOT, resolve(dirname(file), spec));
@@ -825,6 +999,13 @@ if (import.meta.main) {
         violations.push(`${from}: imports ${spec} (only ${owners.join(", ")} may: it runs there alone)`);
     }
   }
+
+  // The inventory where the seam is (the repository's tree; the boundary tests' small trees write some of its files for
+  // the other rules alone): a file of it moved or renamed is said, its entry to follow it.
+  if (existsSync(join(ROOT, DISK_SEAM)))
+    for (const from of [...SEAM_READERS, ...Object.keys(DISK_READERS)])
+      if (!existsSync(join(ROOT, from)))
+        violations.push(`${from}: in the slow-disk inventory, but not there (moved or renamed: its entry follows it)`);
 
   for (const from of PURE_TUI_FIXTURES) {
     const file = join(ROOT, from);

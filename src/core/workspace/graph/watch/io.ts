@@ -1,11 +1,11 @@
-// Existing filesystem observations and platform watch-entry rules.
-import { lstatSync, statSync } from "node:fs";
+// The watcher's observations of the disk, read through the seam (disk.ts, SD-D10), and platform watch-entry rules.
+import * as disk from "../../../foundation/platform/disk.ts";
 import { parentOf } from "../../walk/io/stamps.ts";
 import type { WalkFilter } from "../../walk/filtering/filter.ts";
 
 export function isSymlink(path: string): boolean {
   try {
-    return lstatSync(path).isSymbolicLink();
+    return disk.lstat(path).isSymbolicLink();
   } catch {
     return false;
   }
@@ -19,7 +19,7 @@ export function every(ms: number): string {
 /** When a folder last changed (its ctime: what came or went in it, or it renamed), or null when it isn't there. */
 export function changedAt(path: string): number | null {
   try {
-    return statSync(path).ctimeMs;
+    return disk.stat(path).ctimeMs;
   } catch {
     return null;
   }
@@ -28,7 +28,7 @@ export function changedAt(path: string): number | null {
 /** A directory's mtime, or null when it isn't there. */
 export function dirMtime(path: string): number | null {
   try {
-    return statSync(path).mtimeMs;
+    return disk.stat(path).mtimeMs;
   } catch {
     return null;
   }
@@ -51,7 +51,7 @@ export function watchTakes(
 
 export function statOrNull(path: string): { mtimeMs: number; size: number } | null {
   try {
-    const st = statSync(path);
+    const st = disk.stat(path);
     return st.isFile() ? { mtimeMs: st.mtimeMs, size: st.size } : null;
   } catch {
     return null;

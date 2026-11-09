@@ -45,6 +45,9 @@ describe("the terminal checks' coverage", () => {
   test("the git panel's rows kept by what they are (gitsteady.ts) run the git checks, not every check", () => {
     expect(CHECKS_FOR.find(([re]) => re.test("src/tui/workspace/git/gitsteady.ts"))?.[1]).toEqual(["git"]);
   });
+  test("the seam every read goes through (disk.ts, SD-D14) runs the slow-disk checks, where it stands a slow disk in", () => {
+    expect(CHECKS_FOR.find(([re]) => re.test("src/core/foundation/platform/disk.ts"))?.[1]).toEqual(["slow disk"]);
+  });
 
   test.each(["src/tui/workspace/vaults/vaults.ts", "src/core/workspace/mutations/rename/rename.ts"])(
     "vault and rename changes retain every split vault check: %s",

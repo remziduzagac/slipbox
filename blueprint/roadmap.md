@@ -748,7 +748,7 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 
 ## A slow disk never freezes the screen (#46)
 
-*Not a phase. Drafted and agreed 2026-11-09; not started.*
+*Not a phase. Drafted and agreed 2026-11-09; being built: SD-T1, the seam its reads go through, done.*
 
 - [ ] **[A slow disk never freezes the screen](workstreams/slow-disk/README.md)** (SD): what still reads the disk on
   the screen's thread moved off it, onto the listing threads grown into disk threads — the watcher's look and the TUI's

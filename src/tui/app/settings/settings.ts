@@ -37,7 +37,7 @@ import {
 } from "../../shell/input/keys.ts";
 import type { App, UiState } from "../runtime/app.ts";
 import { uiDefaults } from "../runtime/app.ts";
-import { existsSync, statSync } from "node:fs";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 
 /** The configuration: keys, theme, glyphs, the UI settings, and live reload. */
 export class Settings {
@@ -268,7 +268,7 @@ export class Settings {
 
 function fileStamp(path: string): number {
   try {
-    return existsSync(path) ? statSync(path).mtimeMs : -1;
+    return disk.exists(path) ? disk.stat(path).mtimeMs : -1;
   } catch {
     return -1;
   }
