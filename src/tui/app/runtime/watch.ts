@@ -450,9 +450,9 @@ export class Watch {
 }
 
 /**
- * Whether an open file's text on disk is the one its buffer last read or wrote, its stamp then brought up to date: the
- * watcher's word that it came or changed brings nothing new. The text, not the stamp: writes a moment apart can share
- * an mtime. Never one gone since, or never written.
+ * Whether an open file on disk is as its buffer last read or wrote it — its text, its BOM, its bytes all UTF-8 or not —
+ * the buffer then left as a reload leaves it: the watcher's word that it came or changed brings nothing new. The text,
+ * not the stamp: writes a moment apart can share an mtime. Never one gone since, or never written.
  */
 function asRead(buf: NoteBuffer): boolean {
   if (buf.virtual || buf.deleted || buf.newFile) return false;
@@ -460,10 +460,15 @@ function asRead(buf: NoteBuffer): boolean {
   const at = stamp(buf.abs);
   try {
     const d = readText(buf.abs);
-    if (d.text !== buf.baseText || d.bom !== buf.bom) return false;
+    // A byte that isn't UTF-8 reads as U+FFFD, as that character itself does: the same text, not the same file.
+    if (d.text !== buf.baseText || d.bom !== buf.bom || d.invalidUtf8 !== buf.invalidUtf8) return false;
   } catch {
     return false;
   }
   buf.stamp = at;
+  // No conflict kept or waiting over a change the file no longer has; a clean one's merge markers gone, as a reload's.
+  buf.conflictKept = false;
+  buf.conflictWaiting = false;
+  if (!buf.dirty) buf.markers = false;
   return true;
 }

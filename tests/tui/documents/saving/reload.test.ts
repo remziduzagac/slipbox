@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Config } from "../../../../src/core/application/config/config.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
-import { makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
+import { makeSandbox, makeVault, harness, statusRow } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
 makeSandbox();
@@ -54,6 +54,43 @@ describe("review cycle 1 (TUI)", () => {
     await touch(file, "theirs\n");
     h.app.watch.applyChanges({ changes: [{ rel: "r.md", kind: "changed", isNote: true }], rescan: false });
     expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
+  });
+  test("a conflict kept, its file put back as the note was read: kept no more, as a reload leaves it (#73)", async () => {
+    const { h, v, file } = await source("mine\n");
+    const changed = () =>
+      h.app.watch.applyChanges({ changes: [{ rel: "r.md", kind: "changed", isNote: true }], rescan: false });
+    // Changed there while typing: the prompt waits; put back, there's nothing left to ask.
+    await h.keys("shift+a", "!");
+    await touch(file, "theirs\n");
+    changed();
+    expect(v.buf.conflictWaiting).toBe(true);
+    await touch(file, "mine\n");
+    changed();
+    expect(v.buf.conflictWaiting).toBe(false);
+    // Changed again, yours kept, then undone: clean, the file put back — neither kept nor said to differ.
+    await h.keys("escape");
+    await touch(file, "theirs\n");
+    changed();
+    await h.keys("k");
+    expect(v.buf.conflictKept).toBe(true);
+    await h.keys("u");
+    expect(v.buf.dirty).toBe(false);
+    await touch(file, "mine\n");
+    changed();
+    expect(v.buf.conflictKept).toBe(false);
+    expect(statusRow(h.frame())).not.toContain("differs from disk");
+  });
+  test("a file rewritten outside with a byte that isn't UTF-8 where it had U+FFFD: read again, never edited or saved over (#73)", async () => {
+    const { h, v, file } = await source("a�\n");
+    expect(v.buf.invalidUtf8).toBe(false);
+    // The same text decoded: the invalid byte shows as U+FFFD too.
+    writeFileSync(file, Buffer.from([0x61, 0xff, 0x0a]));
+    const future = Date.now() / 1000 + 5;
+    utimesSync(file, future, future);
+    h.app.watch.applyChanges({ changes: [{ rel: "r.md", kind: "changed", isNote: true }], rescan: false });
+    expect(v.buf.invalidUtf8).toBe(true);
+    await h.keys("shift+a", "!", "escape", "ctrl+s");
+    expect([...readFileSync(file)]).toEqual([0x61, 0xff, 0x0a]);
   });
 });
 
