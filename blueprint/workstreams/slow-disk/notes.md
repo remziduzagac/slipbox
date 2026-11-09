@@ -49,7 +49,11 @@ said in design/roots.md § The index, "Not done", and in issue #46. This workstr
 - That agrees SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9, and SD-D1's last part. No question asked SD-D1's order,
   SD-D5, SD-D8 or SD-D10: they stay proposed.
 
-## Open
+## The rest settled (2026-11-09)
 
-SD-D1's order, SD-D5, SD-D8 and SD-D10, for the maintainer to agree; each task's own questions are in its file
-(SD-T8's on a rename's build, asked when it starts).
+- The maintainer agreed SD-D1, SD-D5, SD-D8 and SD-D10 as proposed, and said to take the recommended answer for every
+  question the tasks had left open. Those were decided with the recommendation: a rename's build as SD-D11, the rest
+  as SD-D12, each said in its task. The workstream is active; its tasks are `todo`.
+- Deciding them found one more read the inventory had missed: `ensureAll` reads every note not parsed yet when the
+  tags, the problems, the link forms or a note's backlinks are asked of the graph on the screen's thread. It's in
+  § 4 of the inventory now, and SD-T6 takes it: a key that needs those notes waits for them, as an open does.

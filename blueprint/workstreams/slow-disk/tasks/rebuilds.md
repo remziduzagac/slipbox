@@ -23,6 +23,10 @@ SD-D3, SD-D5, SD-D6.
 - Answers checked (SD-D5): taken only while `Graph.builds` and the vault open are the ones asked under; the changes
   the graph took in meanwhile (the watcher's, slipbox's own writes, a file reached) applied again over it, as
   `GraphRefresh.homeBuilt` does (`since`). A second ask while one is out waits for it and asks again once.
+- A rename's and a folder operation's build (`renaming.ts:206`, `:220`; `mutations/files.ts:102`, `:148`;
+  `rename-apply.ts:319`, `:421`), SD-D11: read on a disk thread too, the keys after it waiting their turn as after an
+  open, `reading the vault…` in the status line, `esc` not giving it up; the write stays on the screen's thread.
+- The index crosses as its text, parsed here as it is now (`readJson`, `refresh.ts:186`).
 - The index written at the end of the background parse (`writeCache`, `refresh.ts:384`) stays a write (SD-D7).
 - Measured: the screen's thread's longest gap as a 10,000-note vault's walk and index cross, sent whole or the index
   as its text (T12 measured 50 ms for home's walk crossing twice).
@@ -35,6 +39,8 @@ SD-D3, SD-D5, SD-D6.
   answers; going into a third meanwhile drops the second's answer.
 - Races: a reindex asked again while one is out; a note saved by slipbox while the walk is out survives it; the
   watcher's change meanwhile survives it; a vault left meanwhile drops it.
+- Held: a rename with a folder of the vault under `held` — the rename written at once, `reading the vault…`, a frame
+  drawn and `j` waiting; let go, `j` acts on the graph the rename made, the link to the renamed note followed.
 - Past a shortened deadline: `reading the vault gave up: …`, the graph as it was.
 - Mutation: the walk made here again, the first test fails (checked once).
 
@@ -43,12 +49,16 @@ SD-D3, SD-D5, SD-D6.
 `slow disk: the vault open reindexed on a slow disk — its links and backlinks stay while it's read, every key
 answered; a note added meanwhile there once read`.
 
-## Open
+## Decided (2026-11-09)
 
-- A rename's and a folder operation's build (`renaming.ts:206`, `:220`; `mutations/files.ts:102`, `:148`;
-  `rename-apply.ts:319`, `:421`): on the thread with the key waiting as an open does, or kept here as part of the
-  key's write (a question for the maintainer once this task starts; the write itself stays, SD-D7).
-- Sending the index across whole, or as its text parsed here (measured first).
+By the maintainer's instruction to take the recommended answer (SD-D11, SD-D12):
+
+- A rename's and a folder operation's build: on a disk thread, the keys after it waiting (SD-D11). The next key must
+  see the graph the write made; the build kept on the screen's thread would leave every rename on a slow disk a
+  freeze, and one in the background would let the next key act on paths that are gone.
+- The index across threads: as its text. The screen's thread parses it today after reading it; as text it does the
+  same minus the read, where a structured copy would add the copy on top of a parse on the thread. The gap at 10,000
+  notes is recorded here.
 
 ## References
 

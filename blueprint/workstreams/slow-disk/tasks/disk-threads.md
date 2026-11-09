@@ -39,11 +39,15 @@ SD-D2, SD-D6. No caller changes but the listings': the requests the later tasks 
 
 None new: the explorer's slow-disk checks pass unchanged on the renamed pool.
 
-## Open
+## Decided (2026-11-09)
 
-- Whether a third thread is worth it while a walk holds one (measured after SD-T8).
-- Whether an idle disk thread is let go of after a while (#56's "released when unused"): the watcher's look asks every
-  two seconds, so it's idle only while no vault is watched.
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- No third thread: a walk holds one only while the other is free, and a third is a heap more (#56). What SD-T8
+  measures is recorded here, not acted on without a decision.
+- A disk thread with no request for a minute is let go of, and started again on the next (60–70 ms, under the
+  150 ms before `listing…` shows); while a vault is watched the first is asked every two seconds, so only the second
+  is let go of. A test: the second let go after the minute (its clock the test's), started again by the next request.
 
 ## References
 

@@ -28,17 +28,20 @@ of README.md, answered 2026-11-09).
 - The measurement, in the log here.
 - Held: a note with a picture under `held` opened — the note drawn with the picture's place said, a key handled
   meanwhile; let go, the picture drawn.
-- Held: a `/…` link into `held` — drawn as not checked, then resolved.
+- Held: a `/…` link into `held` — drawn as resolved at once; a missing one drawn broken once its answer comes.
 - A layout drawn twice for one answer never moves the cursor or the reading position (D98).
 
 ## Terminal check
 
 `slow disk: a note whose picture is on a slow disk — drawn at once with its place said, the picture once read`.
 
-## Open
+## Decided (2026-11-09)
 
-- How a link not checked yet is drawn (dim, or as resolved until it's said not to be).
-- Whether pictures belong here, or in a step of their own under the roadmap's Images (`12.x`).
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- A link not checked yet: drawn as resolved until said otherwise; most resolve, so the drawing changes only for the
+  few that don't.
+- Pictures: here, the same kind of read, measured with the rest under one rule for what drawing asks.
 
 ## References
 

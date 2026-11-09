@@ -14,8 +14,9 @@ SD-D3, SD-D5, SD-D6, SD-D8. The first thing you'd feel: on a slow disk, the scre
 
 - `VaultWatcher.pollTick` (`src/core/workspace/graph/watch.ts:148`) asks one `stat` batch per tick: every watched
   folder, its `.gitignore` (`WatchDirectories.gitignoreStamp`), each note in `state.followed`; and a `list` of each
-  polled folder with its notes' stamps. Every 15th tick, the sweep's stats of the known notes in slices (**Open**:
-  how many a slice), carried on where it was when the next is due. A tick whose answer hasn't come asks nothing new.
+  polled folder with its notes' stamps. Every 15th tick, the sweep's stats of the known notes, a hundred a
+  request, each asked when the last answers; a sweep still under way at the next 15th tick goes on, none other
+  starts. A tick whose answer hasn't come asks nothing new.
 - The answer is compared, when it comes, with what's known then (`known`, `sizes`, `ownWrites`, `stamps`), and only
   while the watcher's `sync` count is the one it was asked under (SD-D5); a folder gone, a `.gitignore` changed, a
   note changed or gone become pending as now.
@@ -47,10 +48,14 @@ SD-D3, SD-D5, SD-D6, SD-D8. The first thing you'd feel: on a slow disk, the scre
 vault with a folder named as the stand-in's, keys pressed for three looks, each answered within a bound short of the
 folder's time; a note written by the check meanwhile appears in the switcher.
 
-## Open
+## Decided (2026-11-09)
 
-- The sweep's slice, by count or by time on the thread.
-- Whether polled folders (`state.polled`) are listed every tick on a slow disk, or every other.
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- The sweep's slice: a hundred notes a request, chained (above). A count needs no clock in a test (#75); a hundred
+  stats fit the minute's deadline at T12's slow mount's 0.3 s a stat; a fast disk sweeps as quickly as now.
+- Polled folders (`state.polled`): listed every tick, in its batch, as now; a tick whose answer hasn't come asks
+  nothing new, so a slow disk slows the looks by itself.
 
 ## References
 

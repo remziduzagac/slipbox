@@ -568,3 +568,5 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - The same day, the maintainer answered its seven questions, each with the option recommended: SD-D2, SD-D3, SD-D4,
   SD-D6, SD-D7 and SD-D9 are agreed, and what drawing a note reads is in, as the last code task. SD-D1's order, SD-D5,
   SD-D8 and SD-D10 stay proposed.
+- Later that day the maintainer agreed those four as proposed and had the tasks' own questions decided with the
+  recommendation (SD-D11, SD-D12): every decision is agreed, and SD is active, its tasks not started.

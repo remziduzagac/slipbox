@@ -19,9 +19,12 @@ index, home's walk kept).
   window opens and as the background index records what it found (`registry.ts`, `folders.ts`), the background
   index's place (`autoindex.json`), the answers kept for links followed (`links.json`, read again when its mtime
   moved).
-- Each read asked of a disk thread, what's kept here used meanwhile (SD-D3): a vault gone into opens with its
+- Each read the measurement finds made on a timer or at a vault gone into asked of a disk thread, what's kept here
+  used meanwhile (SD-D3); one made before the screen is up stays (SD-D9): a vault gone into opens with its
   positions once they're read; the Vaults window lists what it last read, then what's on disk.
 - Writes stay (SD-D7, agreed: question 4 of README.md).
+- The parse cache (`parsed.db`, `src/core/documents/markdown/parsecache.ts:44`) stays on the screen's thread, said as
+  a known limit in design/tui.md § Known limits.
 
 ## Acceptance criteria
 
@@ -36,11 +39,14 @@ index, home's walk kept).
 `slow disk: home on a slow disk — slipbox's own state read while the keys answer; going into a vault, its notes back
 where they were`.
 
-## Open
+## Decided (2026-11-09)
 
-- What the measurement finds beyond the list above.
-- The parse cache (`parsed.db`, SQLite in the cache folder), asked as each note is parsed: a limit said, or a task of
-  its own (out of this workstream's scope as drafted).
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- What the measurement finds beyond the list: moved in this task if it's made on a timer or at a vault gone into;
+  left if it's made before the screen is up.
+- The parse cache: a known limit, not a task here. It's in the cache folder, local by default, its SQLite calls are
+  synchronous, and moving it moves the parse, which this workstream leaves out.
 
 ## References
 

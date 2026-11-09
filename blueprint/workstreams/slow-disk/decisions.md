@@ -1,15 +1,15 @@
 # Decisions: a slow disk never freezes the screen
 
-**Six agreed, four proposed.** Each entry says what was chosen, or is proposed, with what could have been chosen
-instead. The maintainer's answers of 2026-11-09 ([README.md](README.md) § Questions answered, the option recommended
-in each) agree SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9: each is dated and names the question it settles, and is
-never rewritten, only noted. No question asked SD-D5, SD-D8 or SD-D10, nor SD-D1's order: they stay proposed, and may
-change until the maintainer agrees them (blueprint/README.md § How things are recorded).
+**All agreed, on 2026-11-09.** Each entry says what was chosen, with what could have been chosen instead, and how it
+was agreed: SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9 by the maintainer's answers ([README.md](README.md)
+§ Questions answered, the option recommended in each); SD-D1, SD-D5, SD-D8 and SD-D10 by the maintainer, as proposed;
+SD-D11 and SD-D12, the questions the tasks had left open, by the maintainer's instruction to take the recommended
+answer. An entry is never rewritten; a dated note goes under it (blueprint/README.md § How things are recorded).
 
-## SD-D1: The parts, in order (proposed)
+## SD-D1: The parts, in order (2026-11-09)
 
-Its last part agreed on 2026-11-09: question 6, answered (a), what drawing a note reads in this workstream as its
-last code task, measured first. The order and what stays out are still proposed.
+Agreed: its last part by question 6, answered (a), what drawing a note reads in this workstream as its last code
+task, measured first; the order and what stays out as proposed.
 
 **Decision:** The workstream moves off the screen's thread every read README.md § The inventory lists, but writes
 (SD-D7), in this order: the tests' seam (SD-T1) and the disk threads (SD-T2), which everything uses; the watcher's look
@@ -93,7 +93,9 @@ out of the line is a special case in the key handling.
 **Not chosen:** the keys acting on the window you were in until the note is read, the tab appearing then; opening a
 tab at once with its text empty, filled when read (a cursor and a reading position on nothing).
 
-## SD-D5: Every answer checked against what it was asked under (proposed)
+## SD-D5: Every answer checked against what it was asked under (2026-11-09)
+
+Agreed as proposed.
 
 **Decision:** Each request carries what it was read for, and its answer is taken only while that still holds: the
 watcher's `sync`s (a look's stamps), the graph's `builds` and the vault open (a build's walk), a buffer's version and
@@ -152,7 +154,9 @@ limits).
 
 **Not chosen:** a writer thread for everything; slipbox's own state alone on a writer thread (question 4).
 
-## SD-D8: The watcher's state and logic stay; its reads go (proposed)
+## SD-D8: The watcher's state and logic stay; its reads go (2026-11-09)
+
+Agreed as proposed.
 
 **Decision:** `VaultWatcher` keeps its state and its logic on the screen's thread — the known stamps, own writes, the
 folders left to home's walk, the debounce — and `fs.watch`'s registrations, whose events come here. Each look asks one
@@ -188,7 +192,9 @@ waits keeps one drawing, right.
 
 **Not chosen:** the note drawn at once, its links dim until checked; the start as now.
 
-## SD-D10: The tests' seam (proposed)
+## SD-D10: The tests' seam (2026-11-09)
+
+Agreed as proposed.
 
 **Decision:** Every read this workstream moves goes through one module of the core
 (`src/core/foundation/platform/disk.ts`, growing from `src/core/workspace/walk/io/folders.ts`'s folder reader): a
@@ -207,3 +213,83 @@ shipped one.
 
 **Not chosen:** a FUSE mount in CI (a privilege the runners don't give, and none on macOS); timing the reads (#75);
 every test's App on threads.
+
+## SD-D11: A rename's build: on a disk thread, the keys after it waiting (2026-11-09)
+
+Agreed by the maintainer's instruction to take the recommended answer.
+
+**Decision:** After a rename or a folder operation (`renaming.ts:206`, `:220`; `mutations/files.ts:102`, `:148`;
+`rename-apply.ts:319`, `:421`), the vault's walk and index are read on a disk thread (SD-T8's `walk`), and the keys
+after it wait their turn, as after a note opened (SD-D4); the screen draws, `reading the vault…` in the status line.
+The write itself stays on the screen's thread (SD-D7), and `esc` doesn't give the build up: the write is made, and the
+graph must follow it. Past its deadline the build is said, the graph as the write left it, the vault asked again a
+minute later.
+
+**Why:** The next key must see the graph the write made — a link followed to the note renamed, a second rename
+planned from the new paths. Waiting keeps that; the disk thread keeps the screen drawing and `q` answering.
+
+**Cost:** On a slow disk the keys after a rename wait for the vault to be read, as now, though the screen draws.
+
+**Not chosen:** the build kept on the screen's thread as part of the key's write (every rename on a slow disk a
+freeze, as now); the build in the background as a reindex is (the next key acting on paths that are gone).
+
+## SD-D12: The tasks' own questions (2026-11-09)
+
+Agreed by the maintainer's instruction to take the recommended answer. Each was left open in its task when the design
+was drafted; the task's file says it as decided.
+
+- **SD-T1, a check for the seam:** `check:boundary` refuses an import of `node:fs`'s reads (a stat, a listing, a
+  file's text, an existence or access check) in the files README.md § The inventory names, writes left alone. Why: a
+  test's App reads on the screen's thread (SD-D10), so a read put back there passes every test but its own; only a
+  check sees it. Not chosen: the reviews alone.
+- **SD-T1, the stand-in's delays:** apart. `SLIPBOX_SLOW_DISK` keeps its listing delay; a fourth part gives each stat
+  and read under the folder its own, none when it's left out. Why: T12's ten checks run unchanged, and a walk, which
+  stats each file, doesn't take a listing's delay per file. Not chosen: one delay for every kind of read.
+- **SD-T1, the CLI's cost:** the CLI calls the seam's functions directly, on its own thread; `bun scripts/bench.ts`
+  before and after, within its noise, is the task's acceptance.
+- **SD-T2, a third disk thread:** none; two. Why: a walk holds one only while the other is free, so a short read
+  always has one; a third is a heap more (#56). What SD-T8 measures is recorded, not acted on without a decision.
+- **SD-T2, an idle disk thread:** let go of after a minute without a request, started again on the next (60–70 ms,
+  under the 150 ms before `listing…` shows). Why: #56 asks for unused workers released; while a vault is watched the
+  first is asked every two seconds, so only the second is ever let go of. Not chosen: kept for the session.
+- **SD-T3, the sweep's slice:** a hundred notes a request, each asked when the last answers; a sweep still under way
+  at the next fifteenth tick goes on, and none other starts. Why: a count needs no clock in a test (#75); a hundred
+  stats fit the minute's deadline at T12's slow mount's 0.3 s a stat; asked back to back, a fast disk sweeps as quickly
+  as now. Not chosen: a slice by time on the thread.
+- **SD-T3, polled folders:** listed every tick, in the tick's batch, as now. Why: a tick whose answer hasn't come asks
+  nothing new, so a slow disk slows the looks by itself; listing less often would only slow a fast disk's news.
+- **SD-T4, git's lock while git writes:** asked on its own every 100 ms, one stat out at a time. Why: autosave and the
+  watcher's news wait on it (`5.10`); folded into the look each second, a save after a commit would wait up to a
+  second more on any disk.
+- **SD-T5, a click while a note is read:** dropped, as during a big note's parse (`mouse.ts:73`). Why: it would land
+  on a screen about to change; one rule for both waits. Not chosen: taken after the read.
+- **SD-T5, the session's tabs brought back:** the tab shown first, then the rest in order, one at a time. Why: the
+  note on the screen comes first, and a thread stays free for the watcher's first look and a key's read. Not chosen:
+  all at once on both threads.
+- **SD-T6, how far ahead the background parse reads:** the next slice's notes, asked while this one is parsed. Why:
+  two slices' texts in memory at most, and no new setting. Not chosen: a byte budget.
+- **SD-T6, notes not parsed yet, asked for:** a key that needs them — a rename's or a move's plan, the tags, the
+  problems, the link forms, a backlinks list (`Graph.entry`, `ensureAll`) — waits for their texts, read on the disk
+  threads, as an open does (SD-D4: `reading notes…`, `esc` giving it up), and a plan is never made from notes not
+  read. What a hover or completion asks is shown without it, and again once it's parsed. Why: a list or a rename made
+  from part of the vault would be wrong without saying so. Not chosen: read on the screen's thread, as now.
+- **SD-T7, the vault's own folders kept:** in the same `Listings` as the folders outside it, its 256 kept shared.
+  Why: one cache and one limit, the folder shown longest ago let go of first, whichever side of the vault it's on.
+- **SD-T8, the index across threads:** sent as its text, parsed on the screen's thread. Why: the screen's thread parses
+  it today, after reading it (`readJson`, `refresh.ts:186`); sent as text, it does the same minus the read, where a
+  structured copy would add the copy on top of a parse on the thread. SD-T8 records the gap at 10,000 notes.
+- **SD-T9, what the measurement finds:** a read of slipbox's own folders made on a timer or at a vault gone into moves
+  in this task, as the others do; one made before the screen is up stays (SD-D9).
+- **SD-T9, the parse cache:** stays on the screen's thread, said as a known limit (design/tui.md § Known limits).
+  Why: it's in the cache folder, local by default, and its SQLite calls are synchronous; moving it moves the parse,
+  which this workstream leaves out. Not chosen: a task of its own here.
+- **SD-T10, a start whose vault doesn't answer:** the note shown as its text if its own read answered, its links
+  drawn as resolved until the graph says otherwise, the vault asked again a minute later and the note drawn again
+  when it comes; if the note's read gave up too, nothing opened, said. Why: the note asked for is what's of use while
+  the vault doesn't answer; an empty window leaves nothing to do but quit. Not chosen: nothing opened.
+- **SD-T10, a restart:** brought back as a start is, its tabs' places kept. Why: one path; a restart is a start with
+  its session.
+- **SD-T11, a link not checked yet:** drawn as resolved until said otherwise. Why: most links resolve, so the drawing
+  changes only for the few that don't. Not chosen: dim until checked (every link changing on a slow disk).
+- **SD-T11, pictures:** in SD-T11. Why: the same kind of read, measured with the rest, under one rule for what
+  drawing asks. Not chosen: a step under the roadmap's Images (`12.x`).

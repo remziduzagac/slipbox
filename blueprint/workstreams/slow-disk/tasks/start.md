@@ -27,18 +27,23 @@ SD-D9, SD-D4.
   the note is drawn with its links checked, its backlinks there.
 - A start on a vault that answers at once draws its note as now: the terminal checks that start on a note pass
   unchanged.
-- Past a shortened deadline: said, the screen up, the note shown as text with its links unchecked (**Open**), or
-  nothing opened.
+- Past a shortened deadline: said, the screen up; the note shown as its text if its own read answered, its links
+  drawn as resolved, the vault asked again a minute later and the note drawn again when it comes; nothing opened, and
+  said, if the note's read gave up too.
+- A restart (`UPG`) waiting for its vault: its tabs brought back as a start's, their places kept.
 
 ## Terminal check
 
 `slow disk: slipbox started on a vault on a slow disk — the screen at once, the note once the vault's read, q quitting
 meanwhile`.
 
-## Open
+## Decided (2026-11-09)
 
-- What a start shows when its vault's walk gives up: the note as its text without the graph, or nothing.
-- Whether a restart (`UPG`) waiting for its vault keeps its tabs' places as a start does.
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- A vault that doesn't answer in time: the note shown as its text, links drawn as resolved, asked again a minute
+  later (above). The note asked for is what's of use meanwhile; an empty window leaves nothing to do but quit.
+- A restart: brought back as a start is, one path.
 
 ## References
 

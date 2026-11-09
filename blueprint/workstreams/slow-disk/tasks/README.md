@@ -1,7 +1,7 @@
 # Tasks: a slow disk never freezes the screen
 
-The workstream's work, one file per task, its ID in its H1; finished ones move to `archive/`. None starts before the
-maintainer approves the design. In order (SD-D1), most felt first: SD-T1 and SD-T2 first; then SD-T3, SD-T4 and
+The workstream's work, one file per task, its ID in its H1; finished ones move to `archive/`. The design was agreed
+on 2026-11-09, and none has started. In order (SD-D1), most felt first: SD-T1 and SD-T2 first; then SD-T3, SD-T4 and
 SD-T5, each on its own; SD-T6, SD-T7 and SD-T8 after SD-T2, any order; SD-T9 after SD-T4; SD-T10 after SD-T5 and
 SD-T8; SD-T11 after SD-T6, last of the code; SD-T12 at the end. Each is a pull request of its own into `dev`, with
 its unit tests, its terminal check, its design text and, where you'd notice, the user docs and a CHANGELOG line.

@@ -181,7 +181,7 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   followed only when you say so). The "no" asking again stays open.
 - A link not followed still has its target statted on the main thread, by the walk, Elsewhere's listing and the
   explorer: a mount that hangs behind it can hold them up; only followed links are probed off the thread.
-  (2026-10-17) Open. (2026-11-09) Taken up in [SD](workstreams/slow-disk/README.md), a draft: the explorer's tree of
+  (2026-10-17) Open. (2026-11-09) Taken up in [SD](workstreams/slow-disk/README.md), agreed: the explorer's tree of
   the vault open (SD-T7) and Elsewhere's listing (SD-T8) read on the disk threads; the walk's already off it (T12).
 - A folder link out of the vault goes into the vault holding it, from a peek too: looking moves you there, where
   VV-D7 says it never does. Peek at a folder, or ask. (2026-10-17) Open.

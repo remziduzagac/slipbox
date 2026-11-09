@@ -44,9 +44,12 @@ SD-D3, SD-D4, SD-D5.
 `slow disk: a folder of the vault open listed slowly — listing… under it, every key answered meanwhile, then its rows
 and their marks`.
 
-## Open
+## Decided (2026-11-09)
 
-- Whether the vault's own folders share `Listings`' 256 kept with the folders outside it, or keep their own.
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- The vault's own folders kept in the same `Listings` as those outside it, 256 at most between them, the folder shown
+  longest ago let go of first, whichever side it's on: one cache, one limit.
 
 ## References
 

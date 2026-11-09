@@ -1,5 +1,5 @@
 ---
-status: draft
+status: active
 created: "2026-11-09"
 ---
 
@@ -11,14 +11,15 @@ vault open's disk, or slipbox's own folders under home, still reads it on the sc
 drive asleep or a FUSE mount that answers slowly, the screen and the keys stop for as long as each read takes, every
 two seconds while the watcher looks. This workstream moves those reads off it.
 
-**A draft: design only, nothing built.** The maintainer answered its seven questions on 2026-11-09, each with the
-option recommended (§ Questions answered), which agrees six of its decisions; four stay proposed (§ Decisions). Its
-tasks wait for the design to be agreed.
+**Agreed on 2026-11-09; nothing built yet.** The maintainer answered its seven questions that day, each with the
+option recommended (§ Questions answered), and agreed its other decisions as proposed; the questions its tasks had
+left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
+(§ Decisions). Its tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
-- [design.md](design.md): its changes to the root's design, with what each task leaves **Open**.
-- [decisions.md](decisions.md): SD-D1 to SD-D10; six agreed on 2026-11-09, four proposed.
+- [design.md](design.md): its changes to the root's design.
+- [decisions.md](decisions.md): SD-D1 to SD-D12, agreed on 2026-11-09.
 - [tasks/](tasks/README.md): SD-T1 to SD-T12, in order, each `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
@@ -131,8 +132,10 @@ but still reads the index and its stamp here.
   stamp), `lockedSaid` (an access check), `vaultOf` (each folder above it asked for a marker), and `:e!` and a reload
   by hand (`actions-edit.ts:259`, `saving.ts:140`); a list's preview (`src/tui/shell/overlays/preview.ts:115`) and a
   peek (`peek/opening.ts:69`) the same.
-- **On demand**: `Graph.entry` parses a note not parsed yet when a backlink, hover or completion asks for it;
-  `reachFile` (`refresh.ts:278`) reads a folder to find a name's case (`onDisk`) and stats the file.
+- **On demand**: `Graph.entry` parses a note not parsed yet when a backlink, hover or completion asks for it, and
+  `ensureAll` (`refresh.ts:369`) every one when the tags, the problems, the link forms or a note's backlinks are asked
+  of the graph here (`src/core/workspace/graph/graph.ts:469`, `:483`, `:492`, `:515`); `reachFile` (`refresh.ts:278`)
+  reads a folder to find a name's case (`onDisk`) and stats the file.
 
 ### 5. The explorer's own tree of the vault open
 
@@ -172,7 +175,7 @@ disk that folds case (macOS's), a name's case found by listing each folder on it
 
 ## Approach
 
-The rules, each a decision, agreed or proposed as § Decisions says:
+The rules, each an agreed decision:
 
 - **Where reads go (SD-D2).** The two listing threads T12 made become *the disk threads*: one pool, light (no index,
   no parser), each slot's worker started on its first request, one line, a request going to a thread once one is free
@@ -253,7 +256,7 @@ request into `dev`, its test, its terminal check, its design text.
 
 ## Decisions
 
-In [decisions.md](decisions.md). Agreed on 2026-11-09, by the answers below:
+In [decisions.md](decisions.md), all agreed on 2026-11-09. By the answers below:
 
 - **SD-D2**, one pool: the listing threads become the disk threads; a walk holds one of them at most (question 1).
 - **SD-D3**, nobody asked, nothing waits: the screen's thread keeps what it knew, marked where you act on it
@@ -264,14 +267,24 @@ In [decisions.md](decisions.md). Agreed on 2026-11-09, by the answers below:
 - **SD-D7**, writes stay on the screen's thread: saves, file operations, the scratch, exports (question 4).
 - **SD-D9**, the start takes the screen first; its note waits for the graph (question 5).
 
-Still proposed, no question having asked them:
+By the maintainer, as proposed:
 
-- **SD-D1**, the parts and their order: the inventory above, moved in the tasks' order; what stays named. Its last
-  part is settled (question 6: what drawing a note reads is in, as the last code task); the order and what stays out
-  aren't.
+- **SD-D1**, the parts and their order: the inventory above, moved in the tasks' order; what stays named; what
+  drawing a note reads last (question 6).
 - **SD-D5**, every answer checked against what it was asked under; changes meanwhile applied again.
 - **SD-D8**, the watcher's state and logic stay; its reads go, one batch per look.
 - **SD-D10**, one seam for the tests; a test's App reads here unless asked.
+
+By the maintainer's instruction to take the recommended answer, for the questions the tasks had left open:
+
+- **SD-D11**, a rename's or a folder operation's build: on a disk thread, the keys after it waiting as after an open;
+  the write stays on the screen's thread, and `esc` doesn't give the build up.
+- **SD-D12**, the rest, one line each, each said in its task: a boundary check for the seam; the stand-in's stat and
+  read delay apart from its listing's; two disk threads, the idle one let go of after a minute; the sweep a hundred
+  notes a request; git's lock asked on its own; a click dropped while a note is read; the tab shown first at a start;
+  the parse reading a slice ahead; a key needing notes not parsed yet waiting for them; one `Listings` for every
+  folder; the index sent as its text; the parse cache a known limit; a start whose vault doesn't answer showing its
+  note's text; a link not checked yet drawn as resolved; pictures in SD-T11.
 
 ## Test strategy
 
@@ -324,8 +337,8 @@ Still proposed, no question having asked them:
 
 ## Questions answered
 
-The maintainer answered each on 2026-11-09 with the option recommended, (a) in every one. A task's own questions stay
-in its file: SD-T8's, on a rename's and a folder operation's build, is asked when it starts.
+The maintainer answered each on 2026-11-09 with the option recommended, (a) in every one. The tasks' own questions
+were decided the same day with the recommendation (SD-D11, SD-D12): none is left open.
 
 1. **Which threads read for the screen?** (a) The listing threads become the disk threads, one pool for every read of
    the vault open, a walk holding one at most (recommended: no new worker, one set of deadlines, already never behind

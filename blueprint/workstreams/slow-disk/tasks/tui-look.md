@@ -38,9 +38,12 @@ SD-D3, SD-D5, SD-D6. Beside SD-T3: the second timer that stops the screen on a s
 `slow disk: home's config and the vault's git on a slow disk — the look every second holds up no key; a branch
 switched meanwhile is seen`.
 
-## Open
+## Decided (2026-11-09)
 
-- Whether git's lock is asked on its own while git writes (every 100 ms) or folded into the look's next batch.
+By the maintainer's instruction to take the recommended answer (SD-D12):
+
+- Git's lock while git writes: asked on its own every 100 ms, one stat out at a time, not folded into the look each
+  second, which would hold autosave and the watcher's news up to a second more after every commit (`5.10`).
 
 ## References
 
