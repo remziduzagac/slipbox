@@ -26,8 +26,8 @@ export interface Host {
   /** Turn mouse capture on or off (off hands the mouse to the terminal). */
   setMouse?(on: boolean): void;
   /** Step aside for `argv` in this terminal and wait for it (the renderer suspended): its exit
-   *  code, or an error message when it couldn't start. */
-  runForeground?(argv: string[]): number | string;
+   *  code, or an error message when it couldn't start — once the screen is slipbox's again. */
+  runForeground?(argv: string[]): Promise<number | string>;
   /** Start `argv` detached and don't wait; the promise settles with its exit code or an error. */
   runDetached?(argv: string[]): Promise<number | string>;
   /** Pictures (12.x), as the renderer finds them: whether the terminal draws images (Kitty graphics, sixel), an image

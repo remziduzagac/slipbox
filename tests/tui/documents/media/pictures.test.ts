@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { OptimizedBuffer } from "@opentui/core";
+import { frameBuffer } from "../../../support/tui/frame-buffer.ts";
 import { loadRasterizer } from "../../../../src/core/rendering/media/images/svg.ts";
 import type { Layout, Line } from "../../../../src/core/rendering/layout/ir.ts";
 import type { Host, View } from "../../../../src/tui/app/runtime/app.ts";
@@ -539,8 +539,8 @@ describe("drawn through OpenTUI, from its whole size", () => {
   test("as placeholders: sent once at its whole size; scrolled sideways, its cells from the column that shows, nothing sent", async () => {
     const file = await png(160, 32);
     const written: string[] = [];
-    const pictures = new OpenTuiPictures(() => "kitty", { write: (s) => written.push(s), cell: () => CELL });
-    const buf = OptimizedBuffer.create(20, 4, "unicode");
+    const pictures = new OpenTuiPictures(() => "kitty", { write: (s) => (written.push(s), true), cell: () => CELL });
+    const buf = frameBuffer(20, 4);
     try {
       await pictures.prepare(file);
       pictures.draw(buf, 0, 0, 8, 2, file, { skip: 0, total: 2, left: 0, wide: 20 });
@@ -565,7 +565,7 @@ describe("drawn through OpenTUI, from its whole size", () => {
   test("OpenTUI's own path: the source rectangle of the part that shows, rows and columns, its edges from the cells'", async () => {
     const file = await png(160, 64);
     const pictures = new OpenTuiPictures(() => "sixel");
-    const buf = OptimizedBuffer.create(40, 8, "unicode");
+    const buf = frameBuffer(40, 8);
     const asked: unknown[][] = [];
     (buf as unknown as { drawImage: (...a: unknown[]) => boolean }).drawImage = (...a: unknown[]) => {
       asked.push(a.slice(1, 11));

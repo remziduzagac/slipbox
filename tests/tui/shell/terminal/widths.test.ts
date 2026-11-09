@@ -20,7 +20,8 @@ describe("widths as OpenTUI draws them", () => {
   // (Devanagari's conjuncts did: 2 columns here, 3 there). Every grapheme the reference set and halden
   // hold, in each method, drawn into an OpenTUI buffer and measured where the next character lands.
   test("every grapheme of the reference set and halden, in each of OpenTUI's methods slipbox follows", async () => {
-    const { OptimizedBuffer, RGBA } = await import("@opentui/core");
+    const { RGBA } = await import("@opentui/core");
+    const { frameBuffer } = await import("../../../support/tui/frame-buffer.ts");
     const seen = new Set<string>();
     for (const dir of ["home", "vault"]) {
       const base = join(import.meta.dir, "../../../..", "examples", dir);
@@ -46,7 +47,7 @@ describe("widths as OpenTUI draws them", () => {
     try {
       for (const method of ["unicode", "wcwidth"] as WidthMethod[]) {
         setWidthMethod(method);
-        const buf = OptimizedBuffer.create(16, 1, method);
+        const buf = frameBuffer(16, 1, method);
         const off: string[] = [];
         for (const g of seen) {
           // Never drawn: sanitized first, or zero wide (the canvas skips those). A cluster of tens of
@@ -54,8 +55,7 @@ describe("widths as OpenTUI draws them", () => {
           if (UNSAFE.test(g) || stringWidth(g) === 0 || [...g].length > 16) continue;
           buf.clear(bg);
           buf.drawText(`${g}|`, 0, 0, fg, bg, 0);
-          const chars = (buf as unknown as { buffers: { char: Uint32Array } }).buffers.char;
-          const drawn = chars.indexOf(124);
+          const drawn = buf.withBuffers((cells) => cells.char.indexOf(124));
           if (drawn !== stringWidth(g))
             off.push(
               `${JSON.stringify(g)} U+${[...g].map((c) => c.codePointAt(0)!.toString(16)).join(" ")}: OpenTUI ${drawn}, slipbox ${stringWidth(g)}`,

@@ -33,7 +33,7 @@ export class Handoff {
   }
 
   /** Step aside for the editor (4.1): it runs in this terminal; the note reloads after it. */
-  editInEditor(view: View): void {
+  async editInEditor(view: View): Promise<void> {
     if (!this.app.host.runForeground) return this.app.message("error", "can't hand off to an editor here");
     const target = this.target(view);
     if (!target) return;
@@ -42,7 +42,7 @@ export class Handoff {
     if (buf.dirty && !this.app.saving.save(buf))
       return this.app.message("warn", `${this.app.displayName(buf)} isn't saved — not handing it off`);
     const argv = editorArgv(this.app.config.editor.command, buf.abs, target.line);
-    const r = this.app.host.runForeground(argv);
+    const r = await this.app.host.runForeground(argv);
     if (typeof r === "string") return this.app.message("error", `couldn't start ${argv[0]}: ${r}`);
     if (buf.changedOnDisk()) this.app.watch.reloadBuffer(buf);
     if (r !== 0) this.app.message("warn", `${argv[0]} exited with ${r}`);

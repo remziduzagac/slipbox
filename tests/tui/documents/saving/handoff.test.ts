@@ -21,8 +21,10 @@ describe("hand-off to an editor (space n e, space n s)", () => {
     const line = h.app.cursorLine(v);
     const calls: string[][] = [];
     const host = (h.app as unknown as { host: Host }).host;
-    host.runForeground = (argv) => {
+    // The terminal handed over, and back, asynchronously: the editor saves after a turn, and is waited for.
+    host.runForeground = async (argv) => {
       calls.push(argv);
+      await Bun.sleep(1);
       writeFileSync(file, readFileSync(file, "utf8").replace("Back to", "Edited, back to"));
       const future = Date.now() / 1000 + 5;
       require("node:fs").utimesSync(file, future, future);
@@ -31,7 +33,7 @@ describe("hand-off to an editor (space n e, space n s)", () => {
     await h.keys("space", "n", "e");
     expect(calls).toEqual([["myed", `+${line}`, file]]);
     expect(h.frame()).toContain("Edited, back to");
-    host.runForeground = () => "no such file";
+    host.runForeground = async () => "no such file";
     await h.keys("space", "n", "e");
     expect(h.app.transient!.text).toContain("couldn't start myed");
   });
@@ -88,7 +90,7 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     });
     const host = (h.app as unknown as { host: Host }).host;
     const calls: string[][] = [];
-    host.runForeground = (argv) => (calls.push(argv), 0);
+    host.runForeground = async (argv) => (calls.push(argv), 0);
     host.runDetached = async (argv) => (calls.push(argv), 0);
     const note = join(h.root, "index.md");
     h.app.properties.open();

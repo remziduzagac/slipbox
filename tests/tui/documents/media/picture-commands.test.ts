@@ -20,7 +20,7 @@ import {
   transmit,
 } from "../../../../src/tui/shell/terminal/placeholders.ts";
 import { Pictures } from "../../../../src/tui/shell/terminal/opentui.ts";
-import { OptimizedBuffer } from "@opentui/core";
+import { frameBuffer } from "../../../support/tui/frame-buffer.ts";
 import { inflateSync } from "node:zlib";
 
 import { PICTURES_REST_MS } from "../../../../src/tui/documents/media/pictures.ts";
@@ -294,11 +294,11 @@ describe("pictures (12.x)", () => {
       );
       const written: string[] = [];
       const pictures = new Pictures(() => "kitty", {
-        write: (s) => written.push(s),
+        write: (s) => (written.push(s), true),
         cell: () => ({ width: 8, height: 16 }),
       });
       expect(pictures.usesPlaceholders()).toBe(true);
-      const buf = OptimizedBuffer.create(20, 6, "unicode");
+      const buf = frameBuffer(20, 6);
       // The frame's text, a line per row: a cell a cluster (its spans read placeholders as spaces; their colours are
       // right).
       const lines = () => {
@@ -334,10 +334,10 @@ describe("pictures (12.x)", () => {
       const dir = mkdtempSync(join(sandbox, "ph-"));
       const written: string[] = [];
       const pictures = new Pictures(() => "kitty", {
-        write: (s) => written.push(s),
+        write: (s) => (written.push(s), true),
         cell: () => ({ width: 8, height: 16 }),
       });
-      const buf = OptimizedBuffer.create(20, 4, "unicode");
+      const buf = frameBuffer(20, 4);
       const png = r.png('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>', 8)!;
       const files = Array.from({ length: 49 }, (_, i) => join(dir, `p${i}.png`));
       for (const f of files) writeFileSync(f, png);
@@ -353,14 +353,14 @@ describe("pictures (12.x)", () => {
       pictures.draw(buf, 0, 0, 1, 1, files[48]!, { skip: 0, total: 1, left: 0, wide: 1 });
       expect(written.filter((w) => w.startsWith("\x1b_Ga=d"))).toEqual([release(idOf(files[1]!))]);
       // Wider than its columns can be numbered: OpenTUI's own path.
-      const wide = OptimizedBuffer.create(400, 2, "unicode");
+      const wide = frameBuffer(400, 2);
       const sent = written.length;
       pictures.draw(wide, 0, 0, 298, 1, files[2]!, { skip: 0, total: 1, left: 0, wide: 298 });
       expect(written.length).toBe(sent);
       expect(new TextDecoder().decode(wide.getRealCharBytes())).not.toContain(PH);
       wide.destroy();
       const sixel = new Pictures(() => "sixel", {
-        write: (s) => written.push(s),
+        write: (s) => (written.push(s), true),
         cell: () => ({ width: 8, height: 16 }),
       });
       expect(sixel.usesPlaceholders()).toBe(false);
@@ -370,6 +370,32 @@ describe("pictures (12.x)", () => {
       expect(written.length).toBe(before);
       expect(new TextDecoder().decode(buf.getRealCharBytes(true))).not.toContain(PH);
       buf.destroy();
+    });
+    test("the terminal's output full: the picture not sent, nor placed — the next frame sends it", async () => {
+      const r = (await loadRasterizer())!;
+      const file = join(mkdtempSync(join(sandbox, "ph-")), "p.png");
+      writeFileSync(file, r.png('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"/>', 16)!);
+      let room = false;
+      const written: string[] = [];
+      const pictures = new Pictures(() => "kitty", {
+        write: (s) => room && (written.push(s), true),
+        cell: () => ({ width: 8, height: 16 }),
+      });
+      const buf = frameBuffer(10, 2);
+      const text = () => new TextDecoder().decode(buf.getRealCharBytes(true));
+      try {
+        await pictures.prepare(file);
+        pictures.draw(buf, 0, 0, 2, 1, file, { skip: 0, total: 1, left: 0, wide: 2 });
+        expect(written).toEqual([]);
+        expect(text()).not.toContain(PH);
+        room = true;
+        pictures.draw(buf, 0, 0, 2, 1, file, { skip: 0, total: 1, left: 0, wide: 2 });
+        expect(written).toHaveLength(1);
+        expect(text()).toContain(PH);
+      } finally {
+        pictures.releaseAll();
+        buf.destroy();
+      }
     });
   });
   test("as placeholders, pictures are drawn at every step; else a wheel holds them back from its first tick until it rests", async () => {

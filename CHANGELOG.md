@@ -192,6 +192,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - `slipbox upgrade` runs one at a time per install, never moves back to an older version than the one installed, and
   keeps the version running as well as the one it replaced. A version already downloaded is installed without
   downloading it again.
+- Over SSH, slipbox draws 24-bit colour only when the server knows your terminal has it: `COLORTERM=truecolor` set
+  there, or kitty. Otherwise it uses the nearest of 256 colours, so a terminal that has only 256 shows the themes
+  properly. macOS's `ssh` doesn't send `COLORTERM`: [Troubleshooting](docs/manual/troubleshooting.md) says how to.
+- OpenTUI, the library slipbox draws the terminal with, is 0.6.8.
 
 ### Fixed
 

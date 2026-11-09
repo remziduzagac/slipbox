@@ -1,13 +1,13 @@
 // TUI bootstrap (3.1): locate the root, build the graph, start OpenTUI, route input to the app.
 // Imported lazily by main.ts only when stdout and stdin are terminals (9.3).
 
-import { createCliRenderer, type KeyEvent } from "@opentui/core";
+import { type CliRenderer, createCliRenderer, type KeyEvent, NativeSession } from "@opentui/core";
 import { flag, parseArgs } from "../../../cli/args.ts";
 import { loadConfig } from "../../../core/application/config/config.ts";
 import { Graph, openGraph } from "../../../core/workspace/graph/graph.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { setWidthMethod } from "../../../core/foundation/text/width.ts";
-import { appendFileSync, statSync } from "node:fs";
+import { appendFileSync, statSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { dataHome, stateHome } from "../../../core/foundation/platform/paths.ts";
 import { installedBy, readChannel } from "../../../core/application/distribution/install.ts";
@@ -137,17 +137,62 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
 /** Whether this is a compiled binary: its modules are inside it (`bun build --compile`'s file system). */
 const COMPILED = /^file:\/\/\/(\$bunfs|[A-Za-z]:\/~BUN)\//.test(import.meta.url);
 
-export async function runTui(argv: string[]): Promise<number> {
-  // A restart's note (UPG): where to come back to, and this window's session.
-  const note = takeNote({ pid: process.pid, ppid: process.ppid });
-  const start = prepare(argv, note ? cameBack(note, VERSION) : null);
-  if (typeof start === "number") return start;
-  // The file slipbox was started by, as the shell found it, asked before anything changes: a restart starts it again.
-  const startedBy = startedPath(process.argv0, process.env.PATH ?? "", process.cwd());
+/**
+ * How long OpenTUI may take to give the terminal back at quit. Its teardown goes out behind what's queued before it —
+ * a picture's megabytes take seconds over a slow link — and once this has passed OpenTUI cancels the rest, teardown and
+ * all (its own wait is a second).
+ */
+export const CLOSE_WAIT_MS = 10_000;
 
+/**
+ * The terminal given back when OpenTUI's teardown didn't go out: a string terminator, ending a picture's sequence cut
+ * short, and the end of a frame cut short (synchronized output); then OpenTUI's own teardown as 0.6.8 writes it — the
+ * cursor shown, attributes and the pointer's shape reset, the keyboard's protocol undone (Kitty's popped, or xterm's
+ * modifyOtherKeys reset), mouse reporting, bracketed paste and focus reports off, the main screen back, palette reports
+ * off, the title, the cursor's colour and shape reset. Each undoes what OpenTUI's setup turns on, and does nothing
+ * where it didn't; grapheme clustering (2027) stays on, as OpenTUI's own teardown leaves it. A test holds this to what
+ * OpenTUI writes, so an upgrade that changes that says so.
+ */
+export const RESTORE =
+  "\x1b\\\x1b[?2026l" +
+  "\x1b[?25h\x1b[0m\x1b]22;\x1b\\\x1b[<u\x1b[>4;0m\x1b[?1003l\x1b[?1002l\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?1004l" +
+  "\x1b[?1049l\x1b[?2031l\x1b]0;\x07\x1b]12;default\x07\x1b]112\x07\x1b[0 q\x1b[?25h";
+
+/** `text` to the terminal now, after whatever it was sent: a slow one waited for (a while), one gone left be. */
+function toTerminal(text: string): void {
+  const bytes = Buffer.from(text);
+  const until = Date.now() + 2_000;
+  for (let at = 0; at < bytes.length; ) {
+    try {
+      at += writeSync(1, bytes, at);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EAGAIN" || Date.now() > until) return;
+      Bun.sleepSync(5);
+    }
+  }
+}
+
+/**
+ * OpenTUI's renderer as slipbox runs it (on the process's terminal unless given others), the output it writes through,
+ * and `closed`: settled once the terminal is given back, by OpenTUI's teardown or else by `restore` writing RESTORE.
+ */
+export async function openRenderer(o: {
+  mouse: boolean;
+  stdin?: NodeJS.ReadStream;
+  stdout?: NodeJS.WriteStream;
+  closeWaitMs?: number;
+  restore?: (text: string) => void;
+}): Promise<{ session: NativeSession; renderer: CliRenderer; closed: Promise<void> }> {
+  const stdout = o.stdout ?? process.stdout;
+  // The output OpenTUI writes its frames through, made here (as it would make it) so that slipbox holds it: Kitty's
+  // pictures are sent through it, in order with the frames (12.7).
+  const session = new NativeSession(stdout, { closeTimeoutMs: o.closeWaitMs ?? CLOSE_WAIT_MS });
   const renderer = await createCliRenderer({
+    ...(o.stdin ? { stdin: o.stdin } : {}),
+    stdout,
+    nativeSession: session,
     exitOnCtrlC: false,
-    useMouse: start.config.ui.mouse,
+    useMouse: o.mouse,
     // Mouse movement drives hover highlighting on buttons, tabs and entries.
     enableMouseMovement: true,
     targetFps: 60,
@@ -156,9 +201,29 @@ export async function runTui(argv: string[]): Promise<number> {
     // those above it in view change — a third of the bytes, measured scrolling the pictures demo.
     kittyImageTransport: "zlib",
   });
+  // Raw mode is off as `destroy()` returns; the rest of OpenTUI's teardown — the main screen back, the mouse let go — is
+  // written after it. `closed` resolves once that's out, and rejects when it isn't: the terminal failed, or
+  // CLOSE_WAIT_MS passed and OpenTUI cancelled what was left, the terminal not restored. Then it's restored here.
+  const restore = o.restore ?? toTerminal;
+  const closed = renderer.closed.catch(() => {
+    try {
+      restore(RESTORE);
+    } catch {
+      // the terminal gone: nothing to give back
+    }
+  });
+  return { session, renderer, closed };
+}
 
-  // OpenTUI's teardown — raw mode off, the main screen back, the mouse let go — ends after its `destroy` event.
-  const destroyed = new Promise<void>((r) => renderer.once("destroy", () => r()));
+export async function runTui(argv: string[]): Promise<number> {
+  // A restart's note (UPG): where to come back to, and this window's session.
+  const note = takeNote({ pid: process.pid, ppid: process.ppid });
+  const start = prepare(argv, note ? cameBack(note, VERSION) : null);
+  if (typeof start === "number") return start;
+  // The file slipbox was started by, as the shell found it, asked before anything changes: a restart starts it again.
+  const startedBy = startedPath(process.argv0, process.env.PATH ?? "", process.cwd());
+
+  const { session, renderer, closed } = await openRenderer({ mouse: start.config.ui.mouse });
   let resolveDone: (code: number) => void = () => {};
   const done = new Promise<number>((r) => (resolveDone = r));
   const cell = () => {
@@ -168,9 +233,23 @@ export async function runTui(argv: string[]): Promise<number> {
       : null;
   };
   // Pictures (12.x): drawn where the terminal speaks Kitty graphics or sixel, as OpenTUI found it asking. Kitty's as
-  // Unicode placeholders (12.7): sent once through OpenTUI's own output — so in step with its frames (a private
-  // method: checked at each OpenTUI upgrade) — then drawn as text.
-  const write = (s: string) => void (renderer as unknown as { writeOut(chunk: string): boolean }).writeOut(s);
+  // Unicode placeholders (12.7): sent once through OpenTUI's own output — so in step with its frames — then drawn as
+  // text. Output that's full takes nothing: the picture is sent at a frame drawn once it has room. (One is at most a
+  // million pixels, the paint worker's cap: always less than the output can hold.)
+  const encoder = new TextEncoder();
+  const write = (s: string) => {
+    try {
+      if (session.write(encoder.encode(s))) return true;
+    } catch {
+      return false; // the renderer stopped or gone: no frame to send it with
+    }
+    if (!renderer.isDestroyed)
+      void session.idle().then(
+        () => renderer.requestRender(),
+        () => {},
+      );
+    return false;
+  };
   const pictures = new Pictures(
     () => {
       const c = renderer.capabilities;
@@ -202,16 +281,21 @@ export async function runTui(argv: string[]): Promise<number> {
       setMouse: (on) => {
         renderer.useMouse = on;
       },
-      // The editor gets the terminal: the renderer stops drawing and reading keys until it exits.
-      runForeground: (argv) => {
-        renderer.suspend();
+      // The editor gets the terminal: the renderer stops drawing and reading keys until it exits. Each step is the
+      // terminal written to, and waited for: the main screen back before the editor starts, slipbox's after.
+      runForeground: async (argv) => {
+        try {
+          await renderer.suspend();
+        } catch (err) {
+          return (err as Error).message;
+        }
         try {
           const r = Bun.spawnSync({ cmd: argv, stdio: ["inherit", "inherit", "inherit"] });
           return r.exitCode ?? 1;
         } catch (err) {
           return (err as Error).message;
         } finally {
-          renderer.resume();
+          await renderer.resume();
           renderer.requestRender();
         }
       },
@@ -295,9 +379,7 @@ export async function runTui(argv: string[]): Promise<number> {
       app.draw(canvas);
       painted();
     });
-  const view = new AppRenderable(renderer, paint, pictures);
-  renderer.root.add(view);
-  view.onMouse = (e) => {
+  const view = new AppRenderable(renderer, paint, pictures, (e) => {
     app.mouse.handle({
       type: e.type,
       x: e.x,
@@ -308,7 +390,8 @@ export async function runTui(argv: string[]): Promise<number> {
       ctrl: e.modifiers?.ctrl,
     });
     renderer.requestRender();
-  };
+  });
+  renderer.root.add(view);
   renderer.keyInput.on("keypress", (k: KeyEvent) => {
     if (k.eventType === "release") return;
     void app.input.handleKey(keyName(k)).finally(handled);
@@ -331,11 +414,12 @@ export async function runTui(argv: string[]): Promise<number> {
   for (const s of signals) process.once(s, onSignal);
   const code = await done;
   for (const s of signals) process.off(s, onSignal);
+  // The screen given back before slipbox ends, or says anything more.
+  await closed;
   const restart = app.updates.restartNote;
   const env = app.updates.env;
   if (!restart || !env) return code;
-  // A restart (UPG-D2): once the screen is given back, the upgrade asked for, then the next slipbox in this process.
-  await destroyed;
+  // A restart (UPG-D2): the upgrade asked for, then the next slipbox in this process.
   await new Promise((r) => setTimeout(r, 0));
   process.stdin.pause();
   const release = RELEASE;

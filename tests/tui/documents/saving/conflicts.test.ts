@@ -195,7 +195,7 @@ describe("saving and conflicts (step 4)", () => {
     const { h, file } = await setup("x\n", (c) => (c.editor.command = "ed {file}"));
     const host = (h.app as unknown as { host: Host }).host;
     let seen = "";
-    host.runForeground = () => ((seen = readFileSync(file, "utf8")), 0);
+    host.runForeground = async () => ((seen = readFileSync(file, "utf8")), 0);
     await h.keys("shift+a", "y", "escape", "space", "n", "e");
     expect(seen).toBe("xy\n");
   });
