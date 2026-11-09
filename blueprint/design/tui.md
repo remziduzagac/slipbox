@@ -1020,9 +1020,10 @@ keys.
   (`auto` in a notes vault), `… for now (a) · [files] show` (`a`), `… · [files] show` alone (`files.show` set to
   fewer). Nothing when nothing is left out and git isn't the reason, as with the default (`all`). Worked out once for
   each tree built (`Explorer.filesNotice`), drawn at every frame. Where it doesn't fit on one row it takes a second,
-  the words wrapped, a setting's name (`[files] show`) never split and a row never starting or ending with the `·`; on
-  a pane shorter than eight rows it isn't drawn, the tree keeping its rows. Not a row of the tree: never selected,
-  clicked or scrolled.
+  the words wrapped, a setting's name (`[files] show`) never split and a row never starting or ending with the `·`;
+  where two rows of words aren't enough, the reason is cut short (`…`) on the first and the setting has the second to
+  itself. On a pane narrower than the setting, or shorter than eight rows, it isn't drawn, the tree keeping its rows.
+  Not a row of the tree: never selected, clicked or scrolled.
 - **A row's marks** (VV-D9; `tui/workspace/explorer/marks.ts`, drawn by `drawTree`). At a row's right, in columns that
   line up: the index's state in the last (`indexGlyph`, `INDEX_ROLE`) — indexed `●` (`sidebar_mark`: dimmer than a
   name), indexing `◐` (`info`), not indexed `⊘` (`sidebar`), can't read `⚿` (a lock in Nerd; `warn`), a problem `⚠`

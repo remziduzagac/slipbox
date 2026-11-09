@@ -1218,8 +1218,9 @@ names `[files] show`: `every text file: git repository · [files] show` where `a
 out, how many of the vault's text files (not those `files.include` lists anyway, nor those `files.exclude` leaves out)
 and why — `N files not listed: notes vault`, `… for now (a)` after `a`, nothing more when `files.show` itself lists
 fewer. Nothing is said where nothing is left out and git isn't the reason, as with the default, `all`. On a narrow pane
-it takes a second row, never splitting the setting's name; a pane shorter than eight rows has none. As built:
-`autoWhy`, `isNotesVault` (`core/workspace/vaults/notes-vault.ts`, read by `listFolder`),
+it takes a second row, never splitting the setting's name: where two rows of words aren't enough, the reason is cut
+short (`…`) above the setting, alone on its row; a pane narrower than the setting, or shorter than eight rows, has
+none. As built: `autoWhy`, `isNotesVault` (`core/workspace/vaults/notes-vault.ts`, read by `listFolder`),
 `ExplorerFileRows.filesShown` and `filesNotice` (`tui/workspace/explorer/rows/files.ts`), `drawNotice`
 (`tui/workspace/explorer/drawing/panel.ts`); design/tui.md § Side panes, § Files beyond notes. Decided by an issue
 (#105) and one pull request (D223).

@@ -25,18 +25,25 @@ import { drawDescribed, sideHScrollbar, sideRow, sideView } from "../../../shell
 import { followSelection } from "../../../shell/panels/drawing/selection.ts";
 import { smallButton } from "../../../shell/panels/drawing/chrome.ts";
 
-/** Words into at most two rows of `w` columns, a setting (`[files] show`) kept whole, a row never starting or ending
- *  with the ` · ` between parts; what's left over cut short. */
+/** Words into at most two rows of `w` columns, a row never starting or ending with the ` · ` between parts, the setting
+ *  at the end (`[files] show`) never split: where the words would take more rows, the reason cut short on the first
+ *  and the setting alone on the second; no rows where even the setting doesn't fit (D272). */
 function noticeRows(text: string, w: number): string[] {
+  const parts = text.split(" · ");
+  const setting = parts.length > 1 ? parts.at(-1)! : null;
+  if (setting !== null && stringWidth(setting) > w) return [];
   const rows: string[] = [];
-  text.split(" · ").forEach((part, i) => {
-    for (const [j, word] of (part.match(/\[[^\]]*\] \S+|\S+/g) ?? []).entries()) {
+  parts.forEach((part, i) => {
+    const words = i > 0 && i === parts.length - 1 ? [part] : (part.match(/\S+/g) ?? []);
+    for (const [j, word] of words.entries()) {
       const joined = `${rows.at(-1)}${i > 0 && j === 0 ? " · " : " "}${word}`;
-      if (rows.length === 2 || (rows.length > 0 && stringWidth(joined) <= w)) rows[rows.length - 1] = joined;
+      if (rows.length > 0 && stringWidth(joined) <= w) rows[rows.length - 1] = joined;
       else rows.push(word);
     }
   });
-  return rows.map((row) => truncate(row, w));
+  if (rows.length <= 2 && rows.every((row) => stringWidth(row) <= w)) return rows;
+  if (setting === null) return [truncate(text, w)];
+  return [truncate(parts.slice(0, -1).join(" · "), w), setting];
 }
 
 /**
@@ -48,13 +55,14 @@ function drawNotice(app: App, c: Canvas, pane: Rect, bg: Color | null, geo: Geom
   const text = app.explorer.filesNotice();
   if (!text || pane.h < 8) return pane;
   const w = pane.w - 2;
-  const lines = noticeRows(text, w);
+  const lines = noticeRows(sanitize(text), w);
+  if (lines.length === 0) return pane;
   const h = 1 + lines.length;
   const y = pane.y + pane.h - h;
   drawText(c, pane.x, y, app.glyphs.hbar.repeat(pane.w), { ...roleStyle(app.theme, "border", bg), bg }, pane.w);
   geo.rules.push({ y, x0: pane.x, x1: pane.x + pane.w });
   const dim = { ...roleStyle(app.theme, "dim", bg), bg };
-  lines.forEach((line, i) => drawText(c, pane.x + 1, y + 1 + i, sanitize(line), dim, w));
+  lines.forEach((line, i) => drawText(c, pane.x + 1, y + 1 + i, line, dim, w));
   return { ...pane, h: pane.h - h };
 }
 

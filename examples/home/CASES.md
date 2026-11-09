@@ -581,8 +581,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### explorer
 
-- Explorer default shows notes and data files, hides plain code; 'a' toggles to all text files —
-  `notes/.slipbox/config.toml`, `work/kestrel/README.md` (tui.md 'What lists them' files.show)
+- Explorer default lists every text file, plain code too; 'a' switches to notes and data files alone, and back; a
+  vault's `[files] show` narrows it — `Downloads/résumé-template.py`, `notes/.slipbox/config.toml` (tui.md 'What
+  lists them' files.show; D271)
 - Hidden files: reached by :e or link but not listed; git-ignored and node\_modules ones listed, not indexed —
   `.build/extras.toml`, `work/kestrel/.gitignore`, `work/kestrel/docs/generated/api.md` (tui.md 'Opening' (20.8);
   VV-D8)
@@ -591,8 +592,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - tree with deep folders (6+ levels), many files (500), folders-first order, tree lines —
   `hobbies/cooking/Recipes/Baking/Sourdough/Starter/Feeding log.md`, `work/kestrel/README.md` (Explorer; tests 'tree
   lines', 'the wheel scrolls the explorer')
-- files beyond notes: default data files shown, 'a' toggles all text, binaries never — `notes/.slipbox/config.toml`,
-  `work/kestrel/README.md` (tui.md Files beyond notes; test 'the explorer lists data files by default')
+- files beyond notes: every text file listed by default, data and code, 'a' switches to notes and data files, binaries
+  never — `Downloads/résumé-template.py`, `notes/.slipbox/config.toml` (tui.md Files beyond notes; test 'the explorer
+  lists every text file by default')
 - files.show auto: a repository with `.slipbox/` lists every text file, a notes vault (no `.git` beside its
   `.slipbox/`) its notes and data files; the line at the explorer's foot says why, naming `[files] show` —
   `work/kestrel/.slipbox/config.toml`, `hobbies/photography/tools/ContactSheet.swift` (tui.md Side panes; D272; check

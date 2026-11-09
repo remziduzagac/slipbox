@@ -222,6 +222,28 @@ describe("the explorer's line at its foot, beside auto (D272)", () => {
     expect(only.app.explorer.filesNotice()).toBe("4 files not listed · [files] show");
   });
 
+  test("a narrow pane: [files] show never split, the reason cut short above it; too narrow for it, no line", async () => {
+    const repo = repository(join(place(), "kestrel"), true);
+    const h = await harness({ root: repo, open: "a.md", config: auto, width: 160, height: 30 });
+    const at = (w: number) => {
+      h.app.panels.sideW = w;
+      return foot(h);
+    };
+    // Too wide for two rows of words: the reason cut short, the setting whole on a row of its own.
+    expect(at(26)).toEqual(["every text file: git re…", "[files] show"]);
+    expect(at(24)).toEqual(["every text file: git …", "[files] show"]);
+    expect(at(20)).toEqual(["every text file: …", "[files] show"]);
+    expect(at(14)).toEqual(["every text …", "[files] show"]);
+    // Narrower than the setting: no line at all, rather than a part of its name.
+    expect(at(13)).toEqual([]);
+    expect(at(12)).toEqual([]);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    await h.keys("a");
+    expect(at(20)).toEqual(["2 files not liste…", "[files] show"]);
+    expect(at(13)).toEqual([]);
+  });
+
   test("a pane too short for it: no line, the tree keeps its rows", async () => {
     const repo = repository(join(place(), "kestrel"), true);
     const h = await harness({ root: repo, open: "a.md", config: auto, height: 9 });
