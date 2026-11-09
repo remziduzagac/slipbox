@@ -59,6 +59,8 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/documents/editing/brackets.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/editing/comments.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/editing/indent.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/documents/editing/reflow-width.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/documents/editing/reflow.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/editing/replace.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/editing/snippets.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/documents/editing/tasks.test.ts", "UNIT_TIMEOUT_MS"],

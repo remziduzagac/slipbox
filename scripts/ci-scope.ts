@@ -174,6 +174,8 @@ const EVERYTHING = /^(package\.json|bun\.lock|bunfig\.toml|tsconfig\.json|mise\.
 const LINT = ["_typos.toml", ".markdownlint-cli2.jsonc", "biome.jsonc", ".editorconfig", ".git-blame-ignore-revs"];
 /** What `bun test` loads before every test file (bunfig.toml). */
 const PRELOAD = "tests/setup.ts";
+/** The tests that read every file of the tests' (less their fixtures) and name none: the file-local timeouts' map. */
+const EVERY_TEST_FILE = ["tests/organization/timeouts.test.ts"];
 
 /**
  * Each TypeScript file of src/, scripts/ and tests/ (less the tests' fixtures), and what it uses: the files it imports,
@@ -286,6 +288,7 @@ export function scope(files: string[] | null, graph = importGraph(), root = ROOT
     if (EVERYTHING.test(f)) return { all: `${f}: the packages, the toolchain or the workflows` };
     if (LINT.includes(f)) continue;
     if (f === PRELOAD) return { all: `${f}: loaded before every test` };
+    if (/^tests\/.*\.ts$/.test(f) && !f.includes("/fixtures/")) for (const t of EVERY_TEST_FILE) tests.add(t);
     const sample = SAMPLES_FOR[f];
     if (sample) {
       for (const t of sample.tests) tests.add(t);
