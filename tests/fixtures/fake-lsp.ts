@@ -38,7 +38,8 @@ conn.onInitialize((p) => ({
     codeActionProvider: { resolveProvider: true },
     executeCommandProvider: { commands: ["fake.fixAll"] },
     documentFormattingProvider: true,
-    completionProvider: { triggerCharacters: ["."] },
+    // --brackets: `[` asks too, as a Markdown server may (a link begun).
+    completionProvider: { triggerCharacters: [".", ...(process.argv.includes("--brackets") ? ["["] : [])] },
     signatureHelpProvider: { triggerCharacters: ["(", ","] },
     ...(pull ? { diagnosticProvider: { interFileDependencies: false, workspaceDiagnostics: false } } : {}),
   },

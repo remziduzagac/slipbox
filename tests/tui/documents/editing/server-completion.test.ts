@@ -307,6 +307,27 @@ describe("completion while typing (19.16)", () => {
     await h.app.languages.servers!.stopAll();
   });
 
+  test("`[[` in a note whose server asks at `[`: its answer to the first, come late, leaves the link's list (#48)", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "a.md"), "SLOW start\n"); // SLOW: the answer to the first `[` comes 300 ms late
+    writeFileSync(join(root, "b.md"), "# B\n");
+    const notes = (c: Config) => {
+      served(c);
+      c["language-server"]!.fake!.args = ["--stdio", "--brackets"];
+      c.language = [{ name: "notes", "file-types": ["md"], "language-servers": ["fake"] }];
+    };
+    const h = await harness({ root, open: "a.md", config: notes });
+    await ready(h);
+    expect(h.app.languages.triggers(h.app.view!.buf.abs).completion).toContain("[");
+    await h.keys("o", "[", "[");
+    expect(h.app.completion?.links).toBe("wiki");
+    const links = shown(h);
+    expect(links).toContain("./b.md");
+    await new Promise((r) => setTimeout(r, 450)); // the server's answer come
+    expect([h.app.completion?.links, shown(h)]).toEqual(["wiki", links]);
+    await h.app.languages.servers!.stopAll();
+  });
+
   test("`(` ends the word: the word's items asked for before it, answered late, open no popup after it (#37)", async () => {
     const root = makeVault();
     writeFileSync(join(root, "a.fk"), "SLOW start\n"); // SLOW: a word's items answered 300 ms late
