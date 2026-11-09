@@ -1,5 +1,5 @@
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { parseMarkdown } from "../../../../../src/core/documents/markdown/parse.ts";
 import {
   comparable,
@@ -21,6 +21,7 @@ import {
 } from "../../../../../src/core/workspace/git/review/gitreview.ts";
 import { gitChanges } from "../../../../../src/core/workspace/git/gitsigns.ts";
 import { blockDiff, blockText, noteBlocks } from "../../../../../src/core/foundation/text/blockdiff.ts";
+import * as myers from "../../../../../src/core/foundation/text/myers.ts";
 import { makeCoreSandbox } from "../../../../support/core-sandbox.ts";
 import { untimed } from "../../../../support/scratch-entries.ts";
 
@@ -392,26 +393,33 @@ describe("a note's diff as blocks, before and after (GIT-D2)", () => {
     Array.from({ length: n }, (_, k) => `${seed}${(i * 7919 + k * 104729) % 100003}`).join(" ");
 
   test("a note rewritten whole: its blocks removed and added, at once — a pair diffed by word only if it could be alike", () => {
-    // Fifty paragraphs of 400 words, every word new.
-    const note = (seed: string) => `${Array.from({ length: 50 }, (_, i) => para(seed, i, 400)).join("\n\n")}\n`;
-    let t = performance.now();
-    const d = blockDiff(note("w"), note("v"));
-    expect(performance.now() - t).toBeLessThan(1000);
-    expect(new Set(d.items.map((i) => i.kind))).toEqual(new Set(["@@", "removed", "added"]));
-    // The same fifty words in every paragraph, in another order on each side: every pair could be alike by its words,
-    // and only so many are diffed.
-    let seed = 7;
-    const shuffled = () =>
-      `${Array.from({ length: 50 }, () =>
-        Array.from({ length: 400 }, () => {
-          seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
-          return `w${seed % 50}`;
-        }).join(" "),
-      ).join("\n\n")}\n`;
-    const [a, b] = [shuffled(), shuffled()];
-    t = performance.now();
-    blockDiff(a, b);
-    expect(performance.now() - t).toBeLessThan(1000);
+    // The work counted, not timed: every diff, of a note's lines, its blocks or a pair's words, is a Myers diff, and
+    // what it compares is the tokens of both sides.
+    const diffs = spyOn(myers, "diffLines");
+    const compared = () => diffs.mock.calls.reduce((n, [a, b]) => n + a.length + b.length, 0);
+    try {
+      // Fifty paragraphs of 400 words, every word new: the note's lines and blocks diffed, and no pair, which would
+      // compare 1,600 tokens (a word and a space each).
+      const note = (seed: string) => `${Array.from({ length: 50 }, (_, i) => para(seed, i, 400)).join("\n\n")}\n`;
+      const d = blockDiff(note("w"), note("v"));
+      expect(new Set(d.items.map((i) => i.kind))).toEqual(new Set(["@@", "removed", "added"]));
+      expect(compared()).toBeLessThan(1600);
+      // The same fifty words in every paragraph, in another order on each side: every pair could be alike by its words,
+      // and only so many are diffed — 100,000 tokens' worth of the 2,500 pairs (4,000,000), and the note's lines.
+      diffs.mockClear();
+      let seed = 7;
+      const shuffled = () =>
+        `${Array.from({ length: 50 }, () =>
+          Array.from({ length: 400 }, () => {
+            seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+            return `w${seed % 50}`;
+          }).join(" "),
+        ).join("\n\n")}\n`;
+      blockDiff(shuffled(), shuffled());
+      expect(compared()).toBeLessThan(101_000);
+    } finally {
+      diffs.mockRestore();
+    }
   });
 
   test("a note rewritten whole but a paragraph changed by a word: that one still paired, its word marked", () => {
