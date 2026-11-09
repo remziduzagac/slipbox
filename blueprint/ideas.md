@@ -139,11 +139,12 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - Random input: thousands of random keys and events against the app, each crash's log replayable, as ttt fuzzes in
   Docker. (2026-10-14)
 - macOS on a pull request (issue #65's item 3): Linux alone, macOS after the merge; macOS for what differs there, or
-  with a label; on every pull request, as it was. (2026-10-24) The second chosen (D272).
+  with a label; on every pull request, as it was. (2026-10-24) The second chosen (D273).
 - A macOS job waiting for its Linux job on a pull request only, by a copy of each macOS job per event, so a push's
-  and the full run's macOS start at once: four macOS jobs to keep alike. (2026-11-09) Not chosen (D272).
-- A test file run on macOS when it imports a file of what differs there: about a fifth of the tests import one, most
-  for a helper they only use. (2026-11-09) Not chosen (D272).
+  and the full run's macOS start at once: four macOS jobs to keep alike. (2026-11-09) Not chosen (D273).
+- A test file run on macOS when it imports a file of what differs there, so the tests that don't sit beside their
+  source go with it: about a fifth of the tests import one, most for a helper they only use. (2026-11-09) Chosen, after
+  review found tests the folders missed (D273).
 
 ## Roots and vaults
 

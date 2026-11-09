@@ -9,12 +9,12 @@ name: ci
 # nothing, for `dev` moved to `test` (CIW-D1–CIW-D3, scripts/ci-range.ts). A run by hand runs everything, and calls
 # itself `full`: the check `main` takes nothing without (D251), which it reports again as a commit status, the one
 # `main`'s ruleset sees (D257).
-# macOS after Linux (D272): each macOS job waits for its Linux job and runs only once that passed. A pull request runs
+# macOS after Linux (D273): each macOS job waits for its Linux job and runs only once that passed. A pull request runs
 # them only when it changes what differs on macOS, or carries the `macos` label; every other run, whatever changed.
 # One job, `ci` (`full` by hand), is the required check: it always runs and fails unless every job it waits for passed
 # or was skipped. Each job calls package.json's scripts, never commands of its own.
 on:
-  # `labeled` too, so the `macos` label added runs the macOS jobs (D272). GitHub starts a run for any label: each runs
+  # `labeled` too, so the `macos` label added runs the macOS jobs (D273). GitHub starts a run for any label: each runs
   # every job a pull request's run does, since one that skipped them would report `ci` passed.
   pull_request:
     types: [opened, synchronize, reopened, labeled]
@@ -82,7 +82,7 @@ jobs:
   # `test` and `terminal` (`range`). One that touches only the docs (docs/, the blueprint, the site's pages, the
   # Markdown at the top) skips the tests and the terminal tests, which nothing it changes can break; a push's range with
   # nothing in it skips them too. A merge group and a run by hand test everything, as does a diff that can't be read.
-  # `macos`: whether the macOS jobs run (D272), false only for a pull request that changes nothing `MACOS` lists in
+  # `macos`: whether the macOS jobs run (D273), false only for a pull request that changes nothing `MACOS` lists in
   # scripts/ci-scope.ts and has no `macos` label, which it reads from the event's file as data.
   changes:
     runs-on: ubuntu-24.04
@@ -112,7 +112,7 @@ jobs:
           GH_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}
         run: bun run ci:scope
 
-  # On Linux; on macOS, `test-macos`, once this passed (D272).
+  # On Linux; on macOS, `test-macos`, once this passed (D273).
   test:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
@@ -152,7 +152,7 @@ jobs:
           SCOPE_RANGE: ${{ needs.changes.outputs.range }}
         run: bun run test:changed
 
-  # D272: `test` on macOS (arm64, its SQLite Apple's: 14.13), once it passed on Linux: a change that fails there holds
+  # D273: `test` on macOS (arm64, its SQLite Apple's: 14.13), once it passed on Linux: a change that fails there holds
   # none of the five macOS runners the account has at once. A pull request runs it only when `changes` says `macos`;
   # every other run, always. Named as the matrix named it; its steps are `test`'s, which a test holds them to.
   test-macos:
@@ -186,7 +186,7 @@ jobs:
 
   # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
   # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log. On Linux;
-  # on macOS, `terminal-macos`, once this passed (D272).
+  # on macOS, `terminal-macos`, once this passed (D273).
   terminal:
     needs: changes
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.checks == 'true' }}
@@ -218,7 +218,7 @@ jobs:
           SLIPBOX_TERMINAL_WAIT: "30000"
         run: bun run test:terminal:changed
 
-  # D272: `terminal` on macOS, once it passed on both Linux runners. Never for a pull request (D266), and only when
+  # D273: `terminal` on macOS, once it passed on both Linux runners. Never for a pull request (D266), and only when
   # `changes` says `macos`, which every other run does. Named as the matrix named it; its steps are `terminal`'s, which a
   # test holds them to.
   terminal-macos:
@@ -267,7 +267,7 @@ jobs:
         run: bun run site
 
   # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed — a macOS job
-  # a pull request doesn't need, or one whose Linux job failed, which fails this itself (D272); one that failed, was
+  # a pull request doesn't need, or one whose Linux job failed, which fails this itself (D273); one that failed, was
   # cancelled or never started fails this. Run by hand, everything ran: it's `full`, which `main`'s ruleset requires of
   # a commit before it takes it (D251), as `status` reports it; otherwise `ci`, which `dev`'s and `test`'s require.
   ci:

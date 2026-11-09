@@ -54,21 +54,21 @@ dependency gates and reached unit tests on Ubuntu. Only the terminal job is skip
 Docs-only pull requests still skip the unit job (D230). No ruleset changes are needed: `ci` accepts successful or
 skipped jobs. Lint checks Markdown, spelling and links between files on every PR.
 
-macOS runs after Linux (D272): each macOS job, `test (macos-15)` and `terminal (macos-15)`, waits for its Linux job and
+macOS runs after Linux (D273): each macOS job, `test (macos-15)` and `terminal (macos-15)`, waits for its Linux job and
 runs only once it passed. A pull request runs `test (macos-15)` only when it changes what differs on macOS (`MACOS` in
-`scripts/ci-scope.ts`: the terminal's input and output, spawning processes, the file system's paths, times and watchers,
-fonts and pictures, the installer, the workflows, the packages and the toolchain), or carries the `macos` label: add
-the label to a pull request whose change might behave otherwise on a Mac, and its checks run again with macOS. The
-`changes` job's log says which file ran it, or that it was skipped.
+`scripts/ci-scope.ts`: the terminal's input and output, spawning processes, SQLite, the file system's paths, times and
+watchers, fonts and pictures, the installer, the workflows, the packages and the toolchain) or a test of it, or carries
+the `macos` label: add the label to a pull request whose change might behave otherwise on a Mac, and its checks run
+again with macOS. The `changes` job's log says which file ran it, or that it was skipped.
 
 Pushes to `dev` and `test`, merge groups and runs by hand run macOS whatever changed, so every change is tested on macOS
 after its merge; a run by hand stays full. Their macOS jobs wait for Linux too, so those runs take longer. Scope
 version 3 disables CIW-D2's PR-tree shortcut: a PR pass covers no terminal checks. A squash push retains the range since
-the last passing push, repeating units on both platforms too; old-version passes cannot shorten it. Site remains on
-every PR and push. A promotion already covered by a passing push can still skip tests (CIW-D3). A superseded push gives
-way to its successor, which retains untested commits (CIW-D4). A terminal-only break, or a macOS-only one outside the
-list, can therefore sit on `dev` until its push run finds it. No approval is required, since there is no second person
-to give one.
+the last passing push, repeating Linux's units, and macOS's when its pull request ran them: for most, the push's run is
+the first on macOS. Old-version passes cannot shorten it. Site remains on every PR and push. A promotion already
+covered by a passing push can still skip tests (CIW-D3). A superseded push gives way to its successor, which retains
+untested commits (CIW-D4). A terminal-only break, or a macOS-only one outside the list, can therefore sit on `dev` until
+its push run finds it. No approval is required, since there is no second person to give one.
 
 - **Who:** agents and collaborators work on a branch and open the pull request; the maintainer merges it, or asks an
   agent to review and merge it. Agents merge, run the full suite, move `test` or `main` and release only when the

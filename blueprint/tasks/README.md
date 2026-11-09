@@ -6,7 +6,7 @@ ones move to `archive/`.
 
 ## CI waiting times left open
 
-CIW delivered issue #65 items 5 and 7, and CIW-T7 and CIW-T8 its items 3 and 4 (D272, in `archive/`); its other items
+CIW delivered issue #65 items 5 and 7, and CIW-T7 and CIW-T8 its items 3 and 4 (D273, in `archive/`); its other items
 remain open under their original IDs.
 
 - [CIW-T6: More of the app's files mapped in `CHECKS_FOR`](ciw-map-more-files.md).

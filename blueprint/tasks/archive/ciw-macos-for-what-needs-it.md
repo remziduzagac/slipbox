@@ -22,11 +22,11 @@ its run tested, a push test the others, and `SCOPE_VERSION` go up.
 ## References
 
 - Rests on: issue #65, item 3; design/repository.md § CI.
-- Delivers: D272; design/repository.md § CI (What differs on macOS), design/testing.md § Strategy.
+- Delivers: D273; design/repository.md § CI (What differs on macOS), design/testing.md § Strategy.
 
 ## Log
 
-- 2026-11-09: recorded as D272, with CIW-T8 in one pull request. `MACOS` in `scripts/ci-scope.ts`, beside
+- 2026-11-09: recorded as D273, with CIW-T8 in one pull request. `MACOS` in `scripts/ci-scope.ts`, beside
   `CHECKS_FOR`: path patterns in groups, each saying why it differs on macOS, the tests beside each group's files with
   them; the issue's list, with Apple's SQLite (the search index's FTS5 tables and queries, `14.13`) and the packages
   and the toolchain (Bun and OpenTUI's native library are each system's own build) added. `macosFor` gives the reason
@@ -40,3 +40,16 @@ its run tested, a push test the others, and `SCOPE_VERSION` go up.
   is; the files of each group run macOS, files that only use them and the docs don't; the label exactly, any other or
   none not; labels unread or a diff unread run it; `ci:scope`'s output for a pull request, labelled or not, and for
   every other event. Mutation-checked: the label compared to another name, and `labeled` dropped, fail them (*ran*).
+- 2026-11-09: after review. The list missed the parse cache and the diagrams' cache, both on SQLite (macOS alone had
+  caught the parse cache failing, #232 and #235), and tests that don't sit in their source's folders: the search
+  index's, the parse cache's, the walk's, the language servers' discovery and manager. The caches joined the SQLite
+  group and the tests got patterns; then `macosFor` takes the import graph `ci:scope` builds anyway, and a test file
+  that imports a file of `src/` the list names runs macOS too (about a fifth of the tests import one, most for
+  `paths.ts`). The terminal's group narrowed to OpenTUI's renderer and the start (the canvas is drawn in memory), the
+  platform's to all but its lazy loading and WSL's. `changedFiles` diffs with `--no-renames`: a file moved out of the
+  list counted only where it went; its one other caller, `scope()`, takes the path left as a file deleted (a `.ts` one
+  skipped, another nothing names runs everything), so it may test more, never less. D272 was taken by another pull
+  request (#245): this one is D273. Tests: the files found run it; a test that imports a listed file, by a graph made
+  up and by the repository's own; every `src/` file that imports `sqlite.ts` is listed; a file moved out runs it, for a
+  pull request and a push, through `ci:scope` too. Mutation-checked: each diff without `--no-renames`, the import rule
+  off, and the parse cache dropped from the list, each fails its test (*ran*).

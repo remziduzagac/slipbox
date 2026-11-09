@@ -1,12 +1,12 @@
 // Where a push's range starts (CIW-D1, CIW-D2, CIW-D3, scripts/ci-range.ts), and the workflow that hands it on: in
-// repositories made for each case, GitHub's API faked. And where macOS runs (D272): after Linux, and on a pull request
+// repositories made for each case, GitHub's API faked. And where macOS runs (D273): after Linux, and on a pull request
 // only for what differs there.
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { type Api, githubApi, pushRange, recordName, recordRun, versionAt } from "../scripts/ci-range.ts";
-import { changedFiles, eventLabels, MACOS, macosFor, SCOPE_VERSION } from "../scripts/ci-scope.ts";
+import { changedFiles, eventLabels, importGraph, MACOS, macosFor, SCOPE_VERSION } from "../scripts/ci-scope.ts";
 
 const ROOT = join(import.meta.dir, "..");
 const sandbox = mkdtempSync(join(tmpdir(), "slipbox-ci-range-"));
@@ -440,7 +440,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
     const expression = (text: string) => text.replace(/^\$\{\{(.*)\}\}$/s, "$1");
     for (const event_name of ["pull_request", "push", "merge_group", "workflow_dispatch"]) {
       const github = { event_name };
-      // Linux in the matrices; macOS in jobs of their own, after them (D272).
+      // Linux in the matrices; macOS in jobs of their own, after them (D273).
       expect(ci.jobs.test?.strategy?.matrix.os).toEqual(["ubuntu-24.04"]);
       expect(ci.jobs["test-macos"]?.["runs-on"]).toBe("macos-15");
       expect(ci.jobs.terminal?.strategy?.matrix.os).toEqual(["ubuntu-24.04", "ubuntu-24.04-arm"]);
@@ -551,7 +551,7 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
       return { ...said, log };
     };
     try {
-      // Since a: the docs alone. A push runs macOS whatever changed (D272).
+      // Since a: the docs alone. A push runs macOS whatever changed (D273).
       passes = [a];
       expect(await run({})).toMatchObject({ range: `${a}..${b}`, code: "false", checks: "false", macos: "true" });
       // b itself passed (dev moved to test): nothing runs, and the log says so.
@@ -568,14 +568,14 @@ describe("the workflow hands the range on (CIW-D1–CIW-D4)", () => {
   });
 });
 
-describe("macOS after Linux, and on a pull request only for what differs there (D272)", () => {
+describe("macOS after Linux, and on a pull request only for what differs there (D273)", () => {
   test("each of MACOS's patterns names a file there is: one stale would leave its part to the push", () => {
     const tracked = Bun.spawnSync(["git", "-C", ROOT, "ls-files"]).stdout.toString().split("\n").filter(Boolean);
     expect(tracked).toContain("scripts/ci-scope.ts");
     expect(MACOS.filter((re) => !tracked.some((f) => re.test(f))).map(String)).toEqual([]);
   });
 
-  test("a pull request runs macOS for a file of what differs there, the tests beside it among them", () => {
+  test("a pull request runs macOS for a file of what differs there, its tests among them", () => {
     for (const f of [
       // The terminal's input and output.
       "src/tui/shell/terminal/opentui.ts",
@@ -585,15 +585,26 @@ describe("macOS after Linux, and on a pull request only for what differs there (
       // Spawning processes and the system's tools, Apple's SQLite among them.
       "src/core/foundation/platform/tool-process.ts",
       "src/core/foundation/platform/clipboard.ts",
-      "tests/core/foundation/platform/sqlite.test.ts",
       "src/core/documents/servers/locks.ts",
+      "tests/core/documents/servers/discovery.test.ts",
+      "tests/core/documents/servers/manager.test.ts",
+      // Apple's SQLite: every file that opens a database, and their tests.
+      "tests/core/foundation/platform/sqlite.test.ts",
       "src/core/workspace/search/search-index.ts",
+      "tests/core/workspace/search/index.test.ts",
+      "src/core/documents/markdown/parsecache.ts",
+      "tests/core/documents/markdown/content-cache.test.ts",
+      "src/core/rendering/media/diagrams/diagram-cache.ts",
+      "tests/diagram-cache.test.ts",
       // The file system's paths, times and watchers.
       "src/core/workspace/graph/watch.ts",
       "src/core/workspace/graph/watch/directories.ts",
       "tests/core/workspace/graph/watch-mechanisms.test.ts",
       "src/core/workspace/walk/io/stamps.ts",
       "src/core/workspace/walk/filtering/policy.ts",
+      "tests/core/workspace/walk/walk.test.ts",
+      "tests/core/workspace/walk/mechanisms.test.ts",
+      "tests/core/workspace/walk/hostile.test.ts",
       "src/core/workspace/vaults/mounts.ts",
       "tests/core/workspace/vaults/symlinks/following.test.ts",
       "src/core/workspace/links/links.ts",
@@ -626,6 +637,9 @@ describe("macOS after Linux, and on a pull request only for what differs there (
   test("…and not for a file that only uses them, nor the docs; the first that differs is the reason", () => {
     for (const f of [
       "src/tui/app/runtime/app.ts",
+      "src/tui/shell/terminal/canvas.ts",
+      "src/core/foundation/platform/lazy.ts",
+      "src/core/foundation/platform/wsl.ts",
       "src/core/workspace/graph/graph.ts",
       "src/core/documents/markdown/parse/headings.ts",
       "src/core/documents/servers/transport.ts",
@@ -642,6 +656,81 @@ describe("macOS after Linux, and on a pull request only for what differs there (
     expect(macosFor(["src/tui/app/runtime/app.ts", "bun.lock", ".github/workflows/ci.yml"], [])).toBe(
       "bun.lock differs there",
     );
+  });
+
+  test("a test of a file of `src/` that differs there runs it too, wherever it sits; a file that uses one doesn't", () => {
+    const sqlite = "src/core/foundation/platform/sqlite.ts";
+    const graph = new Map([
+      ["tests/elsewhere/cache.test.ts", ["src/core/foundation/text/width.ts", sqlite]],
+      ["tests/elsewhere/cache.test.tsx", [sqlite]],
+      ["tests/elsewhere/width.test.ts", ["src/core/foundation/text/width.ts"]],
+      ["tests/elsewhere/helper.ts", [sqlite]],
+      ["tests/elsewhere/setup.test.ts", ["tests/setup.ts"]],
+      ["src/tui/app/runtime/app.ts", ["src/tui/shell/terminal/opentui.ts"]],
+    ]);
+    for (const f of ["tests/elsewhere/cache.test.ts", "tests/elsewhere/cache.test.tsx"])
+      expect([f, macosFor([f], [], graph)]).toEqual([f, `${f} tests ${sqlite}, which differs there`]);
+    for (const f of [
+      "tests/elsewhere/width.test.ts",
+      "tests/elsewhere/helper.ts",
+      "tests/elsewhere/setup.test.ts",
+      "src/tui/app/runtime/app.ts",
+    ])
+      expect([f, macosFor([f], [], graph)]).toEqual([f, null]);
+    // A file listed is the reason before a test's imports; without the graph, a test is only its path.
+    expect(macosFor(["tests/elsewhere/cache.test.ts", "bun.lock"], [], graph)).toBe("bun.lock differs there");
+    expect(macosFor(["tests/elsewhere/cache.test.ts"], [])).toBeNull();
+    // Here: a cache's test, and a search's, that no folder of the list holds.
+    const real = importGraph(ROOT);
+    for (const f of ["tests/html-cache.test.ts", "tests/core/workspace/search/mechanisms.test.ts"]) {
+      expect([f, macosFor([f], [])]).toEqual([f, null]);
+      expect(macosFor([f], [], real)).toMatch(/^\S+ tests src\/\S+, which differs there$/);
+    }
+  });
+
+  test("every file of `src/` that opens a database through `sqlite.ts` is listed: Apple's SQLite is older (14.13)", () => {
+    const users = [...importGraph(ROOT)]
+      .filter(([f, uses]) => f.startsWith("src/") && uses.includes("src/core/foundation/platform/sqlite.ts"))
+      .map(([f]) => f);
+    expect(users).toContain("src/core/workspace/search/search-index.ts");
+    expect(users).toContain("src/core/documents/markdown/parsecache.ts");
+    expect(users.filter((f) => macosFor([f], []) === null)).toEqual([]);
+  });
+
+  test("a file moved out of what differs there still runs it: both its paths count, as a push's do", () => {
+    const r = repo();
+    const text = Array.from({ length: 40 }, (_, i) => `export const line${i} = ${i};`).join("\n");
+    r.commit({ "src/core/foundation/platform/x.ts": text });
+    const before = r.git("rev-parse", "HEAD");
+    r.git("mv", "src/core/foundation/platform/x.ts", "src/x.ts");
+    const after = r.commit();
+    // Git's own diff takes it for a move and names only where it went.
+    expect(r.git("diff", "--name-only", before, after)).toBe("src/x.ts");
+    const saved = { event: process.env.GITHUB_EVENT_NAME, range: process.env.SCOPE_RANGE };
+    try {
+      process.env.GITHUB_EVENT_NAME = "pull_request";
+      expect(changedFiles(r.dir)?.sort()).toEqual(["src/core/foundation/platform/x.ts", "src/x.ts"]);
+      process.env.GITHUB_EVENT_NAME = "push";
+      process.env.SCOPE_RANGE = `${before}..${after}`;
+      expect(changedFiles(r.dir)?.sort()).toEqual(["src/core/foundation/platform/x.ts", "src/x.ts"]);
+    } finally {
+      for (const [k, v] of [
+        ["GITHUB_EVENT_NAME", saved.event],
+        ["SCOPE_RANGE", saved.range],
+      ] as const)
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+    const dir = mkdtempSync(join(sandbox, "moved-"));
+    const [out, event] = [join(dir, "out"), join(dir, "event.json")];
+    writeFileSync(out, "");
+    writeFileSync(event, JSON.stringify({ pull_request: { labels: [] } }));
+    const p = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
+      cwd: r.dir,
+      env: { ...gitEnv, GITHUB_EVENT_NAME: "pull_request", GITHUB_EVENT_PATH: event, GITHUB_OUTPUT: out, GH_TOKEN: "" },
+    });
+    expect(readFileSync(out, "utf8")).toEndWith("macos=true\n");
+    expect(p.stdout.toString()).toContain("macOS: runs, src/core/foundation/platform/x.ts differs there");
   });
 
   test("the `macos` label runs it whatever changed; another label, or one like it, doesn't; unread, it runs", () => {

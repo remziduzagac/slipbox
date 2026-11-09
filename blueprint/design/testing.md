@@ -215,9 +215,9 @@ reports it skipped with its issue (`tests/terminal/run.ts`). `bun test` and the 
 `grep -rn "quarantined:" tests/` lists them all; each comes back with its fix, which removes its quarantine. An
 assertion is never deleted or loosened to make a test pass.
 
-**CI runs the suite on Linux and macOS** (GR-D9), each macOS job once its Linux job passed (D272). For a pull
+**CI runs the suite on Linux and macOS** (GR-D9), each macOS job once its Linux job passed (D273). For a pull
 request, the tests its files reach (D239): on Linux, and on macOS only when it changes what differs there or carries
-the `macos` label (D272; [repository.md](repository.md) § CI); the docs' tests only for one of the docs alone (D230);
+the `macos` label (D273; [repository.md](repository.md) § CI); the docs' tests only for one of the docs alone (D230);
 no terminal check (D266). For a push to `dev` or `test`, the tests and the terminal checks for what changed since the
 last passing run, on Linux and macOS whatever changed: nothing for `dev` moved to `test`
 ([repository.md](repository.md) § What a push tests). Every test and check in the full run, `ci` run by hand on `test`

@@ -336,7 +336,7 @@ pause covering the whole load fails it).
 
 ## D266: Terminal checks after merge; unit tests and site stay on pull requests (2026-10-27)
 
-> **Amended by D272 (2026-11-09):** a pull request runs its macOS unit tests only when it changes what differs on
+> **Amended by D273 (2026-11-09):** a pull request runs its macOS unit tests only when it changes what differs on
 > macOS or carries the `macos` label, and each macOS job waits for its Linux job; pushes and the full run keep macOS.
 
 **Decision:** The maintainer's choice, 2026-10-27: pull requests run lint (Biome, sizes, workflows, docs and docs
@@ -361,37 +361,45 @@ PR-tree reuse is disabled. A release still requires the full passing run.
 **Not chosen:** treating a PR record without terminal coverage as complete; per-job range reuse in this small change,
 which would require separate coverage and range contracts.
 
-## D272: macOS on a pull request only for what differs there, and after Linux (2026-11-09)
+## D273: macOS on a pull request only for what differs there, and after Linux (2026-11-09)
 
 **Decision:** The maintainer's choice on issue #65's item 3, option b (2026-10-24), with its item 4. A pull request
-runs its macOS jobs only when it changes a file of what differs on macOS, or carries the `macos` label; a push to `dev`
-or `test`, a merge group and a run by hand run them whatever changed, so every change runs on macOS after its merge,
-and everything does in the full run. What differs is a list of path patterns beside `CHECKS_FOR` (`MACOS` in
-`scripts/ci-scope.ts`), in groups, each saying why: the terminal's input and output; spawning processes and the
-system's tools, Apple's SQLite among them; the file system's paths, times and watchers; fonts and pictures; the
-installer; the workflows and what decides what they run; the packages and the toolchain. `changes` writes `macos`,
-false only for a pull request that changes none of them and has no `macos` label, read from the event's file as data; a
-diff or labels it can't read run them. A label added starts a pull request's run (`labeled`), a whole one. Each macOS
-job, `test-macos` and `terminal-macos`, named `test (macos-15)` and `terminal (macos-15)` as the matrix named them,
-waits for its Linux job (`needs`) and runs only once that passed, for every event. `ci` counts a job skipped as passed,
-as before, so the required checks don't change. `SCOPE_VERSION` stays 3: since D266 no pull request's pass is taken for
-a push's, so a push already tests macOS on all it brought. Amends D266 and GR-D9. Detail: design/repository.md § CI,
-design/testing.md § Strategy, `MAINTAINING.md` § Merging a change.
+runs its macOS jobs only when it changes a file of what differs on macOS, or a test of one, or carries the `macos`
+label; a push to `dev` or `test`, a merge group and a run by hand run them whatever changed, so every change runs on
+macOS after its merge, and everything does in the full run. What differs is a list of path patterns beside `CHECKS_FOR`
+(`MACOS` in `scripts/ci-scope.ts`), in groups, each saying why: the terminal's input and output; spawning processes and
+the system's tools; SQLite, Apple's (every file that opens a database: the search index, the parse cache, the diagrams'
+cache); the file system's paths, times and watchers; fonts and pictures; the installer; the workflows and what decides
+what they run; the packages and the toolchain. A test of one is a test file that imports a file of `src/` the list
+names. A file moved counts as both its paths (`--no-renames`), so one moved out of the list still runs it. `changes`
+writes `macos`, false only for a pull request that changes none of them and has no `macos` label, read from the event's
+file as data; a diff or labels it can't read run them. A label added starts a pull request's run (`labeled`), a whole
+one. Each macOS job, `test-macos` and `terminal-macos`, named `test (macos-15)` and `terminal (macos-15)` as the matrix
+named them, waits for its Linux job (`needs`) and runs only once that passed, for every event. `ci` counts a job
+skipped as passed, as before, so the required checks don't change. `SCOPE_VERSION` stays 3: since D266 no pull
+request's pass is taken for a push's, so a push already tests macOS on all it brought. Amends D266 and GR-D9. Detail:
+design/repository.md § CI, design/testing.md § Strategy, `MAINTAINING.md` § Merging a change.
 
 **Why:** Issue #65: the account runs at most five macOS jobs at once, and with a dozen pull requests open their checks
 waited mostly on a macOS runner (PR #35's macOS terminal job about 55 minutes before it started). Most changes behave
 on macOS as on Linux; option b keeps macOS on the parts that are the system's own, the changes most likely to break
-there. After Linux, a change that fails there holds no macOS runner the others wait for.
+there: only macOS's runs caught the parse cache failing to open, twice, the second a lock taken before its busy
+timeout (#232, #235). A test goes with what it imports, not only with the folder it sits in, since the tests don't all
+mirror the source's folders. After Linux, a change that fails there holds no macOS runner the others wait for.
 
 **Cost:** A macOS-only break in a file the list doesn't name reaches `dev`, where its push run finds it; `test`'s full
-run still gates a release (D251). `needs` is the same for every event, so a push's and the full run's macOS jobs wait
-for Linux too: those runs take Linux's time, then macOS's, and a failure on Linux leaves macOS unrun until the failed
-jobs are run again, which runs the jobs after them. Any label added runs a pull request's checks again: GitHub starts a
-run for every label, and one that skipped its jobs would report `ci` passed. The list is kept by hand; a test holds each
-pattern to a file there is, not to what differs.
+run still gates a release (D251). About a fifth of the test files import a file of the list, so a change to one runs
+macOS, most for a helper they only use (the folders' and real paths', `paths.ts`). `needs` is the same for every event,
+so a push's and the full run's macOS jobs wait for Linux too: those runs take Linux's time, then macOS's, and a failure
+on Linux leaves macOS unrun until the failed jobs are run again, which runs the jobs after them. Any label added runs a
+pull request's checks again: GitHub starts a run for every label, and one that skipped its jobs would report `ci`
+passed. A Dependabot pull request, given two labels a moment after it opens, starts three runs, the first two cancelled
+within seconds by the next; no way was found to tell a label's run apart that couldn't let a run of skipped jobs report
+`ci` passed, or cancel a real one. The list is kept by hand; a test holds each pattern to a file there is, and every
+file that opens SQLite to the list, not to what differs.
 
 **Verify:** a pull request that changes no file of the list and has no label shows `test (macos-15)` skipped and `ci`
 passed, and adding the `macos` label runs it.
 
 **Not chosen:** option a, Linux alone on a pull request, and option c, macOS on every one; a macOS job per event, to
-wait for Linux on a pull request only; a test run on macOS when it imports a file of the list (ideas.md § Process).
+wait for Linux on a pull request only (ideas.md § Process).
