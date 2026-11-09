@@ -42,7 +42,7 @@ import {
   type SteppedWalk,
   type Walker,
 } from "../../../../src/core/workspace/walk/walkers.ts";
-import { Hold, SLOW_MS, STUCK_MS, slowFolders } from "../../../fixtures/walk/slow.ts";
+import { HELD_MS, Hold, SLOW_MS, STUCK_MS, slowFolders } from "../../../fixtures/walk/slow.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
 import { Listings, PENDING_MS, REREAD_MS } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { answerSwitch, type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
@@ -96,12 +96,20 @@ function holding(): Hold {
   return hold;
 }
 
-/** A job stepped until its walk's thread waits in a `held` folder: each slice handed back meanwhile. */
-async function stepUntilHeld(job: { step(budgetMs: number): boolean }, held: Hold): Promise<void> {
+/** Awaited till a thread waits in a `held` folder, `each` done meanwhile — `who` never reaching it said, and thrown, by
+ *  HELD_MS, well short of the test's timeout: no wait left behind for the tests after. */
+async function untilHeld(held: Hold, who: string, each?: () => void): Promise<void> {
+  const end = performance.now() + HELD_MS;
   while (!held.waiting) {
-    expect(job.step(15)).toBe(true);
+    if (performance.now() > end) throw new Error(`${who} never reached \`held\``);
+    each?.();
     await Bun.sleep(5);
   }
+}
+
+/** A job stepped until its walk's thread waits in a `held` folder: each slice handed back meanwhile. */
+async function stepUntilHeld(job: { step(budgetMs: number): boolean }, held: Hold): Promise<void> {
+  await untilHeld(held, "the walk's thread", () => expect(job.step(15)).toBe(true));
 }
 
 /** Home's graph asked for again (`homeIndexed`), `folder` (a `held` one) changed since, so the thread lists it again:
@@ -111,7 +119,7 @@ async function askedAgain(h: Harness, held: Hold, folder: string): Promise<void>
   const back = new Date(Date.now() - 60_000);
   utimesSync(folder, back, back);
   (h.app.watch as unknown as { homeIndexed(capped: null): void }).homeIndexed(null);
-  while (!held.waiting) await Bun.sleep(5);
+  await untilHeld(held, "the walk's thread");
 }
 
 afterEach(() => {
@@ -977,7 +985,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     expect(names(h)).toEqual(["held", "  listing…", "quick", "vault", "  index.md"]);
     expect(h.frame()).toContain("listing…");
     // A key while the listing's thread reads it: handled, and drawn, the folder still unread.
-    while (!held.waiting) await Bun.sleep(5);
+    await untilHeld(held, "the listings' thread");
     await h.keys("ctrl+p");
     expect(h.frame()).toContain("Open note");
     await h.keys("escape");
