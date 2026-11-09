@@ -494,7 +494,8 @@ The properties editor floats over the windows with the note's front matter. Open
 | find in every note and file | `ctrl+shift+f` | `space f g` |
 | replace in every note and file, after a preview | `ctrl+shift+h` | `space f shift+r` |
 | search: notes ranked by your words as you type | | `space f s` |
-| the quick switcher: a note by its name, or a symbol after `#` | `ctrl+p` | `space f f` |
+| the quick switcher: a note by its name, a symbol after `#`, a path (`/`, `~/`, `./`, `../`) | `ctrl+p` | `space f f` |
+| a file by its path, anywhere: its folders and files completed as you type | | `space f e` |
 | the last list of places again, as you left it | | `space '` |
 | a heading of this note | | `space f o` |
 | the headings the cursor is under, as a dropdown | | `space f b` |
@@ -1011,7 +1012,7 @@ Your configuration's [`[aliases]`](configuration.md) adds more commands, or rena
 | `:q!` | quit without saving |
 | `:restart` | start slipbox again, as the newest version installed, where you are; asks first about unsaved notes |
 | `:upgrade` | ask now whether a newer slipbox is out, and offer it |
-| `:e <note>`, `:open <note>` | open a note, or any text file here, by its path |
+| `:e <note>`, `:open <note>` | open a note by its name, or a file by its path (`~` is your home folder) |
 | `:vs [note]` / `:sp [note]` | split side by side / stacked, the note in the new window |
 | `:tabnew [note]` | a new tab, with this note or the one named |
 | `:tabonly`, `:tabo` | close the other tabs, except the pinned ones |
@@ -1101,6 +1102,9 @@ The switcher, the palette, help, pickers and menus share these keys:
 | `alt+enter` | in a list of places, ask where the pick opens: `h` here, `s` in the split, `t` in a new tab |
 
 Pasting puts the first line of the text in the list's filter or the prompt.
+
+In a path, typed after `space f e` or in the switcher, `tab` completes it to the selected entry, `enter` on a folder
+goes into it and `ctrl+w` goes back a folder ([A file by its path](finding.md#a-file-by-its-path)).
 
 The switcher, search, find in every note, references, backlinks and links are lists of places
 ([Finding things](finding.md#lists-of-places)). Where a terminal keeps `alt+enter` for itself, close the list and run

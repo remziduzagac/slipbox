@@ -1352,6 +1352,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - quick switcher: recent first, previous on top, filter words in any order, # for headings/symbols — `notes/index.md`,
   `work/kestrel/README.md` (switcher.open; tests 'ctrl+p lists recent...')
+- a file by its path: space f e asks for one, ~ home, its folders and files completed as typed (tab completes, enter
+  goes into a folder, ctrl+w back), opened as :e opens it, another vault's asked first; the switcher takes one starting
+  /, ~/, ./ or ../ — `notes/index.md`, `work/kestrel/README.md` (note.open_path, switcher.open; tests 'space f e: a
+  file by its path')
 
 ### palette
 
@@ -3038,6 +3042,7 @@ The same notes, one per tab.
 - `note.resolve` — Resolve a conflict with the file — `notes/inbox.md`, `notes/projects/home-office.md`,
   `notes/projects/` (catalog.ts)
 - `note.open` — Open a note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `note.open_path` — Open a file by its path — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
 - `note.create` — New note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
 - `note.reload` — Reload note from disk — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)

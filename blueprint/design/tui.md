@@ -493,14 +493,15 @@ or Elsewhere, the rest of the file system, one place for the machine (VV-D1–VV
 (`21.8`; D76, WSP-D1). The current vault is the one whose tabs are shown. **Choosing a file or folder of another vault
 asks to go into it** (VV-D4, D270; `switchVault` in `tui/workspace/vaults/vaults.ts`): `enter` or a double-click on
 another vault's row in the explorer, a file of another vault opened from the explorer or with `:e` (a path, a pointer;
-`intoOther`), `o` in a peek (§ The peek), the git panel's `o` on a repository, a checkout or a branch's worktree (Open),
-a named folder picked from `space v v` or from the top bar's vault, clicked (WSP-D4), a folder link that leads out of
-the vault (revealed in its own vault, D81). The TUI becomes that vault's, as if started there — its config, its index
-(refreshed), its watcher, its reading positions and your workspace there, whose tabs come back, with the note open (at
-its heading). What git said of the vault left is forgotten — its files' states, the git panel's files, where its branch
-stood, those opened up — and the git panel's message box is emptied: a message typed in one vault is never committed in
-another. **Every way in asks first** (D270), `ctrl+o` back into the vault before too: `Go into kestrel? Your tabs there
-replace these` — Go (`vault.switch_go`, `g`), Stay (`vault.switch_stay`, `c`, `esc`) and, going to a file not from a
+`intoOther`) or by its path (`space f e`, the switcher's), `o` in a peek (§ The peek), the git panel's `o` on a
+repository, a checkout or a branch's worktree (Open), a named folder picked from `space v v` or from the top bar's
+vault, clicked (WSP-D4), a folder link that leads out of the vault (revealed in its own vault, D81). The TUI becomes
+that vault's, as if started there — its config, its index (refreshed), its watcher, its reading positions and your
+workspace there, whose tabs come back, with the note open (at its heading). What git said of the vault left is
+forgotten — its files' states, the git panel's files, where its branch stood, those opened up — and the git panel's
+message box is emptied: a message typed in one vault is never committed in another. **Every way in asks first**
+(D270), `ctrl+o` back into the vault before too: `Go into kestrel? Your tabs there replace these` — Go
+(`vault.switch_go`, `g`), Stay (`vault.switch_stay`, `c`, `esc`) and, going to a file not from a
 peek, Peek at it (`vault.switch_peek`, `p`): read there, read-only, nothing switched. Staying keeps the trail, and from
 a peek its `o` asked, the peek. A vault made (`Give it .slipbox/`, `:init`) or made part of the one holding it is gone
 into unasked (`how.made`): that was what was asked. What waits on the switch, a folder link's folder revealed, git's
@@ -1663,10 +1664,20 @@ past theirs), so the content behind never runs up to the edge.
   `ctrl+p enter` goes back. A query starting with `#` (VS Code's) lists the workspace's symbols instead
   (`19.14`): in a code file, its servers' (`workspace/symbol`), asked as it's typed, each with its kind and
   `path:line`, the last query's answer the one shown; in a note, or where no server gives them, the vault's
-  headings, slipbox's own symbols. `enter` opens the file there. Find in every
+  headings, slipbox's own symbols. `enter` opens the file there. A query starting with `/`, `~/`, `./` or `../` is a
+  path instead (#104): its folder listed and completed as by path, below, each file's place previewed. Find in every
   note (`ctrl+shift+f`, `space f g`) lists each line with the text or regex as `path:line` with the
   line, an open note searched as it is now. Its question takes the window's find toggles, said in it: `alt+r` and
   `alt+w` flip them there.
+- **A file by its path** (#104; `space f e`, `note.open_path`; `tui/shell/overlays/open-path.ts`): a list whose filter
+  is a path, read as `:e` reads one — `~` home, a relative one from the vault's top. It's split at its last `/`: the
+  folder before it is listed, its folders first, by name (hidden names as `files.hidden` lists them, or once the name
+  begun starts with `.`), the entries holding the name begun after it, as every list matches (§ Filtering below).
+  `tab` completes the path to the selected entry; `enter` goes into a folder, the list open, or opens a file through
+  `note.open` — another vault's asked first (D270; § Going into a vault); `ctrl+w` goes back a folder. `enter` with no
+  entry to pick opens the path as typed, `:e` saying why when it can't. A folder is read as the explorer reads one
+  outside the vault, on a listing thread (T12; `listThreads`), once while the list is open: `reading ~/x…` until it
+  comes, why when it can't be (`~/x: it isn't there`). `:e` reads `~/` as home too.
 - **Replace in every note** (`25.4`, D155; `ctrl+shift+h`, `space f shift+r`): what to find — the window's find, or a
   selection on one line, typed already — then what with, then the rename's preview of each line it changes in every
   note and every file the explorer shows (`slipbox replace --all`'s, `--files` as the explorer has them). `enter` does

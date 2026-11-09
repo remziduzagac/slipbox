@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { relative } from "node:path";
 import { KIND_NAMES } from "../../documents/diagnostics/languages.ts";
 import { rank } from "../../shell/overlays/match.ts";
+import { isPath, PathCompletion, pathPick } from "../../shell/overlays/open-path.ts";
 
 /** Finding: find in a note and replace, search, the switcher, notes by type and by tag. */
 const vaultFindOwners = new WeakMap<App, AbortController>();
@@ -243,12 +244,20 @@ export function findActions(): Record<string, Run> {
         .map((x, i) => ({ x, i, r: rank.get(x.data as string) ?? Number.POSITIVE_INFINITY }))
         .sort((p, q) => p.r - q.r || p.i - q.i)
         .map((e) => e.x);
+      // A path typed (`/`, `~/`, `./`, `../`): its folder's entries, completed as `space f e` completes them, opened as
+      // `:e` opens a file.
+      const paths = new PathCompletion(a, isPath);
       a.overlays.openList({
         title: files.length ? `Open (${notes.length} notes, ${files.length} files)` : `Open note (${notes.length})`,
         items: ordered,
-        source: (input) => (input.startsWith("#") ? symbols.list(input.slice(1)) : null),
+        source: (input) =>
+          input.startsWith("#") ? symbols.list(input.slice(1)) : isPath(input) ? paths.rows(input) : null,
+        key: (key, item) => paths.key(key, item),
+        submit: () => paths.submit(),
         places: "switcher",
         accept: (item) => {
+          const pick = pathPick(item);
+          if (pick) return paths.open(pick);
           const at = item.data as string | Spot;
           if (typeof at === "string") a.open(at);
           else if (at.rel !== null) a.openAt(at.rel, at.line);
@@ -256,6 +265,7 @@ export function findActions(): Record<string, Run> {
         },
       });
       const symbols = workspaceSymbols(a, a.overlay);
+      paths.attach(a.overlay);
     },
     "tag.list": (a, arg) => (arg ? a.search.openTagNotes(arg) : a.search.openTagList()),
   };

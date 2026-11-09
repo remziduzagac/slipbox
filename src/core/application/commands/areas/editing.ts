@@ -317,4 +317,10 @@ export const EDITING_SPECS: CommandSpec[] = [
     desc: "Runs any command by name, or an :alias",
   },
   { id: "note.open", title: "Open a note", cli: "slipbox render <note>", desc: "Opens a note by name" },
+  {
+    id: "note.open_path",
+    title: "Open a file by its path",
+    cli: I,
+    desc: "Asks for a path (~ is home), its folders and files completed as you type; opens the file, as :e does",
+  },
 ];

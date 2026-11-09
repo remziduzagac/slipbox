@@ -447,6 +447,7 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; n b" = "app.save_quit"
 "leader ; n c" = "app.quit_force"
 "leader ; P a" = "switcher.open"
+"leader ; P b" = "note.open_path"
 "leader ; s c" = "outline.pick"
 "leader ; L a" = "palette.open"
 "leader ; d f" = "note.open"
