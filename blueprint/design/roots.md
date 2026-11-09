@@ -458,13 +458,15 @@ stay for vaults.
   another link to it, would go over something else, so it's refused as any other there is; a link there is judged by its
   folder, as the one moving is on a disk that ignores case; one whose new folder can't be made changes nothing, and one
   that can't be moved takes away the folders made for it. A link inside a folder that moves is left as the folder's move
-  leaves it; a link leading to a vault, or to a folder holding one, isn't moved (`checkSource`'s `vaults`, `outside`), a
-  vault being known by its real path; a copy or delete of a link out is refused still. An export's default place, beside
-  a note reached through a link out of the vault, is refused; `--out` names one. Where links are looked at on a path's
-  way (`blockingLink`): from the vault's or home's folder; in Elsewhere every link on the way asks, from the folder you
-  work in — the TUI's folder opened, the CLI's current folder (`workDir`) — down; a path named outright outside it
-  starts at its own folder, the file itself asking: what's above the folder you work in is yours to name (macOS's `/tmp`
-  and `/var` are links).
+  leaves it, and a vault it leads to stays where it is, the link in a vault nested in what moves too: in the machine's
+  list by its real path, as any vault a link reaches is (`Reach.discover`, `nestedRootEdits`), its own links into the
+  folder relinked as another vault's are. A link leading to a vault, or to a folder holding one, isn't moved by itself
+  (`checkSource`'s `vaults`, `outside`), a vault being known by its real path; a copy or delete of a link out is refused
+  still. An export's default place, beside a note reached through a link out of the vault, is refused; `--out` names
+  one. Where links are looked at on a path's way (`blockingLink`): from the vault's or home's folder; in Elsewhere every
+  link on the way asks, from the folder you work in — the TUI's folder opened, the CLI's current folder (`workDir`) —
+  down; a path named outright outside it starts at its own folder, the file itself asking: what's above the folder you
+  work in is yours to name (macOS's `/tmp` and `/var` are links).
 - **The CLI** refuses a read through a link not followed (`refuseUnfollowed`, exit 5: `… is reached through a link
   that isn't followed (~/notes/data → /mnt/disk/data): open it in slipbox to choose`) — a note however it's named
   (`resolveNote`, Elsewhere's listing holding a linked note as any other), a snippet `capture --ref --snippet` reads —

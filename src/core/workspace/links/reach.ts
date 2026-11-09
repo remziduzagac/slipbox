@@ -274,7 +274,11 @@ export class Reach implements VaultReach {
     if (g.loc.mode === "home") return;
     const roots: { root: string; nested: boolean }[] = g.skipped
       .filter((s) => s.reason === "nested vault")
-      .map((s) => ({ root: join(g.root, s.rel), nested: true }));
+      .map((s) => {
+        const at = join(g.root, s.rel);
+        // One reached through a followed link (VV-D6) is known by its real path: the link may move, the vault stays (#53).
+        return { root: isInside(real(g.root), real(at)) ? at : real(at), nested: true };
+      });
     for (let up = findVaultRoot(dirname(g.root)); up; up = findVaultRoot(dirname(up)))
       roots.push({ root: up, nested: false });
     for (const { root, nested } of roots) {
