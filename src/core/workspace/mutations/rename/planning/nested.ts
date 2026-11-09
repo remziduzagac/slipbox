@@ -91,7 +91,11 @@ export function nestedRootEdits(
   while (queue.length) {
     const g = openVault(queue.shift()!);
     graphs.push(g);
-    for (const n of g.nestedRoots()) queue.push(join(g.root, n));
+    // One reached through a followed link in it stays where it is, as above: the link moves with it (#53).
+    for (const n of g.nestedRoots()) {
+      const at = join(g.root, n);
+      if (isInside(real(g.root), real(at))) queue.push(at);
+    }
   }
   for (const g of graphs) {
     g.ensureAll();

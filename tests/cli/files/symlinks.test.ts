@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { makeCliProcessSandbox } from "../../support/cli-process.ts";
 
 // File-local default: tests/support/timeouts.ts.
@@ -77,7 +77,11 @@ describe("writing", () => {
     expect(existsSync(join(out, "sub", "s.md"))).toBe(true);
   });
 
-  test("a folder moved with a followed link to a vault elsewhere in it: the link moves, that vault stays where it is (#53)", () => {
+  /**
+   * A vault `root`, and `ov` elsewhere reached from it through a followed link at `link` (below `root`), with the vaults
+   * `nested` in `root`; each in a sandbox of its own, its machine's list read by `roots` (#53).
+   */
+  const followedVault = (link: string, nested: string[] = []) => {
     const dir = realpathSync(mkdtempSync(join(sandbox, "linked-vault-")));
     const own = {
       XDG_STATE_HOME: join(dir, "state"),
@@ -86,21 +90,30 @@ describe("writing", () => {
     };
     const root = join(dir, "root");
     const ov = join(dir, "elsewhere", "ov");
-    for (const d of [join(root, ".slipbox"), join(root, "f"), join(ov, ".slipbox")]) mkdirSync(d, { recursive: true });
-    writeFileSync(join(root, "f", "a.md"), "# A\n\n[o](ov/o.md)\n");
-    writeFileSync(join(root, "top.md"), "# Top\n\n[o](f/ov/o.md)\n");
-    writeFileSync(join(ov, "o.md"), "# O\n\n[back](../../root/f/a.md)\n");
-    const link = join(root, "f", "ov");
-    symlinkSync(ov, link);
+    for (const d of [root, ov, ...nested.map((n) => join(root, n))])
+      mkdirSync(join(d, ".slipbox"), { recursive: true });
+    mkdirSync(dirname(join(root, link)), { recursive: true });
+    symlinkSync(ov, join(root, link));
     mkdirSync(join(dir, "state", "slipbox"), { recursive: true });
     writeFileSync(
       join(dir, "state", "slipbox", "links.json"),
-      JSON.stringify({ version: 1, links: [{ link, target: ov, answer: "follow", at: new Date().toISOString() }] }),
+      JSON.stringify({
+        version: 1,
+        links: [{ link: join(root, link), target: ov, answer: "follow", at: new Date().toISOString() }],
+      }),
     );
     const roots = () =>
       (JSON.parse(readFileSync(join(dir, "state", "slipbox", "roots.json"), "utf8")).roots as { path: string }[])
         .map((r) => r.path)
         .sort();
+    return { own, root, ov, roots };
+  };
+
+  test("a folder moved with a followed link to a vault elsewhere in it: the link moves, that vault stays where it is (#53)", () => {
+    const { own, root, ov, roots } = followedVault("f/ov");
+    writeFileSync(join(root, "f", "a.md"), "# A\n\n[o](ov/o.md)\n");
+    writeFileSync(join(root, "top.md"), "# Top\n\n[o](f/ov/o.md)\n");
+    writeFileSync(join(ov, "o.md"), "# O\n\n[back](../../root/f/a.md)\n");
     // Both opened once: both in the machine's list.
     for (const cwd of [root, ov]) expect(slipbox(["ls"], { cwd, env: own }).code).toBe(0);
     expect(roots()).toEqual([ov, root].sort());
@@ -115,6 +128,25 @@ describe("writing", () => {
     // A link through it from what stays: to where the link is now.
     expect(readFileSync(join(root, "top.md"), "utf8")).toBe("# Top\n\n[o](g2/ov/o.md)\n");
   });
+
+  // The link in a vault nested in what moves: that vault moves, the one its link leads to doesn't.
+  for (const [what, link, nested, move, moved] of [
+    ["a folder holding a vault nested in it", "f/v/ov", "f/v", ["f", "g2"], "g2/v/ov"],
+    ["a vault nested in it", "v/ov", "v", ["v", "w"], "w/ov"],
+  ] as const)
+    test(`${what} moved, with a followed link to a vault elsewhere in that vault: the vault elsewhere stays (#53)`, () => {
+      const { own, root, ov, roots } = followedVault(link, [nested]);
+      writeFileSync(join(root, nested, "a.md"), "# A\n");
+      writeFileSync(join(ov, "o.md"), "# O\n");
+      for (const cwd of [root, join(root, nested), ov]) expect(slipbox(["ls"], { cwd, env: own }).code).toBe(0);
+      expect(roots()).toContain(ov);
+      const r = slipbox(["mv", ...move], { cwd: root, env: own });
+      expect([r.code, r.err]).toEqual([0, ""]);
+      expect(realpathSync(join(root, moved))).toBe(ov);
+      // Known where it is, never by the link's path, old or new.
+      expect(roots()).toContain(ov);
+      expect(roots().filter((p) => p.startsWith(`${root}/`) && p.endsWith("/ov"))).toEqual([]);
+    });
 });
 
 describe("the vault and the tool", () => {
