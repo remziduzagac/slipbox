@@ -1,7 +1,8 @@
 // Folders that answer slowly (T12, #9): one named `slow` takes SLOW_MS to list, one named `stuck` STUCK_MS — far past a
 // test's deadline — as a share or a disk asleep would; every other folder at once. One named `held` answers when its
 // test lets it go (`Hold`), however busy the machine: what waits on it is told by what's held, not by a clock. So does
-// a stat or a read of a path with a `held` folder on its way, made through the seam (`heldReads`, SD-D10).
+// a stat or a read of a path with a `held` folder on its way, made through the seam on a thread whose test asks
+// (`heldReads`, `setReadWait`; SD-D10).
 import { type Dirent, readdirSync, type Stats } from "node:fs";
 import { basename } from "node:path";
 import { onTheWay, stat } from "../../../src/core/foundation/platform/disk.ts";

@@ -268,7 +268,7 @@ export class Settings {
 
 function fileStamp(path: string): number {
   try {
-    return disk.exists(path) ? disk.stat(path).mtimeMs : -1;
+    return disk.stat(path).mtimeMs;
   } catch {
     return -1;
   }

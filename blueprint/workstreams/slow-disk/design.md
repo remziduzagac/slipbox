@@ -31,6 +31,9 @@ other is left for the rest. They answer, with what the asking thread knows and t
 
 Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
 `lstat` (its real path, whether anything is there), a file's bytes. The CLI reads through it too, on its own thread.
+The slow disk stood in for, and a test's hold, reach a read through it on a thread that takes them: the stand-in every
+thread but the screen's, as it starts; the hold the threads a test asks it of (SD-T1). The screen's thread reads at
+once until a task moves its reads, and that task's held test takes the hold there for them.
 
 **Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
 thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
@@ -198,21 +201,27 @@ In "A slow disk, stood in for" (built by SD-T1, but the disk threads, SD-T2's):
   "`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`".
 - "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk` in
   `core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the third" becomes
-  "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk`, in the seam every read
-  goes through: `core/foundation/platform/disk.ts`), and shortens the walk's and the disk threads' deadlines to the
-  third; a fourth part, when given, makes each stat and read of a path with that folder on its way take so long too
-  (`<name>:<ms>::<stat ms>` gives one without a deadline)".
+  "makes a folder of that name take so long to list, on every thread but the main one, each taking it once as it
+  starts (`slowDisk`, in the seam every read goes through: `core/foundation/platform/disk.ts`), and shortens the
+  walk's and the disk threads' deadlines to the third; a fourth part, when given, makes each stat and read of a path
+  with that folder on its way take so long too (`<name>:<ms>::<stat ms>` gives one without a deadline). The main
+  thread takes none: its reads go as they did until the tasks move them, and the held tests watch it (below)".
 - "the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of their own:
-  `tests/fixtures/walk/`)" becomes "the unit tests hold a folder up on a thread of their own and on the main thread
-  (`setFolderReader` for its listing, `setReadWait` for a stat or a read through the seam of a path under it; a worker
-  of their own: `tests/fixtures/walk/`)"; and "(`Hold`, on every thread at once)" becomes "(`Hold`, a listing, a stat
-  or a read alike, on every thread at once)".
+  `tests/fixtures/walk/`)" becomes "the unit tests hold a folder up on a thread that takes the hold, theirs or the
+  main thread (`setFolderReader` for its listing, `setReadWait` for a stat or a read through the seam of a path under
+  it, each set on the thread that asks; a worker of their own: `tests/fixtures/walk/`, which holds a stat or a read
+  only once its test asks); `setSlowDisk` sets a thread's slow disk, and a test sees what it sleeps by recording the
+  sleep, never by timing it"; and "(`Hold`, on every thread at once)" becomes "(`Hold`, a listing, a stat or a read
+  alike, on every thread that takes it at once)".
 - Added after that paragraph: "`check:boundary` keeps the files whose reads a slow disk would hold up to the seam
-  (SD-D12): those that read through it alone (`SEAM_READERS`, `scripts/check-boundary.ts`), and those still allowed
-  to import `node:fs`'s reads, each with why (`DISK_READERS`). It fails on a file of the list that imports a read and
-  isn't allowed to, on one allowed that no longer does, and on one that isn't there. It sees direct imports only: a
-  read through a helper (`readText`, `stamp`, `readJson`), or a call to the seam made on the main thread, is found by
-  the held tests, a read left on the main thread holding their key past the hold's deadline (`gaveUp`)."
+  (SD-D12): those that read through it alone (`SEAM_READERS`, `scripts/disk-inventory.ts`), and those still allowed
+  to read the disk themselves, each with why (`DISK_READERS`). It fails on a file of the list that reads and isn't
+  allowed to, on one allowed that no longer does, and on one, or the seam, that isn't there; only a test's small tree
+  written for the other rules asks to be left out (`--no-inventory`). It sees what a file imports or loads of `node:fs`
+  and Bun's files, not a read through a helper (`readText`, `stamp`, `readJson`) or a call to the seam made on the
+  main thread. Those the held tests find, task by task: each task's held test takes the hold on the main thread for
+  the reads it moves, so a read of them left there holds the test's key past the hold's deadline (`gaveUp`). SD-T1
+  moves none off the main thread, so none takes it there yet: the net grows with each task."
 
 Previously: "`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]`"; "makes a folder of that name take so long to
 list, on whichever thread lists it (`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the walk's and the

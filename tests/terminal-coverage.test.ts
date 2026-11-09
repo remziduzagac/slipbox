@@ -45,8 +45,13 @@ describe("the terminal checks' coverage", () => {
   test("the git panel's rows kept by what they are (gitsteady.ts) run the git checks, not every check", () => {
     expect(CHECKS_FOR.find(([re]) => re.test("src/tui/workspace/git/gitsteady.ts"))?.[1]).toEqual(["git"]);
   });
-  test("the seam every read goes through (disk.ts, SD-D14) runs the slow-disk checks, where it stands a slow disk in", () => {
-    expect(CHECKS_FOR.find(([re]) => re.test("src/core/foundation/platform/disk.ts"))?.[1]).toEqual(["slow disk"]);
+  test("the seam every read goes through (disk.ts, SD-D10) runs every check: every feature reads through it", () => {
+    const seam = "src/core/foundation/platform/disk.ts";
+    expect(CHECKS_FOR.filter(([re]) => re.test(seam))).toEqual([]);
+    const selected = scope([seam]);
+    if (selected.all !== null) throw new Error(`expected a pull request's scope, not everything: ${selected.all}`);
+    expect(selected.checks).toBe("all");
+    expect(selected.why).toContain(`${seam}: every check (no feature of its own)`);
   });
 
   test.each(["src/tui/workspace/vaults/vaults.ts", "src/core/workspace/mutations/rename/rename.ts"])(

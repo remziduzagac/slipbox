@@ -382,8 +382,10 @@ From the review, on 2026-11-10, by the maintainer's instruction to take the reco
   reaching stats and reads (SD-T1): keys pressed while a slow folder is read, each answered within a bound short of
   the folder's time (design/testing.md § The terminal tests), then what the read was for on the screen. CI runs them
   on Linux and macOS after a merge, not on the pull request (D266): before each task's pull request merges, the checks
-  it reaches run locally, listed for the maintainer's approval first (D207, SD-D14), and the task adds `CHECKS_FOR`
-  entries (`scripts/ci-scope.ts`) for `disk.ts` and the files it moves.
+  it reaches run locally (SD-D14: by the maintainer's standing go, unasked; where a task reaches every check, the
+  slow-disk checks and those of the features its files touch, `dev`'s full run the rest after the merge), and the task
+  adds `CHECKS_FOR` entries (`scripts/ci-scope.ts`) for the files it moves. `disk.ts` has none: every feature reads
+  through it, so a change to it reaches every check.
 - **Live.** Each task tried live on a FUSE mount that answers slowly, on Linux, as T12 was (the longest stall of the
   screen's thread, before and after, in the task's log); macOS has no FUSE of its own, so the stand-in alone there.
 - **What stays.** The watcher's, the explorer's, the vaults' and the CLI's tests pass unchanged.

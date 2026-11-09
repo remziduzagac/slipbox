@@ -298,9 +298,10 @@ export class GraphRefresh {
     const reached = new Set(graph.reached);
     graph.build(true, "lazy", walk);
     // A file the walk leaves out, reached by a link or by being opened, that the build didn't keep: reached as it was,
-    // never taken in as one of home's own.
+    // never taken in as one of home's own. Whether each is there, asked of the disk once.
+    const there = new Map(since.map((rel) => [rel, disk.exists(join(graph.root, rel))]));
     const changed = since.filter(
-      (rel) => !(reached.has(rel) && !graph.known(rel) && disk.exists(join(graph.root, rel)) && graph.reachFile(rel)),
+      (rel) => !(reached.has(rel) && !graph.known(rel) && there.get(rel) && graph.reachFile(rel)),
     );
     if (changed.length)
       applyToGraph(
@@ -308,7 +309,7 @@ export class GraphRefresh {
         {
           changes: changed.map((rel) => ({
             rel,
-            kind: disk.exists(join(graph.root, rel)) ? "changed" : "deleted",
+            kind: there.get(rel) ? "changed" : "deleted",
             isNote: graph.filter.isNoteName(basename(rel)),
           })),
           rescan: false,

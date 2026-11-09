@@ -1,17 +1,18 @@
 // The seam every read the slow-disk workstream moves goes through (SD-D10, SD-T1): a stat and a read of a file under a
-// `held` folder wait until the hold is let go, on a thread of the test's and here, and answer what node:fs and
-// `readText` answer; under any other folder, at once. The slow disk stood in for (`SLIPBOX_SLOW_DISK`) slows a stat
-// or a read by its fourth part alone. What waits is told by the hold, never by a clock (#75).
-import { afterEach, describe, expect, test } from "bun:test";
+// `held` folder wait until the hold is let go, on a thread whose test asks — one of the test's, and here — and answer
+// what node:fs and `readText` answer; under any other folder, at once. The slow disk stood in for (`SLIPBOX_SLOW_DISK`)
+// is taken by every thread but the screen's, and slows a stat or a read by its fourth part alone. What waits is told by
+// the hold, and what sleeps by the sleep recorded, never by a clock (#75).
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import * as disk from "../../../../src/core/foundation/platform/disk.ts";
 import { type DecodedFile, readText, stamp } from "../../../../src/core/foundation/platform/fsutil.ts";
 import { HELD_MS, Hold, heldReads, type StatSeen, statSeen } from "../../../fixtures/walk/slow.ts";
 import { makeCoreSandbox } from "../../../support/core-sandbox.ts";
 
 const sandbox = makeCoreSandbox();
-const SLOW_BEFORE = process.env.SLIPBOX_SLOW_DISK;
+const SLOW_HERE = join(import.meta.dir, "../../../fixtures/walk/slow-here.ts");
 
 /** A note's bytes as an editor on another system might leave them: a BOM, CRLF, an invalid byte. */
 const BYTES = Buffer.concat([Buffer.from("﻿# Held\r\n\r\nText "), Buffer.from([0xff]), Buffer.from("\r\n")]);
@@ -29,7 +30,7 @@ function tree(): { held: string; free: string } {
 type Answer = { stat?: StatSeen; text?: DecodedFile; error?: string };
 
 /** A worker of the walk's tests holding `hold` (`slow-worker.ts`): asked a stat or a read made there through the seam,
- *  or to let the hold go once this thread waits on it. */
+ *  to hold those from now on (`holdReads`), or to let the hold go once this thread waits on it. */
 function onThread(hold: Hold) {
   const w = hold.worker();
   const next = <T>(key: string): Promise<T> =>
@@ -47,6 +48,7 @@ function onThread(hold: Hold) {
       w.postMessage({ seam: { op, path } });
       return answer;
     },
+    holdReads: () => w.postMessage({ holdReads: true }),
     letGo(): Promise<true> {
       const done = next<true>("letGo");
       w.postMessage({ letGo: true });
@@ -74,12 +76,11 @@ afterEach(() => {
   stop?.();
   stop = null;
   disk.setReadWait(null);
-  if (SLOW_BEFORE === undefined) delete process.env.SLIPBOX_SLOW_DISK;
-  else process.env.SLIPBOX_SLOW_DISK = SLOW_BEFORE;
+  disk.setSlowDisk(null);
 });
 
 describe("the seam every read goes through (SD-D10)", () => {
-  test("on a test's thread: a stat and a read under `held` wait until it's let go, answering what they answer here; elsewhere at once", async () => {
+  test("on a test's thread: a stat and a read under `held` wait, once it's asked to hold them, until it's let go, answering what they answer here; elsewhere at once", async () => {
     const { held: file, free } = tree();
     held = new Hold();
     const thread = onThread(held);
@@ -87,8 +88,13 @@ describe("the seam every read goes through (SD-D10)", () => {
     // Elsewhere: answered while the hold is on, nothing waiting, nothing let go.
     expect(await thread.ask("stat", free)).toEqual({ stat: statSeen(statSync(free)) });
     expect(await thread.ask("read", free)).toEqual({ text: readText(free) });
+    // Under `held`, before the thread is asked to hold its reads: at once, as a walk's own reads there go (its
+    // `.gitignore`'s), its listings alone held.
+    expect(await thread.ask("stat", file)).toEqual({ stat: statSeen(statSync(file)) });
+    expect(await thread.ask("read", file)).toEqual({ text: readText(file) });
     expect([held.waiting, held.letGo, held.gaveUp]).toEqual([0, false, 0]);
-    // Under `held`: the thread waits there; once let go, its answer is this thread's.
+    // Asked: under `held`, the thread waits there; once let go, its answer is this thread's.
+    thread.holdReads();
     for (const op of ["stat", "read"] as const) {
       held.again();
       let came = false;
@@ -139,7 +145,7 @@ describe("the seam every read goes through (SD-D10)", () => {
     }
   });
 
-  test("SLIPBOX_SLOW_DISK: a fourth part slows each stat and read of a path with the folder on its way; none without it", () => {
+  test("SLIPBOX_SLOW_DISK: taken as a thread starts by every thread but the screen's; a fourth part slows each stat and read under the folder, none without it", () => {
     expect(disk.slowDisk({ SLIPBOX_SLOW_DISK: "slowdisk:2500" })).toEqual({ name: "slowdisk", ms: 2500 });
     expect(disk.slowDisk({ SLIPBOX_SLOW_DISK: "slowdisk:8000:1500" })).toEqual({
       name: "slowdisk",
@@ -162,19 +168,45 @@ describe("the seam every read goes through (SD-D10)", () => {
     expect(disk.onTheWay("/v/held", "held")).toBe(true);
     expect(disk.onTheWay("/v/helden/a.md", "held")).toBe(false);
 
+    // Taken where a thread starts, but on the screen's: a process given one, its main thread and a worker of its.
+    const given = Bun.spawnSync([process.execPath, SLOW_HERE], {
+      env: { ...process.env, SLIPBOX_SLOW_DISK: "held:2500::300" },
+    });
+    expect(JSON.parse(given.stdout.toString())).toEqual({ main: null, worker: { name: "held", ms: 2500, stat: 300 } });
+    expect(disk.slowDiskHere()).toBeNull();
+
+    // What a thread that took one sleeps, each sleep recorded rather than taken.
     const { held: file, free } = tree();
-    // No fourth part: a stat and a read under the folder at once — a minute's wait would be past the test's timeout.
-    process.env.SLIPBOX_SLOW_DISK = "held:60000";
-    expect(statSeen(disk.stat(file))).toEqual(statSeen(statSync(file)));
-    expect(readText(file)).toEqual(readText(free));
-    // A fourth part: each takes it under the folder; elsewhere, none.
-    process.env.SLIPBOX_SLOW_DISK = "held:60000::150";
-    for (const read of [() => disk.stat(file), () => readText(file), () => disk.exists(file)]) {
-      const at = performance.now();
-      read();
-      expect(performance.now() - at).toBeGreaterThanOrEqual(145);
+    const [heldDir, freeDir] = [dirname(file), dirname(free)];
+    const naps = spyOn(Bun, "sleepSync").mockImplementation(() => {});
+    const reads = () => {
+      for (const path of [file, free]) {
+        disk.stat(path);
+        readText(path);
+        disk.exists(path);
+      }
+      for (const dir of [heldDir, freeDir]) disk.readFolder(dir);
+    };
+    const slept = () => {
+      const calls = naps.mock.calls.map(([ms]) => ms);
+      naps.mockClear();
+      return calls;
+    };
+    try {
+      // None, as the screen's thread starts: nothing sleeps.
+      reads();
+      expect(slept()).toEqual([]);
+      // No fourth part: the folder's listing alone, a stat and a read under it at once.
+      disk.setSlowDisk({ name: "held", ms: 2500 });
+      reads();
+      expect(slept()).toEqual([2500]);
+      // A fourth part: each stat and read under the folder takes it too; elsewhere, none.
+      disk.setSlowDisk({ name: "held", ms: 2500, stat: 300 });
+      expect(disk.slowDiskHere()).toEqual({ name: "held", ms: 2500, stat: 300 });
+      reads();
+      expect(slept()).toEqual([300, 300, 300, 2500]);
+    } finally {
+      naps.mockRestore();
     }
-    process.env.SLIPBOX_SLOW_DISK = "held:60000::60000";
-    expect(statSeen(disk.stat(free))).toEqual(statSeen(statSync(free)));
   });
 });
