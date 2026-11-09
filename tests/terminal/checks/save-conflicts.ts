@@ -26,7 +26,7 @@ export const SAVE_CONFLICTS: Check[] = [
   {
     area: "outside-and-code",
     name: "conflict: k keeps yours, marked; :w asks first, d shows the difference, y writes yours over theirs",
-    covers: { cases: ["conflict"], commands: ["note.save"] },
+    covers: { cases: ["conflict"], commands: ["file.save"] },
     options: { open: MEETING },
     run: async (s) => {
       await typedAtEnd(s, "mine one");
@@ -48,7 +48,7 @@ export const SAVE_CONFLICTS: Check[] = [
   {
     area: "outside-and-code",
     name: "conflict: m merges — yours at the end, theirs at the top, both kept, unsaved until :w",
-    covers: { cases: ["conflict"], commands: ["note.save"] },
+    covers: { cases: ["conflict"], commands: ["file.save"] },
     options: { open: MEETING },
     run: async (s) => {
       await typedAtEnd(s, "mine three");

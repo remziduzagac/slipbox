@@ -31,7 +31,7 @@ describe("review cycle 1 (TUI)", () => {
   });
   test("replace all keeps to the selection as it shrinks or grows", async () => {
     const { h, v } = await source("cat cat\ncat cat\ncat\n");
-    await h.keys("shift+v", "j", "space", "f", "r", ...[..."cat"], "tab", "c", "alt+a");
+    await h.keys("shift+v", "j", "space", "/", "r", ...[..."cat"], "tab", "c", "alt+a");
     expect(v.buf.source).toBe("c c\nc c\ncat\n");
     await h.keys("enter"); // nothing left inside: the cat on line 3 stays
     expect(v.buf.source).toBe("c c\nc c\ncat\n");

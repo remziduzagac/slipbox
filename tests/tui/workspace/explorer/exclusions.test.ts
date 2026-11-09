@@ -29,12 +29,12 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     // Every save says it, not the first alone: each save's message stands on its own.
     for (let i = 0; i < 2; i++) {
       wip.edit(0, 0, "x");
-      await h.app.run("note.save");
+      await h.app.run("file.save");
       expect(last(h)).toMatchObject({ level: "info", text: "saved drafts/wip.md (not indexed: walk.exclude)" });
     }
     expect(readFileSync(join(root, "drafts", "wip.md"), "utf8")).toStartWith("xx");
     wip.edit(0, 0, "x");
-    await h.app.run("note.save_force");
+    await h.app.run("file.save_force");
     expect(last(h).text).toBe("saved drafts/wip.md (not indexed: walk.exclude) over the file on disk");
     wip.edit(0, 0, "x");
     h.app.saving.autosave();
@@ -43,11 +43,11 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     const alpha = h.app.buffer("notes/alpha.md")!;
     alpha.edit(0, 0, "x");
     wip.edit(0, 0, "x");
-    await h.app.run("note.save_all");
+    await h.app.run("file.save_all");
     expect(last(h).text).toBe("saved 2 notes (drafts/wip.md not indexed: walk.exclude)");
     h.app.open("notes/alpha.md");
     alpha.edit(0, 0, "x");
-    await h.app.run("note.save");
+    await h.app.run("file.save");
     expect(last(h).text).toBe("saved notes/alpha.md");
     // Moved there: said after where it went.
     h.app.renaming.noteTo("notes/beta.md", "drafts/");

@@ -58,7 +58,7 @@
   and `alt+i` comes back; `y s i w b`, `c s *` then a backtick, `d s (` and a mark typed over a selection wrap and
   unwrap.
 - **TODOs** (EG-T7): the reference set's TODOs are coloured where they're marks and not in prose or a string;
-  `] x` visits the file's; `space f x` lists the vault's.
+  `] x` visits the file's; `space / x` lists the vault's.
 - **Find and replace** (EG-T8): the list fills as the query is typed; it opens on the cursor's word; `path:` narrows it;
   `] q` steps after it's closed; a replace with two rows dropped leaves those two matches and undoes in one step.
 - **Folds** (EG-T9): `z a` on a heading folds its section to a row saying how many lines; `z shift+m` and `z

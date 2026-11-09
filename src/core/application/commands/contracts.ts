@@ -7,4 +7,9 @@ export interface CommandSpec {
   cli: string | null;
   /** A short explanation, shown under the entry in the which-key popup and in the palette. */
   desc: string;
+  /**
+   * The ids it had before (D274): still taken wherever a command is named — `[keys]`, `[aliases]`, a run by id — and
+   * read as this one, never listed.
+   */
+  formerly?: string[];
 }

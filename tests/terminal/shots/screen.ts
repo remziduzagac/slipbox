@@ -25,7 +25,7 @@ export const SHOTS: Shot[] = [
     name: "screen-info-export",
     options: HOME("notes/index.md"),
     take: async (s) => {
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       await s.keys("shift+g");
       await s.see("Export…");

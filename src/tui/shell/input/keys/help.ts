@@ -299,15 +299,18 @@ export const DEFAULT_GROUPS: Record<string, string> = {
   "leader h": "history: back, forward, everywhere visited",
   "leader w": "window: split, focus, move, resize",
   "leader t": "tabs: open, switch, reorder, close",
-  "leader f": "find: notes, headings, tags, text, commands",
+  "leader /": "find: in this note, in every note, search, replace; a heading, the tags, the types, a line",
+  "leader f":
+    "file: new, rename, move, delete, copy, cut, save, reload, info, send, problems; open by name or path, reveal — any file, the explorer's selected one when it has focus",
   "leader u": "ui: theme, icons, width, zen, toggles",
   "leader s": "scratch: collect references for agents",
   "leader k": "cell: fold, edit, copy, references, problems, scratch — the code view's cell at the cursor",
   "leader c": "code: rename, actions, format — the language server's; the problem at the cursor (d)",
-  "leader n": "note: new, rename, move, delete, copy, cut, source, the lens, save, edit elsewhere, reload, info",
-  "leader d": "folder: new, rename, move, delete, copy, cut, paste — the explorer's selected one, or this note's",
+  "leader n":
+    "note: a task ticked, source, the lens, a heading renamed, footnotes, properties, a conflict resolved, export, your editor — what only a note has",
+  "leader d": "directory: new, rename, move, delete, copy, cut, paste — the explorer's selected folder, or this note's",
   "leader v":
-    "folders: go into one, its copies, name it, .slipbox/ in or out, the trash, restore, reindex, info, reload config, symlinks answered",
+    "vault: go into one, its copies, name it, .slipbox/ in or out, the trash, restore, reindex, info, reload config, symlinks answered",
   "leader q": "session: quit",
   "leader g":
     "git: the panel (g); this line's change: stage (s), undo (d), preview (enter); this file unstaged (u); the branch's commits (l); the line's web link: copy (y), open (w)",

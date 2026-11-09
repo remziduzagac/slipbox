@@ -133,7 +133,7 @@ export const TERMINAL_INPUT: Check[] = [
   {
     area: "navigating",
     name: "keys: insert mode's backspace joins lines, tab and shift+tab indent, home, end and the arrows move",
-    covers: { cases: ["keys", "source-mode"], commands: ["view.source", "edit.insert", "note.save"] },
+    covers: { cases: ["keys", "source-mode"], commands: ["view.source", "edit.insert", "file.save"] },
     options: { open: "equipment/instrument-inventory.md" },
     run: async (s) => {
       const NOTE = "equipment/instrument-inventory.md";

@@ -235,11 +235,14 @@ describe("review cycle 3 (config)", () => {
     mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
     writeFileSync(
       join(dir, "v", ".slipbox", "config.toml"),
-      '[aliases]\nwq = "app.quit_force"\n[keys]\n"ctrl+s" = "note.revert"\n"g z" = "ui.zen"\n',
+      '[aliases]\nwq = "app.quit_force"\nw = "note.save_force"\n[keys]\n"ctrl+s" = "note.revert"\n"ctrl+r" = "file.revert"\n"g z" = "ui.zen"\n',
     );
     const r = loadConfig({ configFile: join(dir, "none.toml"), vaultRoot: join(dir, "v") });
     expect(r.config.aliases.wq).toBeUndefined();
+    // By its id now or the one it had (D274): `note.revert` is `file.revert`, `note.save_force` `file.save_force`.
+    expect(r.config.aliases.w).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["ctrl+s"]).toBeUndefined();
+    expect((r.config.keys as Record<string, string>)["ctrl+r"]).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["g z"]).toBe("ui.zen"); // a harmless one applies
   });
   test("a vault's keys and aliases can't run a program (25.7): your own config's can", () => {

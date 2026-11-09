@@ -8,7 +8,7 @@ const FILES: Check[] = [
   {
     area: "links-and-files",
     name: "explorer files: r renames, m moves, d deletes and u restores, y p copies — links fixed; a note duplicated and deleted",
-    covers: { cases: ["copy-move", "trash", "rename"], commands: ["note.copy", "note.delete", "trash.open"] },
+    covers: { cases: ["copy-move", "trash", "rename"], commands: ["file.copy", "file.delete", "trash.open"] },
     options: { open: "people/contacts.md" },
     run: async (s) => {
       // The explorer on contacts.md (space E reveals it).
@@ -54,13 +54,13 @@ const FILES: Check[] = [
       // The trash is listed, empty now.
       await leader(s, "v", "t");
       await s.message("the trash is empty");
-      // The current note: duplicated (the palette), opened; then that copy deleted (space n d).
+      // The current note: duplicated (the palette), opened; then that copy deleted (space f d).
       await s.keys("escape");
       await s.keys(":");
-      await s.type("Duplicate the note");
+      await s.type("Duplicate the file");
       await s.keys("enter");
       await s.status("people-contacts-copy-2.md");
-      await leader(s, "n", "d");
+      await leader(s, "f", "d");
       await s.see(/Delete handbook\/people-contacts-copy-2\.md\?/);
       await s.type("y");
       await s.message("deleted handbook/");
@@ -69,15 +69,15 @@ const FILES: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "files: space n — the note moved to a folder, copied and pasted, cut, deleted and restored, duplicated",
+    name: "files: space f — the note moved to a folder, copied and pasted, cut, deleted and restored, duplicated",
     covers: {
       cases: ["copy-move", "trash"],
-      commands: ["note.move", "note.yank", "note.cut", "folder.paste", "note.delete", "trash.restore", "note.copy"],
+      commands: ["file.move", "file.yank", "file.cut", "folder.paste", "file.delete", "trash.restore", "file.copy"],
     },
     options: { open: "people/contacts.md" },
     run: async (s) => {
-      // space n shift+m: a folder picked from the tree; links fixed after a preview.
-      await leader(s, "n", "shift+m");
+      // space f shift+m: a folder picked from the tree; links fixed after a preview.
+      await leader(s, "f", "shift+m");
       await s.see("Move people/contacts.md to…");
       await s.type("handbo");
       await s.keys("enter");
@@ -86,18 +86,18 @@ const FILES: Check[] = [
       await s.file("handbook/contacts.md", (t) => t.includes("# Contacts"), "moved into handbook/");
       await opened(s, "handbook/contacts.md");
       s.expect(s.read("home.md").includes("(handbook/contacts.md)"), "home's link follows it");
-      // space n y, then space d p: a copy pasted in this note's folder, beside it.
-      await leader(s, "n", "y");
+      // space f y, then space d p: a copy pasted in this note's folder, beside it.
+      await leader(s, "f", "y");
       await s.message("copied handbook/contacts.md");
       await leader(s, "d", "p");
       await s.file("handbook/contacts-copy.md", (t) => t.includes("# Contacts"), "a copy beside it");
-      // space n x, then space d p where it already is: nothing to move.
-      await leader(s, "n", "x");
+      // space f x, then space d p where it already is: nothing to move.
+      await leader(s, "f", "x");
       await s.message("cut handbook/contacts.md");
       await leader(s, "d", "p");
       await s.message("already in handbook");
-      // space n d: to the trash, asked first; space v u: back.
-      await leader(s, "n", "d");
+      // space f d: to the trash, asked first; space v u: back.
+      await leader(s, "f", "d");
       await s.see(/Delete handbook\/contacts\.md\?/);
       await s.type("y");
       await s.message("deleted handbook/contacts.md");
@@ -105,8 +105,8 @@ const FILES: Check[] = [
       await leader(s, "v", "u");
       await s.message("restored handbook/contacts.md");
       s.expect(s.exists("handbook/contacts.md"), "back");
-      // space n shift+y: duplicated beside it, the copy opened.
-      await leader(s, "n", "shift+y");
+      // space f shift+y: duplicated beside it, the copy opened.
+      await leader(s, "f", "shift+y");
       await opened(s, "handbook/contacts-copy-2.md");
       s.expect(s.exists("handbook/contacts-copy-2.md"), "the duplicate written");
     },
@@ -200,7 +200,7 @@ const FILES: Check[] = [
   {
     area: "links-and-files",
     name: "files: a folder with an unsaved note open in it isn't renamed — said, the edit kept; saved, it is, the note open from its new place",
-    covers: { cases: ["copy-move", "rename"], commands: ["folder.rename", "view.source", "note.save"] },
+    covers: { cases: ["copy-move", "rename"], commands: ["folder.rename", "view.source", "file.save"] },
     options: { open: "people/contacts.md" },
     run: async (s) => {
       await leader(s, "n", "v");
@@ -241,14 +241,14 @@ const FILES: Check[] = [
   {
     area: "links-and-files",
     name: "trash: two notes deleted, space v t lists them and ends with Empty the trash…; enter, y, gone for good (DF-D14)",
-    covers: { cases: ["trash"], commands: ["note.delete", "trash.open", "trash.empty"] },
+    covers: { cases: ["trash"], commands: ["file.delete", "trash.open", "trash.empty"] },
     run: async (s) => {
       for (const [name, path] of [
         ["wrap-probe", "scratch/wrap-probe.md"],
         ["broken-frontmatter", "scratch/broken-frontmatter.md"],
       ] as const) {
         await open(s, name);
-        await leader(s, "n", "d");
+        await leader(s, "f", "d");
         await s.see(`Delete ${path}?`);
         await s.type("y");
         await s.message(`deleted ${path}`);
@@ -299,11 +299,11 @@ const FILES: Check[] = [
 const RENAMES: Check[] = [
   {
     area: "links-and-files",
-    name: "rename: space n m previews every change, enter renames; each link follows, nothing else written into the note",
-    covers: { cases: ["rename", "links/conventions", "links/moves"], commands: ["note.rename"] },
+    name: "rename: space f m previews every change, enter renames; each link follows, nothing else written into the note",
+    covers: { cases: ["rename", "links/conventions", "links/moves"], commands: ["file.rename"] },
     run: async (s) => {
       await open(s, "kenji-mori");
-      await leader(s, "n", "m");
+      await leader(s, "f", "m");
       await s.see("rename or move people/kenji-mori.md to:");
       await s.keys("ctrl+u");
       await s.type("people/kenji");
@@ -343,11 +343,11 @@ const RENAMES: Check[] = [
     name: "rename: a link written later to the old path — relinked; then undone, newest first, every file as it was (7.4)",
     covers: {
       cases: ["rename", "links/moves", "links"],
-      commands: ["note.rename", "note.open", "link.relink", "rename.undo"],
+      commands: ["file.rename", "file.open", "link.relink", "rename.undo"],
     },
     run: async (s) => {
       await open(s, "kenji-mori");
-      await leader(s, "n", "m");
+      await leader(s, "f", "m");
       await s.see("rename or move people/kenji-mori.md to:");
       await s.keys("ctrl+u");
       await s.type("people/kenji");
@@ -406,12 +406,12 @@ const RENAMES: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "rename: space n m into a folder — named, the note's name kept; or ending in /, the folder made (DF-D4)",
-    covers: { cases: ["rename", "copy-move"], commands: ["note.rename"] },
+    name: "rename: space f m into a folder — named, the note's name kept; or ending in /, the folder made (DF-D4)",
+    covers: { cases: ["rename", "copy-move"], commands: ["file.rename"] },
     run: async (s) => {
-      // space n m with an existing folder's name: into it, the note's own name kept.
+      // space f m with an existing folder's name: into it, the note's own name kept.
       await open(s, "kenji-mori");
-      await leader(s, "n", "m");
+      await leader(s, "f", "m");
       await s.see("rename or move people/kenji-mori.md to:");
       await s.keys("ctrl+u");
       await s.type("projects");
@@ -426,7 +426,7 @@ const RENAMES: Check[] = [
       await opened(s, "projects/kenji-mori.md");
       s.expect(s.read("home.md").includes("(projects/kenji-mori.md)"), "home's link follows it");
       // A name ending in /, a folder not there yet: made, the note in it.
-      await leader(s, "n", "m");
+      await leader(s, "f", "m");
       await s.see("rename or move projects/kenji-mori.md to:");
       await s.keys("ctrl+u");
       await s.type("visitors/");

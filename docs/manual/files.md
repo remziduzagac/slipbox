@@ -178,7 +178,7 @@ The reasons are:
 | `over walk.max_file_size` | a note too big to read |
 | `past home's limit of 5,000 folders` | a folder of your home folder past where its index stopped |
 
-The Info view (`space n i`) says it too, of the file on screen: `index: not indexed: walk.exclude`, for the file's own
+The Info view (`space f i`) says it too, of the file on screen: `index: not indexed: walk.exclude`, for the file's own
 `⊘` or its folder's.
 
 The column before it is git's: `M`, `+`, `R` or `!` for a changed file, and `•` for a folder with a change in it, `o` in
@@ -290,7 +290,7 @@ The naming and refusal rules below apply to these new paths too.
 
 ![An empty new note, its path and new mark in the tab, before its first save](../images/files-new-file.png)
 
-Press `ctrl+n` or `space n n`, or type `:new`. In the explorer, press `n`. slipbox asks for the note's name.
+Press `ctrl+n` or `space f n`, or type `:new`. In the explorer, press `n`. slipbox asks for the note's name.
 
 It makes the note in the folder of the note you are reading. When the explorer has the keys, it makes it in the
 explorer's selected folder instead, or beside the selected file. The question says where: `new note in ideas/`.
@@ -324,11 +324,11 @@ The folder is made in the same place a new note would be, and its parents too. I
 | To | In the explorer | Anywhere |
 | --- | --- | --- |
 | rename a note, file or folder in its folder | `r` | `space d r` (the folder) |
-| move it to a folder picked from a tree | `m` | `space n shift+m` (the note), `space d m` (the folder) |
-| rename or move a note by typing its new path | | `space n m`, `:rename`, `:mv` |
-| move it by cutting and pasting | `x`, then `p` on the folder | `space n x` / `space d x`, then `space d p` |
+| move it to a folder picked from a tree | `m` | `space f shift+m` (the file), `space d m` (the folder) |
+| rename or move a file by typing its new path | | `space f m`, `:rename`, `:mv` |
+| move it by cutting and pasting | `x`, then `p` on the folder | `space f x` / `space d x`, then `space d p` |
 
-`space n` acts on the note you are reading, and `space d` on its folder. When the explorer has the keys, they act on its
+`space f` acts on the file you are reading, and `space d` on its folder. When the explorer has the keys, they act on its
 selected row.
 
 - **`r`** asks for the new name, with the old one typed already. A note's `.md` is kept for you. Type `espresso`, and
@@ -338,7 +338,7 @@ selected row.
   - `left` and `right` fold and unfold.
   - Typing filters to the folders that match, under their parents. `enter` takes the first.
   - A folder can't move into itself, so it isn't offered.
-- **`space n m`** asks for the note's new path from the vault's top, with its old one typed already (`ideas/coffee`).
+- **`space f m`** asks for the file's new path from the vault's top, with its old one typed already (`ideas/coffee`).
   Change the name, the folders, or both.
   - A folder that's there, or a path ending in `/`, moves the note into it, keeping its name. `archive/` makes
     `archive/coffee.md`, and the folder is made if need be. `archive` does the same when there is such a folder.
@@ -403,10 +403,10 @@ From anywhere:
 
 | Key | What it does |
 | --- | --- |
-| `space n y` | Copies the note you are reading |
+| `space f y` | Copies the file you are reading |
 | `space d y` | Copies its folder |
 | `space d p` | Pastes into the folder of the note you are reading. With the explorer's keys, into the selected one |
-| `space n shift+y` | Makes a copy of the note beside it, and opens it |
+| `space f shift+y` | Makes a copy of the file beside it, and opens it |
 
 A copy is the file as it is, links and all. Nothing links to it yet, and nothing is rewritten. So a relative link in a
 copy pasted into another folder may no longer reach its note.
@@ -415,7 +415,7 @@ What you copied or cut is forgotten when you go into another vault.
 
 ## Deleting and the trash
 
-1. Press `d` in the explorer, `space n d` for the note, or `space d d` for the folder. Or type `:delete`. slipbox asks
+1. Press `d` in the explorer, `space f d` for the file, or `space d d` for the folder. Or type `:delete`. slipbox asks
    first, and says what it costs:
    `Delete ideas/coffee.md? 3 links to it will break. It goes to the trash: u restores it.`
 2. Press `y` to delete. `n` or `esc` doesn't.
@@ -512,7 +512,7 @@ starts with `./` or `../` is from the folder you are in instead.
 | `slipbox trash empty --yes` | Empties the trash for good. Without `--yes`, lists what would go |
 | `slipbox undo` | Takes back the last rename or move, as `space v shift+u` does |
 
-`mv` takes the new path as `space n m` does:
+`mv` takes the new path as `space f m` does:
 
 - A folder that's there, or a path ending in `/`, is moved into. So `slipbox mv inbox.md archive/` makes
   `archive/inbox.md`, and `slipbox mv drafts archive/` makes `archive/drafts`.
@@ -541,15 +541,15 @@ out is refused if a file changed in between.
 
 | Keys | What they do |
 | --- | --- |
-| `space e` / `space shift+e` | The explorer: open, focus, close / show the note you are reading in it |
-| `ctrl+n`, `space n n` / `ctrl+shift+n`, `space d n` | A new note / folder |
-| `space n m` | Rename or move the note by its path |
-| `space n shift+m` / `space d m` | Move the note / the folder to a folder picked from a tree |
+| `space e` / `space shift+e`, `space f shift+e` | The explorer: open, focus, close / show the file on screen in it |
+| `ctrl+n`, `space f n` / `ctrl+shift+n`, `space d n` | A new note / folder |
+| `space f m` | Rename or move the file by its path |
+| `space f shift+m` / `space d m` | Move the file / the folder to a folder picked from a tree |
 | `space d r` | Rename the folder |
-| `space n y`, `space n x` / `space d y`, `space d x` | Copy, cut the note / the folder |
+| `space f y`, `space f x` / `space d y`, `space d x` | Copy, cut the file / the folder |
 | `space d p` | Paste into the folder |
-| `space n shift+y` | A copy of the note beside it, opened |
-| `space n d` / `space d d` | Delete the note / the folder, to the trash |
+| `space f shift+y` | A copy of the file beside it, opened |
+| `space f d` / `space d d` | Delete the file / the folder, to the trash |
 | `space v u` / `space v t` | Restore what was deleted last / the trash, its last row emptying it |
 | `space v shift+u` | Undo the last rename or move |
 

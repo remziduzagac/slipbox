@@ -1,7 +1,7 @@
-// A file opened by its path: the prompt (`space f e`, `note.open_path`) and the switcher given a path (one starting
+// A file opened by its path: the prompt (`space f e`, `file.open_path`) and the switcher given a path (one starting
 // `/`, `~/`, `./` or `../`). What's typed is read as `:e` reads it — `~` home, a relative path from the vault's top —
 // and its folder listed as it's typed: the entries whose names hold what's begun after its last `/`. `tab` completes
-// the selected entry into the path, `enter` goes into a folder or opens a file through `:e` (`note.open`: into another
+// the selected entry into the path, `enter` goes into a folder or opens a file through `:e` (`file.open`: into another
 // vault, asked first, D270), `ctrl+w` goes back a folder. A folder is read off the main thread (T12), one at a time, so
 // one on a disk that answers slowly never holds up the keys, nor the explorer's listings behind it; one a link not
 // followed leads to (VV-D6) is listed only once you've said so.
@@ -236,7 +236,7 @@ export class PathCompletion {
     if (!o || !this.when(o.input) || o.filtered.some((e) => !e.item.header)) return false;
     this.app.overlay = null;
     const abs = resolve(this.app.loc.root, untildePath(o.input, this.app.home));
-    void this.app.run(`note.open ${abs}`).then(() => this.app.host.requestRender());
+    void this.app.run(`file.open ${abs}`).then(() => this.app.host.requestRender());
     return true;
   }
 
@@ -251,11 +251,11 @@ export class PathCompletion {
       this.app.overlay = o;
       return this.type(o, pick.typed);
     }
-    await this.app.run(`note.open ${pick.abs}`);
+    await this.app.run(`file.open ${pick.abs}`);
   }
 }
 
-/** `space f e` (`note.open_path`): a path asked for, completed as it's typed, the file opened as `:e` opens it. */
+/** `space f e` (`file.open_path`): a path asked for, completed as it's typed, the file opened as `:e` opens it. */
 export function openPathPrompt(a: App): void {
   const paths = new PathCompletion(a);
   a.overlays.openList({

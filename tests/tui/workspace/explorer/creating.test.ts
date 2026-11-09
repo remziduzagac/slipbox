@@ -29,18 +29,18 @@ describe("creating notes and folders", () => {
   test(":new takes folders (made) and other note formats; an existing file opens; outside the vault is refused", async () => {
     const root = makeVault();
     const h = await harness({ root });
-    await h.app.run("note.create projects/deep/plan");
+    await h.app.run("file.create projects/deep/plan");
     expect(readFileSync(join(root, "projects", "deep", "plan.md"), "utf8")).toBe("# plan\n\n");
-    await h.app.run("note.create /cfg.toml");
+    await h.app.run("file.create /cfg.toml");
     expect(existsSync(join(root, "cfg.toml"))).toBe(true);
     expect(h.app.view!.buf.rel).toBe("cfg.toml");
-    await h.app.run("note.create notes/alpha");
+    await h.app.run("file.create notes/alpha");
     expect(h.app.messages.at(-1)!.text).toContain("exists");
-    await h.app.run("note.create ../../escape"); // from notes/: past the root
+    await h.app.run("file.create ../../escape"); // from notes/: past the root
     expect(h.app.messages.at(-1)!.text).toContain("not inside the vault");
     expect(existsSync(join(root, "..", "escape.md"))).toBe(false);
   });
-  test("the explorer: n a note in the selected folder (space n n too), N a folder — shown though empty, and selected", async () => {
+  test("the explorer: n a note in the selected folder (space f n too), N a folder — shown though empty, and selected", async () => {
     const root = makeVault();
     const h = await harness({ root });
     await h.keys("space", "e");
@@ -60,11 +60,11 @@ describe("creating notes and folders", () => {
     await h.keys("enter");
     expect(existsSync(join(root, "notes", "ideas", "first.md"))).toBe(true);
     expect(h.app.view!.buf.rel).toBe("notes/ideas/first.md");
-    // space n n, from the explorer: the same, in its selected folder.
+    // space f n, from the explorer: the same, in its selected folder.
     await h.keys("escape", "space", "e");
     h.app.region = "sidebar";
     h.app.explorer.select("notes/ideas");
-    await h.keys("space", "n", "n");
+    await h.keys("space", "f", "n");
     expect(h.app.overlay).toMatchObject({ kind: "prompt", label: "new note in notes/ideas/" });
   });
   test("a pane's own key sequence waits for its second key: a global key it starts with isn't run after a pause", async () => {

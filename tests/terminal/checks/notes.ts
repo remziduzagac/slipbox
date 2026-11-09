@@ -9,7 +9,7 @@ export const NOTES: Check[] = [
     name: "notes: :w, :wa, :w! and :e! — saved, all saved, saved over a file changed on disk, reverted; space n c resolves",
     covers: {
       cases: ["save", "conflict"],
-      commands: ["note.save", "note.save_all", "note.save_force", "note.revert", "note.resolve", "note.open"],
+      commands: ["file.save", "file.save_all", "file.save_force", "file.revert", "note.resolve", "file.open"],
     },
     options: { open: "meetings/2026-09-14-weekly.md" },
     run: async (s) => {
@@ -59,8 +59,8 @@ export const NOTES: Check[] = [
   },
   {
     area: "links-and-files",
-    name: "notes: ctrl+n makes a note beside this one, typed into; ctrl+shift+n a folder; space n r reads it again",
-    covers: { cases: ["new-note"], commands: ["note.create", "folder.create", "note.reload"] },
+    name: "notes: ctrl+n makes a note beside this one, typed into; ctrl+shift+n a folder; space f r reads it again",
+    covers: { cases: ["new-note"], commands: ["file.create", "folder.create", "file.reload"] },
     options: { open: "people/kenji-mori.md" },
     run: async (s) => {
       await s.keys("ctrl+n");
@@ -82,14 +82,14 @@ export const NOTES: Check[] = [
       await s.until(() => s.exists("people/archive"), 3000, "the folder made");
       // An outside write, read again by hand (the watcher would anyway).
       s.write("people/visitors-2026.md", "# visitors-2026\n\nRewritten by an agent.\n");
-      await leader(s, "n", "r");
+      await leader(s, "f", "r");
       await s.see("Rewritten by an agent.", 5000);
     },
   },
   {
     area: "links-and-files",
-    name: "notes: space n e hands the note to your editor and comes back; space n s sends it to a running one",
-    covers: { cases: ["notes"], commands: ["note.edit", "note.send", "note.send_pick"] },
+    name: "notes: space n e hands the note to your editor and comes back; space f s sends it to a running one",
+    covers: { cases: ["notes"], commands: ["note.edit", "file.send", "file.send_pick"] },
     // Each editor leaves a file behind, so the check is that it really ran, with the note's path.
     options: {
       config: `[editor]\ncommand = "sh -c 'echo $0 > $1' {file} {vault}/ran-edit"\nremote = ["sh -c 'echo $0 > $1' {file} {vault}/ran-send"]\n`,
@@ -99,12 +99,12 @@ export const NOTES: Check[] = [
       await opened(s, "home.md");
       await s.until(() => s.exists("ran-edit"), 5000, "the editor to run");
       s.expect(s.read("ran-edit").trim().endsWith("home.md"), "the editor got the note");
-      await leader(s, "n", "s");
+      await leader(s, "f", "s");
       await s.until(() => s.exists("ran-send"), 5000, "the remote editor to run");
       s.expect(s.read("ran-send").trim().endsWith("home.md"), "the remote editor got the note");
-      // space n p picks which running nvim when the remote names a {server}; this one names none: sent again.
+      // space f p picks which running nvim when the remote names a {server}; this one names none: sent again.
       rmSync(s.path("ran-send"));
-      await leader(s, "n", "p");
+      await leader(s, "f", "p");
       await s.until(() => s.exists("ran-send"), 5000, "the remote editor to run again");
       await s.message("sent to sh at line 1");
     },

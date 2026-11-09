@@ -171,10 +171,10 @@ conflicts (`4.5`–`4.10`, `5.5`–`5.7`); live preview (`4.14`).
 
 - [x] **6.1** Decided: our own index in the core (SQLite FTS5), a scan until it's built; an outside engine later
   (D114).
-- [x] **6.2** Literal search: every match (`find`, `space f g`).
+- [x] **6.2** Literal search: every match (`find`, `space / g`).
 - [x] **6.3** Regex search (`find --regex`).
 - [x] **6.4** Scoping by tag and folder: `#tag` / `tag:x` (nested tags too), `path:folder/`.
-- [x] **6.5** Results list and navigation in the TUI (`space f s`): ranked as you type, the words marked.
+- [x] **6.5** Results list and navigation in the TUI (`space / s`): ranked as you type, the words marked.
 - [x] **6.6** The search index: FTS5 in the cache, a row per file, BM25; caught up by size and mtime.
 - [x] **6.7** The change feed: every change to the vault's files through the graph (`onChange`).
 - [x] **6.8** `slipbox search` (ranked; the index, else a scan), `slipbox index`; `[search] engine`.
@@ -506,7 +506,7 @@ path (`21.8`); `17.12`'s redirect following removed in `20.22`; `17.18` revised 
 *Phase 4. Decided 2026-09-30 (D149).*
 
 - [x] **18.1** Buttons: a new note and folder on the explorer's title; rename, move, delete on the selected row.
-- [x] **18.2** Keys: `n` / `N` new note, folder (`space n n` too); `r` rename, `m` move, `d` delete, `u` restore.
+- [x] **18.2** Keys: `n` / `N` new note, folder (`space f n` too); `r` rename, `m` move, `d` delete, `u` restore.
 - [x] **18.3** Folders renamed and moved like notes: every link to anything in them fixed, after a preview.
 - [x] **18.4** Delete to the vault's trash (in its state), links that break said; restore; `:trash`.
 - [x] **18.5** Copy, cut and paste (`y`, `x`, `p`): a copy (`name-copy`), or a move with links fixed.
@@ -517,7 +517,8 @@ path (`21.8`); `17.12`'s redirect following removed in `20.22`; `17.18` revised 
 - [x] **18.10** Questions float in a window: the answer typed, OK / Cancel; a yes-or-no's Yes / No (`y`, `n`).
 - [x] **18.11** `v` makes a folder a vault, `shift+v` a nested vault a plain folder; `init <folder>`, `deinit`.
 - [x] **18.12** A plan's writes into another vault's files reach its index at once (a second rename finds them).
-- [x] **18.13** Leader keys for every file action: `space n` notes, `space d` folders, `space v` vaults.
+- [x] **18.13** Leader keys for every file action: `space f` files (`space n` until D274), `space d` folders,
+  `space v` vaults.
 
 ## Notes over time and by their shape (`22.x`)
 

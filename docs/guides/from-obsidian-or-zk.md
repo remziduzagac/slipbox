@@ -51,7 +51,7 @@ In a zk notebook, it says `markdown links, relative, without .md — zk's .zk/co
 - **Embeds**: `![[note]]`, `![[note#Heading]]` and `![[note#^block]]`. Alone in a paragraph, each is drawn in place,
   behind a bar. `![[photo.png|300]]` is a picture, drawn that wide where your terminal draws pictures. slipbox finds
   it by its name anywhere in the vault.
-- **Tags**: `#tag` and `#nested/tag` in the text, and `tags:` in the front matter. `space f t` lists them, then a
+- **Tags**: `#tag` and `#nested/tag` in the text, and `tags:` in the front matter. `space / t` lists them, then a
   tag's notes.
 - **Front matter** (Obsidian's properties) is a table at the top of the note. `aliases:` gives a note more names. A
   wikilink in it, such as `related: "[[coffee]]"`, is a link like any other.
@@ -80,7 +80,7 @@ These links come out the way the folder writes them:
 - In a zk notebook, they follow `link-format` and `link-drop-extension` in `.zk/config.toml`. By default, a link is a
   Markdown link from the note, without `.md`.
 
-To rename or move a note in slipbox, press `space n m`, or `r` and `m` in the explorer. slipbox fixes every link to
+To rename or move a note in slipbox, press `space f m`, or `r` and `m` in the explorer. slipbox fixes every link to
 it, each in the form it was written. A wikilink stays a wikilink, and a name stays a name.
 
 ## What it doesn't do

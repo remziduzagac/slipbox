@@ -333,7 +333,7 @@ export interface SessionState {
   recent_commands?: string[];
   /** Notes and files shown, most recent first (the switcher lists them first). */
   recent_notes?: string[];
-  /** The nvim socket `space n s` sends to (picked once, then used while it answers). */
+  /** The nvim socket `space f s` sends to (picked once, then used while it answers). */
   remote_server?: string;
 }
 

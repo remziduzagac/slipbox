@@ -45,8 +45,9 @@ Your configuration takes the same notation. It also takes the usual other spelli
 `ctrl+left` and `ctrl+right` by word, `ctrl+shift+f` and `ctrl+tab`. As in vim, `ctrl+w` starts the window keys, and
 `ctrl+t` starts the tab keys.
 
-**The leader for the rest.** Everything else is under `space`, in groups: `space l` for links, `space f` for finding,
-`space n` for the note, and so on. A group's letter twice opens its list: `space h h`, `space l l`, `space t t`,
+**The leader for the rest.** Everything else is under `space`, in groups named for what they act on: `space l` for
+links, `space /` for finding, `space n` for what only a note has, `space f` for any file, `space d` for its folder,
+`space v` for the vault, and so on. A group's letter twice opens its list: `space h h`, `space l l`, `space t t`,
 `space f f`, `space u u`, `space s s`.
 
 **No emacs keys**, except what a Mac terminal sends for its own keys:
@@ -118,7 +119,7 @@ window's edge. [Reading](reading.md) says more.
 | onto the next / previous character you type, on the row | `f` / `shift+f` | |
 | up to the next / previous character you type | `t` / `shift+t` | |
 | the last `f` or `t` again / the other way | `;` / `,` | |
-| a line by its number | `42 g g`, `42 shift+g` (SOURCE view) | `ctrl+g`, `space f l`, `:42` |
+| a line by its number | `42 g g`, `42 shift+g` (SOURCE view) | `ctrl+g`, `space / l`, `:42` |
 | a word or a link on screen, by its label | | `s` (reading), `g w` |
 
 `s` (or `g w`) puts a label of one or two letters on every word of two letters or more and every link the windows of the
@@ -352,7 +353,7 @@ To go to a tab by its place:
 | What | Keys |
 | --- | --- |
 | the explorer: opens it, focuses it, closes it, in turn | `space e` |
-| this note, shown and selected in the explorer | `space shift+e` |
+| the file on screen, shown and selected in the explorer | `space shift+e`, `space f shift+e` |
 
 ### Inside the explorer
 
@@ -424,7 +425,7 @@ Press the key again while the view has the focus to close it.
 | --- | --- |
 | the outline: the note's headings | `space o` |
 | the footnotes: each one, its text and where it's referred to | `space n f` |
-| Info: the file's path, vault, counts, properties, tags and links | `space n i` |
+| Info: the file's path, vault, counts, properties, tags and links | `space f i` |
 
 `space n shift+f` adds a footnote after the word at the cursor, and asks for its text.
 
@@ -483,26 +484,28 @@ The properties editor floats over the windows with the note's front matter. Open
 - `esc` in normal mode, `q` or `:q` close it and write back what changed.
 - `ctrl+s` or `:w` write it back and keep it open.
 
-## Find: `space f`
+<a id="find-space-f"></a>
+
+## Find: `space /`
 
 | What | Direct keys | Leader |
 | --- | --- | --- |
-| find in this note, in the window's find row | `ctrl+f`, `/` | `space f /` |
+| find in this note, in the window's find row | `ctrl+f`, `/` | `space / /` |
 | the next / previous match | `n` / `shift+n` | |
 | the whole word under the cursor, forward / backward | `*` / `#` | |
-| find and replace in this note | `ctrl+h` | `space f r` |
-| find in every note and file | `ctrl+shift+f` | `space f g` |
-| replace in every note and file, after a preview | `ctrl+shift+h` | `space f shift+r` |
-| search: notes ranked by your words as you type | | `space f s` |
-| the quick switcher: a note by its name, a symbol after `#`, a path (`/`, `~/`, `./`, `../`) | `ctrl+p` | `space f f` |
-| a file by its path, anywhere: its folders and files completed as you type | | `space f e` |
+| find and replace in this note | `ctrl+h` | `space / r` |
+| find in every note and file | `ctrl+shift+f` | `space / g` |
+| replace in every note and file, after a preview | `ctrl+shift+h` | `space / shift+r` |
+| search: notes ranked by your words as you type | | `space / s` |
 | the last list of places again, as you left it | | `space '` |
-| a heading of this note | | `space f o` |
-| the headings the cursor is under, as a dropdown | | `space f b` |
-| the tags here, then a tag's notes | | `space f t` |
-| the document types here, then a type's notes in order | | `space f d` |
+| a heading of this note | | `space / o` |
+| the headings the cursor is under, as a dropdown | | `space / b` |
+| the tags here, then a tag's notes | | `space / t` |
+| the document types here, then a type's notes in order | | `space / d` |
 | the next / previous note of this note's document type | `] t` / `[ t` | |
-| the command palette | `:`, `ctrl+shift+p` | `space f p` |
+
+A file by its name or its path opens from [the file's keys](#the-file-space-f): `ctrl+p` or `space f f`, and
+`space f e`. The command palette, `:`, is [the app's](#the-app).
 
 `n` goes to the match after the cursor, wherever the cursor has moved. `shift+n` goes to the one before. Both wrap
 around the note's ends.
@@ -566,8 +569,8 @@ A key that starts an edit works from the rendered note too. Its first press open
 | tick or untick the task at the cursor | `ctrl+l`, `space n t` |
 | undo (all you typed in one go is one step) | `u`, `ctrl+z` |
 | redo | `ctrl+r`, `ctrl+y`, `shift+u` |
-| save | `ctrl+s`, `space n w` |
-| save every changed note | `space n shift+w` |
+| save | `ctrl+s`, `space f w` |
+| save every changed file | `space f shift+w` |
 | for a note changed both here and on disk, load theirs, keep yours, diff, or merge | `space n c` |
 
 The `:` commands for saving and quitting (`:w`, `:wq`, `:q!` and the rest) are in [The `:` prompt](#the--prompt).
@@ -862,30 +865,49 @@ leaves it, committing nothing.
 | `s` | stage the saved file, marking it resolved; the next file in conflict opens |
 | `esc` | close it, what's settled kept |
 
-## Note, folder, app
+<a id="note-folder-app"></a>
+
+## Note, file, folder, app
 
 ### The note: `space n`
 
-Deleting, moving, copying, cutting and exporting act on the explorer's selected note when the explorer has the focus.
+What only a note has. Exporting acts on the explorer's selected note when the explorer has the focus.
 
 | Keys | What |
 | --- | --- |
-| `space n n`, `ctrl+n` | a new note beside this one, asking its name (`projects/idea` makes the folder too) |
-| `space n m` | rename or move the note by its path, or into a folder, fixing links after a preview |
-| `space n shift+m` | move the note to a folder picked from a tree |
 | `space n h` | rename the heading the cursor is in, fixing every link to it after a preview |
-| `space n d` | delete the note to slipbox's trash, after asking |
-| `space n y` / `space n x` | copy / cut the note, for `space d p` to paste |
-| `space n shift+y` | a copy of the note beside it (`name-copy`), opened |
 | `space n o` | export the note as Word, PDF, a web page, an e-book or Markdown, then pick where |
 | `space n shift+o` | export notes, picked in order, as one document |
-| `space n i` | Info, in the right panel: opens it, focuses it, closes it |
 | `space n shift+p` | edit the note's properties (its front matter) in a floating editor |
-| `space n q` | this file's problems, in the Problems panel |
-| `space n r` | read the note from disk again (with unsaved changes, it asks first) |
 | `space n e` | edit the note in your editor, at the cursor's line, in this terminal |
-| `space n s` | send the note to your editor running elsewhere (a running nvim, by default) |
-| `space n p` | choose the running nvim `space n s` sends to |
+
+The rest of `space n` is with what it does: its views, its tasks and a conflict to settle (`space n v`, `space n l`,
+`space n t`, `space n c`) in [Modes, undo and saving](#modes-undo-and-saving), its footnotes (`space n f`,
+`space n shift+f`) in [Outline and the right panel](#outline-and-the-right-panel).
+
+### The file: `space f`
+
+Any file, a note or not. These keys act on the explorer's selected file when the explorer has the focus, and on the
+file you are reading otherwise.
+
+| Keys | What |
+| --- | --- |
+| `space f f`, `ctrl+p` | the quick switcher: a file by its name, a symbol after `#`, a path (`/`, `~/`, `./`, `../`) |
+| `space f e` | a file by its path, anywhere: its folders and files completed as you type |
+| `space f n`, `ctrl+n` | a new note beside this one, asking its name (`projects/idea` makes the folder too) |
+| `space f m` | rename or move the file by its path, or into a folder, fixing links after a preview |
+| `space f shift+m` | move the file to a folder picked from a tree |
+| `space f d` | delete the file to slipbox's trash, after asking |
+| `space f y` / `space f x` | copy / cut the file, for `space d p` to paste |
+| `space f shift+y` | a copy of the file beside it (`name-copy`), opened |
+| `space f r` | read the file from disk again (with unsaved changes, it asks first) |
+| `space f i` | Info, in the right panel: opens it, focuses it, closes it |
+| `space f q` | this file's problems, in the Problems panel |
+| `space f s` | send the file to your editor running elsewhere (a running nvim, by default) |
+| `space f p` | choose the running nvim `space f s` sends to |
+
+Saving (`space f w`, `space f shift+w`) is in [Modes, undo and saving](#modes-undo-and-saving), and showing the file
+in the explorer (`space f shift+e`) in [Explorer](#explorer).
 
 ### Folders: `space d`
 
@@ -925,6 +947,7 @@ A vault is the folder slipbox works in. [Vaults, home and Elsewhere](vaults.md) 
 
 | Keys | What |
 | --- | --- |
+| `:`, `ctrl+shift+p` | the command palette: every command by its name, and a command line ([below](#the--prompt)) |
 | `?`, `space ?` | help: every key, by group, searchable (`enter` runs a command) |
 | `space m` | the messages slipbox has shown |
 | `space r` | report a problem: the bug form, its facts filled in, sent only as you say ([below](#inside-a-report)) |
@@ -962,7 +985,7 @@ With the cursor on a problem, the status line says what's wrong
 
 ### Inside Problems
 
-The Problems panel lies across the bottom, in two tabs: This file (`space n q`) and All (`space v p`).
+The Problems panel lies across the bottom, in two tabs: This file (`space f q`) and All (`space v p`).
 
 | Keys | What |
 | --- | --- |

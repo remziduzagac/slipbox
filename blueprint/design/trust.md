@@ -21,8 +21,8 @@ server or linter slipbox doesn't build in, are your own config's only, and so is
 `render.images_remote`, `lsp.auto_install` and `update.check`, since fetching a note's web pictures tells their sites
 who read what, installing fetches from npm, and the update check asks slipbox's releases (DF-D1, DF-D23). A folder's
 file that sets one is ignored, with a warning, whichever way it sets it. Nor may a folder's `[keys]` or `[aliases]`
-name a command that throws work away or runs a program (`shell.run`, `shell.filter`, `help.report_send`), so a clone
-can't put one on
+name a command that throws work away or runs a program (`shell.run`, `shell.filter`, `help.report_send`), by any id it
+has had (`note.revert` is `file.revert`; D274), so a clone can't put one on
 `ctrl+s` or `:wq` (`USER_ONLY`, each with its reason, and `VAULT_FORBIDDEN_COMMANDS` in
 `core/application/config/config.ts`;
 [configuration.md](../../docs/manual/configuration.md), "What only your own file can set"). A folder may set its

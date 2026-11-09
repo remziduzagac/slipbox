@@ -347,6 +347,7 @@ export function registerActions(app: App): void {
       description: spec.desc,
       run,
       hidden: spec.id === "app.escape",
+      formerly: spec.formerly,
     });
   }
   for (const id of Object.keys(impl))

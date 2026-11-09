@@ -1171,7 +1171,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `notes/meetings/standup-log.md` (cursor.find\_char/find\_repeat; test 'f F t T and ; , — as motions, with counts')
 - half/full page scrolling, scrolloff and H M L, zz zt zb — `hobbies/cycling/202601010900-training-log-2026.md`,
   `notes/meetings/all-hands-archive.md` (cursor.half\_\*/page\_\*/screen\_\*; scroll.\*; ui.scrolloff)
-- goto line by prompt (ctrl+g, :42, space f l) and a line inside a wrapped paragraph or a joined row —
+- goto line by prompt (ctrl+g, :42, space / l) and a line inside a wrapped paragraph or a joined row —
   `notes/daily/2026-09-08.md`, `work/kestrel/src/generated/routes-big.ts` (cursor.goto\_line; 'goto a line whose
   paragraph joins it with others on one row')
 - positions survive resize: top-of-view and cursor anchors in wrapped paragraph and table rows —
@@ -1275,7 +1275,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 - outline with many heading levels, folds, follows cursor, filter, rename heading —
   `notes/meetings/all-hands-archive.md`, `notes/meetings/standup-log.md` (outline.\*; tests outline)
-- outline pick (space f o) and breadcrumb borrowed in source mode — `notes/meetings/all-hands-archive.md`,
+- outline pick (space / o) and breadcrumb borrowed in source mode — `notes/meetings/all-hands-archive.md`,
   `work/kestrel/docs/runbooks/sync-queue.md` (outline.pick; 'unsaved ... source mode's outline comes from a quick
   scan')
 - outline lists headings with source lines — `notes/meetings/all-hands-archive.md`,
@@ -1360,7 +1360,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/README.md` (switcher.open; tests 'ctrl+p lists recent...')
 - a file by its path: space f e asks for one, ~ home, its folders and files completed as typed (tab completes, enter
   goes into a folder, ctrl+w back), opened as :e opens it, another vault's asked first; the switcher takes one starting
-  /, ~/, ./ or ../ — `notes/index.md`, `work/kestrel/README.md` (note.open_path, switcher.open; tests 'space f e: a
+  /, ~/, ./ or ../ — `notes/index.md`, `work/kestrel/README.md` (file.open_path, switcher.open; tests 'space f e: a
   file by its path')
 
 ### palette
@@ -1424,7 +1424,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - save, atomic write keeping permissions, symlinked note written through, target outside vault refused —
   `notes/daily/2026-08-17.md`, `notes/projects/kestrel-v2-3.md` (Writing notes 7.5)
 - save all :wa, :wq, :x, :q!, quit refused naming notes, ctrl+q — `notes/daily/2026-10-01.md`,
-  `notes/projects/kestrel-v2-3.md` (note.save\_all; app.save\_quit)
+  `notes/projects/kestrel-v2-3.md` (file.save\_all; app.save\_quit)
 
 ### autosave
 
@@ -1471,7 +1471,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 ### info
 
 - Info panel sections File/Properties/Tags/Links; folding; enter opens what a row names; y copies; names a third of
-  pane — `notes/people/aiko-tanaka.md`, `notes/projects/kestrel-v2-3.md` (note.info 3.19)
+  pane — `notes/people/aiko-tanaka.md`, `notes/projects/kestrel-v2-3.md` (file.info 3.19)
 - info lists root, mode, name, its copies, the link convention, paths, versions, config files applied in order, index
   written, background — `Downloads/notes-backup-2026-07/index.md`, `hobbies/photography/.slipbox/config.toml`,
   `work/kestrel/README.md` (cli.md Where a command works; configuration.md; cli.test 'info')
@@ -1559,13 +1559,13 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   `work/kestrel/docs/runbooks/sync-queue.md` (heading.rename 11.9)
 - naming a folder (slipbox name, space v n): its .slipbox/ name changed, the old kept, pointers by it still found;
   undo last rename (space v shift+u) refused when a file changed — `hobbies/photography/.slipbox/config.toml`,
-  `notes/.slipbox/config.toml` (folder.name 21.10; rename.undo 7.4)
+  `notes/.slipbox/config.toml` (vault.name 21.10; rename.undo 7.4)
 
 ### trash
 
 - delete note/folder: asks with link counts, trash list newest first, enter restores, refused when path occupied, open
   note shows last text marked deleted, u restores last — `notes/projects/kestrel-v2-3.md`,
-  `notes/templates/drafts/okr-draft.md` (note.delete, trash.\*)
+  `notes/templates/drafts/okr-draft.md` (file.delete, trash.\*)
 - trash lists items newest first; restore by id or path; refused when something is there — `notes/people/contacts.md`,
   `notes/templates/drafts/okr-draft.md` (cli.md trash)
 - trash emptied: `trash empty` lists, `--yes` removes for good; the trash list's last row (or `:empty-trash`) asks,
@@ -1575,13 +1575,13 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 ### copy-move
 
 - duplicate note name-copy, -2; paste beside vs into folder; cut/paste moves with links fixed —
-  `notes/projects/kestrel-v2-3.md`, `notes/templates/meeting.md` (note.copy/yank/cut/paste)
+  `notes/projects/kestrel-v2-3.md`, `notes/templates/meeting.md` (file.copy/yank/cut/paste)
 
 ### new-note
 
 - new note naming: folders created, .md added unless known extension, title heading, typed after blank line, existing
   opens, outside vault refused, leading / from root, duplicate basename suggestion — `notes/templates/daily.md`,
-  `notes/templates/meeting.md` (note.create/folder.create 18.x, 17.5)
+  `notes/templates/meeting.md` (file.create/folder.create 18.x, 17.5)
 
 ### vault
 
@@ -1663,7 +1663,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - workspace restore: tabs, splits ratio, cursors, scroll with breadcrumb, history 50; shared by the vault's
   workspaces: explorer/outline widths, UI overrides, recent commands; restore\_session off — `notes/index.md`,
   `work/infra/dotfiles/slipbox/config.toml` (Positions Saved state; tests 'session restore')
-- editor hand-off: space n e suspends and reloads changed file; space n s to running nvim; picker of several nvims;
+- editor hand-off: space n e suspends and reloads changed file; space f s to running nvim; picker of several nvims;
   remembered; template editors — `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/docs/dev-setup.md` (Handing
   off 4.1/4.2/4.12)
 
@@ -1692,6 +1692,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - commands lists every command id with CLI equivalents; \[keys\], \[aliases\], \[groups\] reflect it in `commands` —
   `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/.slipbox/config.toml` (configuration.md \[keys\]; cli.md
   commands)
+- a command's id from before it was renamed (note.save\_force, note.revert: file.\* now) in \[keys\] or \[aliases\]
+  still binds it, help listing the key under its id now; nothing reported unknown —
+  `work/infra/dotfiles/slipbox/config.toml` (configuration.md \[keys\]; D274; test 'a former id in [keys] and
+  [aliases] still runs')
 
 ### lists-prompts
 
@@ -1716,8 +1720,8 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 
 ### reload
 
-- note.reload / :reload and note.revert (:e!) from disk; reindex; vault info; messages — `.build/extras.toml`,
-  `notes/daily/2026-10-06.md` (note.reload, vault.reindex, vault.info)
+- file.reload / :reload and file.revert (:e!) from disk; reindex; vault info; messages — `.build/extras.toml`,
+  `notes/daily/2026-10-06.md` (file.reload, vault.reindex, vault.info)
 
 ### large
 
@@ -1898,7 +1902,7 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - mv of a folder moves everything, including files the walk doesn't list, links rewritten from where each linking file
   will be — `.build/kestrel.toml`, `work/product/README.md` (cli.md A folder (18.3); cli.test cp rm trash mv folder)
 - mv into a folder: a new path that is a folder already, or ends in /, keeps the name — `mv inbox.md archive/` makes
-  `archive/inbox.md`; space n m likewise — `notes/inbox.md`, `notes/projects/` (cli.md mv; files.md)
+  `archive/inbox.md`; space f m likewise — `notes/inbox.md`, `notes/projects/` (cli.md mv; files.md)
 - mv a nested vault's folder: links into it by path rewritten across vaults, recorded at new place —
   `notes/research/route-engine-spike/README.md`, `work/product/handbook/how-we-write.md` (cli.md A nested vault's
   folder (18.7))
@@ -1975,9 +1979,10 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
 - What reaches the network is yours alone: a vault file's render.images\_remote, lsp.auto\_install and update.check
   ignored with a warning, whichever way they're set — `work/kestrel/.slipbox/config.toml` (configuration.md What only
   you can set, privacy.md; core.test 'what reaches the network is yours alone')
-- Vault \[keys\]/\[aliases\] naming forbidden commands (app.quit\_force, note.revert, note.save\_force, scratch.clear)
-  dropped with a warning; same in user file fine — `work/infra/dotfiles/slipbox/config.toml`,
-  `work/kestrel/.slipbox/config.toml` (configuration.md VAULT\_FORBIDDEN\_COMMANDS)
+- Vault \[keys\]/\[aliases\] naming forbidden commands (app.quit\_force, file.revert, file.save\_force, scratch.clear)
+  dropped with a warning, by their ids now or before (kestrel's `wq = "note.save_force"`); same in user file fine —
+  `work/infra/dotfiles/slipbox/config.toml`, `work/kestrel/.slipbox/config.toml` (configuration.md
+  VAULT\_FORBIDDEN\_COMMANDS; D274)
 - A config that fails to parse on live reload keeps its last good contents with a warning —
   `work/infra/dotfiles/slipbox/config.toml`, `work/infra/dotfiles/slipbox/typo.toml` (configuration.md 'A typo saved
   mid-edit')
@@ -2650,11 +2655,11 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (catalog.ts)
 - `spell.add` — Add the word to your words — `notes/reading/okuma-notlari.md`,
   `notes/reading/maps-and-territories.md` (catalog.ts)
-- `folders.open` — Vaults: go into one — `notes/.slipbox/config.toml`, `work/product/README.md`
+- `vault.open` — Vaults: go into one — `notes/.slipbox/config.toml`, `work/product/README.md`
   (catalog.ts; 21.10)
-- `folders.default` — Which copy a folder's links open — `notes/.slipbox/config.toml`,
+- `vault.default` — Which copy a folder's links open — `notes/.slipbox/config.toml`,
   `Downloads/notes-backup-2026-07/.slipbox/config.toml` (catalog.ts; 21.10)
-- `folder.name` — Name this folder, as pointers name it — `hobbies/photography/.slipbox/config.toml`,
+- `vault.name` — Name this vault, as pointers name it — `hobbies/photography/.slipbox/config.toml`,
   `work/product/README.md` (catalog.ts; 21.10)
 - `root.trust` — Trust this vault — `work/kestrel/eslint.config.js`, `work/kestrel/.vscode/settings.json`
   (kestrel's ESLint and its .vscode settings run only once it's trusted; catalog.ts, 23.x)
@@ -2860,7 +2865,7 @@ The same notes, one per tab.
 ### explorer
 
 - `explorer.cycle` — Explorer: open, focus, close — `notes/projects/`, `notes/index.md` (catalog.ts)
-- `explorer.reveal` — Reveal note in explorer — `notes/projects/`, `notes/index.md` (catalog.ts)
+- `explorer.reveal` — Reveal the file in the explorer — `notes/projects/`, `notes/index.md` (catalog.ts)
 - `explorer.toggle_hidden` — Show or hide hidden files — `work/kestrel/.github/`, `work/kestrel/.env.example`
   (catalog.ts)
 
@@ -3039,24 +3044,9 @@ The same notes, one per tab.
 
 ### note
 
-- `note.save` — Save — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
-- `note.save_all` — Save all — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
-- `note.save_force` — Save over a changed file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (catalog.ts)
-- `note.revert` — Reload, dropping changes — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (catalog.ts)
 - `note.resolve` — Resolve a conflict with the file — `notes/inbox.md`, `notes/projects/home-office.md`,
   `notes/projects/` (catalog.ts)
-- `note.open` — Open a note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
-- `note.open_path` — Open a file by its path — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
-- `note.create` — New note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
-- `note.reload` — Reload note from disk — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (catalog.ts)
 - `note.edit` — Edit in your editor — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (catalog.ts)
-- `note.send` — Send to your running editor — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (catalog.ts)
-- `note.send_pick` — Choose the editor to send to — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
 - `note.export` — Export the note: Word, PDF, HTML… — `notes/research/route-cost-models.md`,
   `notes/projects/sync-rewrite.md` (catalog.ts)
@@ -3064,26 +3054,42 @@ The same notes, one per tab.
   `notes/projects/route-sharing.md` (catalog.ts)
 - `note.export_cancel` — Cancel export — `notes/projects/sync-rewrite.md`, `notes/research/route-cost-models.md`
   (catalog.ts)
-- `note.info` — Info: open, focus, close — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
-  (catalog.ts)
 - `note.properties` — Edit the properties — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
-- `note.delete` — Delete the note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+
+### file
+
+- `file.save` — Save — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `file.save_all` — Save all — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `file.save_force` — Save over a changed file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
-- `note.copy` — Duplicate the note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+- `file.revert` — Reload, dropping changes — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
-- `note.move` — Move the note to a folder… — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+- `file.open` — Open a file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `file.open_path` — Open a file by its path — `notes/index.md`, `work/kestrel/README.md` (catalog.ts)
+- `file.create` — New note or file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `file.reload` — Reload the file from disk — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
-- `note.yank` — Copy the note, to paste — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+- `file.send` — Send to your running editor — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
-- `note.cut` — Cut the note, to paste — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+- `file.send_pick` — Choose the editor to send to — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
-- `note.rename` — Rename or move the note — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+- `file.info` — Info: open, focus, close — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+  (catalog.ts)
+- `file.delete` — Delete the file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `file.copy` — Duplicate the file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/` (catalog.ts)
+- `file.move` — Move the file to a folder… — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+  (catalog.ts)
+- `file.yank` — Copy the file, to paste — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+  (catalog.ts)
+- `file.cut` — Cut the file, to paste — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
+  (catalog.ts)
+- `file.rename` — Rename or move the file — `notes/inbox.md`, `notes/projects/home-office.md`, `notes/projects/`
   (catalog.ts)
 
 ### switcher
 
-- `switcher.open` — Quick switcher: find a note — `notes/index.md` (catalog.ts)
+- `switcher.open` — Quick switcher: find a file — `notes/index.md` (catalog.ts)
 
 ### list
 

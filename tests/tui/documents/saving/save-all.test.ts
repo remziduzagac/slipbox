@@ -12,9 +12,9 @@ describe("word count, save all, the change list, moving lines", () => {
     writeFileSync(join(root, "c.md"), "line one\nline two\nline three\nline four\n");
     const h = await harness({ root, open: "c.md" });
     await h.keys("space", "n", "v", "g", "g", "A", "!", "escape", "G", "A", "?", "escape");
-    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("file.open notes/alpha.md");
     await h.keys("space", "n", "v", "A", "#", "escape");
-    await h.app.run("note.save_all");
+    await h.app.run("file.save_all");
     expect(readFileSync(join(root, "c.md"), "utf8")).toBe("line one!\nline two\nline three\nline four?\n");
     expect(readFileSync(join(root, "notes", "alpha.md"), "utf8")).toContain("#");
     await h.app.run("history.back");

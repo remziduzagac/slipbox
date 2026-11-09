@@ -51,13 +51,13 @@ export class Handoff {
   /** How the running nvims are found and asked; tests replace these. */
   nvimDiscovery: () => NvimServer[] = () => discoverNvims();
   nvimProbe: (socket: string) => NvimServer | null = (s) => probeNvim(s);
-  /** The nvim `space n s` sends to, picked once per vault and kept while it answers. */
+  /** The nvim `space f s` sends to, picked once per vault and kept while it answers. */
   remoteServer: string | undefined;
 
   /**
-   * `space n s`: the note, at the cursor's line, to an editor running elsewhere. With the nvim
+   * `space f s`: the note, at the cursor's line, to an editor running elsewhere. With the nvim
    * preset (the default) or a `{server}` template, the nvim is the one picked before while it
-   * answers; else the only one running; else a picker — which `choose` (`space n p`) always opens.
+   * answers; else the only one running; else a picker — which `choose` (`space f p`) always opens.
    */
   sendToEditor(from: View, choose = false): void {
     const target = this.target(from);

@@ -6,11 +6,11 @@ export const INFO: Check[] = [
   {
     area: "reading",
     name: "info: the Info view — the file's root, properties, backlinks and tags; toggled from the palette",
-    covers: { cases: ["info"], commands: ["note.info", "info.toggle"] },
+    covers: { cases: ["info"], commands: ["file.info", "info.toggle"] },
     run: async (s) => {
       // The Info view (3.19): the file on screen, in the right panel — its vault, properties, links.
       await open(s, "kenji-mori");
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       await s.see(/vault +halden/);
       await s.see("Properties");
@@ -35,7 +35,7 @@ export const INFO: Check[] = [
   {
     area: "reading",
     name: "properties: space n shift+p edits the frontmatter's YAML in a floating editor, written back, the Info view updated",
-    covers: { cases: ["properties", "yaml-frontmatter"], commands: ["note.properties", "note.info"] },
+    covers: { cases: ["properties", "yaml-frontmatter"], commands: ["note.properties", "file.info"] },
     run: async (s) => {
       await open(s, "kenji-mori");
       await leader(s, "n", "shift+p");
@@ -49,7 +49,7 @@ export const INFO: Check[] = [
         (t) => t.includes("status: visiting\n---"),
         "the property in the frontmatter",
       );
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.see(/status +visiting/);
     },
   },

@@ -42,7 +42,7 @@ export const SYNTAX_STRUCTURE: Check[] = [
         "visual.grow",
         "visual.shrink",
         "view.source",
-        "note.save",
+        "file.save",
       ],
     },
     options: at(NOTE),

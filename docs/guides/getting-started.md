@@ -106,7 +106,7 @@ selected. Search stays within this practice vault unless you explicitly widen it
 preview of the note](../images/getting-started-switcher.png)
 
 To find a word in that note, press `ctrl+f`, type `Washed`, and press `enter`. To search the vault's files instead,
-press `space f s` and type `coffee`. `esc` leaves the results without opening one.
+press `space / s` and type `coffee`. `esc` leaves the results without opening one.
 
 ## Make a small edit
 

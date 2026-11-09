@@ -226,7 +226,7 @@ export class Problems {
   }
 
   /**
-   * The Problems panel opened on a tab and focused (`space n q` This file, `space v p` All; the status line's
+   * The Problems panel opened on a tab and focused (`space f q` This file, `space v p` All; the status line's
    * problems, clicked, This file); already open there and focused, closed.
    */
   open(tab: "file" | "all"): void {

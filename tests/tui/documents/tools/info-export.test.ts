@@ -18,7 +18,7 @@ test("Info offers export for notes, runs note.export from row and x, and copies 
   h.app.info.openRow(row);
   expect((h.app.overlay as ListOverlay).title).toBe("Export index.md as");
   await h.keys("escape");
-  await h.app.run("note.info");
+  await h.app.run("file.info");
   await h.keys("x");
   expect((h.app.overlay as ListOverlay).title).toBe("Export index.md as");
   await h.keys("escape");

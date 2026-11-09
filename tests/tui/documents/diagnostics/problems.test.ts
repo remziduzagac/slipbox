@@ -120,7 +120,7 @@ describe("the Problems panel (1.7)", () => {
 
   test("All: a click opens the problem in a tab of its own at its line (the tab showing it, if one does); o here, s the split", async () => {
     const h = await setup();
-    await h.app.run("note.open a/twin.md");
+    await h.app.run("file.open a/twin.md");
     await h.keys("space", "v", "p", "/", "n", "o", "p", "e");
     expect(rows(h)).toEqual(["# Broken links (2)", "  other.md", "    L3  nope.png"]);
     h.frame();
@@ -174,7 +174,7 @@ describe("the Problems panel (1.7)", () => {
       height: 40,
       config: (c) => (c.diagnostics.marks = "off"),
     });
-    await h.keys("space", "n", "q");
+    await h.keys("space", "f", "q");
     expect(h.app.problems.panel).toMatchObject({ shown: true, tab: "file" });
     expect(h.app.region).toBe("problems");
     expect(h.app.problems.ofFile().map((p) => `${p.start.line}:${p.start.column} ${p.target}`)).toEqual([
@@ -213,14 +213,14 @@ describe("the Problems panel (1.7)", () => {
     expect(h.app.region).toBe("content");
     expect(h.app.problems.chosen()).toBeUndefined();
     // Back, then enter: there, the note has the keys; back (alt+b) returns where it was.
-    await h.keys("space", "n", "q");
+    await h.keys("space", "f", "q");
     expect(h.app.region).toBe("problems");
     h.app.problems.panel.file.selected = 0;
     await h.keys("enter");
     expect(h.app.region).toBe("content");
     expect(srcAt(h.app.currentLayout(v).lines[v.cur.row]!, v.cur.col)).toBe(3);
     // tab: All, and back.
-    await h.keys("space", "n", "q", "tab");
+    await h.keys("space", "f", "q", "tab");
     expect(h.app.problems.panel.tab).toBe("all");
     await h.keys("shift+tab");
     expect(h.app.problems.panel.tab).toBe("file");
@@ -245,7 +245,7 @@ describe("the Problems panel (1.7)", () => {
     expect(h.app.problems.panel.shown).toBe(false);
     expect(h.app.region).toBe("content");
     // No button on the left rail: a file with none has the panel's on the status line, dim — it opens All.
-    await h.app.run("note.open a/twin.md");
+    await h.app.run("file.open a/twin.md");
     h.frame();
     expect(hot(h, "btn:problems")).toBeUndefined();
     expect(statusRow(h.frame())).toMatch(/‹ a\/twin\.md › +⚠ 0 /);
@@ -258,7 +258,7 @@ describe("the Problems panel (1.7)", () => {
     expect(h.app.problems.panel.shown).toBe(false);
     // A short screen keeps the note: no panel drawn, its keys still work.
     const s = await setup(12);
-    await s.keys("space", "n", "q");
+    await s.keys("space", "f", "q");
     expect(s.frame()).not.toContain(" This file (");
     expect(s.app.region).toBe("problems");
   });
@@ -274,7 +274,7 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
 
   test("This file's filter: / narrows by message, place or line; enter goes there, the filter cleared", async () => {
     const h = await two();
-    await h.keys("space", "n", "q", "/", "T", "h", "e", "n");
+    await h.keys("space", "f", "q", "/", "T", "h", "e", "n");
     expect(h.app.problems.fileRows().map((p) => p.start.line)).toEqual([5]); // the line's text matched
     expect(h.frame()).toMatch(/This file \(2\) .*› Then/); // its count all of them; the filter after the titles
     expect(h.frame()).not.toContain("3:5");
@@ -283,7 +283,7 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
     expect(line(h)).toBe(5);
     expect(h.app.problems.panel.file.filter).toBe("");
     // Nothing matches: said.
-    await h.keys("space", "n", "q", "/", "z", "z", "z");
+    await h.keys("space", "f", "q", "/", "z", "z", "z");
     expect(h.frame()).toContain("no matches");
     await h.keys("escape");
     expect(h.app.problems.fileRows()).toHaveLength(2);
@@ -291,7 +291,7 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
 
   test("resized as a window is: ctrl+w + and -, resize mode's j / k, a drag of its rule; = a third again; kept", async () => {
     const h = await two();
-    await h.keys("space", "n", "q");
+    await h.keys("space", "f", "q");
     const drawn = () => (h.frame(), h.app.geometry!.problems!.h);
     const first = drawn();
     await h.keys("ctrl+w", "+");
@@ -326,7 +326,7 @@ describe("the Problems panel: filtered, resized, opened from the bar (1.7)", () 
     h.app.quit();
     const again = await harness({ root: h.root, open: null, config: (c) => (c.ui.restore_session = true) });
     expect(again.app.problems.panel.height).toBe(15);
-    await again.keys("space", "n", "q");
+    await again.keys("space", "f", "q");
     expect(again.app.geometry!.problems!.h).toBe(15);
   });
 

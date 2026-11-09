@@ -9,7 +9,7 @@ describe("review cycle 5 (TUI, the session while running)", () => {
     const { loadSession } = await import("../../../../src/core/workspace/session/position.ts");
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/beta.md");
     await h.keys("j");
     const end = Date.now() + 4000;
     const current = () => {

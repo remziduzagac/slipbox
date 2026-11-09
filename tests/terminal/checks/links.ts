@@ -115,14 +115,14 @@ export const LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: zk's links without an extension followed; a rename keeps them so (21.2)",
-    covers: { cases: ["links/conventions", "rename"], commands: ["note.rename", "history.back"] },
+    covers: { cases: ["links/conventions", "rename"], commands: ["file.rename", "history.back"] },
     options: { home: true, startAt: "home/hobbies/cycling/202608151900-index.md" },
     run: async (s) => {
       // `[300 km brevet](rides/202609131900-300k-brevet)`: the note with `.md`, as zk means it.
       await follow(s, "300 km brevet");
       await opened(s, "rides/202609131900-300k-brevet.md");
       // Renamed here: the index's link follows it, still without its extension.
-      await leader(s, "n", "m");
+      await leader(s, "f", "m");
       await s.see("rename or move");
       await s.keys("ctrl+u");
       await s.type("rides/202609131900-brevet-300k");
@@ -329,11 +329,11 @@ export const LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: each root's convention and what said it — Obsidian's, zk's, a folder's own; yours, saved while running (21.4)",
-    covers: { cases: ["links/conventions", "links/state"], commands: ["note.info"] },
+    covers: { cases: ["links/conventions", "links/state"], commands: ["file.info"] },
     options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
     run: async (s) => {
       // The cooking vault's, in the Info view: Obsidian's settings say all three.
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.see(/writes +wikilinks/);
       await s.see(/path +by name/);
       await s.see(/\.md +dropped/);
@@ -363,7 +363,7 @@ export const LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: written as each root writes them — the picker, [[ completed, slipbox link for an agent (21.5)",
-    covers: { cases: ["links/conventions", "links"], commands: ["link.insert", "view.source", "note.save"] },
+    covers: { cases: ["links/conventions", "links"], commands: ["link.insert", "view.source", "file.save"] },
     options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
     run: async (s) => {
       // The picker, reading: after the word under the cursor, a wikilink by name — Obsidian's way.
@@ -405,7 +405,7 @@ export const LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: a target's completion kept while it's typed — hidden past a match, keys as with no popup, back on a backspace; an indent keeps it, a paste closes it; . repeats a completed one (20.13)",
-    covers: { cases: ["links"], commands: ["view.source", "note.save"] },
+    covers: { cases: ["links"], commands: ["view.source", "file.save"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
       const inbox = /inbox\.md +~\/notes\/inbox\.md/;
@@ -550,7 +550,7 @@ export const LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: another vault's note completed as its pointer — each folder by its name, a name two share asked first, a private one said; slipbox link the same (20.13, 21.7)",
-    covers: { cases: ["links", "links/conventions", "links/named-folders"], commands: ["view.source", "note.save"] },
+    covers: { cases: ["links", "links/conventions", "links/named-folders"], commands: ["view.source", "file.save"] },
     options: {
       home: true,
       startAt: "home/notes/index.md",

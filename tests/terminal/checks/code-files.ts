@@ -45,7 +45,7 @@ export const CODE_FILES: Check[] = [
   {
     area: "reading",
     name: "code: a syntax error counted on the status line, hidden while typing, back after",
-    covers: { cases: ["code-py"], commands: ["note.open"] },
+    covers: { cases: ["code-py"], commands: ["file.open"] },
     options: { config: '[render]\ncode = "source"\n' },
     run: async (s) => {
       await s.ex("e scratch/half-written.py"); // code isn't in ctrl+p by default (files.show)
@@ -64,7 +64,7 @@ export const CODE_FILES: Check[] = [
     name: "code: Go, Rust, Lua, shell, JavaScript and TSX — each outline from its grammar, the breadcrumb two levels in",
     covers: {
       cases: ["code-go", "code-rs", "code-lua", "code-sh", "code-js", "code-ts", "code-files"],
-      commands: ["outline.pick", "note.open"],
+      commands: ["outline.pick", "file.open"],
     },
     options: { home: true, startAt: KESTREL },
     run: async (s) => {
@@ -93,7 +93,7 @@ export const CODE_FILES: Check[] = [
   {
     area: "reading",
     name: "code: syntax errors in TypeScript and Go counted on the status line, no server",
-    covers: { cases: ["code-ts", "code-go"], commands: ["note.open"] },
+    covers: { cases: ["code-ts", "code-go"], commands: ["file.open"] },
     options: { home: true, startAt: KESTREL },
     run: async (s) => {
       // A TypeScript file left by a bad rebase: its errors counted on the status line.

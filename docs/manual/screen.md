@@ -207,7 +207,7 @@ Each side of the screen has a panel that shows one view at a time, and a rail of
 | left | the explorer: the folder's notes and files | `≡` | `space e` | [Files](files.md) |
 | left | the history: where this window has been | `◷` | `space h h` | [Finding things](finding.md) |
 | left | source control, the git panel: the files changed, the branches | `±` | `space g g` | [Git](git.md) |
-| right | Info: what the file on screen is | `ℹ` | `space n i` | [below](#the-info-view) |
+| right | Info: what the file on screen is | `ℹ` | `space f i` | [below](#the-info-view) |
 | right | the outline: the note's headings | `▤` | `space o` | [Finding things](finding.md) |
 | right | the footnotes: the note's footnotes | `¹` | `space n f` | [Finding things](finding.md) |
 
@@ -318,7 +318,7 @@ note](../images/screen-problems.png)
 
 It has two tabs:
 
-- **This file** lists every problem of the file on screen, each with its line. To open it, press `space n q`, or click
+- **This file** lists every problem of the file on screen, each with its line. To open it, press `space f q`, or click
   the problem count in the status line. Moving through the list takes the note to each problem and marks it.
 - **All** lists what's wrong across the folder, under a heading for each kind:
   - broken, ambiguous and fragile links
@@ -392,8 +392,8 @@ The breadcrumb shows `§`, then the headings the cursor is under, from the outer
 `§ Coffee › Brewing › Grind`. When they don't all fit, the middle ones fold into `…`.
 
 - Click a heading to scroll the window to it.
-- Click `§` to find a heading in the note by typing part of it (`space f o` does the same).
-- Click `…`, or press `space f b`, to see the whole path as a list. Type to filter it, and press `enter` to jump.
+- Click `§` to find a heading in the note by typing part of it (`space / o` does the same).
+- Click `…`, or press `space / b`, to see the whole path as a list. Type to filter it, and press `enter` to jump.
 
 In a data file, the breadcrumb shows its sections and keys. In a code file, it shows its definitions.
 
@@ -491,7 +491,7 @@ Every key that works in a list is in [Keys](keys.md).
 
 ### The command palette
 
-To open the command palette, press `:`, `ctrl+shift+p` or `space f p`, or select it in About slipbox.
+To open the command palette, press `:` or `ctrl+shift+p`, or select it in About slipbox.
 
 With nothing typed, the palette lists the last five commands you ran from it or from help. Then it lists every
 command, in groups. Type part of a command's name and press `enter` to run it.

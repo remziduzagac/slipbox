@@ -66,7 +66,7 @@ describe("word count, save all, the change list, moving lines", () => {
     await h.keys("space", "n", "v", "v", "e", "e");
     expect(statusRow(h.frame())).toContain("2 words selected");
     await h.keys("escape");
-    await h.app.run("note.info");
+    await h.app.run("file.info");
     expect(h.frame()).toMatch(/words\s+5/);
   });
 });

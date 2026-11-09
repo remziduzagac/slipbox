@@ -53,7 +53,7 @@ export class Exporter {
    * where asked: beside it, its name, unless you say otherwise.
    */
   exportNote(name?: string): void {
-    const t = this.app.explorer.noteTarget();
+    const t = this.app.explorer.fileTarget();
     if (!t) return;
     if (!this.app.graph.notes.has(t.rel))
       return this.app.message("info", `export: ${t.rel} isn't a note — a note is exported`);

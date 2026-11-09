@@ -203,7 +203,7 @@ describe("git's review, merge screen, pull and rebase (GIT-D3, GIT-D5, GIT-D6)",
         await h.keys("escape");
         expect(await said(h, "review: 2 kept (staged); 1 left as it was")).toBe(true);
         // Unsaved typing in new.md: x refuses to write over it, says so, goes on.
-        await h.app.run("note.open new.md");
+        await h.app.run("file.open new.md");
         h.app.view!.buf.edit(0, 0, "typed ");
         await h.app.run("git.review");
         expect(await until(() => h.app.floating?.kind === "review")).toBe(true);

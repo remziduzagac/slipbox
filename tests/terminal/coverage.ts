@@ -53,7 +53,7 @@ const COMMAND_OWNERS: Record<string, Area> = {
     ]),
   ),
   ...Object.fromEntries(
-    ["link", "links", "backlinks", "peek", "note", "folder", "folders", "root", "vault", "trash", "rename", "git"].map(
+    ["link", "links", "backlinks", "peek", "note", "file", "folder", "root", "vault", "trash", "rename", "git"].map(
       (g) => [g, "links-and-files" as const],
     ),
   ),

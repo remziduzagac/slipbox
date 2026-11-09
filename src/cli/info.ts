@@ -123,7 +123,7 @@ export const INFO_COMMANDS: Record<string, Handler> = {
     return { data, human };
   },
 
-  // The TUI's note info (space n i), in one call.
+  // The TUI's note info (space f i), in one call.
   async stat(s, rest) {
     const rel = resolveNote(s, requireArg(rest, "note"));
     await s.graph.loadGrammars();

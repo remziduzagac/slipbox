@@ -52,7 +52,7 @@ describe("vaults in the TUI (17.x)", () => {
     await answerSwitch(h);
     expect(h.app.loc.root).toBe(app);
     await h.app.run("tab.new");
-    await h.app.run("note.open links.md");
+    await h.app.run("file.open links.md");
     h.app.vaults.switchVault(locateVault({ root: notes }), null);
     await answerSwitch(h);
     expect(h.app.loc.root).toBe(notes);

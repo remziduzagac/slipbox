@@ -166,7 +166,7 @@ export interface PromptOverlay {
   cancel?: () => void;
   /** Find's prompt: typed in that window's own find row, not on the bottom line. */
   view?: View;
-  /** Find's replace field, when open (ctrl+h, space f r; tab from the find field). */
+  /** Find's replace field, when open (ctrl+h, space / r; tab from the find field). */
   replace?: ReplaceState;
   /** A find across files (25.4): the window whose find toggles it uses — alt+r, alt+w flip them — and its label. */
   toggles?: { view: View; label: () => string };

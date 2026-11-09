@@ -7,7 +7,7 @@ import { makeSandbox, makeVault, harness } from "../../../tui-harness.ts";
 makeSandbox();
 
 describe("what keymap.md and tui.md promise (review: docs against the tests)", () => {
-  test("UI keys: alt+z wraps, space u m gives the mouse back, space n r reloads from disk", async () => {
+  test("UI keys: alt+z wraps, space u m gives the mouse back, space f r reloads from disk", async () => {
     const root = makeVault();
     writeFileSync(join(root, "r.md"), "# R\n\nbefore\n");
     const h = await harness({ root, open: "r.md" });
@@ -19,7 +19,7 @@ describe("what keymap.md and tui.md promise (review: docs against the tests)", (
     await h.keys("space", "u", "m");
     expect(h.app.ui.mouse).toBe(!mouse);
     writeFileSync(join(root, "r.md"), "# R\n\nafter\n");
-    await h.keys("space", "n", "r");
+    await h.keys("space", "f", "r");
     expect(h.app.view!.buf.source).toBe("# R\n\nafter\n");
   });
 });

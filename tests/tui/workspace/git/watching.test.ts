@@ -60,7 +60,7 @@ describe("a branch switch as one event (5.9)", () => {
     git(root, "checkout", "-q", "-b", "feat");
     expect(h.app.git.checkHead()).toBe(true);
     expect(h.app.messages.at(-1)!.text).toBe("switched to branch feat"); // none kept for feat yet: these stay
-    await h.app.run("note.open b.md");
+    await h.app.run("file.open b.md");
     expect(shown(h)).toEqual(["b.md"]);
     git(root, "checkout", "-q", "main");
     h.app.git.checkHead();
@@ -162,7 +162,7 @@ describe("a branch switch as one event (5.9)", () => {
     const h = await harness({ root, open: "a.md", config: restore });
     git(root, "checkout", "-q", "-b", "feat");
     h.app.git.checkHead(); // main's tabs kept: a.md
-    await h.app.run("note.open b.md");
+    await h.app.run("file.open b.md");
     h.app.session.save(); // feat's: b.md
     expect(shown(await harness({ root, open: null, config: restore }))).toEqual(["b.md"]);
     git(root, "checkout", "-q", "main");

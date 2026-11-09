@@ -6,7 +6,7 @@ export const NEW_FILE: Check[] = [
   {
     area: "editing",
     name: "opening a new file: type and save makes missing parents and the note (#168)",
-    covers: { commands: ["note.save"], cases: ["opening", "new-note", "save"] },
+    covers: { commands: ["file.save"], cases: ["opening", "new-note", "save"] },
     options: { open: "new-folder/2027/coffee.md" },
     run: async (s) => {
       const path = join(s.vault, "new-folder/2027/coffee.md");

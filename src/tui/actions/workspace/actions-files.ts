@@ -1,5 +1,5 @@
-// The commands of files and vaults (`note.*`, `folder.*`, `vault.*`, `trash.*`, `root.*`): notes and folders made,
-// opened, moved, renamed, exported and deleted; vaults made, unmade and described; a root trusted.
+// The commands of files and vaults (`file.*`, `note.*`, `folder.*`, `vault.*`, `trash.*`, `root.*`): notes, files and
+// folders made, opened, moved, renamed, exported and deleted; vaults made, unmade and described; a root trusted.
 
 import { type Run, withView } from "../actions.ts";
 import { isPointer } from "../../../core/workspace/links/pointer.ts";
@@ -23,7 +23,7 @@ import type { App } from "../../app/runtime/app.ts";
 export function fileActions(): Record<string, Run> {
   return {
     // New notes and folders: beside the current note, or in the explorer's selected folder.
-    "note.create": (a, arg) => {
+    "file.create": (a, arg) => {
       if (!arg) return a.files.promptNewNote();
       const r = a.files.createNote(arg, a.files.newItemBase());
       if (r) a.open(r.open);
@@ -35,7 +35,7 @@ export function fileActions(): Record<string, Run> {
       a.exporter.cancel();
     },
     "note.export_many": (a) => a.exporter.compose(),
-    "note.open": (a, arg) => {
+    "file.open": (a, arg) => {
       if (!arg) return void a.run("switcher.open");
       // `~/…` from the home folder, as a shell reads it: a whole path from then on.
       arg = untildePath(arg, a.home);
@@ -76,11 +76,11 @@ export function fileActions(): Record<string, Run> {
       a.message("warn", `no note or file "${arg}"`);
     },
     // A file by its path, asked for and completed as it's typed (`space f e`); given one, opened as `:e` opens it.
-    "note.open_path": (a, arg) => (arg ? a.run(`note.open ${arg}`) : openPathPrompt(a)),
+    "file.open_path": (a, arg) => (arg ? a.run(`file.open ${arg}`) : openPathPrompt(a)),
     // note, vault, app
     // Unsaved changes and the file as it was (DF-D6): yours thrown away only when you say so, autosave as it was; a file
     // that changed too is the conflict prompt's.
-    "note.reload": (a) =>
+    "file.reload": (a) =>
       withView(a, (v) => {
         const buf = v.buf;
         if (!buf.dirty || buf.deleted || buf.changedOnDisk()) return a.watch.reloadBuffer(buf);
@@ -90,7 +90,7 @@ export function fileActions(): Record<string, Run> {
         );
       }),
     // The Info view (3.19), the right panel's first: what the file on screen is; its button above the outline's.
-    "note.info": (a) => a.panels.openRightView("info", "cycle"),
+    "file.info": (a) => a.panels.openRightView("info", "cycle"),
     "note.properties": (a) => a.properties.open(),
     "vault.reindex": (a) => {
       a.graph.build(true, "lazy");
@@ -98,20 +98,20 @@ export function fileActions(): Record<string, Run> {
       a.watch.rebuilt();
       a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
     },
-    "note.delete": (a) => {
-      const t = a.explorer.noteTarget();
+    "file.delete": (a) => {
+      const t = a.explorer.fileTarget();
       if (t) a.files.deleteItem(t);
     },
-    "note.move": (a) => {
-      const t = a.explorer.noteTarget();
+    "file.move": (a) => {
+      const t = a.explorer.fileTarget();
       if (t) a.files.moveItem(t);
     },
-    "note.yank": (a) => {
-      const t = a.explorer.noteTarget();
+    "file.yank": (a) => {
+      const t = a.explorer.fileTarget();
       if (t) a.files.clipItem("copy", t);
     },
-    "note.cut": (a) => {
-      const t = a.explorer.noteTarget();
+    "file.cut": (a) => {
+      const t = a.explorer.fileTarget();
       if (t) a.files.clipItem("cut", t);
     },
     "folder.rename": (a) => {
@@ -138,7 +138,7 @@ export function fileActions(): Record<string, Run> {
     "trash.restore": (a) => a.files.restoreLast(),
     "rename.undo": (a) => a.renaming.undo(),
     "vault.unmake": (a) => a.vaults.unmakeHere(),
-    "note.copy": (a) =>
+    "file.copy": (a) =>
       withView(a, (v) => {
         if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be copied here");
         try {
@@ -158,8 +158,8 @@ export function fileActions(): Record<string, Run> {
       if (isNeverRoot(dir)) return a.message("warn", `${dir} can't have a .slipbox/: slipbox never indexes all of it`);
       a.vaults.choices(dir);
     },
-    "note.rename": (a, arg) => {
-      const t = a.explorer.noteTarget();
+    "file.rename": (a, arg) => {
+      const t = a.explorer.fileTarget();
       if (!t) return;
       if (arg) return a.renaming.noteTo(t.rel, arg);
       a.renaming.prompt(t.rel);
@@ -181,8 +181,8 @@ export function fileActions(): Record<string, Run> {
     "vault.switch_go": (a) => a.vaults.chooseSwitch("go"),
     "vault.switch_peek": (a) => a.vaults.chooseSwitch("peek"),
     "vault.switch_stay": (a) => a.vaults.chooseSwitch("stay"),
-    "folders.open": (a) => a.vaults.openFolders(),
-    "folders.default": (a) => a.vaults.chooseDefaultCopy(),
+    "vault.open": (a) => a.vaults.openFolders(),
+    "vault.default": (a) => a.vaults.chooseDefaultCopy(),
     // A root's trust (23.x): the root you opened, or the shown file's project when it's elsewhere.
     "root.trust": (a) =>
       a.languages.trustRoot(a.languages.trustTarget(a.view ? dirname(a.view.buf.abs) : a.loc.root), true),
@@ -190,7 +190,7 @@ export function fileActions(): Record<string, Run> {
       a.languages.trustRoot(a.languages.trustTarget(a.view ? dirname(a.view.buf.abs) : a.loc.root), false),
     // The symlinks you've answered (VV-D6): one forgotten is asked about again; one followed, followed no more.
     "vault.links": (a) => a.following.list(),
-    "folder.name": (a, arg) => {
+    "vault.name": (a, arg) => {
       // The explorer's selected root (one nested here), when it has focus.
       const item = a.explorer.focused() ? a.explorer.item() : null;
       if (item?.vault && !arg) return a.vaults.renameItem(item);

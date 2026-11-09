@@ -103,13 +103,13 @@ describe("vim-shaped normal mode in source (step 3c)", () => {
     expect(h.frame()).toContain("not a regex");
     await h.keys("escape");
   });
-  test("replace: space f r, tab into the replace row; enter one, alt+a all as one undo step", async () => {
+  test("replace: space / r, tab into the replace row; enter one, alt+a all as one undo step", async () => {
     const root = makeVault();
     writeFileSync(join(root, "r.md"), "# R\n\ncat dog cat\n\n**cat** here\n");
     const h = await harness({ root, open: "r.md", width: 100, height: 30 });
     const v = h.app.view!;
     const type = (t: string) => h.keys(...[...t]);
-    await h.keys("space", "f", "r");
+    await h.keys("space", "/", "r");
     const o = h.app.overlay as { replace?: { focus: boolean; total: number } };
     expect(o.replace!.focus).toBe(false); // nothing to find yet: the find field first
     expect(v.source).toBe(true); // replacing works on the markdown

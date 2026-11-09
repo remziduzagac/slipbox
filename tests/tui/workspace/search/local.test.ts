@@ -16,7 +16,7 @@ describe("the key map as agreed (vim first, desktop editors' ctrl keys, space fo
     await h.keys("space", "n", "v", "g", "g", "A");
     for (const c of " zebra") await h.keys(c === " " ? "space" : c);
     await h.keys("escape"); // unsaved: the search sees it
-    await h.keys("space", "f", "g");
+    await h.keys("space", "/", "g");
     for (const c of "zebra") await h.keys(c);
     await h.keys("enter");
     const o = h.app.overlay as ListOverlay;
@@ -39,13 +39,13 @@ describe("search in the TUI (6.5, 6.9)", () => {
     return harness({ root, open: "index.md", config: (c) => (c.search.engine = "auto"), ...opts });
   };
 
-  test("space f s: ranked as you type, from the index built as the vault opened; the words marked; enter opens at the match", async () => {
+  test("space / s: ranked as you type, from the index built as the vault opened; the words marked; enter opens at the match", async () => {
     const h = await withNotes({
       "dome.md": "# Dome\n\nThe quetzal plinth was replaced,\nits bolts too.\n\n## Later\n\nAnd the dome rollers.\n",
     });
     await h.app.search.whenIndexed();
     expect(h.app.search.index?.complete).toBe(true);
-    await h.keys("space", "f", "s");
+    await h.keys("space", "/", "s");
     expect((h.app.overlay as ListOverlay).title).toStartWith("search here — words");
     await typeIn(h, "quetzal plinth");
     const list = h.app.overlay as ListOverlay;
@@ -73,7 +73,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     const h = await withNotes({ "a.md": "# A\n\nplain words\n" });
     await h.app.search.whenIndexed();
     const found = (q: string) => h.app.search.query(q).hits.map((x) => `${x.path}:${x.line}`);
-    await h.app.run("note.open a.md");
+    await h.app.run("file.open a.md");
     // Typed, not saved: found as it's shown — and not as the file still has it.
     await h.keys("shift+g", "o", ...[..."a zebra"].map((ch) => (ch === " " ? "space" : ch)), "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
@@ -105,7 +105,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
       many[`n${i}.md`] = `# Note ${i}\n\n${"filler words here. ".repeat(40)}${i === 7 ? "a narwhal" : ""}\n`;
     const h = await withNotes(many);
     expect(h.app.search.job).not.toBeNull();
-    await h.keys("space", "f", "s");
+    await h.keys("space", "/", "s");
     await typeIn(h, "narwhal");
     const list = h.app.overlay as ListOverlay;
     expect(h.app.search.job).not.toBeNull(); // keys don't wait for it: its slices run between frames
@@ -119,7 +119,7 @@ describe("search in the TUI (6.5, 6.9)", () => {
     // [search] engine = "scan": no index, the files scanned.
     const s = await withNotes({ "w.md": "# W\n\na walrus\n" }, { config: (c) => (c.search.engine = "scan") });
     expect(s.app.search.index).toBeNull();
-    await s.keys("space", "f", "s");
+    await s.keys("space", "/", "s");
     await typeIn(s, "walrus");
     expect((s.app.overlay as ListOverlay).title).toBe('"walrus" — 1 file (scanned: no index here)');
   });

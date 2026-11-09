@@ -152,7 +152,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     await probe(out);
     const h = await harness({ root, open: "index.md" });
     expect(h.app.graph.notes.has("data/far.md")).toBe(true);
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     const far = h.app.view!.buf;
     expect([far.rel, far.readOnly]).toEqual(["data/far.md", null]);
     h.app.following.forget(link);
@@ -173,7 +173,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     setLinkAnswer(link, "follow");
     await probe(out);
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     const far = h.app.view!.buf;
     h.app.following.forget(link);
     const said = far.readOnly;
@@ -196,7 +196,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     setLinkAnswer(link, "follow");
     await probe(out);
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     const far = h.app.view!.buf;
     far.edit(0, 0, "Typed. ");
     h.app.following.forget(link);
@@ -244,7 +244,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     setLinkAnswer(link, "follow");
     await probe(out);
     const h = await harness({ root, open: "index.md", config: (c) => (c.walk.max_file_size = 500) });
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     const far = h.app.view!.buf;
     expect(far.rel).toBeNull();
     far.edit(0, 0, "Typed. ");
@@ -325,7 +325,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     setLinkAnswer(link, "follow");
     await probe(out);
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     const far = h.app.view!.buf;
     h.app.following.forget(link);
     writeFileSync(join(out, "far.md"), "# Far\n\n- [ ] one\n- [ ] changed out there\n");
@@ -339,7 +339,7 @@ describe("links followed only when you say so (VV-D6)", () => {
     setLinkAnswer(link, "follow");
     await probe(out);
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     const far = h.app.view!.buf;
     far.edit(0, 0, "Typed. ");
     h.app.following.forget(link);
@@ -488,7 +488,7 @@ describe("links followed only when you say so (VV-D6)", () => {
   test(":e naming a note through a link not followed asks first: never made the vault's unasked", async () => {
     const { root } = linked();
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open data/far.md");
+    await h.app.run("file.open data/far.md");
     expect((h.app.overlay as ListOverlay).title).toContain("leads out of");
     expect(h.app.graph.notes.has("data/far.md")).toBe(false);
     expect(h.app.view!.buf.rel).toBe("index.md");

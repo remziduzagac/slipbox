@@ -179,10 +179,10 @@ export class Explorer {
     return this.commands.focused();
   }
 
-  /** What `space n …` acts on (18.13): the explorer's selected note or file when it has focus, else
+  /** What `space f …` acts on (18.13, D274): the explorer's selected note or file when it has focus, else
    *  this note; null (and said) without one. */
-  noteTarget(): ExplorerItem | null {
-    return this.commands.noteTarget();
+  fileTarget(): ExplorerItem | null {
+    return this.commands.fileTarget();
   }
 
   /** What `space d …` acts on (18.13): the explorer's selected folder (or vault, or a file's folder)

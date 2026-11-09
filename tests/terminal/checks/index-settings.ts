@@ -48,7 +48,7 @@ export const INDEX_SETTINGS: Check[] = [
   {
     area: "navigating",
     name: "index: a note saved here is indexed again — its new link in the target's backlinks, its new word found",
-    covers: { cases: ["index", "search"], commands: ["backlinks.open", "search.open", "note.save"] },
+    covers: { cases: ["index", "search"], commands: ["backlinks.open", "search.open", "file.save"] },
     options: { open: "people/kenji-mori.md", size: { cols: 140, rows: 34 } },
     run: async (s) => {
       await toSource(s);
@@ -62,7 +62,7 @@ export const INDEX_SETTINGS: Check[] = [
       await s.see(/Linking to dome-refit\.md/, 5000);
       await s.see(/people\/kenji-mori\.md\s+the dome refit/, 5000);
       await s.keys("escape");
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("quokkaline");
       await s.see(/"quokkaline" — 1 file/, 5000);
       await s.see("people/kenji-mori.md:");
@@ -128,7 +128,7 @@ export const INDEX_SETTINGS: Check[] = [
       // An agent rewrites it: the window reads it again, and the index doesn't take it back.
       s.write("parked/kept.md", "# Kept\n\nA quillwort note, now.\n");
       await s.see("A quillwort note, now.", 5000);
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("quillwort");
       await s.see(/"quillwort"/, 5000);
       await sleep(1000);
@@ -148,7 +148,7 @@ export const INDEX_SETTINGS: Check[] = [
       await leader(s, "v", "r");
       await s.message(/reindexed \d+ notes/, 5000);
       // Searched: the search index caught up with the reindex.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("zanzibar");
       await s.see(/"zanzibar" — 1 file/, 5000);
       await s.see("late.md:");

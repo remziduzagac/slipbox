@@ -72,9 +72,9 @@ describe("top bar, tab strip, status line", () => {
     expect(h.app.geometry!.tabStrip).not.toBeNull();
     expect(h.app.geometry!.tabs).toHaveLength(1);
     await h.keys("ctrl+t", "c");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/beta.md");
     await h.keys("ctrl+t", "c");
-    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("file.open notes/alpha.md");
     h.frame();
     const strip = h.app.geometry!.tabStrip!;
     expect(strip.y).toBe(2); // under the top bar and the frame's top rule
@@ -293,7 +293,7 @@ describe("top bar, tab strip, status line", () => {
   });
   test("a ┃ after each tab, joined to the rules above and below the strip", async () => {
     const h = await harness({ width: 160 });
-    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("file.open notes/alpha.md");
     h.app.openInNewTab("notes/beta.md");
     const rows = h.frame().split("\n");
     const tabs = h.app.geometry!.tabs;
@@ -387,7 +387,7 @@ describe("top bar, tab strip, status line", () => {
     expect(styleOf("status:back").fg).toBe(dim); // nowhere to go yet
     expect(styleOf("status:forward").fg).toBe(dim);
     // Following a link: back lights up.
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/beta.md");
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
     expect(styleOf("status:back").fg).not.toBe(dim);
     expect(styleOf("status:back").bold).toBe(true);
@@ -405,7 +405,7 @@ describe("top bar, tab strip, status line", () => {
     for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: fwd.x, y: fwd.y, button: 0 });
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");
     // The path: the history above it — forward places on top, here marked, back below; enter jumps.
-    await h.app.run("note.open index.md");
+    await h.app.run("file.open index.md");
     await h.app.run("history.back");
     h.frame();
     const path = hot(h, "status:path");

@@ -31,11 +31,11 @@ export const DOCUMENT_STRUCTURE: Check[] = [
 
   {
     area: "reading",
-    name: "document types: space f d lists them with their notes; :type adr the ADRs in order, each its status; ] t and [ t step through them",
+    name: "document types: space / d lists them with their notes; :type adr the ADRs in order, each its status; ] t and [ t step through them",
     covers: { cases: ["notes"], commands: ["type.list", "type.next", "type.prev"] },
     options: { home: true, startAt: "home/work/kestrel/docs/adr/0002-route-engine-in-rust.md" },
     run: async (s) => {
-      await leader(s, "f", "d");
+      await leader(s, "/", "d");
       await s.see("Document types");
       await s.see(/adr\s+4 notes/);
       await s.keys("escape");

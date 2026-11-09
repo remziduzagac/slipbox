@@ -58,7 +58,7 @@ export const GIT: Check[] = [
   {
     area: "links-and-files",
     name: "git: a branch switch while it runs — the branch on the top bar, said once, each branch's tabs back",
-    covers: { cases: ["git", "links/git"], commands: ["note.open"] },
+    covers: { cases: ["git", "links/git"], commands: ["file.open"] },
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
       await s.where(/^kestrel │ main\b/, /‹ README\.md/);
@@ -83,7 +83,7 @@ export const GIT: Check[] = [
   {
     area: "links-and-files",
     name: "git: a branch's tab of a note only it has, back as it's checked out — its links found, a backlink there, once it comes",
-    covers: { cases: ["git", "links/git", "links/backlinks"], commands: ["links.open", "backlinks.open", "note.open"] },
+    covers: { cases: ["git", "links/git", "links/backlinks"], commands: ["links.open", "backlinks.open", "file.open"] },
     options: {
       home: true,
       startAt: "home/work/kestrel/docs/only-here.md",

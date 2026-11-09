@@ -23,10 +23,10 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
   };
   test("none running: says so; one: sends there straight away, opening the file then the line", async () => {
     const none = await setup([]);
-    await none.h.keys("space", "n", "s");
+    await none.h.keys("space", "f", "s");
     expect(none.h.app.transient!.text).toContain("no nvim is running");
     const { h, sent, root } = await setup([server("/elsewhere")]);
-    await h.keys("space", "n", "s");
+    await h.keys("space", "f", "s");
     await Bun.sleep(5);
     const line = h.app.cursorLine(h.app.view!);
     expect(sent).toEqual([
@@ -43,7 +43,7 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
     (h.app as unknown as { host: Host }).host.runDetached = async (argv) => (sent.push(argv), 0);
     h.app.handoff.nvimDiscovery = () => found;
     h.app.handoff.nvimProbe = (s) => found.find((f) => f.socket === s) ?? null;
-    await h.keys("space", "n", "s");
+    await h.keys("space", "f", "s");
     const o = h.app.overlay as ListOverlay;
     expect(o.title).toContain("which nvim");
     expect((o.filtered[0]!.item.data as NvimServer).cwd).toBe(root); // holds the note, the closest folder
@@ -54,7 +54,7 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
     expect(sent[0]![2]).toBe(found[0]!.socket);
     // Next time: straight to the remembered one, no picker, while it answers…
     sent.length = 0;
-    await h.keys("space", "n", "s");
+    await h.keys("space", "f", "s");
     await Bun.sleep(5);
     expect(h.app.overlay).toBeNull();
     expect(sent[0]![2]).toBe(found[0]!.socket);
@@ -62,13 +62,13 @@ describe('the nvim preset ([editor] remote = "nvim", the default)', () => {
     h.app.quit();
     const again = await harness({ root, open: "notes/alpha.md" });
     expect(again.app.handoff.remoteServer).toBe(found[0]!.socket);
-    // space n p always asks.
-    await h.keys("space", "n", "p");
+    // space f p always asks.
+    await h.keys("space", "f", "p");
     expect(h.app.overlay?.kind).toBe("list");
     await h.keys("escape");
     // Gone: the picker comes back.
     h.app.handoff.nvimProbe = () => null;
-    await h.keys("space", "n", "s");
+    await h.keys("space", "f", "s");
     expect(h.app.overlay?.kind).toBe("list");
   });
 });

@@ -140,7 +140,7 @@ Elsewhere's.
 Elsewhere has no index, so what needs one isn't there. slipbox says so, rather than showing an empty list:
 
 - no backlinks (`space l b`, the Info view and `slipbox backlinks` say why)
-- no search across it (`space f s`, `slipbox search`)
+- no search across it (`space / s`, `slipbox search`)
 - no tags across its notes, and no check of their links (`slipbox tags`, `slipbox problems`)
 - no git
 

@@ -182,15 +182,15 @@ describe("reflow in the editor (EG-D12)", () => {
       ),
     ).toBe(59);
     expect(said(h)).toBe("wrapped 1 paragraph to 60 columns (MD013 in docs/.markdownlint-cli2.jsonc)");
-    await h.app.run("note.open other/note.md");
+    await h.app.run("file.open other/note.md");
     await source(h);
     await h.keys("g", "q", "q");
     expect(said(h)).toBe("wrapped 1 paragraph to 50 columns (.editorconfig)");
-    await h.app.run("note.open plain.md");
+    await h.app.run("file.open plain.md");
     await source(h);
     await h.keys("g", "q", "q");
     expect(said(h)).toBe("wrapped 1 paragraph to 80 columns (the default)");
-    await h.app.run("note.open code.ts");
+    await h.app.run("file.open code.ts");
     await source(h);
     const before = text(h);
     await h.keys("g", "q", "q");

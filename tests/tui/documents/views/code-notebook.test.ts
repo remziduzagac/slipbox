@@ -491,7 +491,7 @@ describe("code as a notebook (24.x, 24.13)", () => {
     expect(h.app.view!.buf.rel).toBe("notes/alpha.md");
     expect(line(h)).toBe(7);
     // The box of its own's, in backticks.
-    await h.app.run("note.open tool.ts");
+    await h.app.run("file.open tool.ts");
     expect(onText("Standing alone", "notes/beta.md").srcMap).toBeUndefined();
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("notes/beta.md");

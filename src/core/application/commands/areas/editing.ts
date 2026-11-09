@@ -254,28 +254,32 @@ export const EDITING_SPECS: CommandSpec[] = [
   { id: "edit.undo", title: "Undo", cli: I, desc: "Undoes the last change (a whole insert session is one)" },
   { id: "edit.redo", title: "Redo", cli: I, desc: "Redoes what undo undid" },
   {
-    id: "note.save",
+    id: "file.save",
     title: "Save",
     cli: "slipbox write <note> --stdin",
-    desc: "Writes the note's changes to its file",
+    desc: "Writes the file's changes to disk",
+    formerly: ["note.save"],
   },
   {
-    id: "note.save_all",
+    id: "file.save_all",
     title: "Save all",
     cli: I,
-    desc: "Saves every note with unsaved changes, open in a tab or not",
+    desc: "Saves every file with unsaved changes, open in a tab or not",
+    formerly: ["note.save_all"],
   },
   {
-    id: "note.save_force",
+    id: "file.save_force",
     title: "Save over a changed file",
     cli: "slipbox write <note> --stdin",
-    desc: "Writes the note even though its file changed on disk since it was loaded",
+    desc: "Writes the file even though it changed on disk since it was loaded",
+    formerly: ["note.save_force"],
   },
   {
-    id: "note.revert",
+    id: "file.revert",
     title: "Reload, dropping changes",
     cli: "slipbox read <note>",
     desc: "Throws away unsaved changes and loads the file as it is on disk",
+    formerly: ["note.revert"],
   },
   {
     id: "note.resolve",
@@ -287,9 +291,9 @@ export const EDITING_SPECS: CommandSpec[] = [
   { id: "app.quit_force", title: "Quit without saving", cli: I, desc: "Quits, throwing away unsaved changes" },
   {
     id: "switcher.open",
-    title: "Quick switcher: find a note",
+    title: "Quick switcher: find a file",
     cli: "slipbox ls",
-    desc: "Opens a note by typing part of its name",
+    desc: "Opens a note or file by typing part of its name, a symbol after #, or a path",
   },
   // Lists of places (EG-D2): where a pick opens, and the last list again.
   {
@@ -316,11 +320,18 @@ export const EDITING_SPECS: CommandSpec[] = [
     cli: "slipbox commands",
     desc: "Runs any command by name, or an :alias",
   },
-  { id: "note.open", title: "Open a note", cli: "slipbox render <note>", desc: "Opens a note by name" },
   {
-    id: "note.open_path",
+    id: "file.open",
+    title: "Open a file",
+    cli: "slipbox render <note>",
+    desc: "Opens a note or file by its name or path (:e)",
+    formerly: ["note.open"],
+  },
+  {
+    id: "file.open_path",
     title: "Open a file by its path",
     cli: I,
     desc: "Asks for a path (~ is home), its folders and files completed as you type; opens the file, as :e does",
+    formerly: ["note.open_path"],
   },
 ];

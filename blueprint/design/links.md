@@ -339,7 +339,7 @@ folder changes, a code or data file's as a note's: previewed, undoable, a plan i
 A symlink renamed or moved itself moves as a link, followed still, leading where it did (D260; [roots.md](roots.md)
 § Links followed only when you say so).
 
-**Where a move or a copy lands** (DF-D4, DF-D20). A new path typed for a move — `slipbox mv`, `space n m`, `:mv` —
+**Where a move or a copy lands** (DF-D4, DF-D20). A new path typed for a move — `slipbox mv`, `space f m`, `:mv` —
 or for a copy — `slipbox cp` — that is a folder already, or ends in `/`, means into it: the note, file or folder
 keeps its name there (`slipbox mv note.md ideas/` makes `ideas/note.md`). A path ending in `/` is always a folder to
 go into, made when it isn't there yet: `slipbox mv drafts archive/` makes `archive/drafts`, never renaming `drafts`
@@ -349,7 +349,7 @@ paste there does. Any other path is the whole new path, a note's extension added
 there is refused, never overwritten, and so is a path under a file (`slipbox cp a.md b.md/`). In the CLI, `.` and
 `..` are from the current folder, as `./` and `../` are; a move's plan (`--dry-run`, `--plan`) holds the path it
 lands on. A rename in place (the explorer's `r`) takes a name, never a folder to go into; the explorer's `m` and a
-paste pick the folder themselves, and the TUI's copy of a note (`space n shift+y`) goes beside it, no path typed
+paste pick the folder themselves, and the TUI's copy of a note (`space f shift+y`) goes beside it, no path typed
 (`core/workspace/mutations/rename/rename.ts`, `moveTarget`; `copyPath` in `core/workspace/mutations/files.ts`).
 
 No old name is written into a note (D79). A heading renamed rewrites the fragments naming it, each by its slug or

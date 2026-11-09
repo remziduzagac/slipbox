@@ -20,7 +20,7 @@ describe("the index on demand in the TUI (20.8)", () => {
     writeFileSync(join(root, "drafts", "plan.md"), "# Plan\n\n[back](../index.md)\n"); // the harness's walk.exclude
     const h = await harness({ root, open: "index.md" });
     expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(false);
-    await h.app.run("note.open tmp/scratchpad.md");
+    await h.app.run("file.open tmp/scratchpad.md");
     expect(h.app.view!.buf.rel).toBe("tmp/scratchpad.md");
     expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(true);
     expect(h.app.graph.backlinks("index.md").map((b) => b.from)).toContain("tmp/scratchpad.md");
@@ -28,7 +28,7 @@ describe("the index on demand in the TUI (20.8)", () => {
     h.app.explorer.expanded.delete(join(root, "tmp"));
     h.app.explorer.invalidateTree();
     expect(h.app.info.rows().find((r) => r.key === "index")).toBeUndefined();
-    await h.app.run("note.open .private/p.md");
+    await h.app.run("file.open .private/p.md");
     expect(h.app.view!.buf.rel).toBe(".private/p.md");
     // Left out and never reached (D249): opened as the explorer opens its ⊘ row, by its path from the vault's top or
     // its whole path, and never indexed. Info says why; its row is revealed in the explorer, the ⊘ its folder's, whose
@@ -43,9 +43,9 @@ describe("the index on demand in the TUI (20.8)", () => {
     ];
     for (const [rel, why] of left)
       for (const typed of [rel, join(root, rel)]) {
-        await h.app.run("note.open index.md");
+        await h.app.run("file.open index.md");
         h.app.messages.length = 0;
-        await h.app.run(`note.open ${typed}`);
+        await h.app.run(`file.open ${typed}`);
         expect(h.app.view!.buf.abs).toBe(join(root, rel));
         expect(h.app.view!.buf.rel).toBeNull();
         expect(h.app.messages.map((m) => m.text)).toEqual([]);
@@ -58,7 +58,7 @@ describe("the index on demand in the TUI (20.8)", () => {
         h.app.region = "content";
       }
     // Under a hidden folder no row lists, never reached: opened all the same, Info saying why.
-    await h.app.run("note.open .slipbox/config.toml");
+    await h.app.run("file.open .slipbox/config.toml");
     expect(h.app.view!.buf.abs).toBe(join(root, ".slipbox", "config.toml"));
     expect(h.app.view!.buf.rel).toBeNull();
     expect(h.app.info.rows().find((r) => r.key === "index")?.value).toBe("not indexed: slipbox's own folder");
@@ -68,7 +68,7 @@ describe("the index on demand in the TUI (20.8)", () => {
     for (const [rel] of left) expect(h.app.graph.reached.has(rel)).toBe(false);
     // Not there: said so, as before.
     for (const typed of ["node_modules/dep/gone.md", join(root, "drafts", "gone.md")]) {
-      await h.app.run(`note.open ${typed}`);
+      await h.app.run(`file.open ${typed}`);
       expect(h.app.view!.buf.abs).toBe(join(root, ".slipbox", "config.toml"));
       expect(h.app.messages.at(-1)?.text).toBe(`no note or file "${typed}"`);
     }
@@ -77,7 +77,7 @@ describe("the index on demand in the TUI (20.8)", () => {
     for (const whole of [false, true]) {
       const root = makeVault();
       const h = await harness({ root, open: "index.md" });
-      await h.app.run(`note.open ${whole ? join(root, "nested-vault", "inner.md") : "nested-vault/inner.md"}`);
+      await h.app.run(`file.open ${whole ? join(root, "nested-vault", "inner.md") : "nested-vault/inner.md"}`);
       await answerSwitch(h);
       expect(h.app.loc.root).toBe(join(root, "nested-vault"));
       expect(h.app.view!.buf.rel).toBe("inner.md");
@@ -100,8 +100,8 @@ describe("the index on demand in the TUI (20.8)", () => {
         [".config/tool/t.toml", "hidden"],
       ] as const)
         for (const typed of [rel, join(home, rel)]) {
-          await h.app.run("note.open a.md");
-          await h.app.run(`note.open ${typed}`);
+          await h.app.run("file.open a.md");
+          await h.app.run(`file.open ${typed}`);
           expect(h.app.view!.buf.abs).toBe(join(home, rel));
           expect(h.app.view!.buf.rel).toBeNull();
           expect(h.app.info.rows().find((r) => r.key === "index")?.value).toBe(`not indexed: ${why}`);
@@ -119,13 +119,13 @@ describe("the index on demand in the TUI (20.8)", () => {
     writeFileSync(join(root, "tmp", "scratchpad.md"), "# Scratchpad\n");
     writeFileSync(join(root, "rides.csv"), "date,km\n2026-10-01,42\n");
     const h = await harness({ root, open: "index.md" });
-    await h.app.run(`note.open ${join(root, "rides.csv")}`);
+    await h.app.run(`file.open ${join(root, "rides.csv")}`);
     expect(h.app.view!.buf.rel).toBe("rides.csv");
-    await h.app.run(`note.open ${join(root, "tmp", "scratchpad.md")}`);
+    await h.app.run(`file.open ${join(root, "tmp", "scratchpad.md")}`);
     expect(h.app.view!.buf.rel).toBe("tmp/scratchpad.md");
     expect(h.app.graph.notes.has("tmp/scratchpad.md")).toBe(true);
     // Not there: said so, by the path as typed.
-    await h.app.run(`note.open ${join(root, "tmp", "gone.md")}`);
+    await h.app.run(`file.open ${join(root, "tmp", "gone.md")}`);
     expect(h.app.messages.at(-1)?.text).toBe(`no note or file "${join(root, "tmp", "gone.md")}"`);
   });
 });

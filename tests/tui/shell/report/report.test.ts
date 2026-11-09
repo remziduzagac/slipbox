@@ -591,7 +591,7 @@ describe("sending (RPT-D3, RPT-D4)", () => {
     await h.keys("space", "r");
     await type(h, "never on disk");
     await h.keys("escape");
-    await h.app.run("note.save_force");
+    await h.app.run("file.save_force");
     expect((h.app.overlay as ListOverlay).title).toBe("Send the report — nothing has left yet");
     expect(allText(sandbox)).not.toContain("never on disk");
     // Its name was `report:`, written where slipbox ran, before (#5's review).

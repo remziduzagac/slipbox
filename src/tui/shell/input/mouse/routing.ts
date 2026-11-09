@@ -290,7 +290,7 @@ export class MouseRouting {
         else if (arg === "work") void this.app.run("background.open");
         else if (arg === "messages") void this.app.run("messages.open");
         else if (arg === "brand" || arg === "upgrade") void this.app.run("app.about");
-        else if (arg === "vault") void this.app.run("folders.open");
+        else if (arg === "vault") void this.app.run("vault.open");
         else if (arg === "branch") void this.app.run("git.menu");
         break;
       case "status":

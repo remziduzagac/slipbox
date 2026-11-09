@@ -11,8 +11,8 @@ describe("state (3.4, 3.15)", () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md", height: 20 });
     await h.keys("ctrl+d", "ctrl+d", "w");
     const cur = { ...h.app.view!.cur };
-    await h.app.run("note.open index.md");
-    await h.app.run("note.open samples/handbook/operations-handbook.md");
+    await h.app.run("file.open index.md");
+    await h.app.run("file.open samples/handbook/operations-handbook.md");
     h.frame();
     expect(h.app.view!.cur).toEqual(cur);
   });

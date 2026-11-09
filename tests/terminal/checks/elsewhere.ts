@@ -13,7 +13,7 @@ export const ELSEWHERE: Check[] = [
   {
     area: "links-and-files",
     name: "Elsewhere: gone into from a vault, its own tabs; back with ctrl+o, the vault's tabs as they were",
-    covers: { cases: ["vault", "tabs", "links/travel"], commands: ["tab.new", "note.open", "history.back"] },
+    covers: { cases: ["vault", "tabs", "links/travel"], commands: ["tab.new", "file.open", "history.back"] },
     options: { home: true, startAt: "home/notes/index.md", setup: downloadsElsewhere },
     run: async (s) => {
       // notes: two tabs. (Not inbox.md: notes' config makes it its scratch, shown as `scratch`.)
@@ -42,7 +42,7 @@ export const ELSEWHERE: Check[] = [
   {
     area: "links-and-files",
     name: "Elsewhere: a note just looked at through a link, the link forgotten, then followed — the same window writable",
-    covers: { cases: ["vault", "links/state"], commands: ["note.open", "vault.links"] },
+    covers: { cases: ["vault", "links/state"], commands: ["file.open", "vault.links"] },
     options: {
       startAt: "tmp/plain/a.md",
       setup: (s) => {
@@ -87,7 +87,7 @@ export const ELSEWHERE: Check[] = [
   {
     area: "links-and-files",
     name: "Elsewhere: a note looked at through a link, forgotten, changed by an agent, then followed — read again at once, typing goes into theirs",
-    covers: { cases: ["vault", "links/state", "reload"], commands: ["note.open", "vault.links"] },
+    covers: { cases: ["vault", "links/state", "reload"], commands: ["file.open", "vault.links"] },
     options: {
       startAt: "tmp/plain-agent/a.md",
       setup: (s) => {
@@ -139,7 +139,7 @@ export const ELSEWHERE: Check[] = [
   {
     area: "links-and-files",
     name: "Elsewhere: a link followed, its note typed into, forgotten, changed by an agent, followed again — yours kept, asked which to keep",
-    covers: { cases: ["vault", "links/state", "reload"], commands: ["note.open", "vault.links"] },
+    covers: { cases: ["vault", "links/state", "reload"], commands: ["file.open", "vault.links"] },
     options: {
       startAt: "tmp/plain-typed/a.md",
       // Never autosaved meanwhile: what's typed stays unsaved.

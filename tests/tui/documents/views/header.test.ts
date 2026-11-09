@@ -75,7 +75,7 @@ const lastMessage = (h: Harness) => h.app.messages.at(-1);
 async function textHarness(): Promise<Harness> {
   const h = await harness({ open: NOTE, width: 120, height: 30 });
   writeFileSync(join(h.root, TEXT), "a plain text file\nwith two lines\n");
-  await h.app.run(`note.open ${TEXT}`);
+  await h.app.run(`file.open ${TEXT}`);
   expect(h.app.view!.buf.name).toBe("plain.txt");
   return h;
 }
@@ -172,7 +172,7 @@ describe("the window header's mode buttons (HDR-D2)", () => {
   test("a click in the other window of a split focuses it and switches it alone; its selected one only focuses", async () => {
     const h = await harness({ open: NOTE, width: 200, height: 30 });
     await h.keys("ctrl+w", "v");
-    await h.app.run(`note.open ${YAML}`);
+    await h.app.run(`file.open ${YAML}`);
     const t = h.app.tab!;
     expect(t.views.length).toBe(2);
     const other = 1 - t.active;
@@ -298,7 +298,7 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     const body = Array.from({ length: 9000 }, (_, i) => `key${i}: "value number ${i} of a big file"`).join("\n");
     expect(body.length).toBeGreaterThan(BACKGROUND_PARSE); // big: the size makes no difference
     writeFileSync(join(h.root, "big.yaml"), `a: : [x\n${body}\n`);
-    await h.app.run("note.open big.yaml");
+    await h.app.run("file.open big.yaml");
     const v = h.app.view!;
     expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
     await h.keys("g", "g", "d", "d"); // the broken line gone
@@ -335,9 +335,9 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
     for (const d of ["a", "b"]) mkdirSync(join(h.root, d), { recursive: true });
     writeFileSync(join(h.root, "a/data.yaml"), "a: 1\n");
     writeFileSync(join(h.root, "b/data.yaml"), ":[x\na: 1\n");
-    await h.app.run("note.open b/data.yaml");
+    await h.app.run("file.open b/data.yaml");
     await h.keys("ctrl+w", "v");
-    await h.app.run("note.open a/data.yaml");
+    await h.app.run("file.open a/data.yaml");
     const t = h.app.tab!;
     const [b, a] = [t.views[0]!, t.views[1]!];
     expect([b.buf.name, a.buf.name, viewMode(b)]).toEqual(["data.yaml", "data.yaml", "source"]);
@@ -402,7 +402,7 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
       const h = await harness({ open: YAML, width: 120, height: 30, config: (c) => (c.ui.breadcrumb = breadcrumb) });
       expect(states(h)).toBe("Read:selected Lens:enabled Source:enabled");
       writeFileSync(join(h.root, YAML), "a: : [x\n");
-      await h.app.run("note.reload");
+      await h.app.run("file.reload");
       expect(viewMode(h.app.view!)).toBe("rendered"); // not laid out again yet
       // One frame: the window laid out (to source mode) before its buttons are drawn, never a frame behind.
       expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
@@ -412,9 +412,9 @@ describe("modes a window can't switch to are disabled (HDR-D2)", () => {
   test("a window given another file: Read again for a note after a file with no rendered view, and back", async () => {
     const h = await textHarness();
     expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
-    await h.app.run(`note.open ${NOTE}`);
+    await h.app.run(`file.open ${NOTE}`);
     expect(states(h)).toBe("Read:selected Lens:enabled Source:enabled");
-    await h.app.run(`note.open ${TEXT}`);
+    await h.app.run(`file.open ${TEXT}`);
     expect(states(h)).toBe("Read:disabled Lens:disabled Source:selected");
   });
 
@@ -685,7 +685,7 @@ describe("loading the header's modules", () => {
 });
 
 describe("the two settings (HDR-D3)", () => {
-  test("ui.breadcrumb = false keeps the header, its name, buttons and ▤; space f b's list then centred", async () => {
+  test("ui.breadcrumb = false keeps the header, its name, buttons and ▤; space / b's list then centred", async () => {
     const h = await harness({
       open: NOTE,
       width: 160,
@@ -702,7 +702,7 @@ describe("the two settings (HDR-D3)", () => {
     expect(out.y).toBeGreaterThan(0); // on a header, not the top bar
     expect(buttons(h, 1)[0]!.y).toBe(out.y);
     expect(h.app.geometry!.crumbAnchors).toEqual({});
-    await h.keys("space", "f", "b");
+    await h.keys("space", "/", "b");
     expect(h.app.overlay?.kind).toBe("list");
   });
 
@@ -775,7 +775,7 @@ describe("the two settings (HDR-D3)", () => {
       return [st.bold && "bold", st.dim && "dim", st.italic && "italic"].filter(Boolean).join(" ");
     };
     expect([attrs("Read"), attrs("Lens")]).toEqual(["bold", "dim"]);
-    await h.app.run(`note.open ${TEXT}`);
+    await h.app.run(`file.open ${TEXT}`);
     expect([attrs("Read"), attrs("Source")]).toEqual(["dim italic", "bold"]);
     // The terminal's own palette: colour 8 for both, told apart likewise.
     const term = await harness({ open: TEXT, width: 120, height: 30, themeName: "terminal" });

@@ -168,7 +168,7 @@ export const HOME: Check[] = [
       await inSwitcher(s, "new-quote", "household/new-quote.md");
       await s.keys("escape");
       // Searched too: a note of it never opened.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("renewal");
       await s.see("household/archive/2025-policy.md:", 5000);
       await s.keys("escape");
@@ -235,7 +235,7 @@ export const HOME: Check[] = [
   {
     area: "links-and-files",
     name: "home: gone into from another vault, its tabs brought back — their folders walked at once, a backlink there",
-    covers: { cases: ["vault", "tabs", "switcher", "links/backlinks"], commands: ["note.open", "backlinks.open"] },
+    covers: { cases: ["vault", "tabs", "switcher", "links/backlinks"], commands: ["file.open", "backlinks.open"] },
     options: { home: true, startAt: "home/household/bike-insurance.md", config: UNWALKED, setup: homeFolders },
     run: async (s) => {
       await opened(s, "household/bike-insurance.md");
@@ -307,7 +307,7 @@ export const HOME: Check[] = [
       s.expect(said === 1, `the open note read again once, not ${said} times`);
       await inSwitcher(s, "seeds", "garden/seeds.md");
       await s.keys("escape");
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("sow");
       await s.see("garden/seeds.md:", 5000);
       await s.keys("escape");
@@ -320,7 +320,7 @@ export const HOME: Check[] = [
   {
     area: "links-and-files",
     name: "home: a tab behind a link out of home not followed isn't brought back, nothing read through it",
-    covers: { cases: ["vault", "tabs", "links/state", "safety"], commands: ["note.open", "app.quit"] },
+    covers: { cases: ["vault", "tabs", "links/state", "safety"], commands: ["file.open", "app.quit"] },
     options: {
       home: true,
       startAt: "home/README.md",

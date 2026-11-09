@@ -3,6 +3,7 @@
 import { SERVERS } from "../../documents/servers/languages.ts";
 import { LINTERS } from "../../documents/servers/linters.ts";
 import { isPlainObject } from "./validation/predicates.ts";
+import { currentCommand } from "../commands/catalog.ts";
 
 /**
  * Settings only your own config may set, each with why. A folder's committed config comes with whatever you clone,
@@ -22,12 +23,13 @@ export const USER_ONLY: Record<string, string> = {
 
 /**
  * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,
- * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq.
+ * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq. By any id they have had
+ * (`note.revert` is `file.revert`; D274).
  */
 export const VAULT_FORBIDDEN_COMMANDS = [
   "app.quit_force",
-  "note.revert",
-  "note.save_force",
+  "file.revert",
+  "file.save_force",
   "scratch.clear",
   "shell.run",
   "shell.filter",
@@ -43,10 +45,10 @@ export function dropUserOnly(data: Record<string, unknown>, file: string, warnin
     if (!isPlainObject(table)) return;
     for (const [k, v] of Object.entries(table)) {
       if (isPlainObject(v)) strip(v, `${where}.${k}`);
-      else if (typeof v === "string" && VAULT_FORBIDDEN_COMMANDS.includes(v.split(" ")[0]!)) {
+      else if (typeof v === "string" && VAULT_FORBIDDEN_COMMANDS.includes(currentCommand(v).split(" ")[0]!)) {
         delete table[k];
         warnings.push(
-          `config: ${file} binds ${where}.${k} to ${v}, which only your own config may (${RUNS_A_PROGRAM.has(v.split(" ")[0]!) ? "it runs a program" : "it throws work away"}); ignored`,
+          `config: ${file} binds ${where}.${k} to ${v}, which only your own config may (${RUNS_A_PROGRAM.has(currentCommand(v).split(" ")[0]!) ? "it runs a program" : "it throws work away"}); ignored`,
         );
       }
     }

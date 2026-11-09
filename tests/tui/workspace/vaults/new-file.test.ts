@@ -76,7 +76,7 @@ describe("opening a new file (#168)", () => {
     h.app.saving.requestQuit();
     expect(h.quit()).toBe(false);
     expect(h.app.messages.at(-1)!.text).toContain("unsaved changes");
-    await h.app.run("note.save");
+    await h.app.run("file.save");
     expect(readFileSync(path, "utf8")).toBe("# Coffee\n");
     expect(b.newFile).toBe(false);
     expect(b.dirty).toBe(false);
@@ -100,7 +100,7 @@ describe("opening a new file (#168)", () => {
   test("saving an untouched new buffer explicitly makes an empty file", async () => {
     const path = join(makeVault(), "empty.md");
     const h = started(path);
-    await h.app.run("note.save");
+    await h.app.run("file.save");
     expect(readFileSync(path, "utf8")).toBe("");
     expect(h.app.view!.buf.newFile).toBe(false);
   });
@@ -192,7 +192,7 @@ describe("opening a new file (#168)", () => {
     writeFileSync(join(root, ".slipbox/config.toml"), '[walk]\nexclude = ["drafts/"]\n');
     const h = started(join(root, "drafts/plan.md"));
     h.app.view!.buf.edit(0, 0, "Plan\n");
-    await h.app.run("note.save");
+    await h.app.run("file.save");
     expect(readFileSync(join(root, "drafts/plan.md"), "utf8")).toBe("Plan\n");
     expect(h.app.graph.notes.has("drafts/plan.md")).toBe(false);
     expect(h.app.messages.at(-1)!.text).toContain("not indexed: walk.exclude");

@@ -41,6 +41,7 @@ import { homedir } from "node:os";
 import { Clipboard } from "../clipboard/clipboard.ts";
 import { Messages } from "../notifications/messages.ts";
 import { CommandRegistry, type Keymap } from "../../../core/application/commands/registry.ts";
+import { currentCommand } from "../../../core/application/commands/catalog.ts";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
@@ -521,7 +522,7 @@ export class App {
 
   async run(spec: string): Promise<void> {
     // The terminal tests' coverage (tests/terminal): every command run, one id per line.
-    if (TRACE) appendFileSync(TRACE, `${spec.split(" ")[0]}\n`);
+    if (TRACE) appendFileSync(TRACE, `${currentCommand(spec).split(" ")[0]}\n`); // by its id now (D274)
     if (!(await this.registry.run(this, spec))) this.message("error", `unknown command: ${spec}`);
   }
 

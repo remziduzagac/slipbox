@@ -65,7 +65,7 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     expect(await until(() => said(h).length === 1)).toBe(true);
     expect(said(h)[0]!.level).toBe("warn");
     expect(h.frame()).toContain("nope isn't installed");
-    await h.app.run("note.open b.fk");
+    await h.app.run("file.open b.fk");
     h.frame();
     await Bun.sleep(100);
     expect(said(h)).toHaveLength(1);
@@ -115,7 +115,7 @@ describe("language servers in the TUI (19.1, 19.8)", () => {
     expect((h.app.overlay as ListOverlay).items.map((i) => i.label)).toEqual(["a.fk:3", "a.fk:4"]);
     await h.keys("down", "enter");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
-    await h.app.run("note.open b.fk");
+    await h.app.run("file.open b.fk");
     expect(await until(() => (h.frame(), h.app.languages.servers!.isOpen(join(root, "b.fk"))))).toBe(true);
     await h.keys("g", "shift+i");
     expect(await until(() => h.app.messages.at(-1)?.text === "no implementation found here")).toBe(true);

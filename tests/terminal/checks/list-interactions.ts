@@ -77,13 +77,13 @@ export const LIST_INTERACTIONS: Check[] = [
   {
     area: "navigating",
     name: "questions: enter answers nothing, n says no, esc cancels, y says yes",
-    covers: { cases: ["questions", "trash"], commands: ["note.delete"] },
+    covers: { cases: ["questions", "trash"], commands: ["file.delete"] },
     options: { open: "scratch/wrap-probe.md", size: { cols: 120, rows: 34 } },
     run: async (s) => {
       const NOTE = "scratch/wrap-probe.md";
       const ASKED = "Delete scratch/wrap-probe.md?";
       const ask = async () => {
-        await leader(s, "n", "d");
+        await leader(s, "f", "d");
         await s.see(ASKED);
       };
       await ask();

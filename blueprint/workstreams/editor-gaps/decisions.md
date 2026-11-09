@@ -124,6 +124,9 @@ a selection a mark is typed over.
 
 ## EG-D9: TODOs and stubs (2026-11-08)
 
+> **Amended by D274 (2026-11-09):** the vault's list is `space / x`: `space f` is a file's group now, and finding's
+> is `space /`.
+>
 > **Amended by EG-D23 (2026-11-08):** the stubs dropped; the words stay.
 
 **Decision:** TODO, FIXME, FIX, HACK, XXX and BUG are coloured where they're marks: in a code comment, or at the

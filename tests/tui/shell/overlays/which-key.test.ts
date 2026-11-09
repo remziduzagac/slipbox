@@ -31,7 +31,7 @@ describe("which-key", () => {
     const left = rows[head]!.indexOf("┌");
     expect(rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim()).toBe(""); // a blank row inside, above
     expect(rows[head + 2]!.slice(left)).toMatch(/^│ \S+ +→ \+\w+/);
-    expect(rows[head + 3]).toContain("rename, actions, format"); // +code's explanation, under its name
+    expect(rows[head + 3]).toContain("in this note, in every note"); // +find's explanation (`/`, first), under its name
     const arrows = rows[head + 2]!.split("→").length - 1;
     expect(arrows).toBeLessThanOrEqual(3);
     const foot = rows.findIndex((r, i) => i > head && r.includes("└"));
@@ -60,7 +60,7 @@ describe("which-key", () => {
     const short = await harness({ width: 60, height: 14 });
     const s2 = await short.keys("space");
     expect(s2).toContain("+find");
-    expect(s2).not.toContain("notes, headings, tags, text, commands");
+    expect(s2).not.toContain("in this note, in every note");
   });
   test("group names and explanations come from [groups]", async () => {
     const h = await harness({ config: (c) => (c.groups = { "leader l": "LINKS: everything about links" }) });
@@ -86,7 +86,7 @@ describe("which-key", () => {
       height: 40,
       config: (c) => (
         (c.input.which_key_delay_ms = 10),
-        (c.keys = { "g q a": "note.save" }),
+        (c.keys = { "g q a": "file.save" }),
         (c.groups = { y: "yank: what's copied", "g q": "quick: a group under g" })
       ),
     });
@@ -157,7 +157,7 @@ describe("review round 1", () => {
         if (head < 0) continue;
         const left = rows[head]!.indexOf("┌");
         const padded = rows[head + 1]!.slice(left + 1, rows[head + 1]!.lastIndexOf("│")).trim() === "";
-        const described = rows.join("\n").includes("notes, headings, tags, text, commands");
+        const described = rows.join("\n").includes("rename, actions, format");
         if (padded) expect(described).toBe(true);
       }
     },

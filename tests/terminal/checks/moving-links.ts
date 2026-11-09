@@ -120,7 +120,7 @@ export const MOVING_LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: a followed file link renamed with r and moved with m stays a link, what it leads to where it was, out of the vault its own links left and said; a note through a followed link isn't moved out of it, nor one into it",
-    covers: { cases: ["rename", "links/moves", "safety"], commands: ["note.rename"] },
+    covers: { cases: ["rename", "links/moves", "safety"], commands: ["file.rename"] },
     options: {
       startAt: "v/b.md",
       config: WIDE,
@@ -523,7 +523,7 @@ export const MOVING_LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: a rename reaching a file by two links from two folders writes it for neither, said; two links to one file moved together edit it alike, written once, both indexed again",
-    covers: { cases: ["rename", "links/moves", "links/backlinks"], commands: ["note.rename", "backlinks.open"] },
+    covers: { cases: ["rename", "links/moves", "links/backlinks"], commands: ["file.rename", "backlinks.open"] },
     options: {
       startAt: "v/sub/a.md",
       config: WIDE,
@@ -574,7 +574,7 @@ export const MOVING_LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "nested roots: a rename reaching a note of a vault nested in this one through a link leaves it, said: its own vault reads its links otherwise",
-    covers: { cases: ["rename", "multiple-roots"], commands: ["note.rename"] },
+    covers: { cases: ["rename", "multiple-roots"], commands: ["file.rename"] },
     options: {
       startAt: "v/t.md",
       config: WIDE,
@@ -601,7 +601,7 @@ export const MOVING_LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "rename: a move that can't be finished changes nothing — a link whose note can't be written, a note into a folder that can't be written, a folder made unsearchable after the preview, a move out of a folder that can't be written into new folders — the folders made for it gone",
-    covers: { cases: ["rename", "copy-move", "safety"], commands: ["note.rename"] },
+    covers: { cases: ["rename", "copy-move", "safety"], commands: ["file.rename"] },
     options: {
       startAt: "v/ze.md",
       config: WIDE,
@@ -686,7 +686,7 @@ export const MOVING_LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "links: a rename reaching a note the vault reached in a hidden folder, and a link to it from another folder: written for neither name, said",
-    covers: { cases: ["rename", "links/moves"], commands: ["note.rename"] },
+    covers: { cases: ["rename", "links/moves"], commands: ["file.rename"] },
     options: {
       startAt: "v/r.md",
       config: WIDE,
@@ -828,7 +828,7 @@ export const MOVING_LINKS: Check[] = [
   {
     area: "links-and-files",
     name: "rename: a data file and a link to it from another folder written for neither; a second name for a note by a hard link isn't one entry; a planned move whose note is gone refused; a folder moved with a followed link in it isn't read through there; a stale answer isn't one; a link with none moved says nothing lost",
-    covers: { cases: ["rename", "links/moves", "safety"], commands: ["note.rename"] },
+    covers: { cases: ["rename", "links/moves", "safety"], commands: ["file.rename"] },
     options: {
       startAt: "v/docs/x.md",
       config: WIDE,

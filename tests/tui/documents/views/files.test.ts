@@ -42,7 +42,7 @@ describe("files beyond notes (16.3–16.5)", () => {
   test("a code file opens in SOURCE by default, highlighted, with READ available; a note after it renders", async () => {
     // Code as [render] code = "source" opens it (Python has the code view by default, 24.x).
     const h = await harness({ root: await setup(), config: (c) => (c.render.code = false) });
-    await h.app.run("note.open links-out.md");
+    await h.app.run("file.open links-out.md");
     const v = h.app.view!;
     const links = h.app.currentLayout(v).links;
     const py = links.find((l) => l.target === "run.py")!;
@@ -93,7 +93,7 @@ describe("files beyond notes (16.3–16.5)", () => {
   test("a data file opens from a link, rendered; edits save; a binary file doesn't open", async () => {
     const root = await setup();
     const h = await harness({ root });
-    await h.app.run("note.open links-out.md");
+    await h.app.run("file.open links-out.md");
     const v = h.app.view!;
     const cfg = h.app.currentLayout(v).links.find((l) => l.target === "cfg/app.toml")!;
     h.app.moveCursor(v, { row: cfg.line, col: cfg.col });

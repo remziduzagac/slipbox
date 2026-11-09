@@ -1,4 +1,5 @@
 import { loadSession } from "../../../core/workspace/session/position.ts";
+import { currentCommand } from "../../../core/application/commands/catalog.ts";
 import type { Config } from "../../../core/application/config/config.ts";
 import { folderUnreadable } from "../../../core/foundation/platform/fsutil.ts";
 import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
@@ -46,6 +47,7 @@ export function openInitialWindows(
 ): void {
   context.recentCommands = (loadSession(context.loc)?.recent_commands ?? [])
     .filter((id) => typeof id === "string")
+    .map(currentCommand) // one kept before its command was renamed, by its name now (D274)
     .slice(0, RECENT_MAX);
   context.handoff.remoteServer = loadSession(context.loc)?.remote_server;
   context.history.recentNotes = (loadSession(context.loc)?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);

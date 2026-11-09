@@ -668,6 +668,9 @@ wrongly. `esc` pressed once too many shut what you were writing in; `q` is what 
 
 ## D269: The top bar in sections: the branding and its badge at the left, About's; no version on it (#104, 2026-11-08)
 
+> **Amended by D274 (2026-11-09):** the palette's leader key, `space f p`, is gone: two keys open it, `:` and
+> `ctrl+shift+p`.
+
 **Decision:** A bar is made of **segments**, each a part clicked on its own, grouped into **sections**; the glossary,
 the docs and the code's types (`Segment`) use the two words. The top bar's left section is the branding, `slipbox`, and
 a green `↑` right after it when a newer version is available: both open About, which the palette's click gives way to.

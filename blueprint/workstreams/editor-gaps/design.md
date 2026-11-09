@@ -203,7 +203,7 @@ is `ctrl+p enter` (§ Overlays).
 
 ## MODIFIED design/tui.md § Renames (plans `17.15`, `7.1`–`7.4`)
 
-Adds (EG-D19): renaming or moving a code file — `space n m`, the explorer's `r` and `m`, a folder moved with code in
+Adds (EG-D19): renaming or moving a code file — `space f m`, the explorer's `r` and `m`, a folder moved with code in
 it — asks each running server of its project that registered for it (`workspace.fileOperations.willRename`, with its
 filters) for the edits the rename needs (`workspace/willRenameFiles`): the imports that point at it. Their lines join
 the same preview as the links', each with its server (`src/app.ts:3 from "./old" → from "./new"`); `enter` makes them
@@ -240,7 +240,7 @@ worktree, its buttons, its uncommitted files and its files against its base, no 
 
 ## MODIFIED design/tui.md § Overlays
 
-- **Lists of places** (EG-D2): the quick switcher (its `#` symbols too), search (`space f s`), find in every note,
+- **Lists of places** (EG-D2): the quick switcher (its `#` symbols too), search (`space / s`), find in every note,
   references (`g r`, `space k r`), backlinks and links; and the lists EG adds that hold places: the TODOs (EG-D9), the
   call hierarchy (EG-D19), the marks (EG-D20), the undo steps (EG-D13). A list's item may carry its place (a path, its
   vault, a line, a range); the palette, help, the menus, the dialog and the theme and glyph pickers carry none and stay
@@ -275,7 +275,7 @@ worktree, its buttons, its uncommitted files and its files against its base, no 
   the row selected, its scroll, its preview shown or hidden. Its preview is read again, a file having maybe changed. A
   links list opened again over another note opens its pick where its link leads (its place), not a link of that note.
   Kept while slipbox runs in this vault; going into another drops it. Nothing happens while another overlay is open.
-- **Find in every note** (EG-D10; `find.vault`, `ctrl+shift+f`, `space f g`): no question first. The list has a query
+- **Find in every note** (EG-D10; `find.vault`, `ctrl+shift+f`, `space / g`): no question first. The list has a query
   row of its own, matched as it's typed — each query a request to the regex worker, a newer one taking back the one
   before (search.md § Native regex matching) — the window's toggles in it (`alt+r`, `alt+w`). It opens with the
   selection on one line, else the cursor's word, typed and selected, so typing replaces it. A `path:ops/` word narrows
@@ -482,7 +482,7 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
 - **Coloured** in every view — rendered, SOURCE view, the lens, the code view — the word and its `:` in `todo` (FIXME,
   FIX and BUG in `todo_fix`).
 - **In the file:** `] x` / `[ x` (`todo.next`, `todo.prev`), around the ends.
-- **In the vault:** `space f x` (`todo.list`) lists those of every note and every text file the explorer shows, each
+- **In the vault:** `space / x` (`todo.list`) lists those of every note and every text file the explorer shows, each
   its word, `path:line` and its text, with the preview (§ Overlays). Gathered where the graph gathers code comments'
   links (`20.19`: the vault's code grammars loaded in the background), a note's from its lines, and kept current as
   the graph hears a file change. **Open:** a CLI equivalent (`slipbox find` can't tell a comment), else an interaction.
@@ -575,7 +575,7 @@ Labels come in the dispatch order right after a key awaited as a character. The 
 | normal | `s`, `g w`; `] d` `[ d`; `] x` `[ x`; `] q` `[ q`; `] r` `[ r` |
 | normal | `] f` `[ f` `] a` `[ a` `] o` `[ o`; `m`, `` ` ``, `'`; `ctrl+^`; `ctrl+w z` |
 | normal | `z c`, `z o`, `z shift+m`, `z shift+r`; `z a` now `fold.toggle` |
-| leader | `space '`, `space p`, ``space ` ``; `space c d` `i` `o`; `space f x`; `space h m` `u` |
+| leader | `space '`, `space p`, ``space ` ``; `space c d` `i` `o`; `space / x`; `space h m` `u` |
 | leader | `space g` (a group: `g`, `s` `u` `d`, `enter` `l` `o` `b` `y` `w`) |
 | leader | `space u h` `shift+r` `i`; `space w m` |
 | source | `y s`, `d s`, `c s`; `g q`, `g shift+q`; `g u`, `g shift+u`, `g ~`; `alt+o` |

@@ -100,7 +100,7 @@ describe("the lens (live preview: space n l, i/a/o with edit_in = live)", () => 
   });
   test("replace in the lens: enter replaces the match at the cursor and moves one on", async () => {
     const { h, v } = await setup((c) => (c.editor.edit_in = "live"));
-    await h.keys("space", "f", "r", ...[..."para"], "tab", ...[..."P"]);
+    await h.keys("space", "/", "r", ...[..."para"], "tab", ...[..."P"]);
     const o = h.app.overlay as { replace?: { current: number; total: number } };
     expect(v.live).toBe(true);
     expect(o.replace!.total).toBe(20);
