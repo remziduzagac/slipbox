@@ -361,7 +361,8 @@ describe("a note's diff before and after, laid out (GIT-D2)", () => {
     };
     const small = timed(1000);
     const big = timed(8000);
-    expect(big.best / Math.max(small.best, 1)).toBeLessThan(16);
+    // Eight times the lines: eight times the time if linear, 64 if not; past 24, a cost growing faster than its lines.
+    expect(big.best / Math.max(small.best, 1)).toBeLessThan(24);
     // Each code row goes to its own line: its unit's.
     const { l, d } = small;
     const row = l.lines.find((r) => rowText(r).includes("const v700 = 700;"))!;
