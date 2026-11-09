@@ -31,8 +31,8 @@ import { MOUSE_HELP } from "../src/tui/shell/input/mouse-help.ts";
 import { placeholderRow } from "../src/tui/shell/terminal/placeholders.ts";
 import { allShots } from "./terminal/shot.ts";
 import legacyAnchors from "./fixtures/documentation/legacy-anchors.json";
-import { LINE } from "../site/scripts/about.ts";
-import { readLegacyPages, readMap } from "../site/scripts/gather.ts";
+import { DOCS_URL, LINE, SITE } from "../site/scripts/about.ts";
+import { pageUrl, readLegacyPages, readMap } from "../site/scripts/gather.ts";
 
 const TOP = join(import.meta.dir, "..");
 const DOCS = join(TOP, "docs");
@@ -398,6 +398,27 @@ describe("the user documentation (DOC)", () => {
 
   test("every relative link and anchor lands", () => {
     expect(userDocs().flatMap((f) => brokenLinks(f))).toEqual([]);
+  });
+
+  test("the README's links into the docs go to their website: a page it makes, a heading of it — none to a file", () => {
+    const readme = read(join(TOP, "README.md"));
+    const map = read(join(DOCS, "README.md"));
+    const pages = ["README.md", ...readMap(map).flatMap((g) => g.pages), ...readLegacyPages(map)];
+    const page = new Map(pages.map((p) => [`${SITE}${pageUrl(p)}`, p]));
+    // Inline, autolinked, or a reference's definition at the end.
+    const targets = [...readme.matchAll(/\]\(([^)\s]+)\)|<(https:[^>\s]+)>|^\[[^\]]+\]: (\S+)/gm)].map(
+      (m) => m[1] ?? m[2] ?? m[3]!,
+    );
+    // A doc's Markdown, on GitHub, is the file, not the page: none (its pictures, and the folder, aside).
+    expect(targets.filter((t) => /^docs\/(?!images\/).+\.md(#|$)/.test(t))).toEqual([]);
+    const site = targets.filter((t) => t.startsWith(DOCS_URL));
+    expect(site.length).toBeGreaterThan(10);
+    const lost = site.filter((t) => {
+      const [url, anchor] = t.split("#") as [string, string | undefined];
+      const p = page.get(url);
+      return !p || (anchor !== undefined && !slugsOf(join(DOCS, p)).includes(anchor));
+    });
+    expect(lost).toEqual([]);
   });
 
   test("no roadmap step or decision ID", () => {

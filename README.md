@@ -46,14 +46,14 @@ conflicts on a merge screen, and see which links a merge would break before you 
 Open the folder you already have: a repository, an Obsidian vault, a zk notebook or an ordinary folder. Opening it
 writes nothing there. Your notes and code stay in their files, alongside the tools you already use.
 
-- **Start here:** [What is slipbox?](docs/manual/introduction.md), then [Installation](docs/guides/install.md). The
-  [Quick start](docs/guides/quick-start.md) takes two minutes. The documentation is a website, with search:
+- **Start here:** [What is slipbox?][manual/introduction], then [Installation][guides/install]. The
+  [Quick start][guides/quick-start] takes two minutes. The documentation is a website, with search:
   <https://remziduzagac.github.io/slipbox/docs/>.
 - **Status:** every phase on the [roadmap](blueprint/roadmap.md) is built: reading, editing, search, vaults and named
   folders, git with its review and merge screen, language servers and linters, and export. Releases are published,
-  with previews of the next one between them. slipbox is before 1.0. [Versions](docs/manual/versions.md) says what may
+  with previews of the next one between them. slipbox is before 1.0. [Versions][manual/versions] says what may
   still change.
-- **Help:** the documentation, and its [troubleshooting chapter](docs/manual/troubleshooting.md) for the usual
+- **Help:** the documentation, and its [troubleshooting chapter][manual/troubleshooting] for the usual
   problems. Questions and ideas go in [Discussions](https://github.com/remziduzagac/slipbox/discussions). A bug goes
   in an [issue](https://github.com/remziduzagac/slipbox/issues/new/choose). A security problem goes privately, as
   [SECURITY.md](SECURITY.md) says, never in an issue.
@@ -79,13 +79,13 @@ you were. `slipbox channel` says whether it follows previews, and changes that.
 With Homebrew, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
 0.3.0 was the last release built for them.
 
-[Installation](docs/guides/install.md) has the rest: previews, Windows through WSL, upgrading and removing it,
+[Installation][guides/install] has the rest: previews, Windows through WSL, upgrading and removing it,
 and running it from source.
 
 ## Try it
 
-Follow [Working with slipbox](docs/guides/getting-started.md), then
-[Reading and editing in slipbox](docs/guides/lens.md), for the complete introductory walkthroughs.
+Follow [Working with slipbox][guides/getting-started], then
+[Reading and editing in slipbox][guides/lens], for the complete introductory walkthroughs.
 
 Open a folder you already have, your notes or a repository your agent works in:
 
@@ -130,16 +130,16 @@ Everything is clickable too.
 
 The lens shows the Markdown around the cursor between two rules, with the rest left rendered. The vim commands work
 (`dw`, `ciw`, `p`, `u`, `.`), and autosave saves after a pause. When you quit, slipbox remembers where you were.
-[Reading and editing in slipbox](docs/guides/lens.md) walks through it with examples.
+[Reading and editing in slipbox][guides/lens] walks through it with examples.
 
-[Keys you already know](docs/guides/keys-you-know.md) lists the shortcuts from other editors. Every key is in
-[Keyboard and mouse shortcuts](docs/manual/keys.md), and all of them are configurable
-([Configuration settings](docs/manual/configuration.md)). The configuration reloads itself when you save it.
+[Keys you already know][guides/keys-you-know] lists the shortcuts from other editors. Every key is in
+[Keyboard and mouse shortcuts][manual/keys], and all of them are configurable
+([Configuration settings][manual/configuration]). The configuration reloads itself when you save it.
 
-[Working with slipbox](docs/guides/getting-started.md) walks through a first session.
-[Reviewing changes with Git](docs/guides/code-and-git.md) reviews an agent's change, from its diff to its merge.
-[Links and backlinks](docs/manual/links-and-vaults.md) explains how links find their notes, across folders too.
-[Working across folders and vaults](docs/guides/vaults.md) explains the folders slipbox works in, with examples.
+[Working with slipbox][guides/getting-started] walks through a first session.
+[Reviewing changes with Git][guides/code-and-git] reviews an agent's change, from its diff to its merge.
+[Links and backlinks][manual/links-and-vaults] explains how links find their notes, across folders too.
+[Working across folders and vaults][guides/vaults] explains the folders slipbox works in, with examples.
 
 ## For agents
 
@@ -170,13 +170,13 @@ it. Installation and upgrades install the matching skill for detected Claude Cod
 `--no-skill` or `SLIPBOX_NO_SKILL=1` skips automatic writes; `slipbox skill --auto` detects agents installed later.
 `slipbox skill --install <folder>` chooses another destination.
 
-For you, the same ground is in [Working with agents](docs/guides/agents.md) and
-[The command line](docs/manual/cli.md).
+For you, the same ground is in [Working with agents][guides/agents] and
+[The command line][manual/cli].
 
 ## Documentation
 
-- [docs/](docs/README.md): the user documentation, with guides to start with, and a manual covering every key,
-  setting and command. It's also on its website, <https://remziduzagac.github.io/slipbox/docs/>.
+- [The documentation][docs], a website with search: guides to start with, and a manual covering every key, setting
+  and command. Its pages are written in [docs/](docs/).
 - [CHANGELOG.md](CHANGELOG.md): what each release changed.
 - [ARCHITECTURE.md](ARCHITECTURE.md): a map of the code, for whoever changes it.
 - [ACCESSIBILITY.md](ACCESSIBILITY.md): what the TUI does for accessibility, and its limits.
@@ -237,3 +237,22 @@ out these terms.
 slipbox is licensed under the [Apache License 2.0](LICENSE). Each release carries the licence and `NOTICES.txt`.
 `NOTICES.txt` lists the third-party software built into the binary, and their licences. Beside each build, its SBOM
 lists the same in CycloneDX's format.
+
+<!-- The documentation's pages on its website (site/scripts/gather.ts: pageUrl), each from its file in docs/. -->
+
+[docs]: https://remziduzagac.github.io/slipbox/docs/
+[guides/agents]: https://remziduzagac.github.io/slipbox/docs/guides/agents/
+[guides/code-and-git]: https://remziduzagac.github.io/slipbox/docs/guides/code-and-git/
+[guides/getting-started]: https://remziduzagac.github.io/slipbox/docs/guides/getting-started/
+[guides/install]: https://remziduzagac.github.io/slipbox/docs/guides/install/
+[guides/keys-you-know]: https://remziduzagac.github.io/slipbox/docs/guides/keys-you-know/
+[guides/lens]: https://remziduzagac.github.io/slipbox/docs/guides/lens/
+[guides/quick-start]: https://remziduzagac.github.io/slipbox/docs/guides/quick-start/
+[guides/vaults]: https://remziduzagac.github.io/slipbox/docs/guides/vaults/
+[manual/cli]: https://remziduzagac.github.io/slipbox/docs/manual/cli/
+[manual/configuration]: https://remziduzagac.github.io/slipbox/docs/manual/configuration/
+[manual/introduction]: https://remziduzagac.github.io/slipbox/docs/manual/introduction/
+[manual/keys]: https://remziduzagac.github.io/slipbox/docs/manual/keys/
+[manual/links-and-vaults]: https://remziduzagac.github.io/slipbox/docs/manual/links-and-vaults/
+[manual/troubleshooting]: https://remziduzagac.github.io/slipbox/docs/manual/troubleshooting/
+[manual/versions]: https://remziduzagac.github.io/slipbox/docs/manual/versions/
