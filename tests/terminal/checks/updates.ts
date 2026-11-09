@@ -6,6 +6,7 @@
 
 import {
   chmodSync,
+  constants,
   copyFileSync,
   linkSync,
   mkdirSync,
@@ -30,15 +31,22 @@ function builds(): Releases {
   return r;
 }
 
-/** `from` put at `to`: the same file, linked (at once, whatever its size), or a copy across disks. */
+/**
+ * `from` put at `to`: the same file, linked (at once, whatever its size), or a copy across disks. On macOS a copy of its
+ * own, a clone on APFS: a program there learns its path from its file, which answers with whichever of its names was
+ * looked up last — so a build linked into two checks started together could take itself for the other's, put there by
+ * hand, and offer no upgrade (#100).
+ */
 function place(from: string, to: string): void {
   mkdirSync(dirname(to), { recursive: true });
-  try {
-    linkSync(from, to);
-  } catch {
-    copyFileSync(from, to);
-    chmodSync(to, 0o755);
+  if (process.platform !== "darwin") {
+    try {
+      linkSync(from, to);
+      return;
+    } catch {}
   }
+  copyFileSync(from, to, constants.COPYFILE_FICLONE);
+  chmodSync(to, 0o755);
 }
 
 /** `link` made to lead to `to`, in one step. */
@@ -122,8 +130,6 @@ export const UPDATES: Check[] = [
   {
     area: "navigating",
     name: "updates: About shows a newer release, copies its notes address and offers Upgrade",
-    // On macOS the fixture is intermittently classified as put here by hand: About has no Upgrade (#100).
-    quarantined: "#100",
     releases: true,
     covers: { cases: ["ui"], commands: ["app.about", "app.release_notes", "app.upgrade"] },
     options: { ...INSTALLED, config: "[update]\ncheck = false\n" },
@@ -145,8 +151,6 @@ export const UPDATES: Check[] = [
   {
     area: "outside-and-code",
     name: "updates: the offer once quiet; Upgrade and restart starts the new version in this process, its windows as they were",
-    // On macOS the fixture intermittently offers the releases' address instead of Upgrade and restart (#100).
-    quarantined: "#100",
     covers: { commands: ["app.restart"] },
     releases: true,
     options: INSTALLED,
