@@ -56,6 +56,9 @@ export class SearchIndex {
         ensureCacheHome();
         mkdirSync(dir, { recursive: true });
         db = new Database(file);
+        // First: another slipbox holding it a moment (making it too) is waited for, not taken for an index SQLite
+        // can't read and deleted under it.
+        db.pragma("busy_timeout = 3000");
         const version = Number(db.pragma("user_version"));
         if (version !== 0 && version !== SEARCH_VERSION) throw new Error("another version");
         return new SearchIndex(SearchIndex.prepare(db), file);
@@ -72,7 +75,6 @@ export class SearchIndex {
   private static prepare(db: Database): Database {
     db.pragma("journal_mode = wal");
     db.pragma("synchronous = normal");
-    db.pragma("busy_timeout = 3000");
     db.exec("create table if not exists meta (key text primary key, value text)");
     db.exec(
       "create table if not exists docs (id integer primary key, path text not null unique, grp text not null, size integer not null, mtime real not null)",

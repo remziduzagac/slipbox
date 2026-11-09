@@ -185,6 +185,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- Two slipbox processes making a vault's search index at the same moment (the TUI starting as an agent searches) no
+  longer have one delete the other's index and make its own; it waits for the other. The shared parse cache waits
+  likewise, rather than going without for ten seconds.
+
 - The shared parse cache, when it couldn't open once, was gone without until slipbox restarted, so every note was
   parsed again; it's tried again ten seconds later. A cache folder emptied while slipbox runs is made again.
 

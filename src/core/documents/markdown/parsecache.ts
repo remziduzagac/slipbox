@@ -46,9 +46,11 @@ export class ParseCache {
     try {
       ensureCacheHome(join(file, ".."));
       db = new Database(file);
+      // First: another holding the file a moment (a second slipbox, its threads) is waited for, by the journal's mode
+      // too, which takes the file to itself — not given up on at once.
+      db.pragma("busy_timeout = 3000");
       db.pragma("journal_mode = wal");
       db.pragma("synchronous = normal");
-      db.pragma("busy_timeout = 3000");
       if (Number(db.pragma("user_version")) !== PARSE_CACHE_VERSION) {
         db.exec("drop table if exists parsed");
         db.pragma(`user_version = ${PARSE_CACHE_VERSION}`);
