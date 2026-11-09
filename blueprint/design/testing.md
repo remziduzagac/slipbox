@@ -373,7 +373,9 @@ name take so long to list, on whichever thread lists it (`slowDisk` in `core/wor
 walk's and
 the listings' threads' deadlines to the third: the disk a check can't mount. `tests/terminal/checks/slow-disk.ts`
 drives the TUI with it; the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of
-their own: `tests/fixtures/walk/`). What such a check says comes at once is timed by the check itself, against a
+their own: `tests/fixtures/walk/`). A unit test that says what goes on while a folder is read holds one named `held`
+until it lets it go (`Hold`, on every thread at once): what went on is told by what's still held, never by a clock,
+which a busy machine stretches (#75). What a terminal check says comes at once is timed by the check itself, against a
 bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`, whatever it's asked.
 
 
