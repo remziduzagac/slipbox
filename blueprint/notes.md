@@ -542,3 +542,18 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   out, naming `[files] show`; and a CHANGELOG line under Changed, since vaults with both list their code after
   upgrading. Recorded as D272; the line's wording and place, at the explorer's foot under a rule, were the pull
   request's, written to match the explorer's dim notices.
+
+## macOS kept for what needs it (2026-10-24 to 2026-11-09)
+
+- Issue #65 offered three ways to keep macOS off a pull request's wait; the maintainer chose the second on the issue
+  (2026-10-24): macOS for what differs there, or with a `macos` label, and always after the merge and in the full run.
+  Its item 4, macOS after Linux, went in the same pull request (D273, CIW-T7, CIW-T8).
+- What differs is the issue's list, read as the files where slipbox meets the system, with Apple's SQLite and the
+  packages and the toolchain added. The first draft took a test file only by the folder it sits in; review found
+  tests that don't mirror their source's folders (the walk's, the search index's, the language servers') and the two
+  caches on SQLite left out, though macOS alone had caught the parse cache failing, twice (#232, #235). So a test file
+  that imports a file of the list runs macOS too, every file that opens SQLite is held to the list by a test, and a
+  file moved counts as both its paths.
+- D272 went to another pull request of the same day (#245); this one is D273.
+- The record and the version CIW-T7 asked for needed nothing: D266 had already stopped a pull request's pass counting
+  for a push's.

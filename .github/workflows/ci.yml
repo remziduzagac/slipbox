@@ -9,10 +9,15 @@ name: ci
 # nothing, for `dev` moved to `test` (CIW-D1–CIW-D3, scripts/ci-range.ts). A run by hand runs everything, and calls
 # itself `full`: the check `main` takes nothing without (D251), which it reports again as a commit status, the one
 # `main`'s ruleset sees (D257).
+# macOS after Linux (D273): each macOS job waits for its Linux job and runs only once that passed. A pull request runs
+# them only when it changes what differs on macOS, or carries the `macos` label; every other run, whatever changed.
 # One job, `ci` (`full` by hand), is the required check: it always runs and fails unless every job it waits for passed
 # or was skipped. Each job calls package.json's scripts, never commands of its own.
 on:
+  # `labeled` too, so the `macos` label added runs the macOS jobs (D273). GitHub starts a run for any label: each runs
+  # every job a pull request's run does, since one that skipped them would report `ci` passed.
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [dev, test]
   # Merge queues need an organisation's repository: listed for later.
@@ -77,6 +82,8 @@ jobs:
   # `test` and `terminal` (`range`). One that touches only the docs (docs/, the blueprint, the site's pages, the
   # Markdown at the top) skips the tests and the terminal tests, which nothing it changes can break; a push's range with
   # nothing in it skips them too. A merge group and a run by hand test everything, as does a diff that can't be read.
+  # `macos`: whether the macOS jobs run (D273), false only for a pull request that changes nothing `MACOS` lists in
+  # scripts/ci-scope.ts and has no `macos` label, which it reads from the event's file as data.
   changes:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -86,6 +93,7 @@ jobs:
     outputs:
       code: ${{ steps.scope.outputs.code }}
       checks: ${{ steps.scope.outputs.checks }}
+      macos: ${{ steps.scope.outputs.macos }}
       range: ${{ steps.scope.outputs.range }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -104,13 +112,14 @@ jobs:
           GH_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}
         run: bun run ci:scope
 
+  # On Linux; on macOS, `test-macos`, once this passed (D273).
   test:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15]
+        os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     # The suite takes about ten minutes on a 10-core machine; a runner has 3 or 4.
     timeout-minutes: 45
@@ -143,15 +152,48 @@ jobs:
           SCOPE_RANGE: ${{ needs.changes.outputs.range }}
         run: bun run test:changed
 
+  # D273: `test` on macOS (arm64, its SQLite Apple's: 14.13), once it passed on Linux: a change that fails there holds
+  # none of the five macOS runners the account has at once. A pull request runs it only when `changes` says `macos`;
+  # every other run, always. Named as the matrix named it; its steps are `test`'s, which a test holds them to.
+  test-macos:
+    name: test (macos-15)
+    needs: [changes, test]
+    if: ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs.macos == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          cache: false
+          minimum_release_age: 7d
+      - run: bun install --frozen-lockfile
+      - name: typecheck
+        run: bun run typecheck
+      - name: boundary
+        run: bun run check:boundary
+      - name: dependencies
+        run: bun run check:deps
+      - name: tests
+        env:
+          SCOPE_RANGE: ${{ needs.changes.outputs.range }}
+        run: bun run test:changed
+
   # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
-  # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log.
+  # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log. On Linux;
+  # on macOS, `terminal-macos`, once this passed (D273).
   terminal:
     needs: changes
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.checks == 'true' }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
     # About five minutes on a 10-core machine, a check per core; a runner has 3 or 4.
     timeout-minutes: 45
@@ -176,6 +218,35 @@ jobs:
           SLIPBOX_TERMINAL_WAIT: "30000"
         run: bun run test:terminal:changed
 
+  # D273: `terminal` on macOS, once it passed on both Linux runners. Never for a pull request (D266), and only when
+  # `changes` says `macos`, which every other run does. Named as the matrix named it; its steps are `terminal`'s, which a
+  # test holds them to.
+  terminal-macos:
+    name: terminal (macos-15)
+    needs: [changes, terminal]
+    if: >-
+      ${{ github.event_name != 'pull_request' && needs.changes.outputs.checks == 'true'
+      && needs.changes.outputs.macos == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          cache: false
+          minimum_release_age: 7d
+      - run: bun install --frozen-lockfile
+      - name: terminal tests
+        env:
+          SCOPE_RANGE: ${{ needs.changes.outputs.range }}
+          SLIPBOX_TERMINAL_WAIT: "30000"
+        run: bun run test:terminal:changed
+
   # The docs' site (site/), built from docs/ as the pages workflow builds it: every page gathered, every link within it
   # landing. Its own packages, under its own install gates (site/bunfig.toml).
   site:
@@ -195,14 +266,14 @@ jobs:
       - name: site
         run: bun run site
 
-  # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed; one that
-  # failed, was cancelled or never started fails this. Run by hand, everything ran: it's `full`, which `main`'s
-  # ruleset requires of a commit before it takes it (D251), as `status` reports it; otherwise `ci`, which `dev`'s and
-  # `test`'s require.
+  # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed — a macOS job
+  # a pull request doesn't need, or one whose Linux job failed, which fails this itself (D273); one that failed, was
+  # cancelled or never started fails this. Run by hand, everything ran: it's `full`, which `main`'s ruleset requires of
+  # a commit before it takes it (D251), as `status` reports it; otherwise `ci`, which `dev`'s and `test`'s require.
   ci:
     name: ${{ github.event_name == 'workflow_dispatch' && 'full' || 'ci' }}
     if: ${{ always() }}
-    needs: [lint, changes, test, terminal, site]
+    needs: [lint, changes, test, test-macos, terminal, terminal-macos, site]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}

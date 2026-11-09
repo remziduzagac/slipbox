@@ -7,13 +7,13 @@
 // workflows, and a file nothing names run everything; so do a merge group, a run by hand (the `full` run `main`
 // requires, D251) and a diff that can't be read; the lint's own configs, only the lint. A push to `dev` or `test` is
 // scoped over its range since the nearest complete push pass (CIW-D1, D266, `scripts/ci-range.ts`); a PR without terminal coverage
-// cannot cover those checks after merge. A range with nothing in it runs nothing.
+// cannot cover those checks after merge. A range with nothing in it runs nothing. A pull request runs its macOS jobs
+// only when it changes what differs there (`MACOS`) or carries the `macos` label; every other run, always (D273).
 //
-// `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`; a push's `range`, which the jobs
-// after it read as `SCOPE_RANGE`), and says it
-// either way. `bun run test:changed` and `bun run test:terminal:changed [runner's flags…]` run what a change reaches: a
-// pull request's merge commit against its base in CI, a push's range; here, your branch, committed or not, against
-// where it left `origin/dev` (or `--base <ref>`).
+// `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`, `macos`; a push's `range`, which
+// the jobs after it read as `SCOPE_RANGE`), and says it either way. `bun run test:changed` and `bun run
+// test:terminal:changed [runner's flags…]` run what a change reaches: a pull request's merge commit against its base in
+// CI, a push's range; here, your branch, committed or not, against where it left `origin/dev` (or `--base <ref>`).
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
@@ -149,6 +149,104 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/cli\/install\.ts$/, ["updates"]],
   [/^(src\/core\/application\/distribution\/skill\.ts|skills\/slipbox\/SKILL\.md)$/, []],
 ];
+
+/**
+ * What differs on macOS (D273): a pull request runs its macOS jobs when it changes a file one of these matches, or a
+ * test of one (a test file that imports a file of `src/` they match), or carries the `macos` label; a push, a merge
+ * group and a run by hand run them whatever changed. Each group is a part of slipbox whose behaviour on macOS is the
+ * system's own, with the tests that sit beside it. A file that only uses them (most of the app) waits for the push after
+ * the merge, whose run tests macOS on all it brought.
+ */
+export const MACOS: RegExp[] = [
+  // The terminal's input and output: OpenTUI's renderer, its native library a build of each system's, and the start
+  // that hands it the terminal; the terminal handed to an editor and taken back (raw mode, the input flushed: TCIFLUSH
+  // is 1 there, 0 on Linux); the pseudo-terminal the terminal checks drive, which Bun opens with each system's calls.
+  /^src\/tui\/shell\/terminal\/(?:opentui|run)\.ts$/,
+  /^(?:src|tests)\/tui\/documents\/saving\/handoff(?:\.test)?\.ts$/,
+  /^(?:src|tests)\/core\/documents\/external-editors\//,
+  /^tests\/(?:terminal\/(?:terminal|session)\.ts|terminal-(?:harness|runner)\.test\.ts)$/,
+  // Spawning processes, and the system's tools: the platform's layer — the folders and real paths, atomic writes, a
+  // tool started and its process group stopped, the shell, the clipboard (pbcopy and pbpaste), the browser (`open`),
+  // libc through FFI (libSystem there) — but its lazy loading and WSL's, and the language servers, each installed as its
+  // platform's build and run as a process.
+  /^(?:src|tests)\/core\/foundation\/platform\/(?!(?:lazy|wsl)\.)/,
+  /^tests\/(?:tool-process|image-clipboard)\.test\.ts$/,
+  /^src\/core\/documents\/servers\/(?:client|find|install|locks)\.ts$/,
+  /^tests\/core\/documents\/servers\/(?:client|discovery|manager)\.test\.ts$/,
+  // SQLite, Apple's there, older (14.13): every file that opens a database — the search index (its FTS5 tables and the
+  // queries put to them, ranked by bm25), the parse cache, the diagrams' cache, all in WAL with a busy timeout, whose
+  // locks have failed on macOS alone — and their tests. A test holds every user of `sqlite.ts` to this list.
+  /^src\/core\/(?:foundation\/platform\/sqlite|workspace\/search\/(?:search-index|query\/parsing)|documents\/markdown\/parsecache|rendering\/media\/diagrams\/diagram-cache)\.ts$/,
+  /^tests\/(?:core\/workspace\/search\/index|core\/documents\/markdown\/content-cache|diagram-cache)\.test\.ts$/,
+  // The file system's paths, times and watchers: names that differ only in case are one file (APFS), `/var` and
+  // `/tmp` are links into `/private`, `~/Library` is a system folder, the mounts come from `mount`, a folder's time
+  // has its file system's grain, and the watcher is kqueue's there, inotify's on Linux. The tests' preload makes each
+  // temporary folder its real path.
+  /^(?:src|tests)\/core\/workspace\/graph\/watch/,
+  /^src\/core\/workspace\/walk\/(?:io\/|filtering\/(?:filter|policy)\.ts$|traversal\/symlinks\.ts$)/,
+  /^tests\/core\/workspace\/walk\/(?:walk|mechanisms|hostile)\.test\.ts$/,
+  /^(?:src\/core\/workspace\/vaults\/(?:mounts|symlinks)\.ts|tests\/core\/workspace\/vaults\/home\/mounts\.test\.ts)$/,
+  /^tests\/core\/workspace\/vaults\/symlinks\//,
+  /^src\/core\/workspace\/links\/links\.ts$/,
+  /^tests\/setup\.ts$/,
+  // Fonts and pictures: the fonts found on the machine, in macOS's own folders there, for a PDF and for a diagram's
+  // words; a picture drawn for the terminal, and copied.
+  /^(?:src|tests)\/core\/rendering\/export\/(?:assets\/fonts\.ts$|(?:formats\/)?pdf\/fonts)/,
+  /^(?:src|tests)\/core\/rendering\/media\/images\//,
+  /^(?:src|tests)\/tui\/documents\/media\//,
+  // The installer: install.sh and its bootstrap, Homebrew's formula, the builds for each platform (a Mac's signed again
+  // and checked), what installs, upgrades and restarts slipbox in place, and the release builds the checks of
+  // upgrading run.
+  /^scripts\/(?:(?:install|bootstrap|homebrew)\.template\.(?:sh|rb)|bootstrap\.ts|install-local\.sh|release\.ts)$/,
+  /^src\/(?:core\/application\/distribution\/(?!skill)|tui\/app\/distribution\/|cli\/install\.ts$)/,
+  /^tests\/(?:distribution\/|terminal\/release(?:-builds|s)\.ts$|(?:release|upgrade-restart)\.test\.ts$)/,
+  // The workflows, and what decides what they run: a change to them can move a job onto macOS, or off it.
+  /^(?:\.github\/|scripts\/ci-(?:scope|range)\.ts$)/,
+  // The packages and the toolchain: Bun is a build of each system's, and so are the native packages (OpenTUI's).
+  /^(?:package\.json|bun\.lock|bunfig\.toml|mise\.toml|mise\.lock)$/,
+];
+
+/** The label that runs a pull request's macOS jobs whatever it changed (D273). */
+export const MACOS_LABEL = "macos";
+
+/**
+ * Why a pull request runs its macOS jobs: the first of `files` that differs there, else the first test file that
+ * imports one of `src/` that does (`graph`, the import graph), else the label; or a diff or labels that can't be read
+ * (`null`), which run them. Null when none of these.
+ */
+export function macosFor(
+  files: string[] | null,
+  labels: string[] | null,
+  graph: Map<string, string[]> = new Map(),
+): string | null {
+  if (files === null) return "the diff can't be read";
+  const differs = (f: string) => MACOS.some((re) => re.test(f));
+  const file = files.find(differs);
+  if (file) return `${file} differs there`;
+  for (const f of files) {
+    if (!/^tests\/.*\.test\.tsx?$/.test(f)) continue;
+    const tested = graph.get(f)?.find((u) => u.startsWith("src/") && differs(u));
+    if (tested) return `${f} tests ${tested}, which differs there`;
+  }
+  if (labels === null) return "its labels can't be read";
+  return labels.includes(MACOS_LABEL) ? `the \`${MACOS_LABEL}\` label` : null;
+}
+
+/**
+ * A pull request's labels, from the event GitHub gives the run (`GITHUB_EVENT_PATH`): their names, as data, never run;
+ * null when it can't be read.
+ */
+export function eventLabels(path = process.env.GITHUB_EVENT_PATH): string[] | null {
+  try {
+    if (!path) return null;
+    const labels = (JSON.parse(readFileSync(path, "utf8")) as { pull_request?: { labels?: unknown } }).pull_request
+      ?.labels;
+    if (!Array.isArray(labels)) return null;
+    return labels.flatMap((l) => (typeof l?.name === "string" ? [l.name] : []));
+  } catch {
+    return null;
+  }
+}
 
 /**
  * The samples changed most often, and what reads them; any other sample runs what names it, through the import
@@ -367,7 +465,7 @@ export function scriptFor(what: "test" | "terminal", s: Scope): string[] | null 
 /**
  * A change's files. In CI: a pull request's merge commit against its base; a push's range (`SCOPE_RANGE`, `<from>..<to>`
  * as `changes` worked it out; `all`, or anything else, and it's everything). Here: the branch against `base`'s fork
- * point.
+ * point. A file moved is both its paths (`--no-renames`): one moved out of a path that runs something still runs it.
  */
 export function changedFiles(root = ROOT, base = "origin/dev"): string[] | null {
   const git = (...args: string[]) => {
@@ -375,15 +473,15 @@ export function changedFiles(root = ROOT, base = "origin/dev"): string[] | null 
     return r.exitCode === 0 ? r.stdout.toString().split("\n").filter(Boolean) : null;
   };
   const event = process.env.GITHUB_EVENT_NAME;
-  if (event === "pull_request") return git("diff", "--name-only", "HEAD^1", "HEAD");
+  if (event === "pull_request") return git("diff", "--name-only", "--no-renames", "HEAD^1", "HEAD");
   if (event === "push") {
     const range = /^([0-9a-f]{40})\.\.([0-9a-f]{40})$/.exec(process.env.SCOPE_RANGE ?? "");
-    return range ? git("diff", "--name-only", range[1] ?? "", range[2] ?? "") : null;
+    return range ? git("diff", "--name-only", "--no-renames", range[1] ?? "", range[2] ?? "") : null;
   }
   if (event !== undefined) return null;
   const fork = git("merge-base", base, "HEAD")?.[0];
   if (!fork) return null;
-  const changed = git("diff", "--name-only", fork);
+  const changed = git("diff", "--name-only", "--no-renames", fork);
   const added = git("ls-files", "--others", "--exclude-standard");
   return changed && added ? [...new Set([...changed, ...added])] : null;
 }
@@ -426,8 +524,8 @@ if (import.meta.main) {
   // A push's range with nothing in it — the commit itself, or a tree a run passed already — runs nothing.
   const nothing = event === "push" && files?.length === 0;
   const docsOnly = files !== null && !nothing && codeChanged(files) === null;
-  const s: Scope =
-    docsOnly || nothing ? { all: null, tests: [], checks: [], why: [] } : scope(files, importGraph(here), here);
+  const graph = docsOnly || nothing ? new Map<string, string[]>() : importGraph(here);
+  const s: Scope = docsOnly || nothing ? { all: null, tests: [], checks: [], why: [] } : scope(files, graph, here);
   const said = nothing
     ? "nothing changed since the tree a run passed: no test runs"
     : docsOnly
@@ -443,7 +541,20 @@ if (import.meta.main) {
           .exitCode,
       );
   } else {
+    const code = !docsOnly && !nothing;
     const checks = s.all !== null || s.checks === "all" || s.checks.length > 0;
-    if (out) appendFileSync(out, `code=${docsOnly || nothing ? "false" : "true"}\nchecks=${checks}\n`);
+    // D273: a pull request's macOS jobs for what differs there, or the label; any other run's whatever changed. Here,
+    // with no event, what a pull request of the branch would run, unlabelled.
+    const macos =
+      event === "pull_request" || event === undefined
+        ? macosFor(files, event === undefined ? [] : eventLabels(), graph)
+        : `a ${event} run always does`;
+    if (code)
+      console.log(
+        macos === null
+          ? `macOS: skipped, nothing that differs there changed (the \`${MACOS_LABEL}\` label runs it)`
+          : `macOS: runs, ${macos}`,
+      );
+    if (out) appendFileSync(out, `code=${code}\nchecks=${checks}\nmacos=${macos !== null}\n`);
   }
 }

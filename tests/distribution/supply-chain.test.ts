@@ -233,7 +233,7 @@ describe("the supply chain's gates (14.10)", () => {
     const git = (...args: string[]) => Bun.spawnSync(["git", "-C", repo, ...args], { env: gitEnv });
     const gitEnv = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "t" };
     let runs = 0;
-    // What it writes for the jobs, less a pull request's record and a push's range (tests/ci-range.test.ts).
+    // What it writes for the jobs, less a pull request's record, a push's range and macOS (tests/ci-range.test.ts).
     const scope = (event: string) => {
       const out = join(sandbox, `scope-out-${++runs}`);
       Bun.spawnSync([process.execPath, join(ROOT, "scripts", "ci-scope.ts")], {
@@ -247,7 +247,7 @@ describe("the supply chain's gates (14.10)", () => {
           RUNNER_TEMP: sandbox,
         },
       });
-      return readFileSync(out, "utf8").replace(/^(record|range)=.*\n/gm, "");
+      return readFileSync(out, "utf8").replace(/^(record|range|macos)=.*\n/gm, "");
     };
     const commit = (message: string) => {
       git("add", ".");
