@@ -23,7 +23,7 @@ imports DOCX; `src/core/rendering/media/typeset.ts:13` loads MathJax dynamically
 These observations identify review targets, not demonstrated security boundaries or a complete map of their inputs and
 runtime permissions.
 
-*Read:* [Bun's executable documentation](https://bun.sh/docs/bundler/executables) describes compilation and bundled
+*Read:* [Bun's executable documentation](https://bun.com/docs/compiler/executables) describes compilation and bundled
 resources. The actual module/asset contents of Slipbox's released artifacts remain to be inspected.
 
 ## Design implications
