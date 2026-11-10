@@ -71,6 +71,21 @@ describe("the frame trace", () => {
     expect(o.marks).toHaveLength(1);
   });
 
+  test("the start in (SD-T10): a ready line with the frame just painted, the one a test waits to see", () => {
+    const o = output();
+    const { t, lines } = traceOf(o);
+    t.paint();
+    t.frame();
+    t.paint();
+    t.ready();
+    t.frame();
+    expect(lines().map(traced)).toEqual([
+      { kind: "frame", run: t.run, n: 1 },
+      { kind: "ready", run: t.run, n: 2 },
+      { kind: "frame", run: t.run, n: 2 },
+    ]);
+  });
+
   test("each slipbox a run of its own: a restart in place numbers from 1 again, under another name", () => {
     const a = traceOf(output()).t;
     const b = traceOf(output()).t;

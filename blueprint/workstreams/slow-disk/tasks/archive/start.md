@@ -66,9 +66,12 @@ What the description left open, settled as it was built (SD-D15); design.md's se
   taken, not when the walk began: a note written in a folder the walk had listed, more than two seconds before the
   answer, was never looked for by the watcher, which watches nothing until the first build answers
   (`WalkAnswer.began`; its test in `tests/core/workspace/graph/build-given.test.ts`).
-- The terminal checks' start (`tests/terminal/session.ts`) waits for the vault's first read too, as it waited for the
-  first frame when that came after it: a click before is dropped, as any while a key's read is out. A check that looks
-  at the start while it's read waits itself (`noWait`).
+- The terminal checks' start (`tests/terminal/session.ts`) waits for the vault's first read and what the start opens,
+  as it waited for the first frame when that came after them: before, the keys wait, a click is dropped, `esc` gives
+  up the note, and its window is empty. slipbox says so in the trace (`ready`, trace.ts), with the frame that shows
+  them; a check that looks at the start while it's read waits itself (`noWait`). Added after the merge: the status
+  line's `reading the vault…`, waited for at first, isn't drawn in a narrow terminal, nor while the note's own read is
+  out, and four checks read the screen, clicked or pressed `esc` before the note was in.
 - Home's walk asked again, the graph's errors and the offer to relink what a move broke now follow the first build
   (`Builds.after`), as they read the graph.
 - `CHECKS_FOR` (`scripts/ci-scope.ts`): no entry added. The start's files (`run.ts`, `startup.ts`, `app.ts`, `input.ts`,

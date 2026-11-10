@@ -1,8 +1,8 @@
 // The terminal tests' trace (SLIPBOX_TRACE), as slipbox writes it (run.ts) and the tests' terminal reads it
 // (tests/terminal/terminal.ts, session.ts). Beside the commands run, a `key` line for every key and paste once
-// handled, and a `frame` line for every frame written that has something newly painted in it. A frame written isn't on
-// the screen yet: the terminal reads it later. So after it, in the output, slipbox marks it, and a test waits for the
-// mark.
+// handled, a `frame` line for every frame written that has something newly painted in it, and a `ready` line once the
+// start is in (the vault read after the screen is taken, SD-T10). A frame written isn't on the screen yet: the terminal
+// reads it later. So after it, in the output, slipbox marks it, and a test waits for the mark.
 //
 // Each line names its slipbox, a run of its own: a restart in place (`execve`) keeps the process and the terminal, and
 // the slipbox it starts numbers its frames from its first again. A `key` line has how many frames that slipbox had
@@ -18,16 +18,17 @@ import { appendFileSync } from "node:fs";
  */
 export const FRAME_SHOWN = 7701;
 
-/** A `key` or `frame` line of the trace, read; anything else (a command run) isn't one. */
+/** A `key`, `frame` or `ready` line of the trace, read; anything else (a command run) isn't one. `ready`: the start is
+ *  in — the vault's first read and what the start opens (SD-T10) — painted in that frame. */
 export interface Traced {
-  kind: "key" | "frame";
+  kind: "key" | "frame" | "ready";
   run: string;
   /** The frames the run had painted. */
   n: number;
 }
 
 export function traced(line: string): Traced | null {
-  const m = /^(key|frame) (\S+) (\d+)$/.exec(line);
+  const m = /^(key|frame|ready) (\S+) (\d+)$/.exec(line);
   return m ? { kind: m[1] as Traced["kind"], run: m[2]!, n: Number(m[3]) } : null;
 }
 
@@ -63,6 +64,11 @@ export class FrameTrace {
   /** A frame painted: it shows what was handled before. */
   paint(): void {
     this.painted++;
+  }
+
+  /** The start in, as of the frame just painted: a test acts on it once that frame, or a later one, is shown. */
+  ready(): void {
+    appendFileSync(this.file, `ready ${this.run} ${this.painted}\n`);
   }
 
   /**

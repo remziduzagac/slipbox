@@ -370,7 +370,23 @@ export async function runTui(argv: string[]): Promise<number> {
       })
     : null;
   const handled = () => trace?.key();
-  const painted = () => trace?.paint();
+  // The start in (SD-T10): the vault's first read and what the start opens, read after the screen is taken — the keys
+  // wait for them (`KeyReads`). Traced with the frame painted next, which shows them.
+  let ready = false;
+  const painted = () => {
+    trace?.paint();
+    if (ready) trace?.ready();
+    ready = false;
+  };
+  if (trace)
+    void (async () => {
+      do {
+        await app.reads.settled();
+        await new Promise((r) => setTimeout(r, 0));
+      } while (app.reads.busy);
+      ready = true;
+      renderer.requestRender();
+    })();
   // The whole of it one frame painted: a message said in any of it asks for no other (`App.whileDrawing`).
   const paint = (canvas: Canvas) =>
     app.whileDrawing(() => {
