@@ -3,7 +3,8 @@
 // folder's access, the vault open walked. Each is read as the thread that asks would read it — the same code, through
 // the seam (SD-D10) — with what that thread knows and this one can't see for itself (`walkContext`) taken first. A
 // path's own error is its answer, by its code; the request fails only when its thread does (a deadline, a crash). The
-// watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts).
+// watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts). The
+// TUI's look's own (a way, git's state, the config, a tool's settings) are look-jobs.ts's.
 
 import type { Config } from "../../application/config/config.ts";
 import * as disk from "../../foundation/platform/disk.ts";
@@ -24,6 +25,7 @@ import type { FilterSettings, WalkLimits, WalkResult } from "./contracts.ts";
 import { filterFrom } from "./filtering/filter.ts";
 import { codeOf, type PathStat, statOf } from "./io/stamps.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
+import { answerLookJob, LOOK_OPS, type LookJob, type LookJobAnswer } from "./look-jobs.ts";
 import { listDirectory, walkVault } from "./traversal/walk.ts";
 
 export type { PathStat };
@@ -66,6 +68,7 @@ export type DiskRequest = { context: WalkContext } & (
   | { op: "read"; path: string }
   | { op: "access"; dir: string }
   | { op: "walk"; ask: WalkAsk }
+  | LookJob
 );
 
 export type DiskAnswer =
@@ -73,9 +76,10 @@ export type DiskAnswer =
   | { stats: PathStat[]; judged?: PathVerdict[] }
   | { read: ReadAnswer }
   | { access: string | null }
-  | { walked: WalkAnswer };
+  | { walked: WalkAnswer }
+  | LookJobAnswer;
 
-const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access", "walk"]);
+const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access", "walk", ...LOOK_OPS]);
 
 /** Whether `req` is one the disk threads answer. */
 export const isDiskRequest = (req: { op: string }): req is DiskRequest => DISK_OPS.has(req.op);
@@ -134,5 +138,7 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
       return { access: folderUnreadable(req.dir) };
     case "walk":
       return { walked: walkOf(req.ask) };
+    default:
+      return answerLookJob(req);
   }
 }

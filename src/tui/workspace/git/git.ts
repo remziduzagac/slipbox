@@ -51,7 +51,7 @@ import { GitStaged } from "./state/staged.ts";
 
 /** Source control: git's view of the files, its diffs, branches and commits. */
 export class Git {
-  private readonly reads: GitReads;
+  readonly reads: GitReads;
   private readonly bases: GitBases;
   private readonly stagedCache: GitStaged;
 
@@ -80,10 +80,10 @@ export class Git {
     return !!c && existsSync(join(c.gitDir, "index.lock"));
   }
 
-  /** HEAD looked at (the poll, each batch): when it moved, said so, and the branch's tabs back.
-   *  True when it moved. Not while git still writes: then it hasn't finished moving. */
+  /** HEAD looked at (the poll, each batch): when it moved, said so, and the branch's tabs back. True when it moved.
+   *  Not while git still writes: then it hasn't finished moving. Off the screen's thread, asked of the look (SD-T4). */
   checkHead(): boolean {
-    return this.app.feed.checkHead();
+    return this.app.watch.look.checkHead();
   }
 
   // What git knows of the files (5.11–5.14): each one's state for the explorer's marks and the
@@ -495,12 +495,10 @@ export class Git {
     return named ?? basename(c?.main ?? c?.root ?? this.app.loc.root);
   }
 
-  /** The branch checked out (a detached HEAD: its commit, short), or null outside git. */
+  /** The branch checked out (a detached HEAD: its commit, short), or null outside git: as drawn, the look's (SD-D13). */
   branch(): string | null {
-    const c = this.checkout;
-    if (!c) return null;
-    const h = headOf(c);
-    return h.branch ?? (h.commit ? h.commit.slice(0, 7) : null);
+    const h = this.app.watch.look.head();
+    return h ? (h.branch ?? h.commit?.slice(0, 7) ?? null) : null;
   }
 
   /**

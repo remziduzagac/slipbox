@@ -187,7 +187,13 @@ export class Info {
       if (tasks.length) row("Links", "tasks", `${tasks.filter((t) => t.checked).length} of ${tasks.length} done`);
       // How the links slipbox makes here look (21.4), and what said so (every note read, as for the
       // backlinks) — short, for a narrow panel: `y` copies it whole, as `slipbox info` says it.
-      const c = conventionOf(this.app.graph, this.app.config, this.app.settings.origins);
+      const c = conventionOf(
+        this.app.graph,
+        this.app.config,
+        this.app.settings.origins,
+        undefined,
+        this.app.settings.tool(),
+      );
       const copy = { copy: describeConvention(c) };
       const by = (p: ConventionPart<string>) =>
         p.source === "setting"

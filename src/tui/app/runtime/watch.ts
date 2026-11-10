@@ -2,7 +2,7 @@
 // can't see polled, the background auto-index (20.9), and a note changed on disk reloaded.
 
 import { existsSync } from "node:fs";
-import { readText, stamp } from "../../../core/foundation/platform/fsutil.ts";
+import { readText, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "../../documents/editing/editing.ts";
 import { planRelink } from "../../../core/workspace/mutations/rename/rename.ts";
 import type { AutoIndex } from "../../../core/workspace/graph/autoindex.ts";
@@ -13,17 +13,27 @@ import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App } from "./app.ts";
 import { GraphRefresh } from "./graph-refresh.ts";
+import { Look } from "./look.ts";
 export { parseInSlices } from "./graph-refresh.ts";
+
+/** An open file as a look found it: its stamp on disk (null: gone, or unreadable). */
+export interface Polled {
+  buf: NoteBuffer;
+  at: Stamp | null;
+}
 
 /** The watcher, polling, indexing in the background, and reloads. */
 export class Watch {
   readonly refresh: GraphRefresh;
+  /** The look each second at what no watcher sees (SD-T4). */
+  readonly look: Look;
 
   constructor(readonly app: App) {
     this.refresh = new GraphRefresh(app, {
       rememberSelections: () => this.rememberSelections(),
       rebuilt: () => this.rebuilt(),
     });
+    this.look = new Look(app);
   }
 
   /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
@@ -208,8 +218,10 @@ export class Watch {
   }
 
   /** Poll what the vault watcher cannot see: files open from outside the vault (the scratch), or from
-   *  what home's index leaves out, and the config files, which reload automatically when saved. */
+   *  what home's index leaves out, and the config files, which reload automatically when saved. The TUI's look is made
+   *  on a disk thread (`Look`); a test's App looks here, at once. */
   startPolling(): void {
+    if (this.look.offThread) return this.look.start();
     const t = setInterval(
       () => {
         if (this.app.quitting) return clearInterval(t);
@@ -238,23 +250,39 @@ export class Watch {
    * told. `all`: the files the watcher sees too (a build it was synced to, `rebuilt`).
    */
   poll(all = false): boolean {
-    let changed = false;
-    const told: WatchChange[] = [];
+    // Off the screen's thread (the TUI's): asked of a disk thread, what changed taken when it answers (`polled`).
+    if (this.look.offThread) {
+      this.look.request(all);
+      return false;
+    }
+    const seen: Polled[] = [];
+    for (const buf of this.pollTargets(all))
+      if (buf.elsewhere || !this.app.following.blocked(buf.abs)) seen.push({ buf, at: stamp(buf.abs) });
+    return this.polled(seen);
+  }
+
+  /** The open files a look stats (`poll`): those no watcher sees, or every one (`all`). */
+  pollTargets(all: boolean): NoteBuffer[] {
     let dirs: Set<string> | null = null;
     // Without a watcher (watching off, or a test's app), what one would see: the graph's folders, its filter's names.
     const sees = (rel: string) =>
       this.app.watcher
         ? this.app.watcher.sees(rel)
         : watchTakes(this.app.graph.filter, rel, (dirs ??= new Set(this.app.graph.dirs)));
-    for (const buf of this.app.buffers.values()) {
+    return [...this.app.buffers.values()].filter((buf) => all || buf.rel === null || !sees(buf.rel));
+  }
+
+  /** What a look found of the open files (`poll`): each one's stamp on disk now (null: gone, or unreadable), none read
+   *  through a link not followed. True when one was read or told. */
+  polled(seen: Polled[]): boolean {
+    let changed = false;
+    const told: WatchChange[] = [];
+    for (const { buf, at: st } of seen) {
       const rel = buf.rel;
-      if (!all && rel !== null && sees(rel)) continue;
-      if (!buf.elsewhere && this.app.following.blocked(buf.abs)) continue;
-      if (buf.changedOnDisk()) {
+      if (buf.changedFrom(st)) {
         if (rel !== null && this.app.graph.known(rel)) {
           // Told once: one with unsaved changes isn't read again until its conflict is settled, so it stays changed.
           // Unreadable (a folder on the way locked, made a file, a mount gone) is gone, as the buffer has it.
-          const st = stamp(buf.abs);
           const at = st ? `${st.mtimeMs}:${st.size}` : "gone";
           if (this.toldAt.get(buf) !== at) {
             this.toldAt.set(buf, at);

@@ -463,6 +463,7 @@ describe("the disk threads (SD-D2)", () => {
     expect(await batch.p).toEqual({
       stats: [statHere(a), statHere(b)],
       listings: [listFolder(free, WALK, false), listFolder(heldDir, WALK, false)],
+      jobs: [],
     });
   });
 

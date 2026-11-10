@@ -6,7 +6,6 @@ import { type Config, loadConfig } from "../../../core/application/config/config
 import { glyphsFor, type Glyphs } from "../../../core/rendering/theme/glyphs.ts";
 import { Graph } from "../../../core/workspace/graph/graph.ts";
 import { lintCommand } from "../../../core/documents/diagnostics/lint.ts";
-import { userConfigFile } from "../../../core/foundation/platform/paths.ts";
 import type { UiOverride } from "../../../core/workspace/session/position.ts";
 import { applyColorOverrides, loadTheme, type Theme } from "../../../core/rendering/theme/index.ts";
 import { configFilesFor, setRootMarkers } from "../../../core/workspace/vaults/vault.ts";
@@ -37,7 +36,8 @@ import {
 } from "../../shell/input/keys.ts";
 import type { App, UiState } from "../runtime/app.ts";
 import { uiDefaults } from "../runtime/app.ts";
-import * as disk from "../../../core/foundation/platform/disk.ts";
+import { type ConfigRead, configFiles, mtimeOf } from "../../../core/workspace/walk/look-jobs.ts";
+import type { ToolSays } from "../../../core/workspace/links/convention.ts";
 
 /** The configuration: keys, theme, glyphs, the UI settings, and live reload. */
 export class Settings {
@@ -170,38 +170,58 @@ export class Settings {
     return glyphsFor(mode, process.env, this.app.config.ui.lines);
   }
 
-  private files(): string[] {
-    // Yours, the enclosing roots' (20.7) and the root's own: a change to any is a reload.
-    const { vaultFile, outerFiles } = configFilesFor(this.app.loc);
-    return [
-      this.app.configFile ?? process.env.SLIPBOX_CONFIG ?? userConfigFile(),
-      ...outerFiles,
-      ...(vaultFile ? [vaultFile] : []),
-    ];
+  /** Each config file's mtime as last loaded (-1: none): yours, the enclosing roots' (20.7) and the root's own — a
+   *  change to any is a reload. `given`: as a disk thread stamped them before reading them (the TUI's look, SD-T4). */
+  recordStamps(given?: [string, number][]): void {
+    this.stamps = new Map(given ?? configFiles(this.app.loc, this.app.configFile).map((f) => [f, mtimeOf(f)]));
   }
 
-  recordStamps(): void {
-    this.stamps = new Map(this.files().map((f) => [f, fileStamp(f)]));
+  /** The config files and their stamps as last loaded: what the TUI's look stats and compares (SD-T4). */
+  get stamped(): ReadonlyMap<string, number> {
+    return this.stamps;
   }
 
   /** True when a config file was created, changed or removed since the last load. */
   changedOnDisk(): boolean {
-    for (const [f, before] of this.stamps) if (fileStamp(f) !== before) return true;
+    for (const [f, before] of this.stamps) if (mtimeOf(f) !== before) return true;
     return false;
+  }
+
+  /** Bumped at each reload: a look's config read asked before one is dropped. */
+  loads = 0;
+
+  /** What the root's tool says (Obsidian's, zk's), as the TUI's look last read it (SD-T4, SD-D13), and for which root. */
+  private toolKept: { root: string; says: ToolSays | null } | null = null;
+
+  /** The tool's settings for the links' convention: as the look read them, never read as they're drawn; undefined while
+   *  it hasn't (a test's App, or before the look's first answer): read where they're asked for (`conventionOf`). */
+  tool(): ToolSays | null | undefined {
+    const k = this.toolKept;
+    return k && k.root === this.app.loc.root ? k.says : undefined;
+  }
+
+  /** The tool's settings the look read for `root`, kept; the Info panel's convention said again. */
+  keepTool(root: string, says: ToolSays | null): void {
+    this.toolKept = { root, says };
+    this.app.info.cache = null;
   }
 
   /**
    * Reload config and apply what changed, live: keys, aliases, groups, theme and colour
    * overrides, every UI setting, render settings, the walk (rebuild), the watcher. A UI setting whose config value
-   * changed takes the new value, replacing any session override of it.
+   * changed takes the new value, replacing any session override of it. `read`: the files as a disk thread read and
+   * parsed them (the TUI's look, SD-T4); else read here.
    */
-  reload(reason: "manual" | "file changed" = "manual"): void {
-    this.recordStamps();
-    const loaded = loadConfig({
-      ...configFilesFor(this.app.loc),
-      configFile: this.app.configFile,
-      lastGood: this.lastGood,
-    });
+  reload(reason: "manual" | "file changed" = "manual", read?: ConfigRead): void {
+    this.loads++;
+    this.recordStamps(read?.stamps);
+    if (read) {
+      this.lastGood.clear();
+      for (const [f, data] of read.lastGood) this.lastGood.set(f, data);
+    }
+    const loaded =
+      read?.loaded ??
+      loadConfig({ ...configFilesFor(this.app.loc), configFile: this.app.configFile, lastGood: this.lastGood });
     this.origins = loaded.origins;
     this.app.info.cache = null; // the links' convention may say otherwise now
     this.app.input.clearPending(); // a sequence begun under the old keys means nothing under the new ones
@@ -263,13 +283,5 @@ export class Settings {
       "info",
       `config reloaded (${reason}) — ${changed.length ? `changed: ${changed.join(", ")}` : "no changes"}`,
     );
-  }
-}
-
-function fileStamp(path: string): number {
-  try {
-    return disk.stat(path).mtimeMs;
-  } catch {
-    return -1;
   }
 }

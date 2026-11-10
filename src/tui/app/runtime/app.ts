@@ -330,6 +330,7 @@ export class App {
       graph: () => this.graph,
       now: () => this.now(),
       locked: () => this.git.indexLocked(),
+      asker: () => this.watch.look.asker(),
       apply: (b) => {
         this.watch.applyChanges(b);
         this.host.requestRender();

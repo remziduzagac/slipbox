@@ -39,6 +39,10 @@ export class Following {
   /** Links looked at, this once (VV-D6), by their key: read-only, nothing of them indexed — until you leave. */
   readonly looking = new Set<string>();
 
+  /** Bumped when an answer is given or forgotten, or what's looked at goes: a way checked off the screen's thread
+   *  before it (the TUI's look, SD-T4) was checked against the answers before, and is dropped (SD-D5). */
+  changes = 0;
+
   /** What's under way in the background — a target asked whether it answers — for tests to wait on. */
   pending: Promise<void> | null = null;
 
@@ -125,6 +129,7 @@ export class Following {
 
   /** An answer taken: kept (follow, no) or for this once (look); then what opening it was for. */
   answer(link: string, target: string, what: LinkChoice, then?: Then): void {
+    this.changes++;
     const said = linkSaid(link, target);
     if (what === "no") {
       setLinkAnswer(link, "no");
@@ -215,6 +220,7 @@ export class Following {
    * through it left read-only, and the explorer's rows marked again.
    */
   forget(link: string): void {
+    this.changes++;
     const looked = this.looking.delete(linkKey(link)) || this.looking.delete(link);
     const was = forgetLinkAnswer(link);
     if (!was && !looked) return this.app.message("info", `${tildePath(link)}: nothing said of it to forget`);
@@ -257,6 +263,7 @@ export class Following {
 
   /** Gone into another vault: what was looked at is behind you. */
   left(): void {
+    this.changes++;
     this.looking.clear();
   }
 

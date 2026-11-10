@@ -19,7 +19,7 @@ import type { App, View } from "../../../app/runtime/app.ts";
  */
 export function linkItems(app: App, view: View, style: LinkStyle): CompletionItem[] {
   const g = app.graph;
-  const c = conventionOf(g, app.config, app.settings.origins, style);
+  const c = conventionOf(g, app.config, app.settings.origins, style, app.settings.tool());
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
   // Each other vault's pointer name worked out once, not once per note: per note it read every named folder.

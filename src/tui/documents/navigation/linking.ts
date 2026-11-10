@@ -66,7 +66,7 @@ export class Linking {
         this.writeLinkAsked(view.buf.abs, g.abs(item.data as string), (ends) => {
           if (view.buf.version !== version)
             return this.app.message("warn", "the note changed while you picked: insert the link again");
-          const c = conventionOf(g, this.app.config, this.app.settings.origins);
+          const c = conventionOf(g, this.app.config, this.app.settings.origins, undefined, this.app.settings.tool());
           const title = ends.to.note ? (g.entry(item.data as string)?.title ?? "") : "";
           const link = writeLink(
             c,

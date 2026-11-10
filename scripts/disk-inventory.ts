@@ -105,7 +105,9 @@ export function diskReadsOf(source: string): string[] {
  * here from `DISK_READERS`.
  */
 export const SEAM_READERS = [
+  "src/core/workspace/git/branches/gitrebase.ts",
   "src/core/workspace/git/branches/operation-status.ts",
+  "src/core/workspace/git/branches/operation.ts",
   "src/core/workspace/git/git.ts",
   "src/core/workspace/graph/autoindex.ts",
   "src/core/workspace/graph/feed.ts",
@@ -120,11 +122,14 @@ export const SEAM_READERS = [
   "src/core/workspace/graph/watch/reconciliation.ts",
   "src/core/workspace/graph/watch/state.ts",
   "src/core/workspace/graph/watch/ticks.ts",
+  "src/core/workspace/links/convention.ts",
   "src/core/workspace/vaults/vault-feed.ts",
   "src/core/workspace/walk/filtering/filter.ts",
+  "src/core/workspace/walk/look-jobs.ts",
   "src/core/workspace/walk/traversal/symlinks.ts",
   "src/tui/actions/documents/actions-edit.ts",
   "src/tui/app/runtime/graph-refresh.ts",
+  "src/tui/app/runtime/look.ts",
   "src/tui/app/runtime/startup.ts",
   "src/tui/app/settings/settings.ts",
   "src/tui/documents/buffers/buffer.ts",
@@ -159,12 +164,10 @@ export const SEAM_READERS = [
 export const DISK_READERS: Record<string, string> = {
   "src/core/application/distribution/install.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
   "src/core/foundation/platform/fsutil.ts": "`readJson`'s callers (SD-T8, SD-T9); a write's own reads (SD-D7)",
-  "src/core/workspace/git/branches/gitrebase.ts": "the operation under way, kept from the TUI's look (SD-T4, SD-D13)",
   "src/core/workspace/graph/graph-lookup.ts": "a link into a nested vault, as it's drawn (SD-T11)",
   "src/core/workspace/graph/graph-resolve.ts": "a `/…` link's first folder, as it's drawn (SD-T11)",
   "src/core/workspace/graph/refresh.ts":
     "a build's walk and index read on a disk thread (SD-T8); a file reached (SD-T6)",
-  "src/core/workspace/links/convention.ts": "Obsidian's or zk's settings, read with the TUI's look (SD-T4)",
   "src/core/workspace/links/links.ts": "a name's case on a disk that folds it (`onDisk`), as it's drawn (SD-T11)",
   "src/core/workspace/mutations/files.ts": "a file operation's guards before it writes: kept (SD-D7)",
   "src/core/workspace/mutations/rename/rename-apply.ts": "a rename's guards before it writes: kept (SD-D7)",
@@ -173,7 +176,7 @@ export const DISK_READERS: Record<string, string> = {
   "src/core/workspace/vaults/home/cache.ts": "home's walk kept, brought up to now by a disk thread's `walk` (SD-T8)",
   "src/core/workspace/vaults/registry.ts": "the machine's list of vaults (SD-T9)",
   "src/core/workspace/vaults/symlinks.ts":
-    "a way checked for a link not followed, with the look (SD-T4) and an open (SD-T5); the answers kept (SD-T9)",
+    "the answers kept (SD-T9); a link's own read as a rename moves it: kept (SD-D7)",
   "src/core/workspace/walk/listing.ts": "a nested vault's name and branch, read with the tree's listing (SD-T7)",
   "src/tui/actions/workspace/actions-files.ts": "a file opened by its path (`isFile`), a key's own read (SD-T5)",
   "src/tui/app/distribution/update-observation.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",

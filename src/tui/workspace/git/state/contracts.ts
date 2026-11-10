@@ -13,6 +13,8 @@ export interface GitReadHost {
     now(): number;
     readonly host: { requestRender(): void };
     readonly explorer: { invalidateTree(): void };
+    /** Whether the TUI's look finds the checkout off the screen's thread (SD-T4). */
+    readonly watch: { readonly look: { readonly offThread: boolean } };
   };
   states: Map<string, GitState> | null;
   folders: Map<string, GitState>;

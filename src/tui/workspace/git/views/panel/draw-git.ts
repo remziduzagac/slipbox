@@ -11,7 +11,6 @@ import { roleStyle } from "../../../../shell/screen/style.ts";
 import type { Color, Role } from "../../../../../core/rendering/theme/theme.ts";
 import { splitAtWidth, stringWidth, truncate, truncateStart } from "../../../../../core/foundation/text/width.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
-import { headOf } from "../../../../../core/workspace/git/git.ts";
 import { trackText } from "../../../../../core/workspace/git/branches/gitremote.ts";
 import { filterRow } from "../../../../shell/panels/drawing/chrome.ts";
 import { followSelection } from "../../../../shell/panels/drawing/selection.ts";
@@ -128,8 +127,8 @@ export function drawGitPanel(app: App, c: Canvas, pane: Rect, bg: Color | null, 
 
 /** Where the branch stands: ahead of its base, and against its upstream — or that it has none (`not pushed`). */
 function standing(app: App): string {
-  const co = app.git.checkout!;
-  const branch = headOf(co).branch;
+  // HEAD as the look last found it (SD-D13): never read as the panel is drawn.
+  const branch = app.watch.look.head()?.branch ?? null;
   if (!branch) return "HEAD detached";
   const g = app.glyphs;
   const parts: string[] = [];
