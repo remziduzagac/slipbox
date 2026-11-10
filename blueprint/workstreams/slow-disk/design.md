@@ -152,8 +152,10 @@ the second is let go of.
   unread, and is drawn again when the parse is done (SD-D12).
 - **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows — the view's, and each
   unfolded under it — are listed as the folders outside it are (`Listings`: kept, read again once a second old as the
-  tree is built, and at the next build however old when a thread has written the index of a vault one shows, its row's
-  mark the listing's, `Listings.indexed`; drawn only when the listing's digest changed), with the walk's filter
+  tree is built, and however old, the tree built again for it, once a vault one shows unmarked has its index said
+  written, its row's mark the listing's — `onIndexWritten`, said by a write on the screen's thread and where a peek's or
+  the background index's thread's is recorded; `Listings.indexed` drops a read under way then, a first one too; drawn
+  only when the listing's digest changed), with the walk's filter
   (`list`'s `own`: its settings and its epoch, the filter made once on each thread, as the watcher's judging is): each
   entry with the walk's verdict on it (`exclusion`: a busy folder's note looked for, the `.gitignore`s read, a nested
   vault's marker, all there) and a note the walk didn't give over `walk.max_file_size` said (the notes it gave there

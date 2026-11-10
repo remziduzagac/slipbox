@@ -176,33 +176,43 @@ export class Listings {
   /** The listings of `dir` and of every folder in it read again when next shown, shown as they were meanwhile: what's in
    *  them changed (a file operation). A read under way is dropped: it may have read them before the change. */
   stale(dir: string): void {
-    for (const [, k] of this.under(dir, true)) {
-      k.at = 0;
-      k.reading = null;
-    }
+    for (const [, k] of this.under(dir, true)) this.reread(k);
   }
 
   /** The listing of `dir` alone read again when next shown, never the folders in it (`stale` reads them too): what an
    *  entry of it says may be old — a folder refused, its permission changed since. */
   again(dir: string): void {
-    for (const [, k] of this.under(dir, false)) {
-      k.at = 0;
-      k.reading = null;
-    }
+    for (const [, k] of this.under(dir, false)) this.reread(k);
   }
 
-  /** The listings that show a vault among `keys` (by its key) read again when next shown, shown as they were
-   *  meanwhile, however lately they were read: that vault's index was just written, which its row says (VV-D9) — and
-   *  nothing in the folder changed, for the tree to be built again by. A read under way is dropped: it may have looked
-   *  before the index was there. */
+  /**
+   * Vaults' indexes written (`onIndexWritten`, by their keys), which their rows say (VV-D9): the listings showing one
+   * not indexed yet read again, however lately they were read, and the tree built again to ask them — nothing in the
+   * folder changed for it to be built again by. So is a first listing still being read: it may have looked before the
+   * index was there, and may show one. The vault open's own isn't one: its row says what its index is from here.
+   */
   indexed(keys: readonly string[]): void {
     const written = new Set(keys);
-    if (!written.size) return;
-    for (const k of this.kept.values())
-      if (k.listing?.entries.some((e) => e.vault && written.has(e.vault.key))) {
-        k.at = 0;
-        k.reading = null;
+    written.delete(this.app.loc.key);
+    if (!written.size || this.app.quitting) return;
+    let marked = false;
+    for (const k of this.kept.values()) {
+      const unmarked = k.listing?.entries.some((e) => e.vault && !e.vault.indexed && written.has(e.vault.key));
+      if (unmarked || (!k.listing && k.reading !== null)) {
+        this.reread(k);
+        marked = true;
       }
+    }
+    if (!marked) return;
+    this.app.explorer.invalidateTree();
+    this.app.host.requestRender();
+  }
+
+  /** `k` read again when next shown, shown as it was meanwhile, however lately it was read. A read of it under way is
+   *  dropped, its answer taken for none: it may have read the folder before what changed. */
+  private reread(k: Kept): void {
+    k.at = 0;
+    k.reading = null;
   }
 
   private read(key: string, k: Kept, settings: string): void {

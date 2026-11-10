@@ -11,6 +11,7 @@ import { readJson, writeJson, ensureDir } from "../../foundation/platform/fsutil
 import { recordFolder } from "../vaults/folders.ts";
 import { describeCap } from "../vaults/home.ts";
 import type { Opened } from "./index-job.ts";
+import { indexWritten } from "./index/written.ts";
 import { stateHome } from "../../foundation/platform/paths.ts";
 import { noteIndexed, readRoots, recordRoot } from "../vaults/registry.ts";
 import { rootMarkers } from "../vaults/vault.ts";
@@ -336,7 +337,10 @@ export class AutoIndex {
 
   private markIndexed(key: string): void {
     const v = readRoots().find((x) => x.kind !== "folder" && x.key === key);
+    // Recorded, which says it's written (`noteIndexed`); else said all the same — written where the walker is, on its
+    // thread, it's said here by nothing else (written.ts).
     if (v) noteIndexed(v.key, new Date(this.now()));
+    else indexWritten([key]);
   }
 
   /** The place kept — when it changed since it was last kept: a tick waiting on a thread, or a retry, writes nothing. */

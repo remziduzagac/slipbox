@@ -917,7 +917,9 @@ keys.
   folder not listed yet (`-`'s folder it came from, a note revealed: `Explorer.wanted`) selected when it comes, unless
   you moved the selection since. A folder moved is let go of, the folders it left and came into read again, and a file
   operation in the vault reads its folders listed this way again: an answer read before is dropped; one read under
-  settings changed since (another vault gone into) is read again at once. Each entry is asked one access check, a folder
+  settings changed since (another vault gone into) is read again at once. So is one showing a vault not indexed yet,
+  however lately it was read, once that vault's index is written (`onIndexWritten`), which its row says: a read of it
+  under way, a first one too, is dropped. Each entry is asked one access check, a folder
   its markers and, a busy name, whether it holds a note; another disk mounted there (the mount table, read at most every
   five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry says (a file
   bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when a thread takes

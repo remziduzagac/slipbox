@@ -10,22 +10,25 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, w
 import { dirname, join } from "node:path";
 import type { Config } from "../../../../src/core/application/config/config.ts";
 import { setReadWait } from "../../../../src/core/foundation/platform/disk.ts";
-import { vaultKey } from "../../../../src/core/foundation/platform/paths.ts";
+import { cacheDir, vaultKey } from "../../../../src/core/foundation/platform/paths.ts";
 import { configSignature, vaultSignature } from "../../../../src/core/workspace/graph/backlinks-jobs.ts";
+import { AutoIndex } from "../../../../src/core/workspace/graph/autoindex.ts";
 import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
+import { INDEX_VERSION } from "../../../../src/core/workspace/graph/index/schema.ts";
+import { indexWritten } from "../../../../src/core/workspace/graph/index/written.ts";
 import { setMountTable } from "../../../../src/core/workspace/vaults/mounts.ts";
 import { tildePath } from "../../../../src/core/workspace/vaults/names.ts";
 import { probe, setLinkAnswer } from "../../../../src/core/workspace/vaults/symlinks.ts";
 import { homeAt, locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { listFolder } from "../../../../src/core/workspace/walk/listing.ts";
-import { DiskThreads } from "../../../../src/core/workspace/walk/walk-thread.ts";
+import { DiskThreads, walkThread } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { setFolderReader } from "../../../../src/core/workspace/walk/walk.ts";
 import { caughtUp } from "../../../../src/tui/documents/navigation/peek/synchronization.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
 import { Listings } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { HELD_MS, type Hold, slowFolders } from "../../../fixtures/walk/slow.ts";
 import { makeHeldKeys } from "../../../support/tui/held-keys.ts";
-import { type Harness, harness, makeSandbox } from "../../../tui-harness.ts";
+import { type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
 const { holding, untilHeld } = makeHeldKeys();
@@ -101,6 +104,41 @@ async function aKeyMeanwhile(h: Harness, hold: Hold): Promise<void> {
 }
 
 const said = (h: Harness) => h.app.messages.map((m) => m.text);
+
+/** The vault at `root`'s index written as another thread writes it: there on the disk, nothing said on this one. */
+function writtenElsewhere(root: string): void {
+  const dir = cacheDir({ key: vaultKey(root) });
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "index.json"), JSON.stringify({ version: INDEX_VERSION, entries: {}, branch: null }));
+}
+
+/** The disk threads' next listing of `dir` read there, its answer held here until `release`: what it says is what the
+ *  disk said by `read`. The listings after it pass. */
+function answerHeld(dir: string): {
+  read: Promise<void>;
+  release: () => void;
+  asked: () => number;
+  restore: () => void;
+} {
+  const list = DiskThreads.prototype.list;
+  let release = () => {};
+  let read = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  const done = new Promise<void>((r) => (read = r));
+  let taken = false;
+  const spy = spyOn(DiskThreads.prototype, "list").mockImplementation(function (this: DiskThreads, ...args) {
+    const answer = list.apply(this, args);
+    if (taken || args[0] !== dir) return answer;
+    taken = true;
+    answer.then(read, read);
+    return answer.then(async (l) => {
+      await gate;
+      return l;
+    });
+  });
+  const asked = () => spy.mock.calls.filter((c) => c[0] === dir).length;
+  return { read: done, release, asked, restore: () => spy.mockRestore() };
+}
 
 describe("the explorer's own tree listed off the screen's thread (SD-T7)", () => {
   test("held: a folder of the vault unfolded — `listing…` after a moment, a key handled meanwhile; then its rows, what the walk leaves out by its path and why", async () => {
@@ -552,8 +590,8 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
       await listed(h);
       expect(row(h, "nest")).toMatchObject({ kind: "root", listed: { vault: { indexed: false } } });
       expect(mark()).toBeUndefined();
-      // Its index written, as its thread writes it, and the answer saying so caught up with.
-      openGraph(locateVault({ root: nest }), h.app.config, true);
+      // Its index written on its thread, nothing said here, and the answer saying so caught up with.
+      writtenElsewhere(nest);
       const answer = {
         indexed: true as const,
         wrote: false,
@@ -566,6 +604,130 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
       await listed(h);
       expect(mark()).toBe("indexed");
     } finally {
+      clock.mockRestore();
+    }
+  });
+
+  test("a vault's index written while its folder is read again: the answer, read before, dropped, the folder read again", async () => {
+    const h = await vaultWith({ "nest/.slipbox/config.toml": "", "nest/n.md": "# N\n" });
+    const ex = h.app.explorer;
+    const nest = join(h.root, "nest");
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    const late = answerHeld(h.root);
+    try {
+      expect(row(h, "nest")).toMatchObject({ listed: { vault: { indexed: false } } });
+      ex.listings.again(h.root);
+      ex.invalidateTree();
+      ex.treeRows();
+      // Read on its thread before the index is there; its answer comes after.
+      await late.read;
+      openGraph(locateVault({ root: nest }), h.app.config, true);
+      late.release();
+      await listed(h);
+      expect(ex.marks.of(row(h, "nest")!).index).toBe("indexed");
+    } finally {
+      late.restore();
+      clock.mockRestore();
+    }
+  });
+
+  test("a vault's index written while its folder's first listing is read: that answer dropped, the folder read again", async () => {
+    const h = await vaultWith({ "nest/.slipbox/config.toml": "", "nest/n.md": "# N\n" });
+    const ex = h.app.explorer;
+    const nest = join(h.root, "nest");
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    const late = answerHeld(h.root);
+    try {
+      ex.listings.forget(h.root);
+      ex.invalidateTree();
+      ex.treeRows();
+      await late.read;
+      expect(ex.listings.peek(h.root, true)).toBeNull();
+      openGraph(locateVault({ root: nest }), h.app.config, true);
+      late.release();
+      await listed(h);
+      expect(ex.marks.of(row(h, "nest")!).index).toBe("indexed");
+    } finally {
+      late.restore();
+      clock.mockRestore();
+    }
+  });
+
+  test("an index written that no row is marked by reads nothing again: the vault open's own, while a first listing is read (a note saved); a vault's whose row says it's indexed already", async () => {
+    const h = await vaultWith({ "nest/.slipbox/config.toml": "", "nest/n.md": "# N\n" });
+    const ex = h.app.explorer;
+    const nest = join(h.root, "nest");
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    const late = answerHeld(h.root);
+    try {
+      ex.listings.forget(h.root);
+      ex.invalidateTree();
+      ex.treeRows();
+      await late.read;
+      indexWritten([h.app.loc.key]);
+      late.release();
+      await listed(h);
+      expect(late.asked()).toBe(1);
+      openGraph(locateVault({ root: nest }), h.app.config, true);
+      await listed(h);
+      expect(ex.marks.of(row(h, "nest")!).index).toBe("indexed");
+      const asked = late.asked();
+      indexWritten([vaultKey(nest)]);
+      await listed(h);
+      expect(late.asked()).toBe(asked);
+    } finally {
+      late.restore();
+      clock.mockRestore();
+    }
+  });
+
+  test("vaults nested in the vault open indexed by the background index on its thread: their rows say so once each is done, however lately their folders were listed — one recorded in the machine's list, one not", async () => {
+    const registry = await import("../../../../src/core/workspace/vaults/registry.ts");
+    // Each in a folder of its own: one's write said reads only its own folder again.
+    const h = await vaultWith({
+      "a/nest/.slipbox/config.toml": "",
+      "a/nest/n.md": "# N\n",
+      "b/loose/.slipbox/config.toml": "",
+      "b/loose/l.md": "# L\n",
+    });
+    const ex = h.app.explorer;
+    const [nest, loose] = [join(h.root, "a/nest"), join(h.root, "b/loose")];
+    const marks = () => [ex.marks.of(row(h, "nest")!).index, ex.marks.of(row(h, "loose")!).index];
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    // `loose` never recorded: its index said written where the background index learns of it.
+    registry.writeRoots(registry.readRoots().filter((v) => v.path !== loose));
+    const record = registry.recordRoot;
+    const unrecorded = spyOn(registry, "recordRoot").mockImplementation((v, ...rest) =>
+      v.path === loose ? { ...v, key: vaultKey(loose), seen: "" } : record(v, ...rest),
+    );
+    try {
+      ex.expanded.add("a");
+      ex.expanded.add("b");
+      await listed(h);
+      expect(marks()).toEqual([undefined, undefined]);
+      // Home's index taken as built this pass (its place kept), the two vaults its walk found left, indexed where the
+      // walk is: on its thread.
+      const file = join(h.root, "..", `${h.root.split("/").at(-1)}-progress.json`);
+      const progress = { version: 2, root: h.root, home: true, queue: [nest, loose], current: null, found: 2 };
+      const pass = {
+        indexed: 0,
+        homeNotes: 0,
+        capped: null,
+        passStarted: new Date().toISOString(),
+        passFinished: null,
+      };
+      writeFileSync(file, JSON.stringify({ ...progress, ...pass }));
+      const job = new AutoIndex(h.root, file, () => Date.now(), {
+        walker: walkThread(),
+        config: () => structuredClone(h.app.config),
+      });
+      await stepToEnd(job, 15);
+      expect(job.status).toMatchObject({ indexed: 2, queue: [], current: null });
+      expect(registry.readRoots().some((v) => v.path === loose)).toBe(false);
+      await listed(h);
+      expect(marks()).toEqual(["indexed", "indexed"]);
+    } finally {
+      unrecorded.mockRestore();
       clock.mockRestore();
     }
   });
