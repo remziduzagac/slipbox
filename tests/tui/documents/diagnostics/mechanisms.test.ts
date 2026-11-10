@@ -166,6 +166,8 @@ test("problem rows retain folds, expose matching rows and read deferred lint fin
     config: DEFAULT_CONFIG,
     notes: new Map(),
     problems: () => ({ broken: [], ambiguous: [], fragile: [], orphans: ["orphan.md"] }),
+    // Its notes' texts read here: asked partially, as every one.
+    texts: { partially: <T>(run: () => T) => run() },
   };
   const app = {
     loc: { root: sandbox, mode: "vault" },
