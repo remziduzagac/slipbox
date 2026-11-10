@@ -68,6 +68,39 @@ describe("widths as OpenTUI draws them", () => {
       setWidthMethod("unicode");
     }
   });
+
+  // A terminal draws a glyph as wide as it counts it — the clustering ones as Bun measures it, the terminal checks'
+  // too — whatever OpenTUI's table says. One OpenTUI lays out wider than that pulls the rest of its row a cell left, and
+  // once only what follows it is drawn again, that lands a cell further on: the unicode set's important callout,
+  // `❢`, read `❢  Important` once a frame drew its row again.
+  test("every glyph slipbox draws of its own: as wide to OpenTUI, in each of its methods, as to the terminal", async () => {
+    const { RGBA } = await import("@opentui/core");
+    const { frameBuffer } = await import("../../../support/tui/frame-buffer.ts");
+    const own = new Set<string>();
+    const add = (v: unknown): void => {
+      if (v && typeof v === "object") for (const x of Object.values(v)) add(x);
+      else if (typeof v === "string")
+        for (const g of graphemes(v)) if (g.length > 1 || g.charCodeAt(0) > 0x7e) own.add(g);
+    };
+    for (const mode of ["unicode", "nerd", "ascii"])
+      for (const lines of ["light", "heavy"] as const) add(glyphsFor(mode, {}, lines));
+    expect(own.size).toBeGreaterThan(100);
+    const fg = RGBA.fromHex("#ffffff");
+    const bg = RGBA.fromHex("#000000");
+    const off: string[] = [];
+    for (const method of ["unicode", "wcwidth", "unicode-wide"] as const) {
+      const buf = frameBuffer(16, 1, method);
+      for (const g of own) {
+        buf.clear(bg);
+        buf.drawText(`${g}|`, 0, 0, fg, bg, 0);
+        const drawn = buf.withBuffers((cells) => cells.char.indexOf(124));
+        const terminal = Bun.stringWidth(g, { ambiguousIsNarrow: true });
+        if (drawn !== terminal) off.push(`${method}: ${JSON.stringify(g)}: OpenTUI ${drawn}, the terminal ${terminal}`);
+      }
+      buf.destroy();
+    }
+    expect(off).toEqual([]);
+  });
 });
 
 describe("widths counted the terminal's way", () => {

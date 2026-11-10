@@ -123,7 +123,16 @@ export const MARKDOWN_BLOCKS: Check[] = [
     options: { home: true, startAt: "home/notes/daily/2026-09-23.md", config: '[render]\nglyphs = "unicode"\n' },
     run: async (s) => {
       await s.see("▎ Root cause is a retry without a ceiling.");
-      await s.see("▎ ❢ Important");
+      await s.see("▎ ✱ Important");
+      // Drawn again where the rows above it were: a search's prompt pushes them down, and goes. Its icon as wide to the
+      // terminal as to OpenTUI, what follows it stays where it was drawn (`❢`, wider to OpenTUI, left a cell's gap).
+      await s.keys("/");
+      await s.type("ceiling on");
+      await s.see("› ceiling on");
+      await s.see("▎ ✱ Important");
+      await s.keys("escape");
+      await s.notSee("› ceiling on");
+      await s.see("▎ ✱ Important");
       await s.see("▎ ⚠ Manual skips");
       await s.see("▎ ℹ What the postmortem must answer");
       await s.see("▎ • why the alert was on queue depth and not on queue age");

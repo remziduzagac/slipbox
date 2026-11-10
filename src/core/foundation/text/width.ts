@@ -94,7 +94,8 @@ function computeWidth(g: string): number {
   const cp = g.codePointAt(0) ?? 0;
   // Where OpenTUI's table differs from the others (a test holds slipbox and OpenTUI together on
   // every grapheme the reference set and halden have, and slipbox's own glyphs): the heart and
-  // exclamation ornaments, ❠ to ❧ — ❤, the unicode set's ❢ — are wide to it, whatever their selector.
+  // exclamation ornaments, ❠ to ❧ — ❤ — are wide to it, whatever their selector. Terminals draw them
+  // one cell, so a row holding one is out of step there; slipbox's own glyphs are none of them.
   if (cp >= 0x2760 && cp <= 0x2767) return 2;
   // Not clustering, the terminal advances by the first code point (a flag's first letter, a
   // keycap's digit, ✔ before its VS16), as OpenTUI then lays the cluster out.

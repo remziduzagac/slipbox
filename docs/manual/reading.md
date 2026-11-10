@@ -590,7 +590,7 @@ slipbox draws its icons, bullets, boxes and lines from one of three glyph sets:
 | tasks | `☐` `☑` | `[ ]` `[x]` |
 | a quote's bar | `▎` | `\|` |
 | a picture, an embed | `▣`, `⧉` | `[img]`, `=>` |
-| callouts | `ℹ` `✦` `❢` `⚠` `✖` | `(i)` `(*)` `(!)` `(!)` `(x)` |
+| callouts | `ℹ` `✦` `✱` `⚠` `✖` | `(i)` `(*)` `(!)` `(!)` `(x)` |
 
 The third set, `nerd`, uses icons from a Nerd Font:
 
