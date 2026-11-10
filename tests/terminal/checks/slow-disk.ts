@@ -1,13 +1,14 @@
 // A slow disk (T12, #9): what reads one off the main thread — home's walk and the background index's, the explorer's
-// listings, the watcher's looks (SD-T3) — never holds up the keys or the screen, and still does what it did. The disk a
-// check can't mount is slipbox's own stand-in (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a
-// folder of that name takes so long to list, on whichever thread lists it — and, given a fourth part, each stat and read
-// of what's in it so long on a disk thread. Each check builds a small home of its own.
+// listings, the watcher's looks (SD-T3), the TUI's look each second (SD-T4) — never holds up the keys or the screen, and
+// still does what it did. The disk a check can't mount is slipbox's own stand-in
+// (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a folder of that name takes so long to list, on
+// whichever thread lists it — and, given a fourth part, each stat and read of what's in it so long on a disk thread.
+// Each check builds a small home of its own.
 
-import { chmodSync } from "node:fs";
+import { chmodSync, existsSync } from "node:fs";
 import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open } from "../check.ts";
 import type { Session } from "../session.ts";
-import { crumbs, lastMessage, listed } from "../support/links.ts";
+import { crumbs, git, lastMessage, listed } from "../support/links.ts";
 
 /** The folder name every check's slow disk has. */
 const SLOW = "slowdisk";
@@ -444,6 +445,50 @@ export const SLOW_DISK: Check[] = [
       await s.until(() => progress(s).passFinished !== null, 60_000, "the pass done");
       const p = progress(s);
       s.expect(p.found === p.indexed, `each vault found counted once: ${p.found} found, ${p.indexed} indexed`);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: home's config and the vault's git on a slow disk — the look every second holds up no key; a branch switched meanwhile is seen",
+    covers: { cases: ["git", "links/git"], commands: [] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      // Each stat and read under `slowdisk` a second, off the screen's thread: your config there, and the vault's
+      // repository (its own folder, `--separate-git-dir`), whose state takes some seconds to read.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:1:60000:1000`, SLIPBOX_CONFIG: `{dir}/home/${SLOW}/config.toml` },
+      setup: (s) => {
+        smallHome(s, { [`~/${SLOW}/config.toml`]: "" });
+        if (existsSync(s.path(`~/${SLOW}/notes.git`))) return;
+        for (const args of [
+          ["init", "-q", "-b", "main", "--separate-git-dir", s.path(`~/${SLOW}/notes.git`), "."],
+          ["add", "-A"],
+          ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "start"],
+        ])
+          s.expect(git(s, "~/notes", ...args).code === 0, `git ${args.join(" ")}`);
+      },
+    },
+    run: async (s) => {
+      await s.where(/^~\/notes │ main$/, /index\.md/);
+      s.expect(git(s, "~/notes", "checkout", "-q", "-b", "feat").code === 0, "a branch switched from outside");
+      const switched = performance.now();
+      // Keys meanwhile, each answered within a second, while the look reads git's state on its thread: the top bar
+      // draws the branch it kept until the look has seen the switch.
+      const waits: number[] = [];
+      let kept = 0;
+      while (!/ │ feat$/.test(s.whereText()) && performance.now() - switched < 60_000) {
+        if (/ │ main$/.test(s.whereText())) kept = performance.now() - switched;
+        waits.push(await answered(s));
+        await Bun.sleep(300);
+      }
+      await s.where(/ │ feat$/, null, 5000);
+      await s.message("switched to branch feat", 5000);
+      s.expect(Math.max(...waits) < 1000, `every key answered within a second meanwhile: ${waits.join(", ")} ms`);
+      // Read there, not here: here, the next second's look would have seen it.
+      s.expect(kept >= 2000, `the branch kept while the slow disk was read: ${Math.round(kept)} ms`);
+      // Your config, changed: read and parsed there, and applied.
+      s.write(`~/${SLOW}/config.toml`, "[ui]\nline_numbers = true\n");
+      await s.message("config reloaded", 60_000);
     },
   },
 ];

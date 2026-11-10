@@ -303,6 +303,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   in Messages; slipbox looks again a minute later, and the status line clears once the disk answers. A vault of many
   folders is looked at a hundred files at a time, so what the disk answered before a part it didn't is kept, and a
   part that never answers doesn't stop slipbox looking at the rest.
+- A slow disk holding your config, the vault's git repository or a file open from outside the vault, such as the
+  scratch, no longer stops the screen every second. slipbox checks them in the background now, and the top bar shows
+  the branch as it last read it. When the disk doesn't answer within a minute, a message says `disk not answering`,
+  and slipbox checks again a minute later.
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
   still leads to the same place. Before, the move was refused as `… resolves outside the vault`.

@@ -23,7 +23,7 @@ import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { diskThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { LOOK_AGAIN_MS, type Look } from "../../../../src/tui/app/runtime/look.ts";
 import { HELD_MS, Hold, heldReads } from "../../../fixtures/walk/slow.ts";
-import { type Harness, harness, makeSandbox, whereNow } from "../../../tui-harness.ts";
+import { answerSwitch, type Harness, harness, makeSandbox, whereNow } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
 
@@ -71,7 +71,8 @@ function holdNow(h: Hold): void {
   setReadWait(heldReads);
 }
 
-/** Awaited till a disk thread waits in a `held` folder; thrown by HELD_MS, the look never reaching it. */
+/** Awaited till a disk thread waits in a `held` folder; thrown by HELD_MS, the look never reaching it. A test holds
+ *  once a look has answered (`looked`), the thread started: a busy machine's slow start isn't counted in it. */
 async function untilHeld(h: Hold): Promise<void> {
   const end = performance.now() + HELD_MS;
   while (!h.waiting) {
@@ -80,10 +81,11 @@ async function untilHeld(h: Hold): Promise<void> {
   }
 }
 
-/** A key handled and its frame drawn while the look is out: the switcher opened, and closed. The frame it drew. */
+/** A key handled and its frame drawn while the look is out: the leader's keys shown, and closed. The frame it drew. (Not
+ *  the switcher: its preview's reads are a list's, SD-T5's.) */
 async function keyMeanwhile(h: Harness): Promise<string> {
-  const frame = await h.keys("ctrl+p");
-  expect(frame).toContain("┌─ Open");
+  const frame = await h.keys("space");
+  expect(frame).toContain("+find");
   await h.keys("escape");
   return frame;
 }
@@ -124,17 +126,24 @@ const git = (cwd: string, ...args: string[]) =>
     ...args,
   ]);
 
-/** A vault on `main`, its repository's own folder (`--separate-git-dir`) under `held`: git's state read there, the
- *  notes not. Null without git. */
-function repo(): { root: string; gitDir: string } | null {
+/** A vault on `main` (named short, so the top bar has room for what's under way), its repository's own folder
+ *  (`--separate-git-dir`) under `held`: git's state read there, the notes not. */
+function repo(): { root: string; gitDir: string } {
   const top = folder("look-git");
   const root = join(top, "vault");
   const gitDir = join(top, "held", "git");
   mkdirSync(join(root, ".slipbox"), { recursive: true });
+  writeFileSync(join(root, ".slipbox", "config.toml"), '[vault]\nname = "looked"\n');
+  mkdirSync(dirname(gitDir));
   writeFileSync(join(root, "index.md"), "# Index\n");
-  if (git(top, "init", "-q", "-b", "main", "--separate-git-dir", gitDir, root).exitCode !== 0) return null;
-  git(root, "add", "-A");
-  git(root, "commit", "-q", "-m", "start");
+  for (const [cwd, ...args] of [
+    [top, "init", "-q", "-b", "main", "--separate-git-dir", gitDir, root],
+    [root, "add", "-A"],
+    [root, "commit", "-q", "-m", "start"],
+  ] as [string, ...string[]][]) {
+    const r = git(cwd, ...args);
+    if (r.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr.toString()}`);
+  }
   return { root, gitDir };
 }
 
@@ -156,6 +165,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
   test("the scratch outside the vault, held: a key handled and drawn while its stat is out; let go, what an agent wrote meanwhile is read", async () => {
     const held = holding();
     const { h, look, buf, scratch } = await scratchOpen();
+    await looked(look);
     holdNow(held);
     look.request();
     await untilHeld(held);
@@ -171,7 +181,6 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
   test("git's folder held: a key handled and drawn, the top bar the branch kept, while HEAD is asked; let go, a branch switched meanwhile seen and drawn, then a rebase started meanwhile", async () => {
     const held = holding();
     const r = repo();
-    if (!r) return;
     const h = await harness({ root: r.root, open: "index.md" });
     const look = offThread(h);
     await looked(look);
@@ -216,6 +225,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     symlinkSync(out, link);
     const h = await harness({ root, open: "index.md" });
     const look = offThread(h);
+    await looked(look);
     // The explorer hidden: its row of the link, and what its marks read of it, are the explorer's (SD-T7).
     h.app.sidebar.visible = false;
     // Looked at once, then no more: the link isn't followed.
@@ -243,6 +253,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     writeFileSync(file, "[ui]\nline_numbers = false\n");
     const h = await harness({ configFile: file });
     const look = offThread(h);
+    await looked(look);
     holdNow(held);
     rewrite(file, "[ui]\nline_numbers = true\n");
     look.request();
@@ -307,7 +318,6 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
   test("git writing (its lock held): a batch the watcher brings waits for git's state, asked off the screen's thread, then for the lock to go; applied once", async () => {
     const held = holding();
     const r = repo();
-    if (!r) return;
     const h = await harness({ root: r.root, open: "index.md" });
     const look = offThread(h);
     await looked(look);
@@ -335,7 +345,6 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
   test("an answer for a vault left meanwhile is dropped", async () => {
     const held = holding();
     const r = repo();
-    if (!r) return;
     const other = folder("look-other");
     mkdirSync(join(other, ".slipbox"));
     writeFileSync(join(other, "index.md"), "# Other\n");
@@ -346,7 +355,10 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
     expect(git(r.root, "checkout", "-q", "-b", "feat").exitCode).toBe(0);
     look.request();
     await untilHeld(held);
+    // The look held on its thread; the switch's own reads of the vault left (SD-T9's) go here at once.
+    setReadWait(null);
     h.app.vaults.switchVault(locateVault({ root: other }), null);
+    await answerSwitch(h);
     held.release();
     await look.settled();
     expect(h.app.loc.root).toBe(other);
@@ -359,6 +371,7 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
   test("an answer for a buffer closed meanwhile is dropped", async () => {
     const held = holding();
     const { h, look, buf, scratch } = await scratchOpen();
+    await looked(look);
     holdNow(held);
     look.request();
     await untilHeld(held);
@@ -378,13 +391,13 @@ describe("a look given up on (SD-D6)", () => {
     let now = 1_000_000;
     const { h, look } = await scratchOpen({ now: () => now });
     const asked = spyOn(diskThreads(), "look");
-    const said = () => h.app.messages.filter((m) => m.text.startsWith("⚠ disk not answering")).length;
+    const said = () => h.app.messages.filter((m) => m.text.startsWith("disk not answering")).length;
     held.again();
     look.tick();
     await look.settled();
     expect([asked.mock.calls.length, said()]).toEqual([1, 1]);
     expect(h.app.messages.at(-1)!.text).toBe(
-      "⚠ disk not answering: your config, git and the open files weren't read in time — looked at again in a minute",
+      "disk not answering: the look at your config, git and the open files gave up; it looks again in a minute",
     );
     // Within the minute: nothing asked.
     now += LOOK_AGAIN_MS - 1;

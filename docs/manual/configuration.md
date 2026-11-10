@@ -606,6 +606,12 @@ The TUI reloads its settings by itself when one of these files is saved:
 
 It checks every second, or every `watch.poll_ms` if that is shorter. `space v c`, or `:config`, reloads at once.
 
+That check reads the disk in the background, with git's state for the top bar and any open file outside the vault,
+such as the scratch. So a slow disk, such as a network share or a drive that's asleep, never stops the screen or the
+keys; the top bar shows the branch as slipbox last read it. If the disk doesn't answer within a minute, a message says
+`disk not answering: the look at your config, git and the open files gave up; it looks again in a minute`, and slipbox
+checks again a minute later.
+
 A reload applies what changed, and says so in a message:
 
 | What changed | What happens |

@@ -281,7 +281,7 @@ export class Look {
     this.said = true;
     this.app.message(
       "warn",
-      "⚠ disk not answering: your config, git and the open files weren't read in time — looked at again in a minute",
+      "disk not answering: the look at your config, git and the open files gave up; it looks again in a minute",
     );
     this.app.host.requestRender();
   }
