@@ -16,14 +16,15 @@ option recommended (§ Questions answered), and agreed its other decisions as pr
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
 decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, SD-T2, the disk threads, SD-T3, the watcher's
-look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T7, the explorer's own tree, SD-T8, the vault built again, and
-SD-T9, slipbox's own folders, are done (2026-11-10); the other tasks are `todo`.
+look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T7, the explorer's own tree, SD-T8, the vault built again,
+SD-T9, slipbox's own folders, and SD-T10, the start, are done (2026-11-10); the other tasks are `todo`. SD-T10's choices
+are SD-D15.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
-- [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5 and SD-T7 to SD-T9 `done`, the rest `todo`.
+- [decisions.md](decisions.md): SD-D1 to SD-D15, agreed on 2026-11-09 and 2026-11-10.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5 and SD-T7 to SD-T10 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -334,7 +335,7 @@ merges (SD-D14), its design text.
   `done`
 - [SD-T9](tasks/archive/own-folders.md): slipbox's own state, cache and config folders read off the thread.
   `done`
-- [SD-T10](tasks/start.md): the start takes the screen first, then reads the vault. `todo`
+- [SD-T10](tasks/archive/start.md): the start takes the screen first, then reads the vault. `done`
 - [SD-T11](tasks/drawing.md): what drawing reads: links' targets, pictures, the scratch's places, the Problems'. `todo`
 - [SD-T12](tasks/docs.md): the user docs, the design consolidated, the workstream closed. `todo`
 
@@ -378,6 +379,12 @@ From the review, on 2026-11-10, by the maintainer's instruction to take the reco
   every note never waits).
 - **SD-D13**, what's drawn is kept: git's state from the look, counts of what's parsed marked partial.
 - **SD-D14**, each task's reached terminal checks run before it merges; `CHECKS_FOR` names them.
+
+As SD-T10 was built, on 2026-11-10, the same way:
+
+- **SD-D15**, the start's choices: the note waits in its window; `q` and `ctrl+c` quit while a graph has never been
+  built; `esc` gives up the note's read, not the vault's; the session not saved over while its tabs come back; the
+  search index started once the graph is first built.
 
 ## Test strategy
 

@@ -429,8 +429,9 @@ The status line describes the file in the focused window. From the left:
     later, and the warning goes once the disk answers
   - `○ not watching`, when it's turned off (`watch.enabled = false`)
   - `reading the vault…`, after a rename or a folder moved, copied or restored, while slipbox reads the vault again,
-    and when you've just gone into another vault, until it's first read: the keys you type meanwhile wait for it, so
-    the next one acts on the vault as it is. With no window open, it follows the chip.
+    and when slipbox has just started or you've just gone into another vault, until it's first read: the keys you type
+    meanwhile wait for it, so the next one acts on the vault as it is, and `q` or `ctrl+c` quits. With no window open,
+    it follows the chip.
 
 At the right end:
 

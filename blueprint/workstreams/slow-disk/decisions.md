@@ -5,8 +5,8 @@ was agreed: SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9 by the maintainer's answ
 § Questions answered, the option recommended in each); SD-D1, SD-D5, SD-D8 and SD-D10 by the maintainer, as proposed;
 SD-D11 and SD-D12, the questions the tasks had left open, by the maintainer's instruction to take the recommended
 answer; SD-D13 and SD-D14, and the notes of 2026-11-10 under SD-D1, SD-D6, SD-D8 and SD-D12, the same way, from the
-design's review; the notes under SD-D10 and SD-D14, from SD-T1's. An entry is never rewritten; a dated note goes under
-it (blueprint/README.md § How things are recorded).
+design's review; the notes under SD-D10 and SD-D14, from SD-T1's; SD-D15, the start's choices, the same way, as SD-T10
+was built. An entry is never rewritten; a dated note goes under it (blueprint/README.md § How things are recorded).
 
 ## SD-D1: The parts, in order (2026-11-09)
 
@@ -402,3 +402,36 @@ turns `dev` red for everyone after it.
 > (`tests/terminal-coverage.test.ts` holds it there). And the maintainer gave the workstream a standing go: the checks a
 > task reaches run without a list asked for first; where a task reaches every check, the slow-disk checks and those of
 > the features its files touch run, and `dev`'s full run covers the rest after the merge.
+
+## SD-D15: The start's choices (2026-11-10)
+
+Agreed by the maintainer's instruction to take the recommended answer, as SD-T10 was built: what its description left
+open.
+
+**Decision:**
+
+- **The note waits in its window.** A note the start reads before the graph is built is placed in its window as it's
+  read, the window saying `reading the vault…` until the graph's first build answers (`Builds.awaited`), its place kept
+  for the layout then. Given up, it's shown as its text, and stays shown while the vault is read again.
+- **`q` and `ctrl+c` quit while a graph has never been built,** out of turn, at the start and in a vault gone into
+  alike (`Builds.unbuilt`); `ctrl+q` too. Any other key waits, as SD-T8 has it.
+- **`esc` gives up the note's read, not the vault's:** the window left empty, the keys still waiting for the vault.
+- **The session isn't saved over while its tabs come back** (`Session.coming`), at the start, a restart or a vault gone
+  into: a quit, or the save a second after a change, before they're in would keep none of them. Saved once they are.
+- **Nothing is caught up with a graph of no notes:** the search index starts once the graph is first built, not before
+  (`Search.start`).
+- **`no notes in …` is said only when the vault's own note is none,** once the graph says so; a note named that can't
+  be opened says why, as any key's read does, and `esc` says nothing.
+
+**Why:** A window that says what it waits for keeps the screen and the note it will show apart: no half-drawn note, no
+links drawn then drawn again (SD-D9). Waiting for the vault can last its walk's ten minutes on a disk that doesn't
+answer; quitting is what's left to do, and an empty graph is no reason to hold `q` back. Placing the note as it's read,
+beside the walk, brings the note as soon as the graph comes. A quit while the tabs were coming saved none, and the next
+start brought none back; a search index caught up with an empty graph dropped every note, then indexed them all again
+on the screen's thread.
+
+**Cost:** A vault gone into on a slow disk quits on `q` rather than waiting for its first read, as SD-T8 had it. While
+the tabs come back, a change to the session isn't saved until they're in.
+
+**Not chosen:** the tab placed only once the graph is built (the note's read made after the walk, not beside it); `q`
+quitting at the start alone; `esc` closing the window that waits.

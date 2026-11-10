@@ -71,10 +71,7 @@ interface Started {
 /** slipbox started on `args` as `runTui` starts it: `prepare` — your config `config` — then the screen's App, its
  *  reads, its builds and its explorer's listings on the disk threads (`listOffThread`). Not live, unless asked: no
  *  watcher, no look each second. */
-async function started(
-  args: string[],
-  o: { config?: string; back?: CameBack; live?: boolean } = {},
-): Promise<Started> {
+async function started(args: string[], o: { config?: string; back?: CameBack; live?: boolean } = {}): Promise<Started> {
   const { prepare } = await import("../../../../src/tui/shell/terminal/run.ts");
   const start = prepare([...args, "--config", o.config ?? yours()], o.back ?? null);
   if (typeof start === "number") throw new Error(`exit ${start}`);
@@ -239,7 +236,10 @@ describe("the start takes the screen first, then reads the vault (SD-T10)", () =
       sidebar: false,
     };
     const place = { mode: "vault", root, homeFolder: null };
-    const back = cameBack({ pid: 1, at: Date.now(), from: "0.5.0", upgrade: null, outcome: null, place, session }, "0.6.0");
+    const back = cameBack(
+      { pid: 1, at: Date.now(), from: "0.5.0", upgrade: null, outcome: null, place, session },
+      "0.6.0",
+    );
     const held = holdWalks();
     const s = await started([makeVault()], { back });
     expect(s.app.loc.root).toBe(root);

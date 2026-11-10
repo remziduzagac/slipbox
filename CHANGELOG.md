@@ -150,6 +150,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   listed last, then the list as it is now, and says `reading the list…` the first time; a link's list offers this
   vault's notes at once and other vaults' as soon as they're read.
 
+- slipbox started on a vault on a slow disk takes the screen at once instead of showing nothing while it reads the
+  vault. The note it opens, or the tabs it brings back, say `reading the vault…` until the vault is read, the keys
+  typed meanwhile wait for it, and `q` or `ctrl+c` quits. A quit before the tabs came back keeps them for next time.
+
 - **Breaking:** the `space` groups are named for what they act on, and their keys moved with them. `space f` (+file)
   acts on any file, a note or not; `space n` (+note) keeps what only a note has; finding is `space /` (+find);
   `space d` reads +directory and `space v` +vault. Each key kept its letter, so only the group's key is new.

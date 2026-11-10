@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: [SD-T5, SD-T8]
 tracker: [gh:#46]
@@ -48,6 +48,29 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
 - A vault that doesn't answer in time: the note shown as its text, links drawn as resolved, asked again a minute
   later (above). The note asked for is what's of use meanwhile; an empty window leaves nothing to do but quit.
 - A restart: brought back as a start is, one path.
+
+## Open
+
+What the description left open, settled as it was built (SD-D15); design.md's section it delivers says how.
+
+- The note read before its graph is placed in its window as it's read, beside the walk, the window saying
+  `reading the vault…` until the graph's first build answers (`Builds.awaited`); given up, it's shown as its text.
+- `q`, `ctrl+c` and `ctrl+q` quit out of turn while the vault open's graph has never been built (`Builds.unbuilt`): at
+  the start, and in a vault gone into, which SD-T8 had waiting for its walk.
+- `esc` gives up the note's read, the window left empty; the keys after it still wait for the vault.
+- Found building it: the session was saved over while its tabs were coming back, by a quit or the save a second after
+  a change, so the next start brought none back (`Session.coming`). The search index, started with a graph of no notes,
+  let go of every note it held and indexed them all again after the build (`Search.start`): at every start once the
+  build moved, and already at a vault gone into since SD-T8. Each has its regression test
+  (`tests/tui/app/runtime/start-read.test.ts`).
+- Home's walk asked again, the graph's errors and the offer to relink what a move broke now follow the first build
+  (`Builds.after`), as they read the graph.
+- `CHECKS_FOR` (`scripts/ci-scope.ts`): no entry added. The start's files (`run.ts`, `startup.ts`, `app.ts`, `input.ts`,
+  `views.ts`) reach every check already, and `builds.ts` has its own. The slow-disk checks, the vaults', the session's
+  and the start's ran before the pull request.
+- Still read on the screen's thread: before the screen, what SD-D9 keeps there (your config, the path named, `--base`,
+  the machine's list); as the App starts, in home, the session and whether each of its tabs' notes is there, for the
+  folders its first walk asks (`Vaults.tabFolders`).
 
 ## References
 

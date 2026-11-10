@@ -1,7 +1,7 @@
 // A slow disk (T12, #9): what reads one off the main thread — home's walk and the background index's, the explorer's
 // listings, the vault open's own folders' too (SD-T7), the watcher's looks (SD-T3), the TUI's look each second (SD-T4),
-// a vault's session as it's gone into (SD-T9) — never holds up the keys or the screen, and still does what it did. The
-// disk a check can't mount is slipbox's own stand-in
+// a vault's session as it's gone into (SD-T9), the start's walk (SD-T10) — never holds up the keys or the screen, and
+// still does what it did. The disk a check can't mount is slipbox's own stand-in
 // (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a folder of that name takes so long to list, on
 // whichever thread lists it — and, given a fourth part, each stat and read of what's in it so long on a disk thread.
 // Each check builds a small home of its own.
@@ -10,6 +10,7 @@ import { chmodSync, existsSync } from "node:fs";
 import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open, switcherListed } from "../check.ts";
 import type { Session } from "../session.ts";
 import { crumbs, git, lastMessage, listed } from "../support/links.ts";
+import { exits } from "../support/navigation.ts";
 import { markOf } from "../support/vaults.ts";
 
 /** The folder name every check's slow disk has. */
@@ -646,6 +647,41 @@ export const SLOW_DISK: Check[] = [
       s.expect(Math.max(...waits) < 1000, `every key answered within a second meanwhile: ${waits.join(", ")} ms`);
       s.expect(took >= 3000, `read on a disk thread for its folder's five seconds, not before: ${took} ms`);
       await backlinkFrom(s, /added\.md/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: slipbox started on a vault on a slow disk — the screen at once, the note once the vault's read, q quitting meanwhile",
+    // `q` while the vault is read quits out of turn: no command runs.
+    covers: { cases: ["vault", "index"] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      config: "[watch]\nenabled = false\n",
+      // The vault's own `slowdisk` takes five seconds to list, on whichever thread lists it: the start's walk.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:5000` },
+      setup: (s) => smallHome(s, { [`~/notes/${SLOW}/near.md`]: "# Near\n\nBack to [the index](../index.md).\n" }),
+      // The screen is waited for here: its note comes only once the vault is read.
+      noWait: true,
+    },
+    run: async (s) => {
+      const at = performance.now();
+      // The screen at once, its note waiting for the vault.
+      await s.see("reading the vault…", 5000);
+      s.expect(!s.text().includes("The notes' own index."), "the note waiting for the vault to be read");
+      await s.see("The notes' own index.", 30_000);
+      const took = Math.round(performance.now() - at);
+      s.expect(took >= 3000, `the note drawn once its folder's five seconds were read, not before: ${took} ms`);
+      await backlinkFrom(s, /near\.md/);
+      // Started again: `q` while the vault is read quits at once.
+      await s.restart();
+      await s.see("reading the vault…", 5000);
+      const asked = performance.now();
+      await s.keys("q");
+      await exits(s, "q to quit while the vault is read");
+      const ms = Math.round(performance.now() - asked);
+      s.expect(ms < 3000, `quit before the vault was read: ${ms} ms`);
+      s.expect(s.exitCode() === 0, `a clean exit, not ${s.exitCode()}`);
     },
   },
 ];
