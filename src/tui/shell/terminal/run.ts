@@ -1,10 +1,11 @@
-// TUI bootstrap (3.1): locate the root, build the graph, start OpenTUI, route input to the app.
+// TUI bootstrap (3.1): locate the root, start OpenTUI, route input to the app — which reads the vault once the screen
+// is up (SD-D9).
 // Imported lazily by main.ts only when stdout and stdin are terminals (9.3).
 
 import { type CliRenderer, createCliRenderer, type KeyEvent, NativeSession } from "@opentui/core";
 import { flag, parseArgs } from "../../../cli/args.ts";
 import { loadConfig } from "../../../core/application/config/config.ts";
-import { Graph, openGraph } from "../../../core/workspace/graph/graph.ts";
+import { Graph } from "../../../core/workspace/graph/graph.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { setWidthMethod } from "../../../core/foundation/text/width.ts";
 import { statSync, writeSync } from "node:fs";
@@ -56,9 +57,10 @@ function placed(p: Place): VaultLocation | null {
 /**
  * Everything before the screen is taken: the root found (one that can't be is said in a line, and the
  * exit code returned), its config, the machine told it has seen the root — a named folder moved here by
- * hand adopting its state before the graph opens on it, and the App told it moved (21.8) — the graph.
- * Started by a restart (`back`, UPG-D4): where it left off, in place of the arguments' path and `--root`, its window's
- * session, and `--base` not applied again — a start's instruction, already kept for its branch.
+ * hand adopting its state before the graph opens on it, and the App told it moved (21.8) — and its graph, not built:
+ * the screen, once it's up, reads the vault (SD-D9). Started by a restart (`back`, UPG-D4): where it left off, in
+ * place of the arguments' path and `--root`, its window's session, and `--base` not applied again — a start's
+ * instruction, already kept for its branch.
  */
 export function prepare(argv: string[], back: CameBack | null = null): Start | number {
   const args = parseArgs(argv);
@@ -111,9 +113,9 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
   return {
     loc,
     config: loaded.config,
-    // Home's built by the screen as it starts, once, with what it asks for: the folder opened, its tabs' (VV-D2). Any
-    // other's before the screen is taken.
-    graph: loc.mode === "home" ? new Graph(loc, loaded.config) : openGraph(loc, loaded.config, true, "lazy"),
+    // Built by the screen once it's up (SD-D9), once, with what it asks for — in home, the folder opened and its tabs'
+    // (VV-D2): its walk and index read on a disk thread, the note waiting for it, `q` quitting meanwhile (SD-T10).
+    graph: new Graph(loc, loaded.config),
     warnings,
     notes,
     open: at ? null : (loc.file ?? null),

@@ -51,10 +51,12 @@ export class Search {
     this.list = null;
   }
 
-  /** The index opened (or made) and caught up in the background; the graph's changes followed. */
+  /** The index opened (or made) and caught up in the background; the graph's changes followed. Not before the graph is
+   *  first built (the start, a vault gone into: SD-T8, SD-T10): caught up with a graph of no notes, it would let go of
+   *  every note it holds, to index them all again once the graph is built (`Watch.rebuilt` starts it then). */
   start(): void {
     this.stop();
-    if (isListed(this.app.loc) || this.app.config.search.engine === "scan") return;
+    if (isListed(this.app.loc) || this.app.config.search.engine === "scan" || !this.app.graph.builds) return;
     const idx = SearchIndex.open(this.app.loc);
     if (!idx) return;
     const g = this.app.graph;
