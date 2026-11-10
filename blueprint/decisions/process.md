@@ -403,3 +403,44 @@ passed, and adding the `macos` label runs it.
 
 **Not chosen:** option a, Linux alone on a pull request, and option c, macOS on every one; a macOS job per event, to
 wait for Linux on a pull request only (ideas.md § Process).
+
+## D275: Linux's tests and terminal checks in three parts each, by file (2026-11-10)
+
+**Decision:** Issue #65's item 1 (CIW-T5). CI's `test` job runs in three parts on `ubuntu-24.04`, and its `terminal`
+job in three parts on each of `ubuntu-24.04` and `ubuntu-24.04-arm`, each part on a runner of its own: the matrix's
+`shard`, `1/3` to `3/3`, which the job hands to `bun run test:changed` and `bun run test:terminal:changed` as
+`SCOPE_SHARD`. `test` splits by test file: the tests a change reaches (D239), or, in a run of everything, every test
+file under `tests/`, where a test holds every file `bun test` would find. `terminal` splits by check file
+(`tests/terminal/checks/<name>.ts`): the runner's `--shard i/n` takes its part of the checks its filters chose, so a
+feature's checks, and the release builds the checks of upgrading share, stay on one runner. The rule
+(`scripts/ci-shard.ts`): the heaviest first, each into the part with the least so far, the lowest on a tie, and files
+of the same weight in their paths' order, so the same files make the same parts. A test file weighs its seconds on a
+runner when a run measured it slow (`SLOW_TESTS`: eight seconds or more), else one; a check file weighs its checks, a
+check run alone counting four, a runner's cores, since nothing else runs meanwhile. Each part runs the typecheck and
+the gates too, a few seconds. macOS's jobs stay whole: split, they would only wait longer for the account's five macOS
+runners; each waits for every Linux part (D273). `ci` is unchanged: GitHub gives a job in parts one result, a success
+only when every part passed, so a part failed or cancelled fails it. Amends GR-D9 and TT-D6. Detail:
+design/repository.md § CI, design/testing.md § Strategy and the runner, `MAINTAINING.md` § Merging a change.
+
+**Why:** Issue #65 asks for a scoped pull request's Linux checks in about five minutes. Its `test` job took 7 to 11
+minutes (pull requests' runs of 2026-11-10: 420 to 683 seconds), nearly all of it the tests, one file after another; a
+push's terminal checks took 15 to 18 minutes on `ubuntu-24.04` and 13 to 14 on arm (every check: 911 to 1,069 seconds,
+and 773 to 837). By check file, not by area: there are five areas, and links and files holds two fifths of the checks'
+time, so a part by area couldn't be shorter than about seven minutes; there are 76 check files. Weighed by recorded
+time only for the slow files: by count alone, a run's parts differed by up to 100 seconds, its few slow files (31
+seconds the longest) landing together. With their seconds the parts come within a slow file of each other; the rest
+are too alike (0.7 seconds on average) and change too much from run to run to be worth recording.
+
+**Cost:** More jobs at once: a pull request's three `test` parts where there was one job, a push's six terminal parts
+where there were two. An account runs a limited number of jobs at once (20 on GitHub's free plan, five of them on
+macOS), so with many pull requests open, Linux can queue too. Each part sets its runner up again, about 15 seconds,
+and runs the typecheck and the gates. `SLOW_TESTS` is kept by hand: a test holds each name to a file there is, but a
+file grown slow isn't seen until each test's time is reported (CIW-T9); a stale list only evens the parts less. The
+terminal parts first run on a push to `dev`, since a pull request runs no terminal check (D266).
+
+**Verify:** the first push to `dev` after it runs six terminal parts, each about a third of its runner's checks, and
+the next full run every test and check in its parts.
+
+**Not chosen:** two parts, whose tests would still take five to six minutes; parts by area; parts by count alone; parts
+weighed by the times of earlier runs, read as each run starts, which would change its parts from one run to the next;
+Bun's own `bun test --parallel` on one runner (ideas.md § Process).

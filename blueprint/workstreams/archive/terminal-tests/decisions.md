@@ -55,6 +55,9 @@ rule may keep its few inline lines; realistic content comes from the sample fold
 
 ## TT-D6: In parallel, everywhere; test, then fix (2026-10-13)
 
+> **Amended by D275 (2026-11-10):** on each Linux runner CI runs the checks in three parts, a runner each, by check
+> file; macOS runs them whole.
+
 > **Amended by D238 (2026-10-17):** CI's Mac is Apple silicon alone: Intel Macs aren't built for after 0.3.0, and
 > `macos-15-intel` no longer runs the checks. Linux still runs them on x64 and arm64.
 

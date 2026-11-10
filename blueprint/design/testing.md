@@ -221,12 +221,13 @@ the `macos` label (D273; [repository.md](repository.md) § CI); the docs' tests 
 no terminal check (D266). For a push to `dev` or `test`, the tests and the terminal checks for what changed since the
 last passing run, on Linux and macOS whatever changed: nothing for `dev` moved to `test`
 ([repository.md](repository.md) § What a push tests). Every test and check in the full run, `ci` run by hand on `test`
-(`full`), which a commit needs before `main` takes it and a release builds it (D251). A pull request whose change
-might behave otherwise on macOS, outside the list, takes the `macos` label. The scripts `bun run check` runs, split
-into jobs ([repository.md](repository.md) § CI). While working: your change's own tests and its feature's terminal
-check (`bun run test:terminal <its name>`), then `bun run test:changed` for what else it reaches — never the whole
-suite. A failure the full run finds is fixed
-by a pull request of its own, into `dev`.
+(`full`), which a commit needs before `main` takes it and a release builds it (D251). On Linux each job runs in three
+parts, a runner each: the tests by test file, the terminal checks by check file, every one in exactly one part, so a
+scoped pull request's tests take about five minutes; macOS runs each whole (D275; [repository.md](repository.md) §
+CI). A pull request whose change might behave otherwise on macOS, outside the list, takes the `macos` label. The
+scripts `bun run check` runs, split into jobs ([repository.md](repository.md) § CI). While working: your change's own
+tests and its feature's terminal check (`bun run test:terminal <its name>`), then `bun run test:changed` for what else
+it reaches — never the whole suite. A failure the full run finds is fixed by a pull request of its own, into `dev`.
 
 **Biome formats and lints the code** (`biome.jsonc`: 120 columns, the recommended rules but the code's idioms, each
 turned off with its reason); `bun run lint` fails on a warning, `bun run format` writes (GR-D7).
@@ -382,13 +383,15 @@ which a busy machine stretches (#75). What a terminal check says comes at once i
 bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`, whatever it's asked.
 
 
-**The runner** (`tests/terminal/run.ts`, `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [area or
-name…]`) runs the chosen checks concurrently, as many as the machine has cores, each in a worker process of its own
-(`worker.ts`): two of Bun's pseudo-terminals in one process can cross their output (Bun 1.4.2), and a check that
-crashes takes only itself down. A check has two minutes. The run goes to its end, then reports every failure with
-its screen, a summary by area, and how many commands the checks ran; a check that declares a command it never ran
-fails. `--repeat` runs each check that many times in the same pool, to show a flaky one. A check quarantined (§
-Strategy, flaky tests) is never started: it's reported skipped, with its issue (T31).
+**The runner** (`tests/terminal/run.ts`, `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [--shard
+i/n] [area or name…]`) runs the chosen checks concurrently, as many as the machine has cores, each in a worker process
+of its own (`worker.ts`): two of Bun's pseudo-terminals in one process can cross their output (Bun 1.4.2), and a
+check that crashes takes only itself down. A check has two minutes. The run goes to its end, then reports every
+failure with its screen, a summary by area, and how many commands the checks ran; a check that declares a command it
+never ran fails. `--repeat` runs each check that many times in the same pool, to show a flaky one. `--shard i/n` runs
+the `i`th of `n` parts of the checks chosen, whole check files each, as CI's Linux jobs split them (D275); anything but
+`i/n` is refused. A check quarantined (§ Strategy, flaky tests) is never started: it's reported skipped, with its issue
+(T31).
 
 **The checks** (`tests/terminal/checks/<area>.ts`) are one feature each, small related ones grouped, named by it under
 one of five areas (reading, editing, navigating, links and files, the outside and code), each declaring the reference

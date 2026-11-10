@@ -13,11 +13,13 @@
 // `bun run ci:scope` writes what CI's jobs need to $GITHUB_OUTPUT (`code`, `checks`, `macos`; a push's `range`, which
 // the jobs after it read as `SCOPE_RANGE`), and says it either way. `bun run test:changed` and `bun run
 // test:terminal:changed [runner's flags…]` run what a change reaches: a pull request's merge commit against its base in
-// CI, a push's range; here, your branch, committed or not, against where it left `origin/dev` (or `--base <ref>`).
+// CI, a push's range; here, your branch, committed or not, against where it left `origin/dev` (or `--base <ref>`). With
+// `SCOPE_SHARD` (`i/n`, a Linux job's part in CI), only that part of it (D275, `scripts/ci-shard.ts`).
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { commit, githubApi, pushRange } from "./ci-range.ts";
+import { allTests, parseShard, type Shard, shardTests } from "./ci-shard.ts";
 
 const ROOT = join(import.meta.dir, "..");
 
@@ -466,15 +468,27 @@ export function scope(files: string[] | null, graph = importGraph(), root = ROOT
 
 /**
  * The package.json script, and its arguments, that runs a scope's tests or terminal checks: everything's, the change's
- * own, or none. The tests always through `bun run test`, which bounds each at 30 s.
+ * own, or none. The tests always through `bun run test`, which bounds each at 30 s. A part (`shard`, D275) runs its
+ * share: of the tests, its files of the change's or of every one; of the checks, the runner's `--shard`, which takes its
+ * part of those its filters chose.
  */
-export function scriptFor(what: "test" | "terminal", s: Scope): string[] | null {
+export function scriptFor(
+  what: "test" | "terminal",
+  s: Scope,
+  shard: Shard | null = null,
+  root = ROOT,
+): string[] | null {
   if (what === "test") {
+    if (shard) {
+      const part = shardTests(s.all !== null ? allTests(root) : s.tests, shard);
+      return part.length ? ["test", ...part.map((t) => `./${t}`)] : null;
+    }
     if (s.all !== null) return ["test"];
     return s.tests.length ? ["test", ...s.tests.map((t) => `./${t}`)] : null;
   }
-  if (s.all !== null || s.checks === "all") return ["test:terminal"];
-  return s.checks.length ? ["test:terminal", ...s.checks] : null;
+  const part = shard ? ["--shard", `${shard.index}/${shard.count}`] : [];
+  if (s.all !== null || s.checks === "all") return ["test:terminal", ...part];
+  return s.checks.length ? ["test:terminal", ...s.checks, ...part] : null;
 }
 
 /**
@@ -548,13 +562,17 @@ if (import.meta.main) {
       : say(s, files);
   console.log(said);
   if (what === "test" || what === "terminal") {
-    const cmd = scriptFor(what, s);
-    if (!cmd) console.log(`no ${what === "test" ? "test" : "terminal check"} reaches this change`);
-    else
+    const shard = parseShard(process.env.SCOPE_SHARD);
+    const cmd = scriptFor(what, s, shard, here);
+    const of = shard ? ` in part ${shard.index}/${shard.count}` : "";
+    if (!cmd) console.log(`no ${what === "test" ? "test" : "terminal check"} reaches this change${of}`);
+    else {
+      if (shard && what === "test") console.log(`part ${shard.index}/${shard.count}: ${cmd.length - 1} test files`);
       process.exit(
         Bun.spawnSync([process.execPath, "run", ...cmd, ...rest], { stdio: ["inherit", "inherit", "inherit"] })
           .exitCode,
       );
+    }
   } else {
     const code = !docsOnly && !nothing;
     const checks = s.all !== null || s.checks === "all" || s.checks.length > 0;

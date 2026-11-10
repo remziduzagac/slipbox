@@ -837,7 +837,12 @@ describe("macOS after Linux, and on a pull request only for what differs there (
         `${linux} (macos-15)`,
         "macos-15",
       ]);
-      expect(m.steps).toEqual(l.steps!);
+      // Its Linux job's steps, but the part (D275): macOS runs whole, every test or check of its scope.
+      const whole = (l.steps ?? []).map((s) => {
+        const { SCOPE_SHARD, ...env } = (s as { env?: Record<string, string> }).env ?? {};
+        return SCOPE_SHARD === undefined ? s : { ...s, env };
+      });
+      expect(m.steps).toEqual(whole);
       expect([m.permissions, m["timeout-minutes"]]).toEqual([l.permissions, l["timeout-minutes"]]);
       // No status function: GitHub's own `success()`, so a Linux job failed, cancelled or skipped skips it.
       expect(m.if).not.toMatch(/always\(\)|cancelled\(\)|failure\(\)|success\(\)/);

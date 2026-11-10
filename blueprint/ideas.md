@@ -145,6 +145,13 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - A test file run on macOS when it imports a file of what differs there, so the tests that don't sit beside their
   source go with it: about a fifth of the tests import one, most for a helper they only use. (2026-11-09) Chosen, after
   review found tests the folders missed (D273).
+- The Linux jobs split across runners (issue #65's item 1): in two parts or three; the terminal checks by area or by
+  check file; the parts weighed by count, by the slow files' recorded seconds, or by the times of earlier runs read as
+  each run starts. (2026-11-10) Three parts, by check file, the slow files weighed by their seconds (D275): two would
+  leave the tests five to six minutes; one of the five areas holds two fifths of the checks' time; earlier runs' times
+  would change a run's parts from one run to the next.
+- Bun's own `bun test --parallel`: the test files across a runner's cores in one job, each in a process of its own
+  (`--isolate`). Untried: the tests' shared temporary folder and their fixtures weren't written for it. (2026-11-10)
 
 ## Roots and vaults
 
