@@ -17,6 +17,6 @@ its status `consolidated`.
 
 ## Acceptance criteria
 
-- design/tui.md § SOURCE view, § The lens and § Git, design/rendering.md § Themes and § Diffs, and requirements.md
-  § Editing say what the workstream's design.md and requirements.md say.
+- design/tui.md § SOURCE view, § The lens and § Git, design/rendering.md § Background parsing and spelling limits,
+  § Themes and § Diffs, and requirements.md § Editing say what the workstream's design.md and requirements.md say.
 - `bun run check:docs` passes.

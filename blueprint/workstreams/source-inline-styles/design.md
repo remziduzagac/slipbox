@@ -34,11 +34,13 @@ read from it, never parsed again. Each line's styles are part of its row's signa
 again only when its styles change.
 
 Off the screen's thread for a big note (SIS-D5): when more than `BACKGROUND_PARSE` (128 KiB) of the note isn't in
-either cache, nothing is parsed for the layout; the note is drawn without styles (and without the light highlighting's
-inline colours), its parse sent to the parse workers (`parseAhead`), and the window drawn again when it lands — the
-layout made meanwhile kept under a key of its own, gone with the parse. Text the workers failed on stays plain until it
-changes; a virtual buffer, which isn't sent to them, is parsed here. The stand-in parses of pieces using a definition
-elsewhere are made here, as the render's are.
+either cache, stand-in parses counted, nothing is parsed for the layout; the pieces not styled yet keep the light
+highlighting (code spans and links by pattern), the note's parse goes to the parse workers (`parseAhead`), and the
+window is drawn again when it lands — the layout made meanwhile kept under a key of its own, gone with the parse. The
+workers parse the note's chunks, then those using a definition another chunk holds, with their stand-ins (SIS-D7); a
+piece's stand-in parse is read from the render's chunk holding it. What's still missing past the budget once the
+workers are done (a piece's stand-ins its render's chunk didn't need) is parsed here. Text the workers failed on keeps
+the light highlighting until it changes; a virtual buffer, which isn't sent to them, is parsed here.
 
 `[render] source_styles = false` (SIS-D3) turns the styles off: the light highlighting of before, its code spans and
 links by pattern, a line at a time.
@@ -64,9 +66,22 @@ lines shown." becomes:
 
 its text highlighted as SOURCE view highlights it — a note's Markdown over the whole text, so a fence's or the front
 matter's lines read as theirs, its inline styles (SIS-D6) parsed only in the pieces holding a line shown, a definition
-in a piece not shown found by its line's pattern; code a line at a time, only the lines shown.
+in a piece not shown found by its line's pattern, within SOURCE view's budget (`styledSource`): each text's parse and
+layout cache kept by the app between layouts (`DiffStyles`), a big text's parse sent to the parse workers and the diff
+laid out again when it lands; code a line at a time, only the lines shown.
 
 Previously: as quoted.
+
+## MODIFIED design/rendering.md § Background parsing and spelling limits
+
+Its paragraph "A big note's chunks go in contiguous batches …" gains, after its first sentence:
+
+Once they're in, the chunks that use a label another chunk defines go too, with their stand-in definitions, in a second
+round (`standInChunks`, SIS-D7): taken into the note's parse cache with the stand-ins taken out (`adoptStandIns`), so
+the parse that follows on the screen's thread parses nothing. What's left to parse (`unparsed`) counts them once the
+chunks are in.
+
+Previously: the paragraph without it.
 
 ## MODIFIED design/rendering.md § Themes (plan `2.6`)
 

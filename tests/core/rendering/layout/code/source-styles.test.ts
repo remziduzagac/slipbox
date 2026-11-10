@@ -1,10 +1,12 @@
 import { UNIT_TIMEOUT_MS } from "../../../../support/timeouts.ts";
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { layoutSource, newSourceCache, scanHeadings } from "../../../../../src/core/rendering/layout/code/source.ts";
 import { A_BOLD, A_ITALIC, A_STRIKE, type Layout } from "../../../../../src/core/rendering/layout/ir.ts";
 import { layoutDiff } from "../../../../../src/core/rendering/layout/diff/diff.ts";
+import { newDiffStyles } from "../../../../../src/core/rendering/layout/diff/diff-styles.ts";
 import { composeLive } from "../../../../../src/core/rendering/layout/markdown/live.ts";
-import { newParseCache, parseMarkdown } from "../../../../../src/core/documents/markdown/parse.ts";
+import * as parse from "../../../../../src/core/documents/markdown/parse.ts";
+import { BACKGROUND_PARSE, stopParsePool } from "../../../../../src/core/documents/markdown/parse-pool.ts";
 import { diffView } from "../../../../../src/core/workspace/git/merge/merge.ts";
 import { unicode } from "../../../../support/render-layout.ts";
 import { makeCoreSandbox } from "../../../../support/core-sandbox.ts";
@@ -135,15 +137,15 @@ describe("Markdown's inline styles in SOURCE view (SIS)", () => {
   test("the note's parse at hand is used, not parsed again; past the limit, nothing is parsed and it says so", () => {
     const note = `# Title\n\n${Array.from({ length: 60 }, (_, i) => `Para **${i}** with [^1].`).join("\n\n")}\n\n[^1]: x\n`;
     const fresh = styled(note);
-    const pc = newParseCache();
-    parseMarkdown(note, pc);
-    // With nothing to parse allowed here, the parse's chunks give every style (the stand-ins' aside, parsed here).
+    const pc = parse.newParseCache();
+    parse.parseMarkdown(note, pc);
+    // With nothing to parse allowed here, the parse's chunks give every style, its stand-ins' too.
     const cache = newSourceCache();
     expect(JSON.stringify(layoutSource(note, { ...base, styles: { parsed: pc, limit: 0 } }, cache))).toBe(
       JSON.stringify(fresh),
     );
     expect(cache.styles.pending).toBe(false);
-    // Without it, nothing is: the note as it is without styles, but no light highlighting either, pending.
+    // Without it, nothing is: the note with the light highlighting, pending.
     const none = newSourceCache();
     const waiting = layoutSource(note, { ...base, styles: { limit: 100 } }, none);
     expect(none.styles.pending).toBe(true);
@@ -206,7 +208,7 @@ describe("Markdown's inline styles in SOURCE view (SIS)", () => {
       language: null,
       wrap: true,
       codeScroll: true,
-      styles: true,
+      styles: newDiffStyles(),
     });
     const row = l.lines.find((x) => rowText({ lines: [x] } as Layout).startsWith("+ "))!;
     const spans = row.spans.map((s) => `${s.text}|${s.role}${s.attrs ? `+${s.attrs}` : ""}${s.bg ? `/${s.bg}` : ""}`);
@@ -224,6 +226,100 @@ describe("Markdown's inline styles in SOURCE view (SIS)", () => {
     expect(off.lines.map((x) => x.spans.map((s) => s.text).join(""))).toEqual(
       l.lines.map((x) => x.spans.map((s) => s.text).join("")),
     );
+  });
+
+  test("a line not styled yet, its parse pending or failed, keeps the light highlighting: code spans, links", () => {
+    const paras = Array.from({ length: 30 }, (_, i) => `Para ${i}: \`code ${i}\` and [link](x${i}.md).`);
+    const note = `${paras.join("\n\n")}\n\n    \`indented\` code\n`;
+    const cache = newSourceCache();
+    const waiting = layoutSource(note, { ...base, styles: { limit: 10 } }, cache);
+    expect(cache.styles.pending).toBe(true);
+    expect(runs(waiting, 0)).toEqual([
+      "Para 0: |text",
+      "`code 0`|code_inline",
+      " and |text",
+      "[link](x0.md)|link",
+      ".|text",
+    ]);
+    expect(runs(waiting, 60)).toEqual(runs(plain(note), 60));
+    // Styled once it may parse: an indented code block's line, coloured by the pattern, made again as parsed.
+    const fresh = styled(note);
+    expect(runs(fresh, 60)).toEqual(["    `indented` code|text"]);
+    expect(JSON.stringify(layoutSource(note, { ...base, styles: {} }, cache))).toBe(JSON.stringify(fresh));
+  });
+
+  /** Sections, each its own chunk of the render's, each paragraph marking a footnote the last defines. */
+  const footnoted = (sections: number) => {
+    const part = (s: number) => Array.from({ length: 25 }, (_, i) => `Para **${s}.${i}** with [^1].`).join("\n\n");
+    const parts = Array.from({ length: sections }, (_, s) => `## Part ${s}\n\n${part(s)}`);
+    return `${parts.join("\n\n")}\n\n[^1]: the note\n`;
+  };
+  /** What `parseChunk` parsed while `f` ran, in characters. */
+  const parsedBy = <T>(f: () => T): [T, number] => {
+    const spy = spyOn(parse, "parseChunk");
+    try {
+      const out = f();
+      return [out, spy.mock.calls.reduce((n, c) => n + (c[0] as string).length, 0)];
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  test("the stand-ins' parses count against the budget; the render's parse of them is read, never parsed again", () => {
+    const note = footnoted(4);
+    const fresh = styled(note);
+    // The chunks parsed, as the workers' first round leaves them; their stand-ins not.
+    const pc = parse.newParseCache();
+    parse.adoptChunks(
+      pc,
+      parse.noteChunks(note).map((c) => ({ text: c.text, children: parse.parseChunk(c.text, c.first) })),
+    );
+    expect(parse.standInChunks(note, pc).length).toBeGreaterThan(1);
+    const cache = newSourceCache();
+    const [waiting, spent] = parsedBy(() => layoutSource(note, { ...base, styles: { parsed: pc, limit: 100 } }, cache));
+    expect(cache.styles.pending).toBe(true);
+    expect(spent).toBe(0);
+    expect(runs(waiting, 2)).toEqual(["Para |text", "**|markup", `0.0|strong+${B}`, "**|markup", " with [^1].|text"]);
+    // Their second round: the chunks parsed again with their stand-ins, taken in. Nothing is left to parse here.
+    parse.adoptStandIns(
+      pc,
+      parse.standInChunks(note, pc).map((c) => ({ ...c, children: parse.parseChunk(c.text, c.first) })),
+    );
+    expect(parse.standInChunks(note, pc)).toEqual([]);
+    const [styledNow, none] = parsedBy(() =>
+      layoutSource(note, { ...base, styles: { parsed: pc, limit: 0 } }, newSourceCache()),
+    );
+    expect(none).toBe(0);
+    expect(JSON.stringify(styledNow)).toBe(JSON.stringify(fresh));
+    // The render's own parse of the note reads them too, parsing nothing.
+    const [tree, again] = parsedBy(() => parse.parseMarkdown(note, pc).tree);
+    expect(again).toBe(0);
+    expect(JSON.stringify(tree)).toBe(JSON.stringify(parse.parseMarkdown(note).tree));
+  });
+
+  test("a big note's diff: nothing parsed here past the budget, styled once its parse lands", async () => {
+    const lines = Array.from({ length: 3000 }, (_, i) => `Line ${i} with **strong ${i}** words, to fill a row of it.`);
+    const big = `${lines.join("\n\n")}\n`;
+    expect(big.length).toBeGreaterThan(BACKGROUND_PARSE);
+    let landed: () => void = () => {};
+    const parsed = new Promise<void>((r) => (landed = r));
+    const styles = newDiffStyles(() => landed());
+    const opts = { width: 80, glyphs: unicode, language: null, wrap: false, codeScroll: true, styles };
+    const rows = diffView("", big);
+    const line1 = (l: Layout) => l.lines.find((x) => rowText({ lines: [x] } as Layout).startsWith("+ Line 1 with"))!;
+    const [first, spent] = parsedBy(() => layoutDiff(rows, "", big, opts));
+    expect(spent).toBe(0);
+    expect(line1(first).spans.some((s) => s.attrs)).toBe(false);
+    // Laid out again before it lands (a resize): still nothing parsed here.
+    expect(parsedBy(() => layoutDiff(rows, "", big, { ...opts, width: 90 }))[1]).toBe(0);
+    await parsed;
+    expect(styles.version).toBe(1);
+    const [after, then] = parsedBy(() => layoutDiff(rows, "", big, opts));
+    expect(then).toBe(0);
+    expect(line1(after).spans.map((s) => `${s.text}|${s.role}${s.attrs ? `+${s.attrs}` : ""}`)).toContain(
+      `strong 1|strong+${B}`,
+    );
+    stopParsePool();
   });
 
   test("the lens's rows styled too, its block parsed alone", () => {

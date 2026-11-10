@@ -16,7 +16,7 @@ requirements and design (SIS-T2) waits for the maintainer's approval.
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
-- [decisions.md](decisions.md): SIS-D1 to SIS-D6.
+- [decisions.md](decisions.md): SIS-D1 to SIS-D7.
 - [tasks/](tasks/README.md): SIS-T1, built; SIS-T2, the consolidation, `todo`.
 - [notes.md](notes.md): how it was drafted, what was measured, and its known limits.
 - The research: [../../research/source-inline-styles.md](../../research/source-inline-styles.md), how seven editors

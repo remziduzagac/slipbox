@@ -203,7 +203,7 @@ function show(app: App, r: Review): void {
   buf.readOnly = "the review is read-only: y keeps a change, x reverts it";
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
-    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}`;
+    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${styles?.version}`;
     if (made?.key !== key) {
       const split = sideBySide(app, it.abs, width);
       made = { key, layout: layoutScreen(parts, { width, language, tabWidth, styles, split, ...how }) };

@@ -18,8 +18,8 @@ import { type DecodedFile, readTextStamped, type Stamp, stamp } from "../../../c
 import type { Layout } from "../../../core/rendering/layout/ir.ts";
 import type { NoteRenderOptions } from "../../../core/documents/model/note.ts";
 import { newSourceCache } from "../../../core/rendering/layout/code/source.ts";
-import { newParseCache, noteChunks, type ParsedNote, parseMarkdown } from "../../../core/documents/markdown/parse.ts";
-import { BACKGROUND_PARSE, parseInBackground } from "../../../core/documents/markdown/parse-pool.ts";
+import { newParseCache, type ParsedNote, parseMarkdown } from "../../../core/documents/markdown/parse.ts";
+import { BACKGROUND_PARSE, parseInBackground, unparsed } from "../../../core/documents/markdown/parse-pool.ts";
 import { countWords } from "../../../core/foundation/text/words.ts";
 import { readerFor } from "../../../core/documents/model/readers.ts";
 import type {
@@ -293,17 +293,16 @@ export class NoteBuffer {
   }
 
   /**
-   * A big note's parse, begun on other threads (15.1): when what's left to parse of the current
-   * text — the chunks its cache hasn't got — is at least `BACKGROUND_PARSE` characters (a first
-   * open, a reload that changed most of it). True while one runs; then `parsed` finds it done.
+   * A big note's parse, begun on other threads (15.1): when what's left of the current text's (`unparsed`: its chunks
+   * or their stand-ins) is at least `BACKGROUND_PARSE` characters — or anything, `force`d by SOURCE view's styles past
+   * their budget (SIS-D7). True while one runs; then `parsed` finds it done.
    */
-  parseAhead(): boolean {
+  parseAhead(force = false): boolean {
     if (this.parsing) return true;
     if (this.parseFailed || this.parsedVersion === this.version || this.source.length < BACKGROUND_PARSE) return false;
     if (this.kind.group !== "note" || this.kind.format !== "markdown" || this.virtual) return false;
-    let missing = 0;
-    for (const c of noteChunks(this.source)) if (!this.parseCache.chunks.has(c.text)) missing += c.text.length;
-    if (missing < BACKGROUND_PARSE) return false;
+    const missing = unparsed(this.source, this.parseCache);
+    if (!missing || (missing < BACKGROUND_PARSE && !force)) return false;
     this.parseAbort = new AbortController();
     this.parsing = parseInBackground(this.source, this.parseCache, this.parseAbort.signal)
       .then((ok) => {

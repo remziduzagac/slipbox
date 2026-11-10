@@ -618,3 +618,6 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - The render's chunks were tried first and measured: a line added at the top of a 1 MB note parsed all of it again,
   in 1.6 s. Cut at every block instead, a keystroke parses its paragraph; the workstream's notes have the numbers.
   Consolidation waits for the maintainer.
+- Its pull request's review found three things, fixed in it: a note's diff held to the same budget as SOURCE view, the
+  stand-in parses counted against it and made on the parse workers with the rest of a big note (SIS-D7), and a piece
+  not styled yet keeping the light highlighting.

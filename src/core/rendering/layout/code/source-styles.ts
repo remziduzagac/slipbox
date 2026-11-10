@@ -11,7 +11,13 @@
 
 import type { Nodes, PhrasingContent, RootContent, Table } from "mdast";
 import type { Point } from "unist";
-import { type ParseCache, parseChunk } from "../../../documents/markdown/parse.ts";
+import {
+  chunkStandIns,
+  isStandIn,
+  type ParseCache,
+  parseChunk,
+  standInText,
+} from "../../../documents/markdown/parse.ts";
 import { chunkStarts } from "../../../documents/markdown/parse/chunks.ts";
 import { tame } from "../../../documents/markdown/parse/normalization.ts";
 import type { WikiLink } from "../../../documents/markdown/wikilink.ts";
@@ -36,8 +42,8 @@ export interface Paint {
 export interface StyleOptions {
   /** The note's parse in chunks, where one is at hand (a buffer's): a chunk it holds isn't parsed again. */
   parsed?: ParseCache;
-  /** More than this many characters to parse here, and none are: the chunks no cache holds are plain for now, and
-   *  `StyleCache.pending` says so (a big note, its parse sent to other threads). Default: no limit. */
+  /** More than this many characters to parse here, stand-ins included, and none are: the chunks no cache holds have no
+   *  paints for now, and `StyleCache.pending` says so (a big note, its parse sent to other threads). Default: none. */
   limit?: number;
   /** Only the chunks holding one of these lines (1-based) are wanted (a diff's lines): the others aren't parsed. */
   lines?: ReadonlySet<number>;
@@ -78,7 +84,8 @@ export function newStyleCache(): StyleCache {
   return { chunks: new Map(), pending: false };
 }
 
-/** Each line's paints (0-based, as `source.split("\n")`), and its signature for the row cache. */
+/** Each line's paints (0-based, as `source.split("\n")`), undefined for a line of a chunk not styled, and its
+ *  signature for the row cache. */
 export interface LineStyles {
   paints: (Paint[] | undefined)[];
   sigs: string[];
@@ -100,7 +107,24 @@ export function inlineStyles(source: string, opts: StyleOptions, cache: StyleCac
     for (let l = from + 1; l <= to; l++) if (opts.lines.has(l)) return true;
     return false;
   };
-  /** The render's chunks (`chunkStarts` at its size), each a run of these: found when the buffer's parse is asked. */
+  /** The render's chunk (`chunkStarts` at its size) holding chunk `k`, by its first line, among `starts`. */
+  const holding = (starts: readonly number[], k: number) => {
+    let [w, hi] = [0, starts.length - 1];
+    while (w < hi) {
+      const mid = (w + hi + 1) >> 1;
+      if (starts[mid]! <= ranges[k]![0]) w = mid;
+      else hi = mid - 1;
+    }
+    return w;
+  };
+  /** Chunk `j`'s styles out of those of the render's chunk it's in, which starts at line `from`. */
+  const slice = (all: ChunkStyles, from: number, j: number): ChunkStyles => {
+    const [f, t] = ranges[j]!;
+    const [a, b] = [f - from, t - from];
+    const defs = all.defs.filter((d) => d.line >= a && d.line < b).map((d) => ({ ...d, line: d.line - a }));
+    return { paints: all.paints.slice(a, b), sigs: all.sigs.slice(a, b), defs, refs: refsOf(lines.slice(f, t)) };
+  };
+  /** The render's chunks, each a run of these: found when the buffer's parse is asked. */
   let wide: number[] | null = null;
   /** The render's chunks the buffer's parse hasn't got. */
   const unparsed = new Set<number>();
@@ -108,12 +132,7 @@ export function inlineStyles(source: string, opts: StyleOptions, cache: StyleCac
   const fromParse = (k: number): boolean => {
     if (!opts.parsed?.chunks.size) return false;
     wide ??= chunkStarts(lines);
-    let [w, hi] = [0, wide.length - 1];
-    while (w < hi) {
-      const mid = (w + hi + 1) >> 1;
-      if (wide[mid]! <= ranges[k]![0]) w = mid;
-      else hi = mid - 1;
-    }
+    const w = holding(wide, k);
     if (unparsed.has(w)) return false;
     const [from, to] = [wide[w]!, wide[w + 1] ?? lines.length];
     const hit = opts.parsed.chunks.get(lines.slice(from, to).join("\n"));
@@ -122,46 +141,70 @@ export function inlineStyles(source: string, opts: StyleOptions, cache: StyleCac
       return false;
     }
     const all = paintsOf(hit.children, lines.slice(from, to), hit.shift);
-    for (let j = k; j >= 0 && ranges[j]![0] >= from; j--) share(j, from, all);
-    for (let j = k + 1; j < ranges.length && ranges[j]![0] < to; j++) share(j, from, all);
+    const share = (j: number) => used.set(lines.slice(...ranges[j]!).join("\n"), slice(all, from, j));
+    for (let j = k; j >= 0 && ranges[j]![0] >= from; j--) share(j);
+    for (let j = k + 1; j < ranges.length && ranges[j]![0] < to; j++) share(j);
     return true;
   };
-  const share = (j: number, from: number, all: ChunkStyles) => {
-    const [f, t] = ranges[j]!;
-    const [a, b] = [f - from, t - from];
-    const defs = all.defs.filter((d) => d.line >= a && d.line < b).map((d) => ({ ...d, line: d.line - a }));
-    const body = lines.slice(f, t);
-    used.set(body.join("\n"), { paints: all.paints.slice(a, b), sigs: all.sigs.slice(a, b), defs, refs: refsOf(body) });
-  };
-  /** A chunk's styles by its text, kept or from the buffer's parse; or parsed now (`parse`). `pre`: lines of
-   *  stand-ins before its own; `stubs`: how many must come back as definitions, or it's no good. */
-  const styles = (k: number, text: string, body: string[], parse: boolean, pre = 0, stubs = 0) => {
+  /** A chunk's styles by its text, kept or from the buffer's parse; or parsed now (`parse`). */
+  const styles = (k: number, text: string, parse: boolean) => {
     let entry = used.get(text) ?? cache.chunks.get(text);
-    if (!entry && !stubs && fromParse(k)) entry = used.get(text);
+    if (!entry && fromParse(k)) entry = used.get(text);
     if (!entry) {
       if (!parse) return null;
-      const nodes = parseChunk(text, ranges[k]![0] === 0);
-      if (stubs) {
-        const own = body.length;
-        const isStub = (n: RootContent) =>
-          (n.type === "definition" || n.type === "footnoteDefinition") &&
-          (pre ? (n.position?.start.line ?? 0) <= pre : (n.position?.start.line ?? 0) > own);
-        if (nodes.filter(isStub).length !== stubs) return null;
-      }
-      entry = paintsOf(nodes, body, pre);
+      entry = paintsOf(parseChunk(text, ranges[k]![0] === 0), lines.slice(...ranges[k]!), 0);
     }
     used.set(text, entry);
     return entry;
   };
+  /** The render's chunks and the stand-ins it parses each with, once asked: null when the buffer's parse hasn't got
+   *  every chunk, or parses the note whole. */
+  let render: ReturnType<typeof chunkStandIns> | undefined;
+  /** Each render's chunk's styles, as parsed with its stand-ins, once asked. */
+  const rendered = new Map<number, ChunkStyles | null>();
+  /** The render's parse of the chunk holding chunk `a.k`, with the stand-ins it took (the workers parse them for a big
+   *  note: SIS-D7), its paints for `a.k`: what a parse of `a.k` with its own stand-ins would give. */
+  const fromRender = (a: Again): ChunkStyles | null => {
+    if (!opts.parsed?.chunks.size) return null;
+    render ??= chunkStandIns(lines, opts.parsed);
+    if (!render) return null;
+    const w = holding(
+      render.ranges.map(([from]) => from),
+      a.k,
+    );
+    const [from, to] = render.ranges[w]!;
+    if (!rendered.has(w)) {
+      const body = lines.slice(from, to);
+      const hit = opts.parsed.chunks.get(standInText(body.join("\n"), from, render.stubs[w]!).text);
+      rendered.set(w, hit && hit.stubbed !== false ? paintsOf(hit.children, body, hit.shift) : null);
+    }
+    const all = rendered.get(w);
+    return all ? slice(all, from, a.k) : null;
+  };
+  /** A chunk with stand-ins for the definitions it uses from others: kept by its text with them, or the render's; or
+   *  parsed now (`parse`). One whose stand-ins don't all come back keeps its own parse, kept under that text too. */
+  const withStandIns = (a: Again, parse: boolean) => {
+    let entry = used.get(a.text) ?? cache.chunks.get(a.text) ?? fromRender(a);
+    if (!entry) {
+      if (!parse) return null;
+      const nodes = parseChunk(a.text, ranges[a.k]![0] === 0);
+      const own = nodes.filter((n) => !isStandIn(n, a.pre, a.body.length));
+      entry = nodes.length - own.length === a.count ? paintsOf(own, a.body, a.pre) : parts[a.k]!;
+    }
+    used.set(a.text, entry);
+    return entry;
+  };
   const texts = ranges.map(([from, to]) => (wanted(from, to) ? lines.slice(from, to).join("\n") : null));
-  const parts = texts.map((t, k) => (t === null ? null : styles(k, t, [], false)));
+  const parts = texts.map((t, k) => (t === null ? null : styles(k, t, false)));
   // What no cache holds is parsed here — all of it, or, past the budget, none: it's left for the other threads.
+  const limit = opts.limit ?? Number.POSITIVE_INFINITY;
   const missing = texts.flatMap((t, k) => (t !== null && !parts[k] ? [k] : []));
-  const pending = missing.reduce((n, k) => n + texts[k]!.length, 0) > (opts.limit ?? Number.POSITIVE_INFINITY);
-  if (!pending) for (const k of missing) parts[k] = styles(k, texts[k]!, lines.slice(...ranges[k]!), true);
-  // Reference definitions and footnotes are the note's, not a chunk's: a chunk using a label another defines is
-  // parsed again with a stand-in definition, as the render's parse does (`parseMarkdown`) — here, as there, on this
-  // thread, once the chunks are all at hand (with a parse pending, the layout is made again when it lands).
+  let spent = missing.reduce((n, k) => n + texts[k]!.length, 0);
+  let pending = spent > limit;
+  if (!pending) for (const k of missing) parts[k] = styles(k, texts[k]!, true);
+  // Reference definitions and footnotes are the note's, not a chunk's: a chunk using a label another defines is parsed
+  // again with a stand-in definition, as the render's parse does (`parseMarkdown`), once the chunks are all at hand —
+  // the parse within the same budget, what the render's parse holds read from it (SIS-D7).
   if (!pending && ranges.length > 1 && tamed.includes("]:")) {
     const defs = new Map<string, Def & { part: number; at: number }>();
     let n = 0;
@@ -180,6 +223,7 @@ export function inlineStyles(source: string, opts: StyleOptions, cache: StyleCac
         if (!defs.has(key)) defs.set(key, { ...d, part: k, at: n++ });
       }
     });
+    const again: Again[] = [];
     // A link definition whose label starts with ^ can't be stood in for: the render parses such a note whole.
     if (defs.size && ![...defs.values()].some((d) => !d.footnote && d.label.startsWith("^")))
       ranges.forEach(([from, to], k) => {
@@ -194,28 +238,40 @@ export function inlineStyles(source: string, opts: StyleOptions, cache: StyleCac
           .sort((a, b) => a.at - b.at);
         if (!stubs.length) return;
         const body = lines.slice(from, to);
-        const defsText = stubs.map((d) => `[${d.footnote ? "^" : ""}${d.label}]: #`).join("\n\n");
-        const before = from > 0;
-        const text = before ? `${defsText}\n\n${body.join("\n")}` : `${body.join("\n")}\n\n${defsText}\n`;
-        const pre = before ? defsText.split("\n").length + 1 : 0;
-        const withStubs = styles(k, text, body, true, pre, stubs.length);
-        if (withStubs) parts[k] = withStubs;
+        again.push({ k, body, count: stubs.length, ...standInText(body.join("\n"), from, stubs) });
       });
+    const left = again.filter((a) => {
+      const entry = withStandIns(a, false);
+      if (entry) parts[a.k] = entry;
+      return !entry;
+    });
+    spent += left.reduce((m, a) => m + a.text.length, 0);
+    pending = spent > limit;
+    if (!pending) for (const a of left) parts[a.k] = withStandIns(a, true);
   }
   cache.chunks = used;
   cache.pending = pending;
+  // A line of a chunk not styled (past the budget, or not wanted) has no paints: the light highlighting's, by pattern.
   const paints: (Paint[] | undefined)[] = new Array(lines.length);
-  const sigs: string[] = new Array(lines.length).fill("");
+  const sigs: string[] = new Array(lines.length).fill("?");
   ranges.forEach(([from], k) => {
     const p = parts[k];
     if (!p) return;
     p.paints.forEach((ps, j) => {
-      if (!ps.length) return;
       paints[from + j] = ps;
       sigs[from + j] = p.sigs[j]!;
     });
   });
   return { paints, sigs };
+}
+
+/** A chunk to parse again with stand-ins: its text with them, the lines they add before it, how many. */
+interface Again {
+  k: number;
+  body: string[];
+  text: string;
+  pre: number;
+  count: number;
 }
 
 /** How the text under a node is drawn: as the render composes it (render-inline.ts). */

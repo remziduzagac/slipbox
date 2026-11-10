@@ -10,6 +10,7 @@ import type { Role } from "../../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../../../foundation/text/width.ts";
 import type { CodeScroll, Layout, Line, Span } from "../ir.ts";
 import { layoutSource } from "../code/source.ts";
+import { type DiffStyles, styledSource } from "./diff-styles.ts";
 
 /** The sign and a space: where a row's text starts. The space is where a scrolled row's `‹` goes. */
 export const DIFF_GUTTER = 2;
@@ -24,8 +25,9 @@ export interface DiffLayoutOptions {
    *  rows are whole, and the window scrolls. */
   wrap: boolean;
   codeScroll: boolean;
-  /** A note's lines with Markdown's inline styles, their markers dimmed, as SOURCE view has them (SIS). */
-  styles?: boolean;
+  /** A note's lines with Markdown's inline styles, their markers dimmed, as SOURCE view has them (SIS): each text's
+   *  kept here between layouts, held to SOURCE view's budget. */
+  styles?: DiffStyles;
 }
 
 /** What a changed line and its changed words are tinted with, by its sign. */
@@ -116,20 +118,20 @@ export const diffText = (rows: DiffViewRow[]): string[] =>
  * One side's lines, those wanted (1-based), highlighted as source mode has them: a row each. Markdown's highlighter
  * carries what it knows from line to line (front matter, a fence), so it reads the text whole; code is highlighted a
  * line at a time, so only the lines shown are. `styles`: Markdown's inline styles too (SIS), parsed only where a line
- * shown is.
+ * shown is, within SOURCE view's budget (`styledSource`).
  */
 export function highlighted(
   text: string,
   wanted: number[],
   language: string | null,
   tabWidth: number,
-  styles = false,
+  styles?: DiffStyles,
 ): Map<number, Line> {
   const out = new Map<number, Line>();
   if (!wanted.length) return out;
   const opts = { width: 1, wrap: false, headings: [], language, tabWidth, slice: true };
   if (language === null) {
-    const l = layoutSource(text, styles ? { ...opts, styles: { lines: new Set(wanted) } } : opts);
+    const l = styles ? styledSource(text, wanted, opts, styles) : layoutSource(text, opts);
     for (const k of wanted) {
       const row = l.lines[k - 1];
       if (row) out.set(k, row);

@@ -117,7 +117,8 @@ To go back to the lighter highlighting, set `source_styles = false` under `[rend
 ([Every key](configuration.md#every-key)). The markers' colour is the `markup` role
 ([The roles](configuration.md#the-roles)).
 
-A note too big to parse at once is shown plainly for a moment while it's read, then with its styles.
+A note too big to parse at once has the lighter highlighting for a moment while it's read, then its styles. A big
+note's diff does the same.
 
 ### The lens
 

@@ -42,8 +42,9 @@ the top 40 ms, 342 ms and 1.64 s, every cut below it moved. A paragraph parses i
 A keystroke's extra cost on a 1 MB note is the cutting (`chunkStarts`, 6 ms), the pieces' texts and their look-up in
 the cache, and each line's signature; its parse is one paragraph's. A cold layout with nothing parsed (2.5 s at 1 MB)
 never happens on the screen's thread past 128 KiB (SIS-D5): the parse workers do it. The stand-in parses — a piece
-using a footnote defined elsewhere — are made on the screen's thread, as the render's are: with a footnote mark in every
-section, they're most of a cold layout's cost with the parse at hand.
+using a footnote defined elsewhere — were made on the screen's thread, as the render's were: with a footnote mark in
+every section, they were most of a cold layout's cost with the parse at hand. Since the review the workers make them
+too (SIS-D7, below).
 
 ## Known limits
 
@@ -53,7 +54,31 @@ section, they're most of a cold layout's cost with the parse at hand.
 - **A diff finds a definition it doesn't show by its line's pattern**, not a parse: one inside a block it doesn't show
   (a list item's) may be missed.
 - **Setext headings** (a line underlined with `===`) aren't coloured as headings, as before.
-- **While a big note's parse runs**, its inline styles and the light highlighting's inline colours are both off, for
-  the second or two the workers take.
-- **The stand-in parses** run on the screen's thread: a note with thousands of paragraphs each marking a footnote
-  defined elsewhere takes a second to show in SOURCE view the first time, as READ takes for the same note.
+- **While a big note's parse runs**, or after it failed, it has the light highlighting, not its inline styles.
+- **A definition added to a big note** changes the stand-ins of every piece using it: past the budget, they go to the
+  workers and the pieces keep their own parse (the marks as text) until they're back.
+- **A piece's stand-ins its render's chunk didn't need** (a reference to a definition in the same chunk of the
+  render's, or a label the render's check and the styles' read differently) are parsed on the screen's thread.
+
+## The pull request's review (2026-11-10)
+
+Three findings, each confirmed in the code, fixed, and tested with a test that fails without its fix:
+
+- **A diff parsed a big note on the screen's thread** (`highlighted` in `diff.ts`: no `limit`, a fresh cache each
+  layout, both sides). A diff of a 1 MB note just added took seconds to draw, again on each resize. Diffs are held to
+  SIS-D5 now: `styledSource` (`diff-styles.ts`) keeps each text's parse and layout cache in the app's `DiffStyles`,
+  parses nothing past the budget, sends a big text to the workers and bumps `version` when it lands, which the diff
+  window's, the review's and the merge screen's layout keys hold.
+- **The stand-in pass ignored the budget** and never read the buffer's parse. Its parses count against the budget now,
+  a piece's stand-in parse is read from the render's chunk holding it, and the workers make the render's (SIS-D7).
+  Probed before the fix: a 230 KB note marking a footnote in each paragraph took 566 ms to draw in SOURCE view once its
+  parse landed; after it, 126 ms and nothing parsed on the screen's thread.
+- **Pending or failed styles looked worse than styles off**: every line got no paints, which turned the light
+  highlighting's code spans and links off too. A line of a piece not styled yet has no paints now, so it keeps them;
+  its row's signature (`?`) differs from a styled line's with no paints, so the row is made again once it's styled.
+
+Left for the maintainer's list: the styles' cache keyed by text alone (a first piece and another of the same text);
+the diff's definition pattern matching inside a fence; `refsOf` keeping a label's spaces as typed; a cold pending layout
+calling `inlineStyles` twice; a note half styled while a parse runs. One more found while fixing: a piece shared from
+the render's chunk keeps a reference resolved by a definition elsewhere in that chunk under its own text, so deleting
+that definition leaves the mark styled until the piece is edited.

@@ -41,3 +41,18 @@ SIS-D1 to SIS-D6. Done on 2026-11-10.
 - The manual's SOURCE view section, the configuration reference (the key, the role), the CHANGELOG; the screenshots
   that show a note's Markdown with a link in it retaken (SOURCE view, the lens's, the conflict prompt's, the vault
   switch's), the others that showed none unchanged.
+
+## Review fixed (2026-11-10)
+
+The pull request's review found three things, each fixed with a test that fails without it
+([../../notes.md](../../notes.md) § The pull request's review):
+
+- A diff held to the budget (`diff-styles.ts`, SIS-D6's note): a core test lays out a 200 KB note's diff, nothing
+  parsed on the screen's thread, styled once its parse lands; a TUI test draws the diff window the same way.
+- The stand-ins within the budget, read from the render's parse, parsed on the workers (SIS-D7): a core test of the
+  budget and of the render's parse read; a parse-threads test, the workers' second round, the parse after it parsing
+  nothing; a TUI test of a big note marking footnotes, and of a definition added to it.
+- A line not styled yet keeps the light highlighting: a core test, pending, and a TUI test, pending and after a failed
+  parse.
+
+Each fix undone once (13 mutations): each made a test fail.

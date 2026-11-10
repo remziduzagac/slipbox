@@ -1,9 +1,10 @@
 # Decisions: Markdown's inline styles in SOURCE view
 
 **Taken on 2026-11-10, each with the answer recommended, by the maintainer's instruction to take the recommended
-answer**; the pull request that builds them lists them for the maintainer's review. Each entry says what was chosen,
-what could have been chosen instead, and why. An entry is never rewritten; a dated note goes under it
-(blueprint/README.md § How things are recorded).
+answer**; the pull request that builds them lists them for the maintainer's review. SIS-D7, and the notes under
+SIS-D5 and SIS-D6, came from that pull request's review, taken the same way. Each entry says what was chosen, what
+could have been chosen instead, and why. An entry is never rewritten; a dated note goes under it (blueprint/README.md
+§ How things are recorded).
 
 ## SIS-D1: The markers kept, dimmed, in a role of their own (2026-11-10)
 
@@ -82,6 +83,11 @@ big note for READ, and their chunks serve SOURCE view too. All or none keeps a n
 of the styles' own (a second parse of the same text); parsing on the screen's thread whatever the size (seconds of
 frozen screen on opening a big note in SOURCE view).
 
+> **Note (2026-11-10), from the pull request's review:** a piece not styled yet, its parse pending or failed, keeps the
+> light highlighting (code spans and links by pattern) rather than no inline colours at all. The stand-in parses count
+> against the same budget, are read from the render's parse where it holds them, and for a big note are made by the
+> parse workers too (SIS-D7): "A piece's stand-in parse is made on the screen's thread" no longer holds.
+
 ## SIS-D6: The lens and a note's diff the same (2026-11-10)
 
 **Decision:** The lens's source rows and a note's diff (its window, the review, the merge screen: `layoutDiff`) draw the
@@ -95,3 +101,29 @@ its blocks lightly as they read.
 
 **Not chosen:** SOURCE view alone (the lens and the diff left looking older); the lens parsed with the whole note (its
 rows are composed without a parse, so a keystroke there stays cheap).
+
+> **Note (2026-11-10), from the pull request's review:** a diff is held to SIS-D5 as SOURCE view is. Each text's parse
+> in chunks and its layout's cache are kept by the app between the diff's layouts (`DiffStyles`, the last eight texts);
+> nothing past the budget is parsed on the screen's thread; a big text's parse goes to the parse workers, and the diff
+> is laid out again when it lands. A diff of a 1 MB note just added parsed all of it on each layout before.
+
+## SIS-D7: A big note's stand-ins parsed on the parse workers too (2026-11-10)
+
+**Decision:** Once a big note's chunks are parsed on the workers, the chunks that use a label another chunk defines are
+parsed there too, with their stand-in definitions (`standInChunks`, a second round of `parseInBackground`), and taken
+into the buffer's parse cache as `parseMarkdown` keeps them (`adoptStandIns`). What's left to parse of a note
+(`unparsed`, which `parseAhead` weighs) counts them once its chunks are in. SOURCE view's styles read a piece's
+stand-in parse from the render's chunk holding it; past the budget, they send what's left to the workers whatever its
+size (`parseAhead(true)`), and parse here only what the workers don't: a piece's stand-ins the render's chunk didn't
+need.
+
+**Why:** The review found a note marking a footnote in most paragraphs parsed nearly whole again on the screen's thread
+once its parse landed, for SOURCE view's stand-ins. Counting them against the budget alone would only have moved that
+parse, since nothing else would make it. READ's parse made the same parses on the screen's thread; both now find them
+done. Measured: a 230 KB note marking a footnote in each paragraph took 566 ms to draw in SOURCE view once its parse
+landed, 126 ms now, nothing parsed.
+
+**Not chosen:** counting them and parsing them here once nothing is left for the workers (the same freeze, later);
+leaving them plain until READ parses the note (SOURCE view's footnote marks as text for as long as the note is open);
+a worker of the styles' own for SOURCE view's pieces (a third parse of the same text, when the render's chunks serve
+both).

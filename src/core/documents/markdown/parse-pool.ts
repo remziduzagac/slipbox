@@ -1,10 +1,10 @@
 // Parsing a big note on other threads (15.1): its chunks — which parse the same apart as whole — in contiguous
-// batches among a few workers, their nodes taken into the note's parse cache, so the parse that follows here finds
-// every chunk done. Each worker's requests go through a bounded mailbox (worker-requests.ts): a burst of notes waits
-// its turn, and a request that fails fails alone.
+// batches among a few workers, then those parsed again with stand-in definitions (SIS-D7), their nodes taken into the
+// note's parse cache, so the parse that follows here finds every chunk done. Each worker's requests go through a
+// bounded mailbox (worker-requests.ts): a burst of notes waits its turn, and a request that fails fails alone.
 import { availableParallelism } from "node:os";
 import type { Root } from "mdast";
-import { adoptChunks, noteChunks, type ParseCache } from "./parse.ts";
+import { adoptChunks, adoptStandIns, noteChunks, type ParseCache, standInChunks } from "./parse.ts";
 import { WorkerRequestError, WorkerRequests } from "../../foundation/workers/worker-requests.ts";
 import { workerUrl } from "../../foundation/workers/url.ts";
 
@@ -56,10 +56,22 @@ function pool(): WorkerRequests[] {
 }
 
 /**
- * Parse `source`'s chunks that `cache` hasn't got, on the workers, into `cache`. True when they're all there. False
- * when cancelled (`signal`, or a newer parse sharing the cache), or when a request failed: then the cache records why
- * (`backgroundFailure`, read by `parseMarkdown`), and whether it was about the worker rather than the note (`transient`:
- * the deadline, a crash, threads that can't start, the pool stopped), which a later parse may try again.
+ * What's left to parse of `source`, in characters: its chunks `cache` hasn't got, or, with those all in, the chunks to
+ * parse again with stand-in definitions that it hasn't got (SIS-D7). What `parseInBackground` would send.
+ */
+export function unparsed(source: string, cache: ParseCache): number {
+  let n = 0;
+  for (const c of noteChunks(source)) if (!cache.chunks.has(c.text)) n += c.text.length;
+  return n || standInChunks(source, cache).reduce((m, c) => m + c.text.length, 0);
+}
+
+/**
+ * Parse `source`'s chunks that `cache` hasn't got, on the workers, into `cache`; then the chunks `parseMarkdown` parses
+ * again with stand-in definitions, known once the chunks are in (SIS-D7), so nothing of the parse is left for the
+ * screen's thread. True when they're all there. False when cancelled (`signal`, or a newer parse sharing the cache), or
+ * when a request failed: then the cache records why (`backgroundFailure`, read by `parseMarkdown`), and whether it was
+ * about the worker rather than the note (`transient`: the deadline, a crash, threads that can't start, the pool
+ * stopped), which a later parse may try again.
  */
 export async function parseInBackground(source: string, cache: ParseCache, signal?: AbortSignal): Promise<boolean> {
   owners.get(cache)?.abort();
@@ -70,14 +82,18 @@ export async function parseInBackground(source: string, cache: ParseCache, signa
   running++;
   if (idle) clearTimeout(idle);
   idle = null;
-  try {
-    const chunks = noteChunks(source).filter((c) => !cache.chunks.has(c.text));
-    if (!chunks.length) return true;
+  /** Chunks parsed on the workers, each batch's nodes taken in (`adopt`) as it parsed: why one failed, if one did;
+   *  null when cancelled. */
+  const round = async <C extends { text: string; first: boolean }>(
+    chunks: C[],
+    adopt: (batch: C[], children: Root["children"][]) => void,
+  ): Promise<{ failure: { why: string; transient: boolean } | null } | null> => {
+    if (!chunks.length) return { failure: null };
     const ws = pool();
     // Contiguous runs of about equal size — at least one a worker, none over BATCH.
     const total = chunks.reduce((n, c) => n + c.text.length, 0);
     const target = Math.max(1, Math.min(BATCH, Math.ceil(total / ws.length)));
-    const batches: (typeof chunks)[] = [];
+    const batches: C[][] = [];
     let size = 0;
     for (const c of chunks) {
       if (!batches.length || (size > 0 && size + c.text.length > target)) {
@@ -90,7 +106,7 @@ export async function parseInBackground(source: string, cache: ParseCache, signa
     const results = await Promise.allSettled(
       batches.map((batch, i) =>
         ws[i % ws.length]!.request<{ json: string }>(
-          { chunks: batch },
+          { chunks: batch.map(({ text, first }) => ({ text, first })) },
           {
             signal: abort,
             bytes: batch.reduce((n, c) => n + c.text.length * 2 + 16, 16),
@@ -99,16 +115,12 @@ export async function parseInBackground(source: string, cache: ParseCache, signa
         ),
       ),
     );
-    if (abort.aborted || owners.get(cache) !== owner) return false;
+    if (abort.aborted || owners.get(cache) !== owner) return null;
     // What parsed is kept, whatever else failed: a later parse sends only the rest.
     let failure: { why: string; transient: boolean } | null = null;
     for (const [i, r] of results.entries()) {
       if (r.status === "fulfilled") {
-        const children = JSON.parse(r.value.json) as Root["children"][];
-        adoptChunks(
-          cache,
-          batches[i]!.map((chunk, k) => ({ text: chunk.text, children: children[k]! })),
-        );
+        adopt(batches[i]!, JSON.parse(r.value.json) as Root["children"][]);
         continue;
       }
       // The note's own failure (the worker's answer) says more than one about the worker.
@@ -116,8 +128,29 @@ export async function parseInBackground(source: string, cache: ParseCache, signa
       if (!failure || own)
         failure = { why: r.reason instanceof Error ? r.reason.message : String(r.reason), transient: !own };
     }
-    cache.backgroundFailure = failure ? { source, ...failure } : undefined;
-    return !failure;
+    return { failure };
+  };
+  try {
+    const chunks = await round(
+      noteChunks(source).filter((c) => !cache.chunks.has(c.text)),
+      (batch, children) =>
+        adoptChunks(
+          cache,
+          batch.map((c, k) => ({ text: c.text, children: children[k]! })),
+        ),
+    );
+    const done =
+      chunks && !chunks.failure
+        ? await round(standInChunks(source, cache), (batch, children) =>
+            adoptStandIns(
+              cache,
+              batch.map((c, k) => ({ ...c, children: children[k]! })),
+            ),
+          )
+        : chunks;
+    if (!done) return false;
+    cache.backgroundFailure = done.failure ? { source, ...done.failure } : undefined;
+    return !done.failure;
   } catch (error) {
     if (!abort.aborted && owners.get(cache) === owner)
       cache.backgroundFailure = {

@@ -138,7 +138,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
       lang ? (opts.languageAt?.(i + 1) ?? lang) : lang,
       lineSpans,
       fences.get(i),
-      styles ? (styles.paints[i] ?? NONE) : undefined,
+      styles?.paints[i],
     );
     states.push(state);
     rows.push(built.rows);
@@ -303,14 +303,12 @@ interface Highlighted {
   out: string;
 }
 
-/** A line without inline styles, though they're on: none guessed by pattern either. */
-const NONE: readonly Paint[] = [];
-
 /**
  * A role for each UTF-16 offset of a line: light markdown highlighting with a little state carried
  * from line to line — "fm0" (a first line of "---"), "fm" (inside frontmatter), "c<fence>" (inside
  * fenced code), "" (neither). Anything it doesn't know is text. `paints`: the line's inline styles
- * (SIS), over its own colours; without them, code spans and links found by pattern.
+ * (SIS), over its own colours, none guessed then; without them (styles off, or not had yet: a big
+ * note's parse pending or failed), code spans and links found by pattern.
  */
 function highlightLine(
   raw: string,

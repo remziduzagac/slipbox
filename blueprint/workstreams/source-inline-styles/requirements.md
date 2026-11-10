@@ -40,7 +40,8 @@
   defined in another chunk.
 - The incremental layout, styles on, equal to a fresh one after any edit.
 - A diff's lines and the lens's rows styled.
-- A big note in SOURCE view plain while its parse runs on other threads, styled and drawn again once it lands.
+- A big note in SOURCE view with the light highlighting while its parse runs on other threads, or after it failed;
+  styled and drawn again once it lands, its stand-ins parsed there too. A big note's diff the same.
 - A terminal check of a note in SOURCE view: its bold text bold, its `**` in the markup role's colour.
 
 ## Changes to the root's requirements

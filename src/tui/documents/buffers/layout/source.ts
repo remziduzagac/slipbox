@@ -12,8 +12,8 @@ import type { BufferLayoutContext } from "./contracts.ts";
  * `styles`: a Markdown note's inline styles shown (SIS, `render.source_styles`). They come from the note's parse in
  * chunks — the chunks its parse holds already aren't parsed again, a keystroke parses the one it changed — but a big
  * note isn't parsed here on the screen's thread: past `BACKGROUND_PARSE` of it to parse, its parse goes to other threads
- * (`parseAhead`) and the chunks it hasn't got are plain until it lands; the layout made then (its key says the parse is
- * running) is made again, styled.
+ * (`parseAhead`) and the chunks it hasn't got keep the light highlighting until it lands; the layout made then (its key
+ * says the parse is running) is made again, styled.
  */
 export function sourceLayout(
   ctx: BufferLayoutContext,
@@ -74,12 +74,13 @@ export function sourceLayout(
         },
         ctx.sourceCache,
       );
-    // While its parse runs on other threads, nothing more is parsed here. Past the limit, it's sent there; where it
-    // can't be (a virtual buffer, stand-ins for definitions), parsed here after all — but never what those threads
-    // failed at, which stays plain until the text changes (15.1).
+    // While its parse runs on other threads, nothing more is parsed here. Past the limit, what's left of it is sent
+    // there, its stand-ins too (SIS-D7); where it can't be (a virtual buffer, or nothing left there to parse: pieces
+    // of SOURCE view's own), parsed here after all — but never what those threads failed at, which keeps the light
+    // highlighting until the text changes (15.1).
     l = lay(ctx.buffer.parsing ? 0 : BACKGROUND_PARSE);
     const failed = ctx.parseCache.backgroundFailure?.source === ctx.buffer.source;
-    if (ctx.sourceCache.styles.pending && !failed && !ctx.buffer.parsing && !ctx.buffer.parseAhead())
+    if (ctx.sourceCache.styles.pending && !failed && !ctx.buffer.parsing && !ctx.buffer.parseAhead(true))
       l = lay(Number.POSITIVE_INFINITY);
     if (ctx.layouts.size >= 6) ctx.layouts.delete(ctx.layouts.keys().next().value!);
     // Made while its parse runs: kept under a key that's gone once it lands.

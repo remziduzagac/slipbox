@@ -240,7 +240,7 @@ function show(app: App, m: MergeState): void {
   buf.readOnly = "the merge screen is read-only: o, t and b settle a conflict, e edits it in the lens";
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
-    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}`;
+    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${styles?.version}`;
     if (made?.key !== key)
       made = {
         key,
