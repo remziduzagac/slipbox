@@ -185,7 +185,9 @@ export class GraphRefresh {
     const g = this.graph;
     const t0 = performance.now();
     g.builds++;
-    g.walkedAt = Date.now();
+    // A walk read on a disk thread: when it began, not when it's taken — seconds later on a slow disk, a note written in
+    // a folder it had listed would be older than that, and the watcher would never list the folder again (SD-T10).
+    g.walkedAt = (given && "began" in given && given.began) || Date.now();
     const read = given && "walked" in given ? { walk: given.walk, home: given, index: given.index } : given;
     const home =
       g.loc.mode !== "home"

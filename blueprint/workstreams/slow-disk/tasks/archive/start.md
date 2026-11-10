@@ -62,7 +62,13 @@ What the description left open, settled as it was built (SD-D15); design.md's se
   a change, so the next start brought none back (`Session.coming`). The search index, started with a graph of no notes,
   let go of every note it held and indexed them all again after the build (`Search.start`): at every start once the
   build moved, and already at a vault gone into since SD-T8. Each has its regression test
-  (`tests/tui/app/runtime/start-read.test.ts`).
+  (`tests/tui/app/runtime/start-read.test.ts`). And a build read on a disk thread took its walk's time as when it was
+  taken, not when the walk began: a note written in a folder the walk had listed, more than two seconds before the
+  answer, was never looked for by the watcher, which watches nothing until the first build answers
+  (`WalkAnswer.began`; its test in `tests/core/workspace/graph/build-given.test.ts`).
+- The terminal checks' start (`tests/terminal/session.ts`) waits for the vault's first read too, as it waited for the
+  first frame when that came after it: a click before is dropped, as any while a key's read is out. A check that looks
+  at the start while it's read waits itself (`noWait`).
 - Home's walk asked again, the graph's errors and the offer to relink what a move broke now follow the first build
   (`Builds.after`), as they read the graph.
 - `CHECKS_FOR` (`scripts/ci-scope.ts`): no entry added. The start's files (`run.ts`, `startup.ts`, `app.ts`, `input.ts`,

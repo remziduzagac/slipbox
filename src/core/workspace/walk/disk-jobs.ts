@@ -70,11 +70,13 @@ export interface IndexRead {
   hashes?: Record<string, string>;
 }
 
-/** A walk answered: the walk; home's own besides it, for home; the index read after it, when asked. */
+/** A walk answered: the walk; home's own besides it, for home; the index read after it, when asked; when it began
+ *  (`began`, ms since the epoch): what changed after then may be missing from it, however long it took to answer. */
 export interface WalkAnswer {
   walk: WalkResult;
   home?: Omit<HomeWalk, "walk">;
   index?: IndexRead;
+  began?: number;
 }
 
 /** A folder of the vault open's own tree listed for the explorer (SD-T7): by its walk's filter, and the names of the
@@ -206,15 +208,16 @@ function statsOf(ask: StatAsk): StatAnswer {
 
 /** The vault walked, then its index read, in the order a build on the thread that asks reads them. */
 function walkOf(ask: WalkAsk): WalkAnswer {
+  const began = Date.now();
   const filter = filterFrom(ask.filter);
   const read = (walk: WalkResult) => (ask.index === undefined ? {} : { index: indexRead(ask.index, walk) });
   if (ask.how === "home") {
     const { key, asked, limits } = ask.home ?? { key: "", asked: [] };
     const { walk, ...home } = homeWalk({ root: ask.filter.root, key }, filter, asked, limits, false);
-    return { walk, home, ...read(walk) };
+    return { walk, home, ...read(walk), began };
   }
   const walk = ask.how === "listed" ? listDirectory(ask.filter.root, filter) : walkVault(ask.filter.root, filter);
-  return { walk, ...read(walk) };
+  return { walk, ...read(walk), began };
 }
 
 /** A request answered here: what it asked for, read as the thread that asked would. */
