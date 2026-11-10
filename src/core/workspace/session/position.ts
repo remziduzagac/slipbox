@@ -179,7 +179,12 @@ function writePositions(data: PositionMap): void {
  * it from `from` to `to`.
  */
 export function carryPositions(from: string, to: string): void {
-  const data = readPositions(positionsFile());
+  const out = carried(readPositions(positionsFile()), from, to);
+  if (out) writePositions(out);
+}
+
+/** `data` with the positions of a root moved from `from` to `to` moved along; null when none were its. */
+function carried(data: PositionMap, from: string, to: string): PositionMap | null {
   const out: PositionMap = {};
   let moved = false;
   for (const [k, v] of Object.entries(data)) {
@@ -189,7 +194,7 @@ export function carryPositions(from: string, to: string): void {
     if (inside || root !== v.root) moved = true;
     out[inside ? join(to, rel) : k] = { ...v, ...(root ? { root } : {}) };
   }
-  if (moved) writePositions(out);
+  return moved ? out : null;
 }
 
 /**
@@ -226,6 +231,13 @@ export class PositionStore {
     this.data = merged(this.data, before);
     writePositions(this.data);
     rmSync(join(stateDir(this.place), "positions.json"), { force: true });
+  }
+
+  /** A root moved by hand (21.8), as `carryPositions` moved the file's: those kept here moved the same way — the vault
+   *  left's, carried into a vault gone into (SD-T9) — so the root's are found, and a save doesn't bring the old paths
+   *  back. */
+  carry(from: string, to: string): void {
+    this.data = carried(this.data, from, to) ?? this.data;
   }
 
   /** The stored key for a buffer's key: a root path, or absolute (a file outside it). */

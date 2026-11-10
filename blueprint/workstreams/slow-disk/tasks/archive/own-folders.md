@@ -65,16 +65,21 @@ What the description left open, settled here for the maintainer to confirm; desi
 - One request, `own` (`core/workspace/walk/own-jobs.ts`, `answerOwnJob`), reads what's asked of slipbox's own
   folders: a vault's session, the machine's vaults, the other vaults' notes for completion. Each is asked as a key's
   read (`key`), no key held for it.
-- Going into a vault (`Session.enter`): its `session.json`, with the vault's positions kept before 21.8, is read
-  there; the keys go on in the vault gone into meanwhile, its theme and keys your config's. Once it answers, the tabs
-  open where they were left (`Session.entered`), unless one was opened meanwhile, which stays, as a restore with tabs
-  open leaves them; the recents of the moment come first, then the session's; a UI override set meanwhile wins over
-  the session's. Until it's answered, the vault's session isn't saved (`unread`), so a quit or a switch meanwhile
-  doesn't write over what's kept; one that fails or isn't answered in time is said in Messages, the note named or the
-  vault's own opens, and the session stays unsaved for the visit: what's kept isn't known.
+- Going into a vault (`Session.enter`): its `session.json`, with the vault's positions kept before 21.8, is read there;
+  the keys go on in the vault gone into meanwhile, its theme and keys your config's. Once it answers, the tabs open
+  where they were left (`Session.entered`), unless one was opened meanwhile, which stays, as a restore with tabs open
+  leaves them. The note the switch was for (a link followed, a file named) is opened and shown then all the same
+  (`meanwhile`), unless you opened it yourself meanwhile: that's the one sign that you've gone elsewhere on purpose this
+  code can tell from a key, and where you went since is left as it is. The recents of the moment come first, then the
+  session's; a UI override set meanwhile wins over the session's. Until it's answered, the vault's session isn't saved
+  (`unread`), so a quit or a switch meanwhile doesn't write over what's kept; one that fails or isn't answered in time
+  is said in Messages, the note named or the vault's own opens, and the session stays unsaved for the visit: what's kept
+  isn't known.
 - The machine's positions (`positions.json`, one file) are carried over from the vault left (`PositionStore`'s
-  `kept`), not read again: the same file, read at the start and merged with the disk's at each save. The vault's own
-  of before 21.8 come with the session and are taken in then (`takeIn`), the file removed, as before.
+  `kept`), not read again: the same file, read at the start and merged with the disk's at each save. A vault moved by
+  hand has them moved along here (`PositionStore.carry`) as `recordLocation` moves the file's, or the old paths would
+  be found and saved back. The vault's own of before 21.8 come with the session and are taken in then (`takeIn`), the
+  file removed, as before.
 - Your config isn't read again going into a vault: what the TUI's look last read by its stamp (SD-T4) is used
   (`loadConfig`'s `kept`, `Settings.yoursKept`). The vault's own `.slipbox/config.toml` is the vault's disk, read as
   before. A test's App, whose look is here, reads both as before.
@@ -84,10 +89,17 @@ What the description left open, settled here for the maintainer to confirm; desi
 - Link completion: the other vaults' notes (the machine's list, each vault's `index.json`) are kept per App and the
   vault they were read from, each with its pointer worked out there (`pointerAt`). A completion offers this vault's
   notes and what's kept, and the answer replaces the other vaults' while the same completion's open, its filter and
-  its pick kept (`moreLinks`).
+  its pick kept (`moreLinks`), the items built only then. The read is a background request, no key's waiting behind
+  it; one out at a time, a completion opened meanwhile taking its answer, then, still open, one more read — however
+  many opened — so a vault indexed since the first was asked is offered (20.13). Not a time a read is taken as fresh:
+  a list made after a vault was indexed offers it (the links check "each target its own completion"). With nothing of
+  this vault's to offer, the completion stays open, showing nothing, until they come (`narrow` keeps a link's list
+  open while nothing matches).
 - `links.json`, the answers kept for links followed, is statted by the TUI's look with its batch each second and read
-  there when its mtime moved (a `links` look job), taken only if it wasn't read or written here since (`tookLinks`);
-  `kept()` no longer stats it as asked. A write keeps what it wrote, not read back.
+  there when its mtime moved (a `links` look job), taken only if no answer was written here, nor the file read again,
+  since the look took its stamp (`tookLinks`, by `written`, a count of the writes here: a write's stamp isn't known);
+  `kept()` no longer stats it as asked. A write (`setLinkAnswer`, `forgetLinkAnswer`, `moveLink`) stats it and reads
+  it first if it moved, as before (SD-D7), so another slipbox's answer isn't written over, and keeps what it wrote.
 - `readJson` (`fsutil.ts`) reads through the seam, so a test's hold reaches each of slipbox's own files read with it.
 - What stays (SD-D7, SD-D9): the start's reads; each write of slipbox's own state, and the read it makes first to
   merge with another slipbox's (the positions' and the session's save, `recordLocation`'s machine lists, the

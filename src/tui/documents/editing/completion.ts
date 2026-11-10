@@ -283,16 +283,17 @@ function narrow(app: App, c: CompletionState): void {
 }
 
 /** Other vaults' notes as a disk thread read them (SD-T9), in place of those offered so far, while the list `c` is open
- *  (SD-D5): narrowed by what's typed, the item selected kept. */
-function moreLinks(app: App, c: CompletionState, others: CompletionItem[]): void {
-  if (app.completion !== c) return;
+ *  (SD-D5) — built only then: narrowed by what's typed, the item selected kept. Whether it was. */
+function moreLinks(app: App, c: CompletionState, others: () => CompletionItem[]): boolean {
+  if (app.completion !== c) return false;
   const was = c.shown[c.selected];
-  c.items = inOrder([...c.items.filter((i) => !i.sortText?.startsWith("1")), ...others]);
+  c.items = inOrder([...c.items.filter((i) => !i.sortText?.startsWith("1")), ...others()]);
   c.steps = undefined;
   narrow(app, c);
   const at = was ? c.shown.findIndex((i) => i.filterText === was.filterText) : -1;
   if (at >= 0) c.selected = at;
   app.host.requestRender();
+  return true;
 }
 
 /** The chosen item put in: its edit (from where it starts to the cursor), else its text over the word; then its other edits (an import). */

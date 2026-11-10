@@ -281,6 +281,8 @@ export class Vaults {
     for (const e of this.app.graph.errors) this.app.message("warn", e);
     // The machine's positions, as the vault left just saved them: none read (SD-T9).
     this.app.positions = new PositionStore(target, this.app.positions);
+    // Moved by hand: the positions kept here follow it, as `recordLocation` moved the file's.
+    if (carriedFrom) this.app.positions.carry(carriedFrom, target.root);
     for (const b of this.app.buffers.values()) this.app.languages.servers?.close(b.abs);
     for (const buffer of this.app.buffers.values()) buffer.cancelParse();
     this.app.languages.stopSyntax(); // its code files' passes too: the thread's for the next vault's

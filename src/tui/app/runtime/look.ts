@@ -14,7 +14,7 @@ import { askGit, keepOperation } from "../../../core/workspace/git/branches/oper
 import { headOf } from "../../../core/workspace/git/git.ts";
 import { activityFile } from "../../../core/workspace/graph/autoindex.ts";
 import { toolFiles, toolSaid } from "../../../core/workspace/links/convention.ts";
-import { lookAfterLinks, tookLinks } from "../../../core/workspace/vaults/symlinks.ts";
+import { type LinksStamp, lookAfterLinks, tookLinks } from "../../../core/workspace/vaults/symlinks.ts";
 import { isInside } from "../../../core/workspace/vaults/vault.ts";
 import type { GitAsker, GitSeen, Head } from "../../../core/workspace/vaults/vault-feed.ts";
 import type { PathStat } from "../../../core/workspace/walk/io/stamps.ts";
@@ -54,8 +54,8 @@ interface Asked {
   /** The config files statted, as last loaded; the tool's settings' files (none in Elsewhere). */
   config: string[];
   tool: { path: string; folder: boolean }[];
-  /** The answers kept for links followed: their file, and its mtime as kept (SD-T9). */
-  answers: { file: string; mtime: number };
+  /** The answers kept for links followed: their file, its mtime as kept, the answers written here by then (SD-T9). */
+  answers: LinksStamp;
 }
 
 /** A look asked for and not yet taken by one: of every open file (`all`), and what waits for its answer. */
@@ -248,7 +248,7 @@ export class Look {
     for (const j of second.jobs) {
       if ("config" in j && app.settings.loads === loads) app.settings.reload("file changed", j.config);
       else if ("tool" in j) app.settings.keepTool(a.loc.root, toolSaid(j.tool));
-      else if ("links" in j) tookLinks(j.links, a.answers.mtime);
+      else if ("links" in j) tookLinks(j.links, a.answers);
       changed = true;
     }
     return changed;

@@ -41,15 +41,19 @@ export interface LinksRead {
 
 let cache: LinksRead | null = null;
 
+/** The answers written here so far (`keep`): a read made before one of them is older than what's kept (SD-D5). */
+let written = 0;
+
 /** The answers' file the TUI's look stats each second (SD-T9): while it does, the answers kept are never statted as
  *  they're asked — read again once the look finds the file changed, on a disk thread (`tookLinks`). */
 let looked: string | null = null;
 
 /** The answers kept, read again when the file changed (another slipbox answered): statted as they're asked, unless the
- *  look stats the file (`looked`). */
-function kept(): KeptLink[] {
+ *  look stats the file (`looked`) — or `writing`: what's written is what's there now, merged with another slipbox's
+ *  answers since, as on the screen's thread before (SD-D7). */
+function kept(writing = false): KeptLink[] {
   const file = linksFile();
-  if (looked === file && cache?.file === file) return cache.list;
+  if (looked === file && cache?.file === file && !writing) return cache.list;
   let mtime = -1;
   try {
     mtime = disk.stat(file).mtimeMs;
@@ -78,19 +82,26 @@ export function readLinks(): LinksRead {
   return { file, mtime, list: answersIn(file) };
 }
 
-/** The answers' file and its mtime as kept (NaN: not known) — what the TUI's look compares with its stat (SD-T9). From
- *  then on, the file's stamp is the look's to keep; `null`, its own again (a test). */
-export function lookAfterLinks(on = true): { file: string; mtime: number } {
-  const file = linksFile();
-  looked = on ? file : null;
-  return { file, mtime: cache?.file === file ? cache.mtime : Number.NaN };
+/** The answers' file as the look found it kept: its mtime (NaN: not known) and the answers written here by then. */
+export interface LinksStamp {
+  file: string;
+  mtime: number;
+  written: number;
 }
 
-/** The answers as a disk thread read them for the look, kept — unless they were kept anew here after the look compared
- *  the stamp `was` (written here meanwhile: SD-D5). */
-export function tookLinks(read: LinksRead, was: number): void {
+/** The answers' file and its mtime as kept — what the TUI's look compares with its stat (SD-T9). From then on, the
+ *  file's stamp is the look's to keep; `null`, its own again (a test). */
+export function lookAfterLinks(on = true): LinksStamp {
+  const file = linksFile();
+  looked = on ? file : null;
+  return { file, mtime: cache?.file === file ? cache.mtime : Number.NaN, written };
+}
+
+/** The answers as a disk thread read them for the look, kept — unless an answer was written here, or the file read
+ *  again, since the look took its stamp `was`: the read is older than what's kept then (SD-D5). */
+export function tookLinks(read: LinksRead, was: LinksStamp): void {
   const now = cache?.file === read.file ? cache.mtime : Number.NaN;
-  if (Object.is(now, was)) cache = read;
+  if (read.file === was.file && was.written === written && Object.is(now, was.mtime)) cache = read;
 }
 
 function real(path: string): string {
@@ -156,7 +167,7 @@ export function followedTarget(link: string): string | null {
 export function setLinkAnswer(link: string, answer: LinkAnswer | null): void {
   const key = linkKey(link);
   const target = linkTarget(link);
-  const list = kept().filter((e) => e.link !== key);
+  const list = kept(true).filter((e) => e.link !== key);
   if (answer && target) list.push({ link: key, target, answer, at: new Date().toISOString() });
   keep(list);
 }
@@ -165,6 +176,7 @@ export function setLinkAnswer(link: string, answer: LinkAnswer | null): void {
 function keep(links: KeptLink[]): void {
   ensureDir(stateHome());
   cache = null;
+  written++;
   writeJson(linksFile(), { version: 1, links });
   // What was written kept, its stamp not known: the look reads it again (SD-T9), anyone else stats it as it's asked.
   cache = { file: linksFile(), mtime: Number.NaN, list: links };
@@ -189,7 +201,7 @@ export function answersKept(): AnswerKept[] {
  */
 export function forgetLinkAnswer(link: string): KeptLink | null {
   const keys = new Set([linkKey(link), resolve(link)]);
-  const list = kept();
+  const list = kept(true);
   const hit = list.find((e) => keys.has(e.link));
   if (!hit) return null;
   keep(list.filter((e) => e !== hit));
@@ -225,7 +237,7 @@ export function moveLink(from: string, to: string): string | null {
   }
   // Moved, the link keeps its answer.
   const now = linkKey(to);
-  const list = kept();
+  const list = kept(true);
   const hit = list.find((e) => e.link === was);
   const leads = hit ? null : linkTarget(to);
   const rest = list.filter((e) => e.link !== was && (e.link !== now || (!hit && e.target === leads)));

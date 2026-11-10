@@ -168,8 +168,9 @@ export class Session {
             "warn",
             `${loc.root}: its workspace couldn't be read (${err.message}): its tabs aren't brought back`,
           );
-          if (open && !app.tabs.length) void app.openInNewTab(open, anchor);
-          else if (!app.tabs.length) this.openDefault();
+          if (app.tabs.length) this.meanwhile(open, anchor);
+          else if (open) void app.openInNewTab(open, anchor);
+          else this.openDefault();
           app.host.requestRender();
         },
       );
@@ -187,24 +188,34 @@ export class Session {
     app.history.recentNotes = first(app.history.recentNotes, session?.recent_notes ?? [], RECENT_NOTES_MAX);
     app.handoff.remoteServer ??= session?.remote_server;
     if (this.restoreUiOverrides(session) || apply) this.applyUi();
-    if (app.tabs.length) return;
+    if (app.tabs.length) return this.meanwhile(open, anchor);
     // Read on the disk threads (SD-T5): the default note once none of the tabs could be, as when none was kept.
     const none = open ? undefined : () => this.openDefault();
     const restored = app.config.ui.restore_session && this.restore({ open, none }, session);
     // The file asked for once the tab shown is back — the keys waiting for both, the rest coming in the background.
     const coming = restored ? this.restoring : null;
-    const opened = () => {
-      if (!open) return;
-      const i = app.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === open));
-      if (i < 0) return app.openInNewTab(open, anchor);
-      app.activeTab = i;
-      const t = app.tabs[i]!;
-      t.active = t.views.findIndex((x) => x.buf.abs === open);
-      if (anchor) app.history.jumpTo(t.views[t.active]!, anchor);
-    };
+    const opened = () => (open ? this.show(open, anchor) : undefined);
     if (coming && open) void app.reads.hold(coming.then(opened));
     else if (open) void opened();
     else if (!restored) this.openDefault();
+  }
+
+  /** Tabs opened while the session was read (SD-T9): they stay, the session's tabs not brought back over them, but the
+   *  note the switch was for is opened and shown all the same — unless you opened it yourself meanwhile, where you've
+   *  gone since being yours. */
+  private meanwhile(open: string | null, anchor?: Anchor): void {
+    if (open && !this.app.tabs.some((t) => t.views.some((x) => x.buf.abs === open))) void this.show(open, anchor);
+  }
+
+  /** `abs` shown: its tab, the view on it, at `anchor`; in a tab of its own when none has it. */
+  private show(abs: string, anchor?: Anchor): void | Promise<void> {
+    const app = this.app;
+    const i = app.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === abs));
+    if (i < 0) return app.openInNewTab(abs, anchor);
+    app.activeTab = i;
+    const t = app.tabs[i]!;
+    t.active = t.views.findIndex((x) => x.buf.abs === abs);
+    if (anchor) app.history.jumpTo(t.views[t.active]!, anchor);
   }
 
   /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own. */

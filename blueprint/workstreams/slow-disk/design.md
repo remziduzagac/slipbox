@@ -184,17 +184,21 @@ the second is let go of.
   here as it is now. After a rename or a folder operation (SD-D11), the build is read there too, but the keys after it
   wait their turn, as after an open, and `esc` doesn't give it up: the write is made, and the graph must follow it.
 - **slipbox's own folders** (SD-T9). What's read of them at a vault gone into, as the Vaults window opens and as a
-  link's completion asks is read there (`own`), what was read last used meanwhile. Going into a vault, its session
-  and the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into,
-  and its tabs open where they were left once it answers — not over a tab opened meanwhile, the recents of the moment
-  first, a UI override set meanwhile kept; its session isn't saved until then. The machine's positions are carried
-  over from the vault left, and your config is what the TUI's look last read by its stamp, neither read again. The
-  Vaults window lists the vaults last read (`Vaults — reading the list…` the first time), then what the disk says, its
-  filter and pick kept; a link's completion offers this vault's notes and the other vaults' last read, then theirs as
-  read. The answers kept for links followed (`links.json`) are statted by the TUI's look and read there when they
-  moved; a write keeps what it wrote. Measured on a home answering in 100 ms an op (SD-T9's log), a vault gone into
-  holds the screen about 5 s less, the Vaults window opened again not at all; what still holds it there is the
-  writes with the reads that merge them (below), the search index (§ Known limits) and the vault's index (SD-T8).
+  link's completion asks is read there (`own`), what was read last used meanwhile. Going into a vault, its session and
+  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into, and its
+  tabs open where they were left once it answers — not over a tab opened meanwhile, though the note the switch was for
+  opens and is shown all the same, unless you opened it yourself meanwhile; the recents of the moment first, a UI
+  override set meanwhile kept; its session isn't saved until then. The machine's positions are carried over from the
+  vault left — moved along with a vault moved by hand, as the file's are — and your config is what the TUI's look last
+  read by its stamp, neither read again. The Vaults window lists the vaults last read (`Vaults — reading the list…` the
+  first time), then what the disk says, its filter and pick kept; a link's completion offers this vault's notes and the
+  other vaults' last read, then theirs as read — in the background, one read out at a time, a list opened meanwhile
+  taking its answer and then one more read, and built only for a list still open. The answers kept for links followed
+  (`links.json`) are statted by the TUI's look and read there when they moved, a read older than an answer written here
+  dropped; a write reads the file first and keeps what it wrote. Measured on a home answering in 100 ms an op (SD-T9's
+  log), a vault gone into holds the screen about 5 s less, the Vaults window opened again not at all; what still holds
+  it there is the writes with the reads that merge them (below), the search index (§ Known limits) and the vault's index
+  (SD-T8).
 - **The start** (SD-D9, SD-T10). The screen is taken first; the vault's walk and index are read on a disk thread, the
   note waiting for its graph (`reading the vault…`), `q` and `ctrl+c` quitting meanwhile. Your config, the path named
   and `--base` are read before, as they say what the screen is. A vault that doesn't answer in time: its note shown as
