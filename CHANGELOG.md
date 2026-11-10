@@ -8,6 +8,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Added
 
+- SOURCE view shows a note's inline styles as they read, with the markers kept: the text between `**` is bold, between
+  `_` italic, between `~~` struck, and `==highlighted==` text is on its band; a link's text is apart from its address,
+  and wiki links, footnote marks, tags and maths have their colours. The markers stay as typed, in the new `markup`
+  role's dimmer colour. Bold is what the rendered note shows as bold: `snake_case` and a `*` in code stay plain. The
+  lens and a note's diff show the same. `[render] source_styles = false` brings back the lighter highlighting.
+
 - `space f e` opens a file by its path, anywhere on the machine: it asks for the path, `~` your home folder, and lists
   the folders and files as you type. `tab` completes the path, `enter` goes into a folder or opens the file, `ctrl+w`
   goes back a folder. The switcher (`ctrl+p`) takes a path too, one starting with `/`, `~/`, `./` or `../`. A file of

@@ -97,7 +97,8 @@ If the lens is open when you switch, SOURCE view takes its place; the two are no
 refer to the file's source lines across the views.
 
 ![Inbox in two windows: rendered on the left, and on the right in SOURCE view, its heading's #, the tasks' - [ ] and the
-link's destination showing, the status line reading SOURCE](../images/reading-editing-source.png)
+link's destination showing, the link's text in its colour between dimmer brackets, the status line reading
+SOURCE](../images/reading-editing-source.png)
 
 ## Move it, and grow it
 

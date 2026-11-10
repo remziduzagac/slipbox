@@ -98,14 +98,26 @@ Everything else works as in the rendered note:
 - line numbers
 - the outline and the breadcrumb
 
-The Markdown is lightly highlighted:
+The Markdown is highlighted as it reads:
 
 - front matter
 - headings
 - lists and task boxes
 - quotes
 - code, with fenced blocks highlighted in their declared language
-- links
+- inline styles: bold text is bold, italic text italic, struck text struck, `==highlighted==` text on its band, a
+  link's text apart from its address, wiki links, footnote marks, tags, maths and inline HTML
+
+Nothing is hidden or moved. The markers stay where you typed them (`**`, `_`, `~~`, `==`, a link's brackets) in a
+colour of their own, dimmer than the text, so the cursor, a selection and find work on the text as it is. What counts
+as bold is what the rendered note shows as bold: `snake_case_words` stay plain, a `*` inside a code span is code, and a
+`**` you haven't closed yet stays as typed until you close it. The lens and a note's diff show the same.
+
+To go back to the lighter highlighting, set `source_styles = false` under `[render]`
+([Every key](configuration.md#every-key)). The markers' colour is the `markup` role
+([The roles](configuration.md#the-roles)).
+
+A note too big to parse at once is shown plainly for a moment while it's read, then with its styles.
 
 ### The lens
 

@@ -8,6 +8,9 @@ import { adoptChunks, noteChunks, type ParseCache } from "./parse.ts";
 import { WorkerRequestError, WorkerRequests } from "../../foundation/workers/worker-requests.ts";
 import { workerUrl } from "../../foundation/workers/url.ts";
 
+/** A note with at least this much to parse is parsed on other threads (15.1): about 6,000 lines. */
+export const BACKGROUND_PARSE = 128 * 1024;
+
 let workers: WorkerRequests[] | null = null;
 /** Workers asked for (tests); null: up to four, a core left for the UI. */
 let count: number | null = null;

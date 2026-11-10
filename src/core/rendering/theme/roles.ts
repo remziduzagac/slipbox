@@ -60,6 +60,9 @@ export const ROLES = [
   "html",
   "image",
   "math",
+  // Markdown's markup in SOURCE view and the lens, where the text it styles is drawn as it reads (SIS): `**`, `_`,
+  // `~~`, `==`, a link's brackets, an escape's backslash, a `%%comment%%` — what reading never shows
+  "markup",
   // syntax inside code blocks
   "syn_keyword",
   "syn_function",

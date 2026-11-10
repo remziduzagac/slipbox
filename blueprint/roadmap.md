@@ -758,6 +758,15 @@ SD-T3, the watcher's look, SD-T4, the TUI's look each second, and SD-T5, a note 
   folders, and the walk at the start, made once the screen is up. A key's own read waits for it and `esc` gives it up;
   saves stay where they are.
 
+## Inline styles in SOURCE view (#103)
+
+*Not a phase. Opened and built 2026-11-10 (SIS-T1); its consolidation (SIS-T2) waits for the maintainer.*
+
+- [ ] **[Markdown's inline styles in SOURCE view](workstreams/source-inline-styles/README.md)** (SIS): bold, italic,
+  struck and highlighted text, links, wiki links, footnote marks, tags and maths as the render draws them, the markers
+  kept in a dimmer `markup` role, by the render's own parse; the lens and a note's diff the same;
+  `[render] source_styles` to turn it off.
+
 ## Later
 
 Agreed, but not scheduled.

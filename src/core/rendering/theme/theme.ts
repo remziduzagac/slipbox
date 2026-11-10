@@ -154,6 +154,8 @@ export function themeFromPalette(
     html: { fg: p.comment },
     image: { fg: p.magenta },
     math: { fg: p.teal },
+    // SOURCE view's `**`, `_`, brackets (SIS): there, dimmed as a link's address is, the text they style as it reads.
+    markup: { fg: p.comment },
     syn_keyword: { fg: p.magenta, bold: true },
     syn_function: { fg: p.blue, bold: true },
     syn_string: { fg: p.green },
@@ -407,6 +409,7 @@ export function monoTheme(): Theme {
   roles.math = { italic: true };
   roles.url = { dim: true };
   roles.html = { dim: true };
+  roles.markup = { dim: true };
   roles.dim = { dim: true };
   roles.fm_error = { bold: true };
   roles.syntax_error = { bold: true, underline: true };

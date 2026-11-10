@@ -1,6 +1,7 @@
-// Inline highlights and comments.
+// Inline highlights and comments; the inline styles in SOURCE view (SIS).
 
 import { type Check, leader } from "../check.ts";
+import { TOKYO } from "../support/appearance.ts";
 
 export const MARKDOWN_INLINE: Check[] = [
   {
@@ -29,6 +30,30 @@ export const MARKDOWN_INLINE: Check[] = [
       await s.notSee("and on birthdays");
       await s.notSee("Still to ask Mum");
       await s.notSee("goat's milk");
+    },
+  },
+  {
+    area: "reading",
+    name: "SOURCE view: a note's inline styles as it reads, its markers kept — bold drawn bold, its ** in their own colour",
+    covers: { cases: ["inline"], commands: ["view.source"] },
+    options: { open: "handbook/operations-handbook.md" },
+    run: async (s) => {
+      await leader(s, "n", "v");
+      await s.status("SOURCE");
+      await s.see("**Decision:** Every operational decision");
+      const [marker, bold, plain] = [
+        s.styleOf("**Decision:** Every"),
+        s.styleOf("Decision:** Every"),
+        s.styleOf(" Every operational decision"),
+      ];
+      s.expect(
+        !!marker && !!bold && !!plain && bold.bold && !plain.bold && !marker.bold,
+        `the text between the ** bold, they and the text around them not: ${JSON.stringify([marker, bold, plain])}`,
+      );
+      s.expect(
+        marker?.fg === TOKYO.roles.markup.fg && marker?.fg !== plain?.fg,
+        `the ** in the theme's markup colour: ${JSON.stringify([marker, plain])}`,
+      );
     },
   },
 ];

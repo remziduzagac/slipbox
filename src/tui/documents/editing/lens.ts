@@ -329,7 +329,9 @@ export class Lens {
     }
     view.liveBase = base;
     const editing = !!view.insert;
-    const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}:${editing ? "e" : "v"}`;
+    // A Markdown note's inline styles in the lens's rows, as SOURCE view has them (SIS).
+    const styles = this.app.config.render.source_styles && buf.kind.group === "note" && buf.kind.format === "markdown";
+    const key = `${base.active[0]}-${base.active[1]}:${buf.version}:${base.renderedVersion}:${editing ? "e" : "v"}:${styles}`;
     if (base.composed?.key === key) return base.composed.layout;
     const spans = code ? buf.syntax?.spans : undefined;
     const layout = composeLive(base.rendered, base.old, base.active, texts, {
@@ -337,6 +339,7 @@ export class Lens {
       wrap,
       rule: this.app.glyphs.lensRule,
       editing,
+      styles,
       ...(["lens", "both"].includes(this.app.config.ui.relative_numbers) ? { counters: LENS_COUNTERS } : {}),
       ...(code ? { language: buf.kind.format, ...(spans ? { spans: (l: number) => spans.get(l) } : {}) } : {}),
     });

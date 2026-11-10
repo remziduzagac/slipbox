@@ -79,11 +79,16 @@ export function blocksOf(w: DiffWindow): BlockDiff {
 }
 
 /** How a file's diff is highlighted: its language (a note's, markdown's highlighter: null) and its tab's width. */
-export function diffLanguage(app: App, path: string, text: string): { language: string | null; tabWidth: number } {
+export function diffLanguage(
+  app: App,
+  path: string,
+  text: string,
+): { language: string | null; tabWidth: number; styles: boolean } {
   const kind = classify(path, app.config.walk.extensions);
   const language = kind.group === "note" ? readerFor(kind.format).language : kind.format;
   const tabWidth = indentFor(isAbsolute(path) ? path : join(app.loc.root, path), text).tabWidth;
-  return { language, tabWidth };
+  // A note's lines with their inline styles, as SOURCE view has them (SIS).
+  return { language, tabWidth, styles: language === null && app.config.render.source_styles };
 }
 
 /**
@@ -131,7 +136,7 @@ export function openDiff(app: App, d: DiffRequest): void {
     return;
   }
   if (app.floating && !app.overlays.closeFloating()) return;
-  const { language, tabWidth } = diffLanguage(app, d.path, now);
+  const { language, tabWidth, styles } = diffLanguage(app, d.path, now);
   const note = classify(d.path, app.config.walk.extensions).group === "note";
   const w: DiffWindow = {
     before,
@@ -154,7 +159,7 @@ export function openDiff(app: App, d: DiffRequest): void {
     const mode = w.blocks?.on ? "blocks" : split ? "split" : "lines";
     const key = `${mode}:${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${buf.version}`;
     if (made?.key !== key) {
-      const opts = { width, language, tabWidth, ...how };
+      const opts = { width, language, tabWidth, styles, ...how };
       made = {
         key,
         layout: w.blocks?.on

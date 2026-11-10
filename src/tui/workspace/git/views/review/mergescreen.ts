@@ -232,7 +232,7 @@ function show(app: App, m: MergeState): void {
     ),
     { rows: result.rows, from: result.text, to: result.text },
   ];
-  const { language, tabWidth } = diffLanguage(app, path, m.read);
+  const { language, tabWidth, styles } = diffLanguage(app, path, m.read);
   const buf = new NoteBuffer(null, `merge:${m.rel}`, `merge:${m.rel}`);
   buf.kind = { group: "text", format: "text" };
   // `w` and, through `file.save`, `:w` and ctrl+s: the file saved as settled.
@@ -244,7 +244,7 @@ function show(app: App, m: MergeState): void {
     if (made?.key !== key)
       made = {
         key,
-        layout: layoutScreen(parts, { width, language, tabWidth, split: sideBySide(app, path, width), ...how }),
+        layout: layoutScreen(parts, { width, language, tabWidth, styles, split: sideBySide(app, path, width), ...how }),
       };
     return made.layout;
   };

@@ -19,7 +19,7 @@ import type { Layout } from "../../../core/rendering/layout/ir.ts";
 import type { NoteRenderOptions } from "../../../core/documents/model/note.ts";
 import { newSourceCache } from "../../../core/rendering/layout/code/source.ts";
 import { newParseCache, noteChunks, type ParsedNote, parseMarkdown } from "../../../core/documents/markdown/parse.ts";
-import { parseInBackground } from "../../../core/documents/markdown/parse-pool.ts";
+import { BACKGROUND_PARSE, parseInBackground } from "../../../core/documents/markdown/parse-pool.ts";
 import { countWords } from "../../../core/foundation/text/words.ts";
 import { readerFor } from "../../../core/documents/model/readers.ts";
 import type {
@@ -53,8 +53,7 @@ interface UndoStep {
   after: number;
 }
 
-/** A note with at least this much to parse is parsed on other threads (15.1): about 6,000 lines. */
-export const BACKGROUND_PARSE = 128 * 1024;
+export { BACKGROUND_PARSE };
 
 export class NoteBuffer {
   source = "";
@@ -207,6 +206,7 @@ export class NoteBuffer {
       get renderCache() {
         return buffer.renderCache;
       },
+      parseCache: buffer.parseCache,
     };
   }
 
@@ -534,9 +534,9 @@ export class NoteBuffer {
   private split: { version: number; lines: string[] } | null = null;
 
   /** The raw markdown as a layout (source mode, 4.13), its headings the render's: the parse's, or
-   *  while editing scanned from the text the way the render reads them. */
-  sourceLayout(width: number, wrap: boolean, _glyphs: Glyphs): Layout {
-    return sourceLayout(this.layoutContext, width, wrap, _glyphs);
+   *  while editing scanned from the text the way the render reads them; `styles`, its inline styles too (SIS). */
+  sourceLayout(width: number, wrap: boolean, _glyphs: Glyphs, styles = false): Layout {
+    return sourceLayout(this.layoutContext, width, wrap, _glyphs, styles);
   }
 
   /** The notes its layouts draw inside it (1.11), by absolute path: a change to one re-lays it out. */

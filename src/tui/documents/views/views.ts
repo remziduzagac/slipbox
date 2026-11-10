@@ -101,7 +101,7 @@ export class Views {
     const layout = drawn
       ? drawn(width, { glyphs: this.app.glyphs, wrap: this.app.ui.wrap, codeScroll: this.app.code.scrolls() })
       : view.source
-        ? view.buf.sourceLayout(width, this.app.ui.wrap, this.app.glyphs)
+        ? view.buf.sourceLayout(width, this.app.ui.wrap, this.app.glyphs, this.app.config.render.source_styles)
         : view.live
           ? this.app.lens.liveLayout(view, width)
           : code
@@ -154,8 +154,18 @@ export class Views {
           : clampPos(layout, view.sel.anchor);
     }
     if (view.live && view.liveBase) this.app.lens.pin(view, layout);
+    if (view.source && view.buf.parsing) this.restyle(view.buf.parsing);
     return layout;
   }
+
+  /** A big note's parse on other threads, which SOURCE view's inline styles wait for (SIS): drawn again once it's in. */
+  private restyle(parse: Promise<void>): void {
+    if (this.restyling.has(parse)) return;
+    this.restyling.add(parse);
+    void parse.finally(() => this.app.host.requestRender());
+  }
+
+  private readonly restyling = new WeakSet<Promise<void>>();
 
   /** What a big note shows while its parse runs on other threads (15.1); keys wait for it. */
   private readingLayout(buf: NoteBuffer, width: number): Layout {

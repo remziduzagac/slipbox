@@ -134,6 +134,8 @@ export interface LiveOptions {
   /** Its counters' column (`[ui] relative_numbers`): this many columns before each source row, kept free — the drawing
    *  writes each row's distance from the cursor's there — never the cursor's (its cells map to no offset, -1). */
   counters?: number;
+  /** A Markdown note's inline styles in the lens's rows, as SOURCE view has them (SIS): its blocks parsed alone. */
+  styles?: boolean;
 }
 
 /** A lens row with its counters' column before it: spaces mapped to no offset, its text after them. */
@@ -165,6 +167,7 @@ export function composeLive(rendered: Layout, old: Block, active: Block, lines: 
     slice: true,
     ...(opts.language ? { language: opts.language } : {}),
     ...(spans ? { spans: (l: number) => spans(l + active[0] - 1) } : {}),
+    ...(opts.styles && !opts.language ? { styles: {} } : {}),
   });
   let placed = false;
   const rule: Role = opts.editing ? "lens_edit" : "lens";
