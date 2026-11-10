@@ -70,8 +70,10 @@ export class Vaults {
     const pending = this.pendingSwitch;
     this.pendingSwitch = null;
     if (!pending || choice === "stay") return;
+    // Peeked at instead, what was to follow it follows once the peek has it: a data file's section gone to (a link's
+    // ctrl+click, `goThere`); a note made there isn't typed into in a peek, read-only (`promptNewNote`).
     if (choice === "peek") {
-      if (pending.open) peekAt(this.app, pending.open, pending.target, pending.anchor);
+      if (pending.open) peekAt(this.app, pending.open, pending.target, pending.anchor, pending.how.after);
       return;
     }
     if (choice === "save") {

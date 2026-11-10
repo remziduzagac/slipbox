@@ -24,6 +24,7 @@ import type { App, Tab, View, UiState } from "../../app/runtime/app.ts";
 import { RECENT_MAX, RECENT_NOTES_MAX } from "../../app/runtime/startup.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { defaultNote } from "../../documents/navigation/opening.ts";
+import { tildePath } from "../../../core/workspace/vaults/names.ts";
 import { uiDefaults } from "../../app/runtime/app.ts";
 
 /** The workspaces kept and restored, and the state published for the CLI. */
@@ -147,7 +148,9 @@ export class Session {
     app.history.recentNotes = [];
     app.handoff.remoteServer = undefined;
     const loc = app.loc;
-    if (!app.reads.offThread) return this.entered(sessionRead(loc), open, anchor, true, then);
+    // From the key it went on, not the keys taken so far: one already behind it counts as typed since (`afterOpening`).
+    const after = then && { run: then, keys: app.input.keyAt };
+    if (!app.reads.offThread) return this.entered(sessionRead(loc), open, anchor, true, after);
     // The config's meanwhile.
     this.applyUi();
     this.unread = true;
@@ -159,7 +162,7 @@ export class Session {
         (a) => {
           if (!here() || !("session" in a)) return;
           this.unread = false;
-          this.entered(a.session, open, anchor, false, then);
+          this.entered(a.session, open, anchor, false, after);
           app.relayoutAll();
           app.host.requestRender();
         },
@@ -169,9 +172,9 @@ export class Session {
             "warn",
             `${loc.root}: its workspace couldn't be read (${err.message}): its tabs aren't brought back`,
           );
-          if (app.tabs.length) this.meanwhile(open, anchor, then);
-          else if (open) void this.show(open, anchor, then);
-          else this.afterOpening(this.openDefault(), false, then);
+          if (app.tabs.length) this.meanwhile(open, anchor, after);
+          else if (open) void this.show(open, anchor, after);
+          else this.afterOpening(this.openDefault(), false, after);
           app.host.requestRender();
         },
       );
@@ -180,8 +183,8 @@ export class Session {
   /** What a vault's session keeps, applied as it's gone into: the positions it kept itself before taken in, the recents
    *  (those of the moment it was read first), the UI's settings changed here, and its tabs — none over tabs opened
    *  meanwhile — with `open` shown, or the default note; the UI's settings put to use when they changed, or `apply`;
-   *  `then` once what it opens is in. */
-  private entered(read: SessionRead, open: string | null, anchor?: Anchor, apply = false, then?: () => void): void {
+   *  `after` once what it opens is in. */
+  private entered(read: SessionRead, open: string | null, anchor?: Anchor, apply = false, after?: After): void {
     const app = this.app;
     const session = read.session;
     app.positions.takeIn(read.positions);
@@ -190,37 +193,43 @@ export class Session {
     app.history.recentNotes = first(app.history.recentNotes, session?.recent_notes ?? [], RECENT_NOTES_MAX);
     app.handoff.remoteServer ??= session?.remote_server;
     if (this.restoreUiOverrides(session) || apply) this.applyUi();
-    if (app.tabs.length) return this.meanwhile(open, anchor, then);
+    if (app.tabs.length) return this.meanwhile(open, anchor, after);
     // Read on the disk threads (SD-T5): the default note once none of the tabs could be, as when none was kept.
     const none = open ? undefined : () => this.openDefault();
     const restored = app.config.ui.restore_session && this.restore({ open, none }, session);
-    // The file asked for once the tab shown is back — the keys waiting for both, the rest coming in the background.
+    // The file asked for once the tab shown is back — the keys waiting for both, the rest coming in the background;
+    // that tab failed, said, the file all the same; the vault left meanwhile, neither: it's another vault's.
     const coming = restored ? this.restoring : null;
-    if (coming && open) void app.reads.hold(coming.then(() => this.show(open, anchor, then)));
-    else if (open) void this.show(open, anchor, then);
-    else this.afterOpening(restored ? coming : this.openDefault(), coming !== null, then);
+    if (coming && open) {
+      const here = this.stillIn();
+      const shown = () => (here() ? this.show(open, anchor, after) : undefined);
+      void app.reads.hold(coming.catch(this.failed(`${tildePath(app.loc.root)}'s tabs`, here)).then(shown));
+    } else if (open) void this.show(open, anchor, after);
+    else this.afterOpening(restored ? coming : this.openDefault(), coming !== null, after);
   }
 
   /** Tabs opened while the session was read (SD-T9): they stay, the session's tabs not brought back over them, but the
    *  note the switch was for is opened and shown all the same — unless you opened it yourself meanwhile, where you've
-   *  gone since being yours, and `then` isn't run; with none asked for, `then` at once. */
-  private meanwhile(open: string | null, anchor?: Anchor, then?: () => void): void {
-    if (!open) return then?.();
-    if (!this.app.tabs.some((t) => t.views.some((x) => x.buf.abs === open))) void this.show(open, anchor, then);
+   *  gone since being yours, and `after` isn't run; with none asked for, `after` at once. */
+  private meanwhile(open: string | null, anchor?: Anchor, after?: After): void {
+    if (!open) return after?.run();
+    if (!this.app.tabs.some((t) => t.views.some((x) => x.buf.abs === open))) void this.show(open, anchor, after);
   }
 
   /** `abs` shown: its tab, the view on it, at `anchor`; in a tab of its own when none has it, read on a disk thread
-   *  first. `then` once it's shown, the keys waiting for it as for the read — never when it isn't: the read given up
-   *  (`esc`) or failed. */
-  private show(abs: string, anchor?: Anchor, then?: () => void): void | Promise<void> {
+   *  first. `after` once it's shown, the keys waiting for it as for the read — never when it isn't: the read given up
+   *  (`esc`) or failed (said), the vault left meanwhile or slipbox quitting. */
+  private show(abs: string, anchor?: Anchor, after?: After): void | Promise<void> {
     const app = this.app;
+    const here = this.stillIn();
     const shown = () => {
-      if (then && app.view?.buf.abs === abs) then();
+      if (after && here() && app.view?.buf.abs === abs) after.run();
     };
     const i = app.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === abs));
     if (i < 0) {
       const opening = app.openInNewTab(abs, anchor);
-      return opening instanceof Promise ? app.reads.hold(opening.then(shown)) : shown();
+      if (!(opening instanceof Promise)) return shown();
+      return app.reads.hold(opening.then(shown, this.failed(tildePath(abs), here)));
     }
     app.activeTab = i;
     const t = app.tabs[i]!;
@@ -229,20 +238,47 @@ export class Session {
     shown();
   }
 
-  /** `then`, for a switch with no note asked for, once what it opens is in, read or not — the keys waiting for it: the
-   *  vault's own note, or the tab shown (`restoring`), and the tabs behind it when it couldn't be (the vault's own
-   *  note may open once they're read). Run after it, a folder revealed keeps the explorer it was revealed in. Not once
-   *  the vault is left: those tabs aren't waited for by the keys. */
-  private afterOpening(opening: void | Promise<void> | null, restoring: boolean, then?: () => void): void {
-    if (!then) return;
+  /**
+   * `after`, for a switch with no note asked for, once what it opens is in, read or not (failed, said) — the keys
+   * waiting for it: the vault's own note, or the tab shown (`restoring`). When that tab couldn't be, once the tabs
+   * behind it are read too (the vault's own note may open after them), which no key waits for: not when a key was
+   * taken since the switch — it would take the keys from what you're typing. Run after it, a folder revealed keeps the
+   * explorer it was revealed in. Not once the vault is left, or slipbox quits.
+   */
+  private afterOpening(opening: void | Promise<void> | null, restoring: boolean, after?: After): void {
+    if (!after) return;
+    const app = this.app;
+    const here = this.stillIn();
+    const now = () => {
+      if (here()) after.run();
+    };
+    const idle = () => {
+      if (app.input.keysSeen === after.keys) now();
+    };
+    const done = () => (restoring && !app.tabs.length ? void Promise.resolve(this.behind).then(idle, idle) : now());
+    if (!(opening instanceof Promise)) return done();
+    const failed = this.failed(`${tildePath(app.loc.root)}'s ${restoring ? "tabs" : "own note"}`, here);
+    void app.reads.hold(
+      opening.then(done, (err) => {
+        failed(err);
+        done();
+      }),
+    );
+  }
+
+  /** Whether the vault open now is still the one it was, slipbox not quitting: what a switch opens there, and what
+   *  follows it, dropped once it isn't. */
+  private stillIn(): () => boolean {
     const app = this.app;
     const visit = app.vaults.visits;
-    const now = () => {
-      if (app.vaults.visits === visit && !app.quitting) then();
+    return () => app.vaults.visits === visit && !app.quitting;
+  }
+
+  /** A switch's opening that failed: said, as a key's read says its own — unless the vault was left meanwhile. */
+  private failed(what: string, here: () => boolean): (err: unknown) => void {
+    return (err) => {
+      if (here()) this.app.message("warn", `${what} couldn't be opened (${(err as Error).message})`);
     };
-    const done = () => (restoring && !app.tabs.length ? void Promise.resolve(this.behind).then(now) : now());
-    if (opening instanceof Promise) void app.reads.hold(opening.then(done));
-    else done();
   }
 
   /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own; read on a disk thread, a
@@ -346,7 +382,8 @@ export class Session {
       if (!placed.size && !this.app.tabs.length) await how.none?.();
     };
     const first = shown ? this.app.reads.hold(place(shown)) : Promise.resolve(false);
-    this.behind = first.then((on) => (on ? rest() : undefined));
+    // The tab shown failed (said where it's waited for, `entered`): the rest read all the same.
+    this.behind = first.then((on) => (on ? rest() : undefined), rest);
     return first.then(() => {});
   }
 
@@ -428,6 +465,12 @@ export class Session {
     s.branches = recent(branches, SESSION_BRANCHES);
     saveSession(this.app.loc, s);
   }
+}
+
+/** What follows a switch (`SwitchHow.after`), and the key it went on (`Input.keyAt`). */
+interface After {
+  run: () => void;
+  keys: number;
 }
 
 /** How the session's tabs come back: the tab with `open` (absolute) shown first; `none` once none could be read, read on
