@@ -510,19 +510,19 @@ export class Session {
   }
 
   /** The slipbox CLI, as an agent runs it beside the TUI: the same vault, config and state. */
-  cli(...args: string[]): { code: number; out: string } {
+  cli(...args: string[]): { code: number; out: string; err: string } {
     return this.cliIn(this.vault, ...args);
   }
 
   /** The CLI run from a folder (`~/…` in the reference set). */
-  cliIn(cwd: string, ...args: string[]): { code: number; out: string } {
+  cliIn(cwd: string, ...args: string[]): { code: number; out: string; err: string } {
     const { SLIPBOX_TRACE: _, ...env } = this.processEnv();
     const r = spawnSync(process.execPath, [join(REPO, "src", "main.ts"), ...args], {
       cwd: this.path(cwd),
       encoding: "utf8",
       env: { ...env, NO_COLOR: "1" },
     });
-    return { code: r.status ?? -1, out: r.stdout };
+    return { code: r.status ?? -1, out: r.stdout, err: r.stderr };
   }
 
   /** What was copied last (SLIPBOX_CLIPBOARD=file puts copies in clipboard.txt in the state dir). */
