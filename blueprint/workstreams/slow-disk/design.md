@@ -194,7 +194,9 @@ the second is let go of.
   the answer says its folder is gone, only while the view and the trail are those it asked about. A zoom (`z`, `-`, the
   breadcrumb, `shift+h` out of a hidden folder), `l` on a folder whose listing hasn't come and the start's folder ask
   `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers, and what the key
-  does after the zoom done only then; the start's once what it opens is in (SD-T10). One `Listings` keeps both sides'
+  does after the zoom done only then; the start's once what it opens is in (SD-T10). A file operation of slipbox's
+  lists the folders it changed again as a key's own read too (`Explorer.afterOp`, `Listings.relist`), what it selects
+  selected once they've answered: no key after it acts on a row listed from before it. One `Listings` keeps both sides'
   folders, 256 at most; a folder listed on both (a nested vault's, unfolded, a path in it asked) is kept once for each.
 - **The vault built again** (SD-T8; `Builds`, `tui/app/runtime/builds.ts`). A reindex, the watcher's rescan, a setting
   of the walk changed, a vault gone into, a branch's tabs and the folders asked for in home read the walk and the index

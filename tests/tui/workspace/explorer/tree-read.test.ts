@@ -732,3 +732,68 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
     }
   });
 });
+
+describe("a file operation's folders listed again before the keys after it act (SD-T7)", () => {
+  /** A folder of notes and a file, the explorer shown and unfolded on it, `handbook/people.md` selected. */
+  async function onPeople(): Promise<Harness> {
+    const h = await vaultWith({
+      "handbook/ops.md": "# Ops\n",
+      "handbook/people.md": "# People\n",
+      "handbook/safety.adoc": "= Safety\n",
+      "handbook/writing.md": "# Writing\n",
+    });
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    h.app.explorer.select("handbook/people.md");
+    await listed(h);
+    h.app.explorer.select("handbook/people.md");
+    return h;
+  }
+  const selected = (h: Harness) => h.app.explorer.rows()[h.app.sidebar.selected]?.path;
+
+  test("deleted: a key after it waits for its folder read again — never on the deleted note's row, still listed from before", async () => {
+    const h = await onPeople();
+    const late = answerHeld(join(h.root, "handbook"));
+    try {
+      await h.keys("d", "y");
+      await late.read;
+      expect(names(h)).toContain("  people.md"); // listed from before: the folder's answer held
+      const y = press(h, "y");
+      expect(h.app.files.clip).toBeNull();
+      late.release();
+      await y;
+      expect(names(h)).not.toContain("  people.md");
+      expect(h.app.files.clip?.rel).toBe("handbook/safety.adoc");
+    } finally {
+      late.restore();
+    }
+  });
+
+  test("restored, the watcher's word of the delete late: a key after it acts on the note restored, never on its neighbour", async () => {
+    const h = await onPeople();
+    await h.keys("d", "y");
+    await h.app.reads.settled();
+    expect(selected(h)).toBe("handbook/safety.adoc");
+    const late = answerHeld(join(h.root, "handbook"));
+    try {
+      await press(h, "u");
+      await late.read;
+      // The watcher's batch of the delete, come after the restore: the walk lets the note go, and the listing kept from
+      // after the delete doesn't have it — the selection on its neighbour meanwhile.
+      h.app.watch.applyChanges({
+        changes: [{ rel: "handbook/people.md", kind: "deleted", isNote: true }],
+        rescan: false,
+      });
+      expect(selected(h)).toBe("handbook/safety.adoc");
+      const y = press(h, "y");
+      expect(h.app.files.clip).toBeNull();
+      late.release();
+      await y;
+      expect(selected(h)).toBe("handbook/people.md");
+      expect(h.app.files.clip?.rel).toBe("handbook/people.md");
+    } finally {
+      late.restore();
+    }
+  });
+});

@@ -133,6 +133,7 @@ export function fileActions(): Record<string, Run> {
         if (!v.buf.rel) return a.message("warn", "only a note or file of this vault can be copied here");
         try {
           const r = copyPath(a.graph, v.buf.rel);
+          a.files.afterFileOp([r.to]);
           a.open(r.to);
           a.message("info", `copied ${r.from} → ${r.to}`);
         } catch (err) {

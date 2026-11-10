@@ -138,7 +138,7 @@ export class Listings {
     k.tree = this.tree;
     const again = k.listing?.error ? RETRY_MS : REREAD_MS;
     if (k.reading === null && (!k.listing || k.settings !== settings || Date.now() - k.at > again))
-      this.read(key, k, settings);
+      void this.read(key, k, settings);
     return k.listing;
   }
 
@@ -215,14 +215,37 @@ export class Listings {
     k.reading = null;
   }
 
-  private read(key: string, k: Kept, settings: string): void {
+  /**
+   * The kept listings of `dirs` read again at once, on either side of the vault, a key's own read (SD-D4: a key's
+   * deadline): what a file operation of slipbox's changed in them (`Explorer.afterOp`). Settled once each has answered
+   * and been taken; failed when one gave no answer, or once `stop` gives up waiting — that read goes on, taken if it
+   * comes.
+   */
+  relist(dirs: readonly string[], stop: AbortSignal): Promise<void> {
+    const reads: Promise<void>[] = [];
+    for (const [key, k] of this.kept)
+      if (dirs.includes(k.dir)) reads.push(this.read(key, k, this.settings(k.own), "key"));
+    const givenUp = new Promise<never>((_, no) =>
+      stop.addEventListener("abort", () => no(Error("given up")), { once: true }),
+    );
+    return Promise.race([Promise.all(reads).then(() => {}), givenUp]);
+  }
+
+  /** Whether a listing of one of `dirs` is kept. */
+  keeps(dirs: readonly string[]): boolean {
+    for (const k of this.kept.values()) if (dirs.includes(k.dir)) return true;
+    return false;
+  }
+
+  /** `k` read on a disk thread, by the explorer — or as a key's (`relist`): failed then with what its thread said. */
+  private read(key: string, k: Kept, settings: string, by: "explorer" | "key" = "explorer"): Promise<void> {
     const n = ++this.serial;
     k.reading = n;
     const dir = k.dir;
     const empty = { dir, entries: [], notes: false, scope: null };
     const own = k.own ? { ...this.judge(), walked: this.walkedIn(dir) } : undefined;
-    diskThreads()
-      .list(dir, this.app.config.walk, this.app.ui.hidden_files, "explorer", own)
+    return diskThreads()
+      .list(dir, this.app.config.walk, this.app.ui.hidden_files, by, own)
       .then(
         (listing) => this.answered(key, n, settings, listing),
         (err: Error) => {
@@ -232,9 +255,8 @@ export class Listings {
           if (was?.reading === n && was.listing && was.listing.error === null) {
             was.reading = null;
             was.at = Date.now();
-            return;
-          }
-          this.answered(key, n, settings, { ...empty, error: noAnswer(err) });
+          } else this.answered(key, n, settings, { ...empty, error: noAnswer(err) });
+          if (by === "key") throw err;
         },
       );
   }
@@ -249,7 +271,7 @@ export class Listings {
     k.reading = null;
     k.at = Date.now();
     const now = this.settings(k.own);
-    if (settings !== now) return this.read(key, k, now);
+    if (settings !== now) return void this.read(key, k, now);
     const changed =
       !k.listing || k.settings !== settings || k.listing.error !== listing.error || k.listing.digest !== listing.digest;
     k.listing = listing;

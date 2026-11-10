@@ -3,7 +3,8 @@
 // the listings of the folders shown (`explorer-disk.ts`, VV-D8, SD-T7); a row's marks are `marks.ts`' (VV-D9).
 
 import { classify, type FileGroup } from "../../../core/documents/model/filetypes.ts";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
+import { tildePath } from "../../../core/foundation/platform/paths.ts";
 import { match } from "../../shell/overlays/match.ts";
 import type { App } from "../../app/runtime/app.ts";
 import { Listings } from "./listings.ts";
@@ -73,6 +74,27 @@ export class Explorer {
   /** Select the row at `path` (a row path): now, or once its folder's listing comes (`wanted`); `fallback` meanwhile. */
   selectRow(path: string, fallback?: number): void {
     return this.navigation.selectRow(path, fallback);
+  }
+
+  /**
+   * A file operation of slipbox's done (SD-T7): the folders it changed — those of `touched`, paths in the vault, what
+   * went and what came — listed again at once, a key's own read (SD-D4: the keys after it wait for it, `esc` gives it
+   * up), and `select` (a path in the vault) selected now and again once they've answered. A key never acts on the row a
+   * listing from before the operation put under the selection: a file gone, still listed; a neighbour, where one came
+   * back that the walk let go of meanwhile (the watcher's word of the delete, late). Another view in the left panel: no
+   * key acts on the explorer's rows, and they're read again as the tree is next built.
+   */
+  afterOp(touched: readonly string[], select?: string): void {
+    const dirs = [...new Set(touched.map((p) => dirname(join(this.app.loc.root, p))))];
+    const name = dirs.map((d) => tildePath(d)).join(", ");
+    const relist = (stop: AbortController) => this.listings.relist(dirs, stop.signal);
+    const read =
+      this.app.leftView === "explorer" && this.listings.keeps(dirs)
+        ? this.app.reads.ask(name, null, (_, s) => relist(s), "not listed again")
+        : null;
+    if (select === undefined) return;
+    this.select(select);
+    if (read) void this.app.reads.hold(read.then(() => this.select(select)));
   }
 
   /** Select a path in the explorer, unfolding its folders. */
