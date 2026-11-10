@@ -343,8 +343,12 @@ export class Marks {
     // A note of the vault's own tree the walk didn't read: too big, by the size its listing read (SD-T7).
     if (row.kind === "note" && !broken && !unreadable && !row.outside && !this.app.graph.notes.has(row.path))
       f.big = !!l.big;
-    if (row.kind === "root" && row.root && l.vault) f.vault = this.vaultMarks(l.vault.indexed, l.vault.head);
-    else if (row.kind !== "note" && row.outside && !row.leftOut) f.busy = l.busy ?? null;
+    if (row.kind === "root" && row.root) {
+      if (l.vault) f.vault = this.vaultMarks(l.vault.indexed, l.vault.head);
+      // The vault open's own row above the view, home's: no vault's by a marker (VV-D2), so its listing reads neither
+      // its index nor its branch — read here, as for the vault open's row they always were.
+      else if (row.root.here) f.vault = this.vaultFacts(row.root.abs);
+    } else if (row.kind !== "note" && row.outside && !row.leftOut) f.busy = l.busy ?? null;
     return f;
   }
 

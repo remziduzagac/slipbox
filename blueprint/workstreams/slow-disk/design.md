@@ -155,21 +155,29 @@ the second is let go of.
   only when the listing's digest changed), with the walk's filter (`list`'s `own`: its settings and its epoch, the
   filter made once on each thread, as the watcher's judging is): each entry with the walk's verdict on it
   (`exclusion`: a busy folder's note looked for, the `.gitignore`s read, a nested vault's marker, all there) and a note
-  over `walk.max_file_size` said. `fromDisk` builds what the walk didn't give from those listings, nothing read on the
-  screen's thread. Every row a listing gave carries what it read (`TreeRow.listed`) — where a link leads, a nested
-  vault's own name, its branch and whether its index is in the cache folder — and its marks are the listing's
-  (`Marks.listedFacts`); a row of the vault's own tree whose folder's listing hasn't come is drawn as the walk gave it,
-  by its folder's name for a nested vault, unmarked, and nothing is read for it. A folder not listed yet keeps the
-  walk's rows, `listing…` first under it after a moment; one whose thread gave no answer says so there (`can't read: no
-  answer in time`), read again a minute later. Whether a path is left out (`Paths.leftOut`: a row's path, `rowPath`,
-  and the tree's top, `leftOutAt`) is the verdict of the listing of the folder holding each folder on its way; while
-  that listing is read, by the name alone (git's and slipbox's own folders, a hidden name, `walk.exclude`). The view and
-  the trail are statted there as the tree is built — they and the folders above them, one request out at a time — and
-  the view gives way when the answer says its folder is gone, only while the view and the trail are those it asked
-  about. A zoom (`z`, `-`, the breadcrumb), `l` on a folder whose listing hasn't come and the start's folder ask
-  `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers; the start's is
-  read here until SD-T10. One `Listings` keeps both sides' folders, 256 at most; a folder listed on both (a nested
-  vault's, unfolded, a path in it asked) is kept once for each.
+  the walk didn't give over `walk.max_file_size` said (the notes it gave there named to the thread, `own.walked`, never
+  statted). Another disk mounted at an entry is never looked at: its verdict is its name's, `walk.exclude`'s and the
+  `.gitignore`s' holding it (`mountExclusion`). `fromDisk` builds what the walk didn't give from those listings,
+  nothing read on the screen's thread; under a folder whose listing hasn't come, or gave no answer, its unfolded
+  folders are listed for their rows' marks alone, since which of them is a link the walk followed is that listing's to
+  say. Every row a listing gave carries what it read (`TreeRow.listed`) — where a link leads, a nested vault's own
+  name, its branch and whether its index is in the cache folder — and its marks are the listing's
+  (`Marks.listedFacts`; home's own row above the view, no vault's by a marker, has its index and branch read here, as
+  the vault open's row always had); a row of the vault's own tree whose folder's listing hasn't come is drawn as the
+  walk gave it, by its folder's name for a nested vault, unmarked, and nothing is read for it. A folder not listed yet
+  keeps the walk's rows, `listing…` first under it after a moment; one whose thread gave no answer says so there
+  (`can't read: no answer in time`), read again a minute later. Whether a path is left out (`Paths.leftOut`: a row's
+  path, `rowPath`, and the tree's top, `leftOutAt`) is the verdict of the listing of the folder holding each folder on
+  its way; while that listing is read, by the name alone (git's and slipbox's own folders, a hidden name,
+  `walk.exclude`, a folders-only pattern only for a path the walk doesn't know as a file), else not known yet. A folder
+  kept unfolded, or a row to select, stored by its path while its verdict wasn't known is moved to its row's path once
+  the listing says (`Paths.rekey`, as the tree is built), and back if that changes. The view and the trail are statted
+  there as the tree is built — they and the folders above them, one request out at a time — and the view gives way
+  when the answer says its folder is gone, only while the view and the trail are those it asked about. A zoom (`z`,
+  `-`, the breadcrumb, `shift+h` out of a hidden folder), `l` on a folder whose listing hasn't come and the start's
+  folder ask `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers, and what
+  the key does after the zoom done only then; the start's is read here until SD-T10. One `Listings` keeps both sides'
+  folders, 256 at most; a folder listed on both (a nested vault's, unfolded, a path in it asked) is kept once for each.
 - **The vault built again** (SD-T8). A reindex, the watcher's rescan, a setting of the walk changed, a vault gone into,
   a branch's tabs and the folders asked for in home read the walk and the index on a disk thread (`walk`); the graph
   stays as it was meanwhile, `reading the vault…` among the background tasks. The index crosses as its text, parsed

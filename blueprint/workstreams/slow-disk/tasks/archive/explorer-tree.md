@@ -80,15 +80,28 @@ What the description left open, settled here for the maintainer to confirm; desi
   it, its marks drawn once the tree is built again from the listing. A nested vault's row is drawn by its folder's
   name meanwhile, as the acceptance criteria ask.
 - A folder a link the walk followed leads to is listed for its rows' marks alone: what the walk gave there stays what's
-  shown (VV-D6), nothing found in it by the listing.
+  shown (VV-D6), nothing found in it by the listing. Under a folder whose listing hasn't come or gave no answer, every
+  unfolded folder is listed so: which of them is a followed link is that listing's to say.
 - Whether a path is left out, while its folder's listing is read, is judged by its name alone (git's and slipbox's
   own folders, a hidden name, `walk.exclude`): a busy or ignored folder is taken as the vault's own until its listing
-  answers, which places its row (the acceptance criteria's "placed once its listing answers").
+  answers, which places its row (the acceptance criteria's "placed once its listing answers"). A path is never guessed
+  a folder: a folders-only `walk.exclude` pattern names it only when it isn't a file the walk knows. A folder unfolded,
+  or a row to select, stored meanwhile is moved to its row's path once the listing says (`Paths.rekey`, only what's
+  kept looked at), rather than waiting for the listing before storing it: a reveal is answered at once.
+- Another disk mounted at an entry of a folder of the vault is judged without a look at it (`mountExclusion`): its
+  name, `walk.exclude` and the `.gitignore`s holding it. A busy name there is busy only when ignored: whether it holds
+  a note would need the look.
+- A note the walk gave is never statted for its size by its folder's listing: the walk's notes in that folder are sent
+  with it (`own.walked`), so a re-read every second costs a stat only for a note the walk didn't give.
+- Home's own row above the view takes its index and branch from a read here, as the vault open's row did before:
+  home is no vault by a marker (VV-D2), so its folder's listing gives neither.
 - The view's and the trail's stat: of them and of every folder above them, in one request, one out at a time; an
   answer of a view or trail moved since, or after quitting, is dropped and the next build asks again. No answer (its
   deadline): the view stays, asked again at the next build.
 - `l` on a folder whose listing has come takes its listing's word (`unreadable`), no read; on a note, none. Otherwise
-  it asks `access` as a key's own read, as a zoom does. `shift+h` hiding the view's hidden folder waits for its zoom.
+  it asks `access` as a key's own read, as a zoom does. `shift+h` hiding the view's hidden folder waits for its zoom,
+  and selects and says only once that zoom answers that the folder can be read: given up, no answer or can't read,
+  what's said then stays.
 - The start asks its folder through the same read (`KeyReads.folder`), here at once until SD-T10 moves the start off
   the screen's thread (`reads.here`). The zoom it then makes doesn't ask again (`zoomTo`'s `checked`).
 - Elsewhere's top: it was listed by `Listings` already (`outsideRows`); the branch of `rootTree` that read it here

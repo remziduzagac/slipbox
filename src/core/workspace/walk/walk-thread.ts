@@ -11,10 +11,11 @@
 import type { Config } from "../../application/config/config.ts";
 import type { HomeWalk } from "../vaults/home.ts";
 import type { IndexAnswer, Opened } from "../graph/index-job.ts";
-import type { JudgeBy, JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
+import type { JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
 import type {
   DiskRequest,
   ListAsk,
+  OwnList,
   LookRequestAnswer,
   PathStat,
   ReadAnswer,
@@ -366,8 +367,9 @@ export class DiskThreads {
   }
 
   /** The folder `dir` listed (`listFolder`), `walk` the settings a busy folder is decided by, `hidden` `files.hidden`;
-   *  the explorer's, unless a look asks; a folder of the vault open's own tree with its walk's verdicts (`own`). */
-  async list(dir: string, walk: Config["walk"], hidden: boolean, by: Asker = "explorer", own?: JudgeBy) {
+   *  the explorer's, unless a look asks; a folder of the vault open's own tree with its walk's verdicts (`own`, and the
+   *  notes it gave there, whose size isn't looked at). */
+  async list(dir: string, walk: Config["walk"], hidden: boolean, by: Asker = "explorer", own?: OwnList) {
     const ask = { op: "list" as const, dir, walk, hidden, ...(own ? { own } : {}) };
     return (await this.ask<{ listing: FolderListing }>(ask, by)).listing;
   }

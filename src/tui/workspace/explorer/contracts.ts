@@ -207,6 +207,8 @@ export interface ExplorerRowState {
   readonly listings: {
     /** `own`: a folder of the vault open's own tree, each entry with its walk's verdict (SD-T7). */
     get(dir: string, own?: boolean): FolderListing | null;
+    /** `get`'s, nothing asked: what's kept alone. */
+    peek(dir: string, own?: boolean): FolderListing | null;
     pending(dir: string, own?: boolean): boolean;
   };
 }

@@ -7,6 +7,7 @@
 // a moment (`PENDING_MS`); an answer that changed nothing draws nothing, one for a folder let go of meanwhile is
 // dropped, and rows that come keep the selection on the row it was on.
 
+import { relative, sep } from "node:path";
 import { listFolder, type FolderListing } from "../../../core/workspace/walk/listing.ts";
 import type { JudgeBy } from "../../../core/workspace/graph/watch/judging.ts";
 import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
@@ -69,6 +70,27 @@ export class Listings {
     return { filter: f.settings, epoch: f.epoch };
   }
 
+  /** The names of the notes the vault open's walk gave, by their folder's path in it: made again once its notes move. */
+  private notesBy: { graph: object; generation: number; by: Map<string, string[]> } | null = null;
+
+  /** The notes its walk gave in `dir`, a folder of the vault open's own tree, by name: their size is never looked at
+   *  (SD-T7) — a note too big is one it didn't give. */
+  private walkedIn(dir: string): string[] {
+    const g = this.app.graph;
+    if (this.notesBy?.graph !== g || this.notesBy.generation !== g.generation) {
+      const by = new Map<string, string[]>();
+      for (const rel of g.notes.keys()) {
+        const at = rel.lastIndexOf("/");
+        const folder = at < 0 ? "" : rel.slice(0, at);
+        let names = by.get(folder);
+        if (!names) by.set(folder, (names = []));
+        names.push(rel.slice(at + 1));
+      }
+      this.notesBy = { graph: g, generation: g.generation, by };
+    }
+    return this.notesBy.by.get(relative(this.app.loc.root, dir).split(sep).join("/")) ?? [];
+  }
+
   /** What a listing is read under, as it is now. */
   private settings(own: boolean): string {
     const walk = this.app.config.walk;
@@ -92,8 +114,12 @@ export class Listings {
   /** The folder `dir` as last listed — null while its first listing is read — read again when it's old. `own`: a folder
    *  of the vault open's own tree, each entry with its walk's verdict (SD-T7). */
   get(dir: string, own = false): FolderListing | null {
-    if (!this.offThread)
-      return listFolder(dir, this.app.config.walk, this.app.ui.hidden_files, own ? this.app.graph.filter : undefined);
+    if (!this.offThread) {
+      const { walk } = this.app.config;
+      const hidden = this.app.ui.hidden_files;
+      if (!own) return listFolder(dir, walk, hidden);
+      return listFolder(dir, walk, hidden, this.app.graph.filter, new Set(this.walkedIn(dir)));
+    }
     const settings = this.settings(own);
     const key = keyOf(dir, own);
     let k = this.kept.get(key);
@@ -114,6 +140,13 @@ export class Listings {
     if (k.reading === null && (!k.listing || k.settings !== settings || Date.now() - k.at > again))
       this.read(key, k, settings);
     return k.listing;
+  }
+
+  /** The folder `dir` as last listed, nothing asked: null when it isn't kept, or its first listing is read. A test's App
+   *  lists it here, at once, as `get` does. */
+  peek(dir: string, own = false): FolderListing | null {
+    if (!this.offThread) return this.get(dir, own);
+    return this.kept.get(keyOf(dir, own))?.listing ?? null;
   }
 
   /** Whether a listing is being read (tests wait for none). */
@@ -163,7 +196,7 @@ export class Listings {
     k.reading = n;
     const dir = k.dir;
     const empty = { dir, entries: [], notes: false, scope: null };
-    const own = k.own ? this.judge() : undefined;
+    const own = k.own ? { ...this.judge(), walked: this.walkedIn(dir) } : undefined;
     diskThreads()
       .list(dir, this.app.config.walk, this.app.ui.hidden_files, "explorer", own)
       .then(
@@ -207,14 +240,17 @@ export class Listings {
     const ex = this.app.explorer;
     const s = this.app.sidebar;
     const mine = this.app.leftView === "explorer" && !s.filter;
-    const wanted = ex.wanted?.at === s.selected ? ex.wanted.path : undefined;
-    const at = mine ? (wanted ?? ex.rows()[s.selected]?.path) : undefined;
+    const wanted = ex.wanted?.at === s.selected ? ex.wanted : null;
+    const was = mine && !wanted ? ex.rows()[s.selected]?.path : undefined;
     ex.invalidateTree();
+    // Its path read once the tree is built: the row's path it was asked by may be another now (`ExplorerPaths.rekey`).
+    const rows = mine ? ex.rows() : [];
+    const at = wanted ? wanted.path : was;
     if (at !== undefined) {
-      const i = ex.rows().findIndex((r) => r.path === at);
+      const i = rows.findIndex((r) => r.path === at);
       if (i >= 0) {
         s.selected = i;
-        if (at === wanted) ex.wanted = null;
+        if (wanted) ex.wanted = null;
       }
     }
     this.app.host.requestRender();

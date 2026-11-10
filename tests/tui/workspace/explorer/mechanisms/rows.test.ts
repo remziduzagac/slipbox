@@ -33,11 +33,9 @@ function context(files: Record<string, string>): ExplorerReadContext {
 
 /** Listings read here, at once, as a test's App reads them: a folder of the vault's own tree with its walk's filter. */
 function here(app: ExplorerReadContext) {
-  return () => ({
-    get: (dir: string, own = false) =>
-      listFolder(dir, app.config.walk, app.ui.hidden_files, own ? app.graph.filter : undefined),
-    pending: () => false,
-  });
+  const get = (dir: string, own = false) =>
+    listFolder(dir, app.config.walk, app.ui.hidden_files, own ? app.graph.filter : undefined);
+  return () => ({ get, peek: get, pending: () => false });
 }
 
 test("file-row visibility reads live mode, include and exclude rules; notes precede those rules", () => {
@@ -86,7 +84,7 @@ test("row paths distinguish the vault, nested vault contents, outside folders an
 
 test("tree rows keep directory-first order and reuse the live expanded set", () => {
   const app = context({ "z.md": "# Z\n", "a.md": "# A\n", "sub/b.md": "# B\n" });
-  const state = { expanded: new Set<string>(), listings: { get: () => null, pending: () => false } };
+  const state = { expanded: new Set<string>(), listings: { get: () => null, peek: () => null, pending: () => false } };
   const tree = new ExplorerTree(app, state, new ExplorerPaths(app, () => state.listings), new ExplorerFileRows(app));
   expect(tree.build(app.loc.root).map((row) => row.path)).toEqual(["sub", "a.md", "z.md"]);
   state.expanded.add("sub");
@@ -106,7 +104,11 @@ test("outside rows preserve pending and unreadable placeholders before their lis
   writeFileSync(join(outside, "b.md"), "# B\n");
   const state = {
     expanded: new Set<string>(),
-    listings: { get: (_dir: string): ReturnType<typeof listFolder> | null => null, pending: () => true },
+    listings: {
+      get: (_dir: string): ReturnType<typeof listFolder> | null => null,
+      peek: () => null,
+      pending: () => true,
+    },
   };
   const tree = new ExplorerTree(app, state, new ExplorerPaths(app, () => state.listings), new ExplorerFileRows(app));
   expect(tree.build(outside)).toEqual([

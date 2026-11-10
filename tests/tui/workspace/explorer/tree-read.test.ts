@@ -6,9 +6,15 @@
 // past the hold's deadline (`gaveUp`, `gaveUpHere`) and the test fails.
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { Config } from "../../../../src/core/application/config/config.ts";
+import { setReadWait } from "../../../../src/core/foundation/platform/disk.ts";
+import { setMountTable } from "../../../../src/core/workspace/vaults/mounts.ts";
 import { tildePath } from "../../../../src/core/workspace/vaults/names.ts";
+import { probe, setLinkAnswer } from "../../../../src/core/workspace/vaults/symlinks.ts";
+import { homeAt } from "../../../../src/core/workspace/vaults/vault.ts";
+import { listFolder } from "../../../../src/core/workspace/walk/listing.ts";
 import { DiskThreads } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { setFolderReader } from "../../../../src/core/workspace/walk/walk.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
@@ -23,14 +29,23 @@ const { holding, untilHeld } = makeHeldKeys();
 afterEach(() => setFolderReader(null));
 
 /** A vault of `files` (path → text) besides its index, by its real path: its explorer's listings and its keys' reads on
- *  the disk threads, as the TUI reads them; hidden names not listed, so the rows counted are the folders listed. */
-async function vaultWith(files: Record<string, string>): Promise<Harness> {
+ *  the disk threads, as the TUI reads them; hidden names not listed, so the rows counted are the folders listed.
+ *  `config`, its settings besides; `before`, what's made in it before it's walked. */
+async function vaultWith(
+  files: Record<string, string>,
+  opts: { config?: (c: Config) => void; before?: (root: string) => void } = {},
+): Promise<Harness> {
   const root = realpathSync(mkdtempSync(join(sandbox, "tree-")));
   for (const [rel, text] of Object.entries({ ".slipbox/config.toml": "", "index.md": "# Index\n", ...files })) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), text);
   }
-  const h = await harness({ root, config: (c) => void (c.files.hidden = false) });
+  opts.before?.(root);
+  const config = (c: Config) => {
+    c.files.hidden = false;
+    opts.config?.(c);
+  };
+  const h = await harness({ root, config });
   h.app.explorer.listings = new Listings(h.app, true);
   h.app.reads.offThread = true;
   h.app.explorer.invalidateTree();
@@ -307,5 +322,214 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
     await listed(h);
     expect(names(h)).toEqual(["held", "  sub", "    s.md", "index.md"]);
     expect(hold.gaveUpHere).toEqual([]);
+  });
+
+  test("held: a note revealed in a folder `.gitignore` leaves out, before its listing comes — its folders kept by their rows' paths once it does, unfolded, the note selected; a file a folders-only `walk.exclude` names stays the vault's", async () => {
+    const h = await vaultWith(
+      { "held/.gitignore": "out/\n", "held/out/deep/x.md": "# X\n", "held/plan.md": "# P\n" },
+      { config: (c) => (c.walk.exclude = ["plan.md/"]) },
+    );
+    const R = h.root;
+    const ex = h.app.explorer;
+    const x = join(R, "held/out/deep/x.md");
+    const hold = held();
+    ex.reveal(x);
+    await untilHeld(hold, "the listings' thread");
+    // Not known yet: the vault's own by their names meanwhile; a file by what the walk knows of it, never a folder.
+    expect(ex.expanded.has("held/out")).toBe(true);
+    expect(ex.wanted?.path).toBe("held/out/deep/x.md");
+    expect(ex.rowPath(join(R, "held/plan.md"))).toBe("held/plan.md");
+    await aKeyMeanwhile(h, hold);
+    hold.release();
+    await listed(h);
+    expect([...ex.expanded].filter((p) => p.includes("out")).sort()).toEqual([
+      join(R, "held/out"),
+      join(R, "held/out/deep"),
+    ]);
+    expect(names(h)).toEqual(["held", "  out", "    deep", "      x.md", "  plan.md", "index.md"]);
+    expect(row(h, "out")).toMatchObject({ path: join(R, "held/out"), leftOut: ".gitignore" });
+    expect(ex.rows()[h.app.sidebar.selected]?.path).toBe(x);
+    expect(row(h, "plan.md")!.path).toBe("held/plan.md");
+    expect(hold.gaveUp).toBe(0);
+    expect(hold.gaveUpHere).toEqual([]);
+  });
+
+  test("held: another disk mounted at a folder of the vault — its folder's listing judges it by its name and the `.gitignore`s holding it, never looking at it", async () => {
+    const h = await vaultWith({
+      "docs/held/.gitignore": "build/\n",
+      "docs/held/a.md": "# A\n",
+      "docs/held/node_modules/x.md": "# X\n",
+      "docs/held/build/out.js": "x\n",
+    });
+    const dir = join(h.root, "docs/held");
+    const shares = [join(dir, "node_modules"), join(dir, "build")];
+    // Held here at, or in, either disk: what a share gone away does. A busy name's is where the walk would look for a
+    // note, a `.gitignore`d one's not even that.
+    const hold = holding((p) => shares.some((s) => p === s || p.startsWith(`${s}/`)));
+    setMountTable(() => shares.map((at) => ({ device: "server:/share", at, type: "nfs", options: "rw" })));
+    try {
+      // Listed here, as its thread lists it: the mount table a test gives is this thread's.
+      const l = listFolder(dir, h.app.config.walk, false, h.app.graph.filter);
+      expect(l.error).toBeNull();
+      const entry = (name: string) => l.entries.find((e) => e.name === name);
+      const mount = { dir: true, file: false, denied: false, mount: true } as const;
+      expect(entry("node_modules")).toEqual({ name: "node_modules", ...mount, excluded: null });
+      expect(entry("build")).toEqual({ name: "build", ...mount, excluded: "busy folder" });
+      expect(hold.gaveUpHere).toEqual([]);
+    } finally {
+      setMountTable(null);
+    }
+  });
+
+  test("held past a shortened deadline: a folder of the vault with no answer — a link the walk followed in it, unfolded, gives no rows of its own", async () => {
+    const ext = realpathSync(mkdtempSync(join(sandbox, "ext-")));
+    writeFileSync(join(ext, "e.md"), "# E\n");
+    expect(await probe(ext)).toBe(true);
+    const h = await vaultWith(
+      { "held/a.md": "# A\n" },
+      {
+        before: (root) => {
+          symlinkSync(ext, join(root, "held/lnk"));
+          setLinkAnswer(join(root, "held/lnk"), "follow");
+        },
+      },
+    );
+    const lnk = join(h.root, "held/lnk");
+    const ex = h.app.explorer;
+    expect(h.app.graph.notes.has("held/lnk/e.md")).toBe(true);
+    // Come since the walk, in what the link leads to: never a row of the vault's.
+    writeFileSync(join(ext, "new.md"), "# New\n");
+    const hold = holding(undefined, 300);
+    setFolderReader(slowFolders);
+    ex.expanded.add("held");
+    ex.invalidateTree();
+    h.frame();
+    const noAnswer = "  can't read: no answer in time";
+    const end = performance.now() + HELD_MS;
+    while (!names(h).includes(noAnswer)) {
+      if (performance.now() > end) throw new Error(`never said: ${names(h).join(", ")}`);
+      await Bun.sleep(5);
+    }
+    hold.release();
+    ex.expanded.add("held/lnk");
+    await listed(h);
+    // Its listing read for its rows' marks, the walk's rows kept.
+    expect(ex.listings.peek(lnk, true)?.entries.map((e) => e.name)).toContain("new.md");
+    expect(names(h)).toEqual(["held", noAnswer, "  lnk", "    e.md", "  a.md", "index.md"]);
+    expect(hold.gaveUpHere).toEqual([]);
+  });
+
+  test("zoomed out above home, the vault open: its row's branch read here — its folder's listing reads none, home no vault by a marker (VV-D2)", async () => {
+    // Its folder listed here, at once (a test's App): a disk thread doesn't see the home a test sets.
+    const top = realpathSync(mkdtempSync(join(sandbox, "above-")));
+    const home = join(top, "me");
+    mkdirSync(join(home, ".git", "refs", "heads"), { recursive: true });
+    writeFileSync(join(home, ".git", "HEAD"), "ref: refs/heads/main\n");
+    writeFileSync(join(home, "n.md"), "# N\n");
+    const before = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const h = await harness({ loc: homeAt(home) });
+      const ex = h.app.explorer;
+      await ex.zoomTo(top);
+      const me = ex.treeRows().find((r) => r.path === home);
+      expect(me).toMatchObject({ kind: "root", root: { here: true } });
+      expect(me!.listed).toBeDefined();
+      expect(me!.listed!.vault).toBeUndefined();
+      expect(ex.marks.of(me!).describe).toBe("main");
+    } finally {
+      process.env.HOME = before;
+    }
+  });
+
+  test("held: `shift+h` in a hidden folder — the view goes out once its folder's read answers, said then; given up (`esc`), or no answer, nothing more", async () => {
+    const h = await vaultWith({ "held/.hid/sub/s.md": "# S\n", "held/a.md": "# A\n" });
+    const R = h.root;
+    const ex = h.app.explorer;
+    const hid = join(R, "held/.hid");
+    h.app.settings.setUi("hidden_files", true);
+    await ex.zoomTo(hid);
+    await listed(h);
+    expect(ex.top).toBe(hid);
+    h.app.region = "sidebar";
+    const hold = held();
+    const off = press(h, "shift+h");
+    await untilHeld(hold, "the zoom's read");
+    await press(h, "escape");
+    hold.release();
+    await off;
+    await h.app.reads.settled();
+    expect(ex.top).toBe(hid);
+    expect(said(h).join("\n")).not.toContain("hidden files not shown");
+    // No answer in time: that said, nothing after it.
+    h.app.settings.setUi("hidden_files", true);
+    const late = holding(undefined, 300);
+    await press(h, "shift+h");
+    await h.app.reads.settled();
+    expect(ex.top).toBe(hid);
+    expect(said(h).at(-1)).toBe(`${tildePath(join(R, "held"))} didn't answer: not zoomed into`);
+    late.release();
+    // Answered that it can't be read: that said, nothing after it (root reads anything: nothing to refuse).
+    if (process.getuid?.() !== 0) {
+      chmodSync(join(R, "held"), 0o000);
+      try {
+        h.app.settings.setUi("hidden_files", true);
+        await press(h, "shift+h");
+        await h.app.reads.settled();
+      } finally {
+        chmodSync(join(R, "held"), 0o755);
+      }
+      expect(ex.top).toBe(hid);
+      expect(said(h).at(-1)).toStartWith(`can't read ${tildePath(join(R, "held"))}: `);
+    }
+    // Answered: the view out, then said, in the key's own turn.
+    h.app.settings.setUi("hidden_files", true);
+    await press(h, "shift+h");
+    await h.app.reads.settled();
+    expect(ex.top).toBe(join(R, "held"));
+    expect(said(h).at(-1)).toBe("explorer: hidden files not shown");
+    expect(late.gaveUpHere).toEqual([]);
+  });
+
+  test("held: a folder of the vault listed — the notes its walk gave named to its thread, never looked at for their size; one come since, too big, marked", async () => {
+    const h = await vaultWith(
+      { "held/a.md": "# A\n", "held/b.md": "# B\n" },
+      { config: (c) => (c.walk.max_file_size = 1000) },
+    );
+    const ex = h.app.explorer;
+    const dir = join(h.root, "held");
+    writeFileSync(join(dir, "big.md"), `# Big\n\n${"x".repeat(2000)}\n`);
+    const list = spyOn(DiskThreads.prototype, "list");
+    try {
+      const hold = held();
+      ex.expanded.add("held");
+      ex.invalidateTree();
+      h.frame();
+      await untilHeld(hold, "the listings' thread");
+      const own = list.mock.calls.find((c) => c[0] === dir && c[4])?.[4];
+      expect([...(own?.walked ?? [])].sort()).toEqual(["a.md", "b.md"]);
+      hold.release();
+      await listed(h);
+      expect(row(h, "big.md")?.listed?.big).toBe(true);
+      expect(row(h, "a.md")?.listed?.big).toBeUndefined();
+      // As its thread lists it: a note its walk gave read once less (never statted for its size), one it didn't as often.
+      const reads = (walked?: Set<string>) => {
+        const seen: string[] = [];
+        setReadWait((p) => void seen.push(p));
+        try {
+          listFolder(dir, h.app.config.walk, false, h.app.graph.filter, walked);
+        } finally {
+          setReadWait(null);
+        }
+        return (name: string) => seen.filter((p) => p === join(dir, name)).length;
+      };
+      const all = reads();
+      const given = reads(new Set(own?.walked));
+      expect(given("a.md")).toBe(all("a.md") - 1);
+      expect(given("big.md")).toBe(all("big.md"));
+      expect(hold.gaveUpHere).toEqual([]);
+    } finally {
+      list.mockRestore();
+    }
   });
 });

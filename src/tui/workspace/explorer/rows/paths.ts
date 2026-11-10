@@ -21,9 +21,10 @@ export class ExplorerPaths {
   ) {}
 
   /** What the listing of the folder holding `abs`, a folder of the vault open's own tree, read of it: none while it's
-   *  read, or when it lists none such. */
-  listedAt(abs: string): ListedEntry | undefined {
-    const listing = this.listings().get(dirname(abs), true);
+   *  read, or when it lists none such. `ask`: a listing not kept is asked for; else only what's kept is looked at. */
+  listedAt(abs: string, ask = true): ListedEntry | undefined {
+    const listings = this.listings();
+    const listing = ask ? listings.get(dirname(abs), true) : listings.peek(dirname(abs), true);
     if (!listing) return undefined;
     let names = byName.get(listing);
     if (!names) byName.set(listing, (names = new Map(listing.entries.map((e) => [e.name, e]))));
@@ -52,6 +53,33 @@ export class ExplorerPaths {
     return [...this.nestedRels(), ...this.unwalkedRels()].some((n) => rel.startsWith(`${n}/`)) ? abs : rel;
   }
 
+  /**
+   * The folders kept unfolded (`expanded`), and the row to select once it's there (`wanted`), by their rows' paths now
+   * (SD-T7): one stored while a listing on its way was read — taken as the vault's own by its name meanwhile — moved
+   * to its row's path once that listing says what the walk does with it, and back if that changes (a `.gitignore`
+   * edited). Only what's kept is looked at, nothing asked: a path whose verdict isn't known yet stays as it is.
+   */
+  rekey(expanded: Set<string>, wanted: { path: string } | null): void {
+    const R = this.app.loc.root;
+    if (isListed(this.app.loc)) return;
+    const others = [...this.nestedRels(), ...this.unwalkedRels()];
+    const now = (key: string): string => {
+      const abs = isAbsolute(key) ? key : join(R, key);
+      if (abs === R || !isInside(R, abs) || abs.includes("\0")) return key;
+      const rel = relative(R, abs).split(sep).join("/");
+      if (others.some((n) => rel.startsWith(`${n}/`))) return abs;
+      const why = this.verdict(rel, abs, false);
+      return why === undefined ? key : why ? abs : rel;
+    };
+    for (const key of [...expanded]) {
+      const path = now(key);
+      if (path === key) continue;
+      expanded.delete(key);
+      expanded.add(path);
+    }
+    if (wanted) wanted.path = now(wanted.path);
+  }
+
   /** The links to folders the walk didn't go through (VV-D6), by their path in the vault: looked at, listed a level at
    *  a time. */
   unwalkedRels(): string[] {
@@ -63,9 +91,17 @@ export class ExplorerPaths {
    * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
    * (VV-D8) — a hidden name in home, and in a vault while the explorer lists them (`files.hidden`), each then a row by
    * its path; else, in a vault, a hidden note reached by a link is in its tree (20.8), as a hidden file reached always
-   * is. Why, and the folder (or file) it says it of; or null. Each on its way as its folder's listing judged it.
+   * is. Why, and the folder (or file) it says it of; or null. Each on its way as its folder's listing judged it; one
+   * whose listing hasn't come taken as the vault's own meanwhile, unless its name says (`rekey` moves what was stored by
+   * it once that listing comes).
    */
   leftOut(rel: string, abs: string): LeftOut | null {
+    return this.verdict(rel, abs) ?? null;
+  }
+
+  /** `leftOut`, or undefined while a listing on the way hasn't come and its name alone doesn't say. `ask`: a listing
+   *  not kept is asked for; else only what's kept is looked at. */
+  private verdict(rel: string, abs: string, ask = true): LeftOut | null | undefined {
     const filter = this.app.graph.filter;
     const shown = this.app.ui.hidden_files;
     const R = this.app.loc.root;
@@ -75,26 +111,34 @@ export class ExplorerPaths {
       const at = parts.findIndex((_, i) => filter.mountAt(parts.slice(0, i + 1).join("/")));
       return { why: ANOTHER_DISK, at: at < 0 ? abs : join(R, ...parts.slice(0, at + 1)) };
     }
+    let unknown = false;
     for (let i = 1; i <= parts.length; i++) {
       const prefix = parts.slice(0, i).join("/");
-      const listed = this.listedAt(join(R, prefix));
-      // A folder on the way; the path itself as its listing found it (a folder when it isn't there).
-      const dir = i < parts.length || (listed?.dir ?? true);
+      // Past a folder whose verdict isn't known yet, nothing more asked: it may be left out, its folders no tree's.
+      const listed = this.listedAt(join(R, prefix), ask && !unknown);
+      // A folder on the way; the path itself as its listing found it, else as the walk knows it (a note, a file).
+      const dir = i < parts.length ? true : listed ? listed.dir : this.app.graph.known(rel) ? false : undefined;
       const why = listed?.excluded !== undefined ? listed.excluded : this.byName(prefix, dir);
-      if (why === null || why === "nested vault") continue;
+      if (why === undefined) unknown = true;
+      if (!why || why === "nested vault") continue;
       if (why === "hidden" && !filter.home && (!shown || (i === parts.length && this.app.graph.known(rel)))) continue;
       return { why, at: join(R, ...parts.slice(0, i)) };
     }
-    return null;
+    return unknown ? undefined : null;
   }
 
   /** Why the walk leaves out `rel` by its name alone, while its folder's listing is read: slipbox's and git's own
-   *  folders, a hidden name, one `walk.exclude` names — what it holds, or `.gitignore`, said once that listing comes. */
-  private byName(rel: string, dir: boolean): string | null {
+   *  folders, a hidden name, one `walk.exclude` names — a folder, with `dir`; not known, as both or neither.
+   *  Undefined where its name doesn't say: what it holds, a `.gitignore`, home's skip list, a vault's marker, or
+   *  whether it's a folder. */
+  private byName(rel: string, dir: boolean | undefined): string | undefined {
     const name = rel.slice(rel.lastIndexOf("/") + 1);
     if (ALWAYS_SKIPPED.has(name)) return "always skipped";
     if (name.startsWith(".")) return "hidden";
-    return this.app.graph.filter.excludes(rel, dir) ? "walk.exclude" : null;
+    const filter = this.app.graph.filter;
+    const [asDir, asFile] = [filter.excludes(rel, true), filter.excludes(rel, false)];
+    if (dir === undefined ? asDir && asFile : dir ? asDir : asFile) return "walk.exclude";
+    return undefined;
   }
 
   /** Why the vault open's walk leaves out `abs` (VV-D8), when it's in its own tree: the view's folder, or a file Info

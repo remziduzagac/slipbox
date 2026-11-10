@@ -249,6 +249,9 @@ export class Explorer {
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
+    // What was stored by a path's row while its listing was read, by the row it has now (SD-T7). Here, on a test's
+    // App, every listing is there when it's stored.
+    if (this.listings.offThread) this.paths.rekey(this.expanded, this.wanted);
     this.listings.newTree();
     this.navigation.keepToWhatsThere();
     const rows = this.treeBuilder.build(this.top);

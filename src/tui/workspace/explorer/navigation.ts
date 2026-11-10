@@ -103,13 +103,23 @@ export class ExplorerNavigation {
    * asked already (slipbox opened on it).
    */
   zoomTo(dir: string, checked = false): void | Promise<void> {
+    return this.zoomThen(dir, checked);
+  }
+
+  /** `zoomTo`, and `then` once its read has said the folder can be read, in the key's own turn: never when it was given
+   *  up (`esc`), got no answer in time or said it can't — what's said then stays said. */
+  private zoomThen(dir: string, checked: boolean, then?: () => void): void | Promise<void> {
     const from = this.host.top;
-    if (dir === from) return;
-    if (checked) return this.zoomed(dir, from);
+    if (dir === from) return then?.();
+    if (checked) {
+      this.zoomed(dir, from);
+      return then?.();
+    }
     return this.app.reads.folder(dir, "not zoomed into", (why) => {
       if (why) return this.app.message("warn", `can't read ${tildePath(dir)}: ${why}`);
       // The view moved meanwhile (its folder gone, given way): this zoom was from another.
       if (this.host.top === from) this.zoomed(dir, from);
+      then?.();
     });
   }
 
@@ -221,9 +231,10 @@ export class ExplorerNavigation {
       }
       this.app.message("info", shown ? "explorer: hidden files shown" : "explorer: hidden files not shown");
     };
-    // Once the view's gone out, when it does: its folder's read a key's own.
-    const zoomed = out ? this.zoomTo(out) : undefined;
-    return zoomed instanceof Promise ? zoomed.then(after) : after();
+    // Once the view's gone out, when it does: its folder's read a key's own, and this the rest of the key's turn — not
+    // when that read was given up, got no answer or found the folder can't be read: what's said then stays said.
+    if (out) return this.zoomThen(out, false, after);
+    after();
   }
 
   /** A folder moved (18.3, 18.7): the view and the trail in it go with it, as its folds do. */

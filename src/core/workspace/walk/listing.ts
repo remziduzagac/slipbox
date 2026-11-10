@@ -124,9 +124,16 @@ const relIn = (root: string, abs: string): string => relative(root, abs).split(s
 /**
  * The folder `dir` listed, every entry the explorer lists (`listsName`, `hidden`: `files.hidden`) with what's known of it
  * — nothing read of one it doesn't list, nor of another disk mounted at one (`walk`: what a busy folder is). `own`: the
- * vault open's walk's filter, `dir` a folder of its own tree (SD-T7) — each entry with its verdict, and a note too big.
+ * vault open's walk's filter, `dir` a folder of its own tree (SD-T7) — each entry with its verdict, and a note too big
+ * among those its walk didn't give (`walked`: the names of the notes it gave in `dir`, never looked at for their size).
  */
-export function listFolder(dir: string, walk: Config["walk"], hidden: boolean, own?: WalkFilter): FolderListing {
+export function listFolder(
+  dir: string,
+  walk: Config["walk"],
+  hidden: boolean,
+  own?: WalkFilter,
+  walked?: ReadonlySet<string>,
+): FolderListing {
   const ownRoot = findVaultRoot(dir);
   const out: FolderListing = {
     dir,
@@ -151,11 +158,11 @@ export function listFolder(dir: string, walk: Config["walk"], hidden: boolean, o
     if (!listsName(e.name, hidden)) continue;
     // Another disk mounted here: one that stops answering would hang whatever looks at it — a folder or a file as its
     // folder's entry says (a file bind-mounted: a container's `/etc/hosts`), nothing more. In the vault's own tree, its
-    // walk's verdict all the same: its filter knows another disk without looking (home's), or walks into it (a vault's).
+    // walk's verdict as far as it's known without looking into it (`mountExclusion`).
     if (mounted.has(e.name)) {
       const entry: ListedEntry = { name: e.name, dir: e.isDirectory(), file: !e.isDirectory(), denied: false };
       entry.mount = true;
-      if (own) entry.excluded = own.exclusion(relIn(own.root, join(dir, e.name)), entry.dir);
+      if (own) entry.excluded = own.mountExclusion(relIn(own.root, join(dir, e.name)), entry.dir);
       out.entries.push(entry);
       continue;
     }
@@ -182,7 +189,7 @@ export function listFolder(dir: string, walk: Config["walk"], hidden: boolean, o
       const busy = busyFolderWhyAt(abs, walk);
       if (busy) entry.busy = busy;
     }
-    if (own) judged(entry, abs, own);
+    if (own) judged(entry, abs, own, walked);
     out.entries.push(entry);
   }
   out.digest = Bun.hash(JSON.stringify([out.entries, out.notes, out.scope])).toString(36);
@@ -190,10 +197,11 @@ export function listFolder(dir: string, walk: Config["walk"], hidden: boolean, o
 }
 
 /** An entry of a folder of the vault open's own tree, given what its walk says of it (SD-T7): why it's left out, asked
- *  of it as what it is (a link, as what it leads to); and a note over `walk.max_file_size`, by its size. */
-function judged(entry: ListedEntry, abs: string, own: WalkFilter): void {
+ *  of it as what it is (a link, as what it leads to); and a note over `walk.max_file_size`, by its size — one its walk
+ *  didn't give (`walked`) alone: one it gave was read whole, and its row isn't marked so. */
+function judged(entry: ListedEntry, abs: string, own: WalkFilter, walked?: ReadonlySet<string>): void {
   entry.excluded = own.exclusion(relIn(own.root, abs), entry.dir);
-  if (!entry.file || !own.isNoteName(entry.name)) return;
+  if (!entry.file || !own.isNoteName(entry.name) || walked?.has(entry.name)) return;
   try {
     if (disk.stat(abs).size > own.maxFileSize) entry.big = true;
   } catch {}

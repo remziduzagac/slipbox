@@ -55,10 +55,14 @@ export interface WalkAnswer {
   index?: { text: string | null; stamp: string };
 }
 
-/** A folder listed: for the explorer (`walk`, `hidden`; a folder of the vault open's own tree with its walk's filter,
- *  `own`: SD-T7), or for the watcher, judged (`judge`: SD-T3). */
+/** A folder of the vault open's own tree listed for the explorer (SD-T7): by its walk's filter, and the names of the
+ *  notes its walk gave in it (`walked`), whose size isn't looked at. */
+export type OwnList = JudgeBy & { walked?: string[] };
+
+/** A folder listed: for the explorer (`walk`, `hidden`; a folder of the vault open's own tree, `own`), or for the
+ *  watcher, judged (`judge`: SD-T3). */
 export type ListAsk =
-  | { dir: string; walk: Config["walk"]; hidden: boolean; own?: JudgeBy }
+  | { dir: string; walk: Config["walk"]; hidden: boolean; own?: OwnList }
   | { dir: string; judge: ListJudge };
 
 /** Paths statted: links followed, or their own (`own`); for the watcher's settle, each judged too (`judge`). */
@@ -159,7 +163,10 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
     case "list":
       if ("judge" in req) return { listing: judgeListing(req.dir, req.judge.how, judgeContextFor(req.judge)) };
       // The vault's own folder: judged by the filter the watcher's reads are, made once on this thread and kept.
-      return { listing: listFolder(req.dir, req.walk, req.hidden, req.own && judgeContextFor(req.own).filter) };
+      if (!req.own) return { listing: listFolder(req.dir, req.walk, req.hidden) };
+      return {
+        listing: listFolder(req.dir, req.walk, req.hidden, judgeContextFor(req.own).filter, new Set(req.own.walked)),
+      };
     case "stat":
       return statsOf(req);
     case "read":

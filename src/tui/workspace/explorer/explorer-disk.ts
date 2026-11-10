@@ -76,12 +76,13 @@ export function fromDisk(
     if (listing?.error && !listing.error.includes(" ")) continue;
     if (!listing || listing.error !== null) {
       // Not listed yet — said once it's taken a moment — or its thread gave no answer, in its words: its walked folders
-      // unfolded are asked for all the same, their rows the walk's meanwhile.
+      // unfolded are asked for all the same, for their rows' marks alone, their rows the walk's meanwhile — which of
+      // them is a link the walk followed (VV-D6), whose own entries are never the vault's, is this listing's to say.
       if (listing?.error) out.failed.set(dir, listing.error);
       else if (listings.pending(abs, true)) out.pending.push(dir);
       for (const d of walked.dirs)
         if (expanded.has(d) && posix.dirname(d) === (dir || ".") && !posix.basename(d).startsWith("."))
-          queue.push({ dir: d, finds });
+          queue.push({ dir: d, finds: false });
       continue;
     }
     for (const e of listing.entries) {
