@@ -1,9 +1,14 @@
 // The one seam the reads of the disk go through (SD-D10): a folder's listing, a path's stat and lstat (its real path
 // too, and whether anything is there), a file's bytes. Each is node:fs's own call, made on whichever thread asks — the
 // screen's, the walk's, a listing's — and the CLI's, which calls these directly. What it adds is for the tests alone: a
-// terminal test's slow disk (`SLIPBOX_SLOW_DISK`, `slowDisk`) and a unit test's hold (`setFolderReader`,
-// `setReadWait`: tests/fixtures/walk/slow.ts), each reaching every read made through it on a thread that takes it. The
-// screen's thread takes neither until a test asks: its reads go as they did until the task that moves each (SD-T1).
+// terminal test's slow disk (`SLIPBOX_SLOW_DISK`, `slowDisk`) and a unit test's hold (tests/fixtures/walk/slow.ts).
+//
+// Two listings, apart (SD-T1). The walk's (`readFolder`: a walk, the explorer's listing threads, the filter) takes the
+// stand-in on every thread, the screen's too, as since T12, so a walk put back on the screen's thread is slowed there
+// and T12's checks see it; a test holds it with `setFolderReader`. The rest (`entries`: the watcher's listings, the
+// explorer's tree; and every stat and read here) takes the stand-in on every thread but the screen's, and a test's hold
+// on the thread that asks (`setReadWait`): on the screen's thread those go at once, as they did, until the task that
+// moves each off it.
 
 import {
   closeSync,
@@ -32,9 +37,10 @@ export interface SlowDisk {
 
 /**
  * A slow disk, for the terminal tests (T12; `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a
- * folder of that name takes so long to list, on a thread that takes it (`stood`) — the disk a check can't mount. Given
- * a fourth part, each stat and read of a path with that folder on its way takes so long too; none when it's left out
- * (`<name>:<ms>::<stat ms>` gives one without a deadline). Its deadline is walk-thread.ts's.
+ * folder of that name takes so long to list (the walk's listing on every thread, `entries` on every thread but the
+ * screen's) — the disk a check can't mount. Given a fourth part, each stat and read of a path with that folder on its
+ * way takes so long too, on every thread but the screen's; none when it's left out (`<name>:<ms>::<stat ms>` gives one
+ * without a deadline). Its deadline is walk-thread.ts's.
  */
 export function slowDisk(env = process.env): SlowDisk | null {
   const [name, ms, deadline, stat] = (env.SLIPBOX_SLOW_DISK ?? "").split(":");
@@ -47,21 +53,26 @@ export function slowDisk(env = process.env): SlowDisk | null {
   };
 }
 
-/**
- * The slow disk this thread stands in for, read once as it starts: every thread but the screen's takes it — the walk's,
- * the listing threads', the others a vault is read on — as each did before the seam; the screen's takes none, so its
- * reads, listings too, go at once until the task that moves each off it (SD-T1). A test sets its own (`setSlowDisk`).
- */
-let stood: SlowDisk | null = isMainThread ? null : slowDisk();
+/** The slow disk this process was given, read once as each thread starts. */
+const given = slowDisk();
 
-/** This thread's slow disk, a test's (or none, null), in place of what it took as it started. */
-export function setSlowDisk(slow: SlowDisk | null): void {
-  stood = slow;
+/** The slow disk the walk's listing stands in for on this thread: on every thread, the screen's too (`readFolder`). */
+let walkSlow: SlowDisk | null = given;
+
+/** The slow disk the rest of the seam stands in for on this thread (`entries`, each stat and read): on every thread but
+ *  the screen's, whose reads go at once until the task that moves each off it. */
+let stood: SlowDisk | null = isMainThread ? null : given;
+
+/** This thread's slow disk, a test's (none: null): `seam` for `entries` and each stat and read, `walk` for the walk's
+ *  listing — the same unless given. */
+export function setSlowDisk(seam: SlowDisk | null, walk: SlowDisk | null = seam): void {
+  stood = seam;
+  walkSlow = walk;
 }
 
-/** The slow disk this thread stands in for: what it took as it started (`stood`), or a test's since. */
-export function slowDiskHere(): SlowDisk | null {
-  return stood;
+/** The slow disks this thread stands in for: the walk's listing's, and the rest of the seam's. */
+export function slowDiskHere(): { walk: SlowDisk | null; seam: SlowDisk | null } {
+  return { walk: walkSlow, seam: stood };
 }
 
 /** Whether a folder named `name` is on the way to `path`, or is `path` itself. */
@@ -69,38 +80,51 @@ export function onTheWay(path: string, name: string): boolean {
   return path.split(/[\\/]/).includes(name);
 }
 
-const readdirTyped = (abs: string): Dirent[] => {
-  if (stood && basename(abs) === stood.name) Bun.sleepSync(stood.ms);
+const walkListing = (abs: string): Dirent[] => {
+  if (walkSlow && basename(abs) === walkSlow.name) Bun.sleepSync(walkSlow.ms);
   return readdirSync(abs, { withFileTypes: true });
 };
 
-/** How a folder is listed: `readdirSync` (a terminal test's slow disk held up, on a thread that took it: `stood`),
- *  unless a test holds it up itself (`setFolderReader`, on its own thread). */
-export let folderReader = readdirTyped;
+/** How the walk lists a folder: `readdirSync`, a terminal test's slow disk held up on every thread (`walkSlow`), unless
+ *  a test holds it up itself (`setFolderReader`). */
+export let folderReader = walkListing;
 
-/** A folder's entries, typed: as the walk reads them, the explorer's listings and the watcher's too. */
+/** A folder's entries, typed, as the walk reads them (a walk's listings, the explorer's listing threads', the filter's):
+ *  the stand-in on every thread, the screen's too, as since T12. */
 export function readFolder(abs: string): Dirent[] {
   return folderReader(abs);
 }
 
-/** A test's folder reader (T12: one held up on purpose, as a slow disk is); null, `readdirSync` again. */
+/** A test's folder reader for the walk (T12: one held up on purpose, as a slow disk is); null, `readdirSync` again. */
 export function setFolderReader(read: ((abs: string) => Dirent[]) | null): void {
-  folderReader = read ?? readdirTyped;
+  folderReader = read ?? walkListing;
 }
 
-/** Before a stat or a read of `path`: a terminal test's slow disk, on a thread that took it and given a fourth part,
- *  taking its time. */
-const slowReads = (path: string): void => {
-  if (stood?.stat && onTheWay(path, stood.name)) Bun.sleepSync(stood.stat);
-};
+/** A test's wait before each of the rest of the seam's reads on this thread (a hold); none, the slow disk's. */
+let held: ((path: string) => void) | null = null;
 
-/** What each stat and read through the seam does first: `slowReads`, unless a test holds them up (`setReadWait`). */
-let readWait = slowReads;
+/** Before a stat or a read of `path`: a test's hold, else a terminal test's slow disk, given a fourth part, on a thread
+ *  that took it. */
+function readWait(path: string): void {
+  if (held) held(path);
+  else if (stood?.stat && onTheWay(path, stood.name)) Bun.sleepSync(stood.stat);
+}
 
-/** A test's wait before each stat and read through the seam on this thread (a hold, as `setFolderReader`'s on a
- *  listing); null, the slow disk's again. */
+/** A test's wait before `entries` and each stat and read through the seam on this thread (a hold, as
+ *  `setFolderReader`'s on the walk's listing); null, the slow disk's again. */
 export function setReadWait(wait: ((path: string) => void) | null): void {
-  readWait = wait ?? slowReads;
+  held = wait;
+}
+
+/**
+ * A folder's entries, typed, read for what isn't a walk — the watcher's listings, the explorer's tree (SD-T1 moved them
+ * here): a test's hold on this thread (`setReadWait`), else a terminal test's slow disk on a thread that took it; on
+ * the screen's thread at once, as before, until the tasks that move them (SD-T3, SD-T7).
+ */
+export function entries(abs: string): Dirent[] {
+  if (held) held(abs);
+  else if (stood && basename(abs) === stood.name) Bun.sleepSync(stood.ms);
+  return readdirSync(abs, { withFileTypes: true });
 }
 
 /** `path`'s stat, its links followed: `statSync`'s, thrown as it throws. */

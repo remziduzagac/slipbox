@@ -199,7 +199,7 @@ export class VaultWatcher {
     for (const dirRel of this.state.polled) {
       let entries: Dirent[] = [];
       try {
-        entries = disk.readFolder(join(root, dirRel));
+        entries = disk.entries(join(root, dirRel));
       } catch {
         this.state.polled.delete(dirRel);
         continue;
@@ -260,7 +260,7 @@ export class VaultWatcher {
     for (const [d, mtime] of moved) {
       let entries: Dirent[];
       try {
-        entries = disk.readFolder(join(root, d));
+        entries = disk.entries(join(root, d));
       } catch {
         continue; // gone since: the next tick reports it
       }

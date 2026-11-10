@@ -45,7 +45,7 @@ export class WatchDirectories {
       this.watchDir(d);
       let entries: Dirent[] = [];
       try {
-        entries = disk.readFolder(join(this.opts.root, d));
+        entries = disk.entries(join(this.opts.root, d));
       } catch {
         return;
       }

@@ -85,13 +85,17 @@ how.
   and its `promises`, exported again, `require` or `import()`, awaited or not), streamed, polled or globbed, and a file
   of Bun's (`Bun.file`); a comment naming one is none.
 - A stat or a read is slowed, and held, when a folder of the name is anywhere on the path's way, the path itself
-  included; a listing as before, by the folder's own name. The stand-in is taken once, as a thread starts, by every
-  thread but the screen's (the walk's, the listings', the others a vault is read on, as each was before); the screen's
-  takes none, so the watcher's and the explorer's listings moved to the seam go at once there, as they did. A test
-  sets a thread's own (`setSlowDisk`) and records what it sleeps rather than timing it. A test's wait for a stat or a
-  read (`setReadWait`) is apart from its folder reader (`setFolderReader`), each set on the thread that asks:
-  `slow-worker.ts` holds listings from its start, and a stat or a read only once its test asks (`holdReads`), so a
-  walk's own reads (a `.gitignore`'s) and the walk's tests' counts go as they did.
+  included; a listing as before, by the folder's own name. Each thread reads the stand-in once, as it starts.
+- Two listings, apart, settled by the maintainer's standing instruction to take the recommended option (SD-D10's
+  note). A walk's listing (`readFolder`, `setFolderReader`: a walk, the explorer's listing threads, the filter) takes
+  the stand-in on every thread, the screen's too, as since T12, so a walk put back on the screen's thread is slowed
+  there and T12's checks see it; a test's process shows a walk slowed on its main thread as on a worker. The listings
+  this task moves to the seam (`entries`: the watcher's, the explorer's tree) and every stat and read take it on every
+  thread but the screen's, so they go at once there, as they did, until SD-T3 and SD-T7 move them. A test sets a
+  thread's own (`setSlowDisk`, the seam's and the walk's) and records what it sleeps rather than timing it. A test's
+  wait for `entries`, a stat or a read (`setReadWait`) is apart from a walk's folder reader (`setFolderReader`), each
+  set on the thread that asks: `slow-worker.ts` holds listings from its start, and the rest only once its test asks
+  (`holdReads`), so a walk's own reads (a `.gitignore`'s) and the walk's tests' counts go as they did.
 - Measured: `bun scripts/bench.ts` before and after moved both ways on a shared machine (the CLI's `find` 158 and
   310 ms); run again, the base and the change alternated three times, the CLI's cases within the same spread (`find`
   153–192 ms on the base, 149–170 on the change; `read`, 139–149 and 147–191; a task toggled, 187–211 and 176–263;

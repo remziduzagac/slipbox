@@ -1,10 +1,20 @@
 // The seam every read the slow-disk workstream moves goes through (SD-D10, SD-T1): a stat and a read of a file under a
 // `held` folder wait until the hold is let go, on a thread whose test asks — one of the test's, and here — and answer
 // what node:fs and `readText` answer; under any other folder, at once. The slow disk stood in for (`SLIPBOX_SLOW_DISK`)
-// is taken by every thread but the screen's, and slows a stat or a read by its fourth part alone. What waits is told by
-// the hold, and what sleeps by the sleep recorded, never by a clock (#75).
+// slows the walk's listing on every thread, the screen's too, and the rest of the seam on every thread but the
+// screen's, a stat or a read by its fourth part alone. What waits is told by the hold, and what sleeps by the sleep
+// recorded, never by a clock (#75).
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import * as disk from "../../../../src/core/foundation/platform/disk.ts";
 import { type DecodedFile, readText, stamp } from "../../../../src/core/foundation/platform/fsutil.ts";
@@ -128,6 +138,8 @@ describe("the seam every read goes through (SD-D10)", () => {
       ["readRegular", (p) => disk.readRegular(p), (p) => readFileSync(p)],
       ["stamp", (p) => stamp(p), (p) => ({ mtimeMs: statSync(p).mtimeMs, size: statSync(p).size })],
       ["readText", (p) => readText(p), (p) => readText(p)],
+      // The listing moved here that isn't a walk's (the watcher's, the explorer's tree): its folder's.
+      ["entries", (p) => disk.entries(dirname(p)).map((e) => e.name), (p) => readdirSync(dirname(p))],
     ];
     for (const [name, seam, fs] of reads) {
       // Elsewhere: at once, the hold still on.
@@ -145,7 +157,7 @@ describe("the seam every read goes through (SD-D10)", () => {
     }
   });
 
-  test("SLIPBOX_SLOW_DISK: taken as a thread starts by every thread but the screen's; a fourth part slows each stat and read under the folder, none without it", () => {
+  test("SLIPBOX_SLOW_DISK: the walk's listing slowed on every thread, the screen's too; the rest on every thread but the screen's; a fourth part slows each stat and read under the folder", () => {
     expect(disk.slowDisk({ SLIPBOX_SLOW_DISK: "slowdisk:2500" })).toEqual({ name: "slowdisk", ms: 2500 });
     expect(disk.slowDisk({ SLIPBOX_SLOW_DISK: "slowdisk:8000:1500" })).toEqual({
       name: "slowdisk",
@@ -168,16 +180,23 @@ describe("the seam every read goes through (SD-D10)", () => {
     expect(disk.onTheWay("/v/held", "held")).toBe(true);
     expect(disk.onTheWay("/v/helden/a.md", "held")).toBe(false);
 
-    // Taken where a thread starts, but on the screen's: a process given one, its main thread and a worker of its.
-    const given = Bun.spawnSync([process.execPath, SLOW_HERE], {
-      env: { ...process.env, SLIPBOX_SLOW_DISK: "held:2500::300" },
-    });
-    expect(JSON.parse(given.stdout.toString())).toEqual({ main: null, worker: { name: "held", ms: 2500, stat: 300 } });
-    expect(disk.slowDiskHere()).toBeNull();
-
-    // What a thread that took one sleeps, each sleep recorded rather than taken.
     const { held: file, free } = tree();
     const [heldDir, freeDir] = [dirname(file), dirname(free)];
+
+    // A process given one: a walk's listing slowed on its main thread as on a worker (T12's checks see a walk put back
+    // on the screen's thread); the watcher's listing and a stat on the worker alone, and there the walk's look for the
+    // folder's `.gitignore` too (a read through the seam: the fourth part).
+    const given = Bun.spawnSync([process.execPath, SLOW_HERE, dirname(heldDir)], {
+      env: { ...process.env, SLIPBOX_SLOW_DISK: "held:2500::300" },
+    });
+    expect(given.stderr.toString()).toBe("");
+    expect(JSON.parse(given.stdout.toString())).toEqual({
+      main: { walk: [2500], watcher: [], stat: [] },
+      worker: { walk: [2500, 300], watcher: [2500], stat: [300] },
+    });
+    expect(disk.slowDiskHere()).toEqual({ walk: null, seam: null });
+
+    // What a thread that took one sleeps, each sleep recorded rather than taken.
     const naps = spyOn(Bun, "sleepSync").mockImplementation(() => {});
     const reads = () => {
       for (const path of [file, free]) {
@@ -185,7 +204,10 @@ describe("the seam every read goes through (SD-D10)", () => {
         readText(path);
         disk.exists(path);
       }
-      for (const dir of [heldDir, freeDir]) disk.readFolder(dir);
+      for (const dir of [heldDir, freeDir]) {
+        disk.entries(dir);
+        disk.readFolder(dir);
+      }
     };
     const slept = () => {
       const calls = naps.mock.calls.map(([ms]) => ms);
@@ -193,18 +215,23 @@ describe("the seam every read goes through (SD-D10)", () => {
       return calls;
     };
     try {
-      // None, as the screen's thread starts: nothing sleeps.
+      // None given: nothing sleeps.
       reads();
       expect(slept()).toEqual([]);
-      // No fourth part: the folder's listing alone, a stat and a read under it at once.
-      disk.setSlowDisk({ name: "held", ms: 2500 });
+      // The screen's thread given one: the walk's listing of the folder alone.
+      const slow = { name: "held", ms: 2500, stat: 300 };
+      disk.setSlowDisk(null, slow);
       reads();
       expect(slept()).toEqual([2500]);
-      // A fourth part: each stat and read under the folder takes it too; elsewhere, none.
-      disk.setSlowDisk({ name: "held", ms: 2500, stat: 300 });
-      expect(disk.slowDiskHere()).toEqual({ name: "held", ms: 2500, stat: 300 });
+      // Another thread's, no fourth part: the folder's listings, a stat and a read under it at once.
+      disk.setSlowDisk({ name: "held", ms: 2500 });
       reads();
-      expect(slept()).toEqual([300, 300, 300, 2500]);
+      expect(slept()).toEqual([2500, 2500]);
+      // A fourth part: each stat and read under the folder takes it too; elsewhere, none.
+      disk.setSlowDisk(slow);
+      expect(disk.slowDiskHere()).toEqual({ walk: slow, seam: slow });
+      reads();
+      expect(slept()).toEqual([300, 300, 300, 2500, 2500]);
     } finally {
       naps.mockRestore();
     }

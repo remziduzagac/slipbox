@@ -54,7 +54,7 @@ export function fromDisk(
   for (let dir = queue.shift(); dir !== undefined; dir = queue.shift()) {
     let entries: Dirent[];
     try {
-      entries = disk.readFolder(join(app.loc.root, dir));
+      entries = disk.entries(join(app.loc.root, dir));
     } catch {
       continue; // gone, or not yours to read: its row says so
     }

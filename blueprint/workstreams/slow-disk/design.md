@@ -31,9 +31,11 @@ other is left for the rest. They answer, with what the asking thread knows and t
 
 Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
 `lstat` (its real path, whether anything is there), a file's bytes. The CLI reads through it too, on its own thread.
-The slow disk stood in for, and a test's hold, reach a read through it on a thread that takes them: the stand-in every
-thread but the screen's, as it starts; the hold the threads a test asks it of (SD-T1). The screen's thread reads at
-once until a task moves its reads, and that task's held test takes the hold there for them.
+It keeps two listings apart (SD-T1). The walk's (`readFolder`: a walk, the explorer's listing threads, the filter)
+takes the slow disk stood in for on every thread, the screen's too, as since T12, so a walk put back on the screen's
+thread is slowed there and T12's checks see it. The rest (`entries`: the watcher's listings, the explorer's tree; and
+every stat and read) takes it on every thread but the screen's, and a test's hold on the threads it asks: the screen's
+thread reads those at once until a task moves them, and that task's held test takes the hold there for them.
 
 **Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
 thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
@@ -201,18 +203,20 @@ In "A slow disk, stood in for" (built by SD-T1, but the disk threads, SD-T2's):
   "`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`".
 - "makes a folder of that name take so long to list, on whichever thread lists it (`slowDisk` in
   `core/workspace/walk/walk.ts`), and shortens the walk's and the listings' threads' deadlines to the third" becomes
-  "makes a folder of that name take so long to list, on every thread but the main one, each taking it once as it
-  starts (`slowDisk`, in the seam every read goes through: `core/foundation/platform/disk.ts`), and shortens the
-  walk's and the disk threads' deadlines to the third; a fourth part, when given, makes each stat and read of a path
-  with that folder on its way take so long too (`<name>:<ms>::<stat ms>` gives one without a deadline). The main
-  thread takes none: its reads go as they did until the tasks move them, and the held tests watch it (below)".
+  "makes a folder of that name take so long to list (`slowDisk`, in the seam every read goes through:
+  `core/foundation/platform/disk.ts`, each thread taking it once as it starts) — a walk's listing on whichever thread
+  lists it, the main one too, so a walk put back there is slowed; the seam's other listing (`entries`: the watcher's,
+  the explorer's tree) on every thread but the main one — and shortens the walk's and the disk threads' deadlines to
+  the third; a fourth part, when given, makes each stat and read of a path with that folder on its way take so long
+  too, on every thread but the main one (`<name>:<ms>::<stat ms>` gives one without a deadline). The main thread's
+  reads but a walk's go as they did until the tasks move them, and the held tests watch it (below)".
 - "the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of their own:
   `tests/fixtures/walk/`)" becomes "the unit tests hold a folder up on a thread that takes the hold, theirs or the
-  main thread (`setFolderReader` for its listing, `setReadWait` for a stat or a read through the seam of a path under
-  it, each set on the thread that asks; a worker of their own: `tests/fixtures/walk/`, which holds a stat or a read
-  only once its test asks); `setSlowDisk` sets a thread's slow disk, and a test sees what it sleeps by recording the
-  sleep, never by timing it"; and "(`Hold`, on every thread at once)" becomes "(`Hold`, a listing, a stat or a read
-  alike, on every thread that takes it at once)".
+  main thread (`setFolderReader` for a walk's listing, `setReadWait` for `entries` and a stat or a read through the
+  seam of a path under it, each set on the thread that asks; a worker of their own: `tests/fixtures/walk/`, which
+  holds a stat or a read only once its test asks); `setSlowDisk` sets a thread's slow disks, the seam's and the walk's,
+  and a test sees what it sleeps by recording the sleep, never by timing it"; and "(`Hold`, on every thread at once)"
+  becomes "(`Hold`, a listing, a stat or a read alike, on every thread that takes it at once)".
 - Added after that paragraph: "`check:boundary` keeps the files whose reads a slow disk would hold up to the seam
   (SD-D12): those that read through it alone (`SEAM_READERS`, `scripts/disk-inventory.ts`), and those still allowed
   to read the disk themselves, each with why (`DISK_READERS`). It fails on a file of the list that reads and isn't

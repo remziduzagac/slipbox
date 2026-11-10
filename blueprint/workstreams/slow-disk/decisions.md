@@ -236,11 +236,15 @@ shipped one.
 **Not chosen:** a FUSE mount in CI (a privilege the runners don't give, and none on macOS); timing the reads (#75);
 every test's App on threads.
 
-> **Note (2026-11-10), from SD-T1's review:** the stand-in and the hold reach a read on a thread that takes them, not
-> every thread. Every thread but the screen's takes the stand-in once, as it starts (a test sets a thread's own with
-> `setSlowDisk`); a test takes the hold on the threads it asks it of (`setFolderReader`, `setReadWait`), its walk's
-> worker holding a stat or a read only once asked. So the screen's thread reads as it did, listings too, until a task
-> moves its reads: that task's held test takes the hold there for the reads it moves, and the net grows task by task.
+> **Note (2026-11-10), from SD-T1's review, settled by the maintainer's standing instruction to take the recommended
+> option:** the seam keeps two listings apart. A walk's listing (`readFolder`: a walk, the explorer's listing threads,
+> the filter) takes the stand-in on every thread, the screen's too, as since T12: a walk put back on the screen's thread
+> is slowed there, and T12's checks see it. The rest — the listings SD-T1 moves to the seam (`entries`: the watcher's,
+> the explorer's tree) and every stat and read — take it on every thread but the screen's, each thread reading it once
+> as it starts (a test sets a thread's own with `setSlowDisk`). A test takes the hold on the threads it asks it of
+> (`setFolderReader` for a walk's listing, `setReadWait` for the rest), its walk's worker holding a stat or a read
+> only once asked. So the screen's thread reads those as it did until a task moves them: that task's held test takes
+> the hold there for the reads it moves, and the net grows task by task.
 
 ## SD-D11: A rename's build: on a disk thread, the keys after it waiting (2026-11-09)
 

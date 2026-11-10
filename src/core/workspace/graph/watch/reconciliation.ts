@@ -70,7 +70,7 @@ export class WatchReconciliation {
       }
       let entries: Dirent[] = [];
       try {
-        entries = disk.readFolder(join(root, d));
+        entries = disk.entries(join(root, d));
       } catch {}
       for (const e of entries) {
         if (!e.isFile()) continue;

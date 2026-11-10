@@ -143,11 +143,13 @@ export const SEAM_READERS = [
  * decision that keeps them. One that no longer imports a read fails the check until its entry goes.
  *
  * What the check doesn't see: it reads imports alone. A read through a helper (fsutil.ts's `readText`, `stamp`,
- * `readJson`) passes it, and so does a call to the seam made synchronously on the screen's thread. No test holds the
- * screen's thread's reads yet: the stand-in and the holds reach a thread that takes them (the walk's, the listings', a
- * test that asks: disk.ts), and the screen's takes none, so it reads as it did. Each later task's held test takes the
- * hold on the screen's thread for the reads that task moves: a read of them left there holds the test's key past the
- * hold's deadline, and the test sees `gaveUp`. The net grows task by task; the check keeps the list honest.
+ * `readJson`) passes it, and so does a call to the seam made synchronously on the screen's thread. The seam keeps two
+ * listings apart (disk.ts): the walk's (`readFolder`), which the stand-in slows on every thread, the screen's too, so
+ * T12's checks see a walk put back there; and the rest (`entries`, each stat and read), which it slows on every thread
+ * but the screen's, and a test holds on the thread it asks — so the screen's thread reads those as it did. No held test
+ * takes the hold there yet: each later task's held test takes it on the screen's thread for the reads that task moves,
+ * and a read of them left there holds the test's key past the hold's deadline (`gaveUp`). The net grows task by task;
+ * the check keeps the list honest.
  */
 export const DISK_READERS: Record<string, string> = {
   "src/core/application/distribution/install.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
