@@ -152,8 +152,8 @@ What you see while it waits:
 - `listing…` under a folder in the explorer, while it's listed. Zooming into a folder waits for it as opening a note
   does ([The zoom](files.md#the-zoom)).
 - `reading the vault…` in Background work while the TUI reads the whole vault again, and on the status line while your
-  keys wait for that: when slipbox has just started, in a vault you've just gone into, after a rename or a folder moved
-  ([The index](#the-index)).
+  keys wait for that: when slipbox has just started, in a vault you've just gone into, and after a rename or a folder
+  moved ([The index](#the-index)).
 - `reading notes…` on the status line, while the list of tags, a note's backlinks or a rename's preview waits for every
   note to be read. Until then, the Problems panel's and Info's counts are of the notes read so far, marked `…`.
 - A picture's `▣` line, an embedded note's link and a link drawn as found, until their files are read. The note is
@@ -162,15 +162,15 @@ What you see while it waits:
   as slipbox looked for changes ([When a file changes on disk](editing.md#when-a-file-changes-on-disk)), read a note
   changed outside it, or checked your config, git and the files you have open ([Reloading](configuration.md#reloading)).
 
-Nothing is read while you wait instead. A read that doesn't answer in time is given up, and slipbox says so: a note you
-opened, or a folder you zoomed into, after a minute, and you try again when you like; a look for changes after a
-minute, and a folder listed or the whole vault after ten, each asked again a minute later.
+When the disk doesn't answer, slipbox never stops the screen to read it there instead. It gives the read up and says
+so: a note you opened, or a folder you zoomed into, after a minute, and you try again when you like; a look for changes
+after a minute, and a folder listed or the whole vault after ten, each tried again a minute later.
 
 Some things still wait for the disk, and the screen with them:
 
 - **Writing.** A save, a rename, a move, a copy, a delete, the scratch and an export are written as you make them, so
   the screen waits until each is written. That keeps what's written in order, against another program's change and
-  against quitting. Autosave waits too.
+  against quitting. An autosave holds it the same way.
 - **Starting.** slipbox reads your config and the folder you named before the screen comes up; in your home folder,
   whether your tabs' notes are still there too.
 - **Watching.** slipbox asks the system to watch each folder of the vault, and on a mount that has stopped answering,
