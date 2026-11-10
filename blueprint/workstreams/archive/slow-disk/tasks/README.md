@@ -24,4 +24,4 @@ first (SD-D14).
 - [SD-T10](archive/start.md): the start takes the screen first, then reads the vault. Done.
 - [SD-T11](archive/drawing.md): what drawing reads — a note's links and pictures, the scratch's places — and the
   Problems panel's notes. Done.
-- [SD-T12](docs.md): the user docs, the design consolidated, the workstream closed.
+- [SD-T12](archive/docs.md): the user docs, the design consolidated, the workstream closed. Done.
