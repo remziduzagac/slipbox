@@ -95,6 +95,9 @@ accepted deviation until then, with a review date.
 
 ## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
 
+> **Amended by D276 (2026-11-10):** each `test` job reports its tests' times, the slowest in its step summary, uploads
+> the report, and fails on a test file over its budget.
+
 > **Amended by D275 (2026-11-10):** Linux's tests run in three parts by test file, and its terminal checks in three
 > parts by check file on each runner, a runner each; macOS's jobs stay whole; `ci` fails when any part does.
 

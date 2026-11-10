@@ -13,6 +13,8 @@ name: ci
 # them only when it changes what differs on macOS, or carries the `macos` label; every other run, whatever changed.
 # Linux's `test` and `terminal` each run in three parts, a runner each, by test file and by check file (D275,
 # scripts/ci-shard.ts); macOS's whole, as a part would only wait longer for the account's five macOS runners.
+# Each `test` job reports its tests' times, the slowest in its step summary, and fails on a test file over its budget
+# (D276, scripts/test-times.ts); it uploads them, which `SLOW_TESTS` is rewritten from by hand.
 # One job, `ci` (`full` by hand), is the required check: it always runs and fails unless every job it waits for passed
 # or was skipped. Each job calls package.json's scripts, never commands of its own.
 on:
@@ -151,12 +153,30 @@ jobs:
       - name: dependencies
         run: bun run check:deps
       # A pull request's or a push's: the tests its files reach (D239), a push's over the range `changes` worked out
-      # (CIW-D1); a run by hand's, every one. This part's of them (D275).
+      # (CIW-D1); a run by hand's, every one. This part's of them (D275). Their JUnit report in the runner's temporary
+      # folder, an empty one when none runs (D276).
       - name: tests
+        id: tests
         env:
           SCOPE_RANGE: ${{ needs.changes.outputs.range }}
           SCOPE_SHARD: ${{ matrix.shard }}
+          SCOPE_REPORT: ${{ runner.temp }}/test-times.xml
         run: bun run test:changed
+      # D276: once the tests ran, passed or failed, their times: the slowest files and tests, here and in the step
+      # summary; a test file over its budget fails the job (scripts/test-times.ts).
+      - name: test times
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        run: bun run test:times "$RUNNER_TEMP/test-times.xml"
+      # The report, for `bun scripts/test-times.ts slow <run>`, which weighs the parts by it: `test-times-Linux-0` to
+      # `-2` the parts 1/3 to 3/3, `test-times-macOS-0` macOS's whole.
+      - name: upload test times
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-times-${{ runner.os }}-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/test-times.xml
+          if-no-files-found: warn
+          retention-days: 30
 
   # D273: `test` on macOS (arm64, its SQLite Apple's: 14.13), once it passed on Linux: a change that fails there holds
   # none of the five macOS runners the account has at once. A pull request runs it only when `changes` says `macos`;
@@ -187,9 +207,22 @@ jobs:
       - name: dependencies
         run: bun run check:deps
       - name: tests
+        id: tests
         env:
           SCOPE_RANGE: ${{ needs.changes.outputs.range }}
+          SCOPE_REPORT: ${{ runner.temp }}/test-times.xml
         run: bun run test:changed
+      - name: test times
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        run: bun run test:times "$RUNNER_TEMP/test-times.xml"
+      - name: upload test times
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-times-${{ runner.os }}-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/test-times.xml
+          if-no-files-found: warn
+          retention-days: 30
 
   # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
   # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log. On Linux,

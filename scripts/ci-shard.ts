@@ -49,12 +49,17 @@ export function split<T>(items: readonly T[], count: number, key: (t: T) => stri
   return parts.map((p) => p.sort(order));
 }
 
+/** The seconds on a runner from which a test file weighs its own in the split, not one: `SLOW_TESTS`. */
+export const SLOW = 8;
+
 /**
- * The test files that took eight seconds or more on a GitHub Linux runner (`ubuntu-24.04`), by their seconds there: a
- * pull request's run and a push's, 2026-11-10 (runs 42726853524 and 42762627359), the longer of the two. Any other file
- * counts one second (the rest took 0.7 on average). A test holds each to a file there is: one moved is renamed here.
+ * The test files that took SLOW seconds or more on a GitHub Linux runner (`ubuntu-24.04`), by their seconds there, in
+ * the runs the line below names, each file's longest. Any other file counts one second (the rest took 0.7 on average).
+ * Written by `bun scripts/test-times.ts slow <run>…` from those runs' reports (CIW-T9, D276), by hand, so a tree's
+ * parts are the same in every run of it. A test holds each to a file there is: one moved is renamed here.
  */
 export const SLOW_TESTS: Record<string, number> = {
+  // runs 42726853524, 42762627359 (2026-11-10), each file's longest, from the job logs before the reports
   "tests/tui/workspace/explorer/walk-thread.test.ts": 31,
   "tests/distribution/release.test.ts": 26,
   "tests/cli/agents/skill.test.ts": 24,

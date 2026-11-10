@@ -592,3 +592,14 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   split evenly (five areas, one two fifths of the time), so they're split by check file, the area's own files; and the
   parts are weighed by the slowest test files' recorded seconds, which by count alone landed together. Three parts, as
   two would have left the tests five to six minutes. Recorded as D275 (CIW-T5).
+
+## The slowest tests kept in check (2026-11-10)
+
+- Issue #65's item 6 asked for each test's time in CI, the slowest listed, and a budget for a test file's time, so one
+  slow test is seen when it lands; and D275 left `SLOW_TESTS` kept by hand, a file grown slow unseen.
+- Bun 1.4.2's JUnit reporter has each file's time, from its loading to its last hook, and each test's. The job logs of
+  2026-11-09 and 2026-11-10 gave the same, each file's time from the end of the file before it: on Linux five files
+  over 20 seconds at their longest, none over 33, the rest under 20; on macOS the same files from about Linux's time to
+  five times it, from one run to the next. So a file's budget is 30 seconds on Linux, its own for those five, and four
+  times that on macOS, each one and a half times the longest seen. `SLOW_TESTS` is rewritten from a run's reports by a
+  script, by hand, so the parts stay the tree's. Recorded as D276 (CIW-T9).

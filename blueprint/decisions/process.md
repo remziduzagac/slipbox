@@ -406,6 +406,10 @@ wait for Linux on a pull request only (ideas.md § Process).
 
 ## D275: Linux's tests and terminal checks in three parts each, by file (2026-11-10)
 
+> **Amended by D276 (2026-11-10):** `SLOW_TESTS` is rewritten from CI's own reports of each test's time, by
+> `bun scripts/test-times.ts slow <run>…`, by hand and committed; each `test` job reports its tests' times and
+> fails on a test file over its budget.
+
 **Decision:** Issue #65's item 1 (CIW-T5). CI's `test` job runs in three parts on `ubuntu-24.04`, and its `terminal`
 job in three parts on each of `ubuntu-24.04` and `ubuntu-24.04-arm`, each part on a runner of its own: the matrix's
 `shard`, `1/3` to `3/3`, which the job hands to `bun run test:changed` and `bun run test:terminal:changed` as
@@ -444,3 +448,52 @@ the next full run every test and check in its parts.
 **Not chosen:** two parts, whose tests would still take five to six minutes; parts by area; parts by count alone; parts
 weighed by the times of earlier runs, read as each run starts, which would change its parts from one run to the next;
 Bun's own `bun test --parallel` on one runner (ideas.md § Process).
+
+## D276: Each test's time reported in CI, and a test file's held to a budget (2026-11-10)
+
+**Decision:** Issue #65's item 6 (CIW-T9). Each `test` job, each Linux part and macOS's, has `bun test` write its
+JUnit report (`--reporter=junit`, which `ci:scope` adds when `SCOPE_REPORT` names a file in the runner's temporary
+folder; for a part with nothing to run, an empty report). Once the tests ran, passed or failed, `bun run test:times`
+reads it: the ten slowest test files and the ten slowest tests, in the job's log and its step summary, and a failure
+for each test file over its budget, which names the file, its time and the budget. The job uploads the report as
+`test-times-<system>-<part>` (`Linux-0` to `Linux-2`, the parts 1/3 to 3/3; `macOS-0`), kept 30 days, with no
+permission added and no secret. A test file's budget (`scripts/test-times.ts`) is `BUDGET`, 30 seconds on a Linux
+runner, as long as one test may take; or, for a file known to be slow, its own in `BUDGETS`, with why, as
+`check:size` caps a file past its limit: such a file doesn't fail, and can't grow past its own unseen. Five files have
+one, 45 or 50 seconds. On macOS every budget is four times Linux's (`MACOS_FACTOR`). Each budget is at least one and
+a half times (`MARGIN`) the longest its file took, on each system, in the runs it was chosen from. The log says a file
+within its budget but not by that margin and, on Linux, a file with a budget of its own that took BUDGET over the
+margin or less (its entry may go); neither fails. A report missing, or a file that isn't one, fails the step.
+`SLOW_TESTS`, which weighs the Linux parts (D275), is rewritten from runs' reports by `bun scripts/test-times.ts slow
+<run>…`: each file's longest over the runs' Linux reports, eight seconds or more, a file the runs didn't measure kept
+as it was. It's run by hand and committed, so a tree's parts stay the same from one run of it to the next. Amends
+D275 and GR-D9. Detail: design/testing.md § Timeout policy, design/repository.md § CI, `MAINTAINING.md` § Merging a
+change.
+
+**Why:** Issue #65: nothing showed which tests a run's time went on, and a file grown slow wasn't seen (D275 kept
+`SLOW_TESTS` by hand). The budget was chosen from the job logs of 2026-11-09 and 2026-11-10, each test's time and each
+file's (62 runs; 63 Linux test jobs or parts and 41 macOS jobs that passed). On Linux, of 545 test files, five took
+more than 20 seconds at their longest (28.5 to 32.8), the next 19.9, and 527 less than eight: 30 seconds is one and a
+half times the longest of every file without a budget of its own, and a slow test added to almost any file shows.
+Linux's times moved little from run to run, the slowest file's from 25 to 33 seconds. A run of every test took from
+about Linux's time to over twice it on macOS, and a file's time there moved far more: the samples' from 15 to 121
+seconds, the header's from 6 to 36, the branches' panel's from 8.5 to 33, up to five times its longest on Linux. Four
+times Linux's keeps each budget there one and a half times the longest, the samples' included (200 seconds); a closer
+factor would fail runs no change made slower. A run's report is the data, so `SLOW_TESTS` is rewritten from it rather
+than by reading logs.
+
+**Cost:** A job has one more way to fail. A runner slower than any in the runs recorded could fail a file within its
+margin; a file over is made faster, split, or given a budget of its own, with why, in the same pull request. On macOS
+the budget is loose, two minutes for most files: it holds a file gone far slower there, and Linux holds the rest. Each
+test job takes a few seconds more, for the report, its summary and its upload. `SLOW_TESTS` is still rewritten by
+hand: a stale list only evens the parts less. A test file that fails to load is missing from Bun's report, but the run
+fails anyway.
+
+**Verify:** this change's own run, which runs every test: each `test` job's step summary lists its slowest files and
+tests, its `test-times-*` artifact holds the report, and no file is over its budget.
+
+**Not chosen:** a budget per test, which the 30-second timeout is already; each file's budget from its own recorded
+time with a margin, which every file's time moving would rewrite; Bun's `--timings` (per-file times that balance `bun
+test --shard`), as the parts are a change's own files, split by `scripts/ci-shard.ts`; the times read from earlier runs
+as a run starts, which would change a tree's parts from one run to the next (D275); `SLOW_TESTS` rewritten by the weekly
+health job, which would need a token that writes; a budget on Linux alone (ideas.md § Process).
