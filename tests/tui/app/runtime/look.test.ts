@@ -7,7 +7,7 @@
 // here, whoever's, isn't what it's about. Nor is anything a test awaits counted against a clock of its own — a thread
 // waiting in `held`, the look answered, what git or the feed leaves: a thread's start, slow on a busy machine, is never
 // taken for an answer that didn't come. A wait that never ends is the test's timeout, which says what it waited for.
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
@@ -27,6 +27,7 @@ import { linkKey } from "../../../../src/core/workspace/vaults/symlinks.ts";
 import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { diskThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { LOOK_AGAIN_MS, type Look } from "../../../../src/tui/app/runtime/look.ts";
+import { Session } from "../../../../src/tui/workspace/session/session.ts";
 import { Hold, heldReads } from "../../../fixtures/walk/slow.ts";
 import { answerSwitch, type Harness, harness, makeSandbox, statusRow, whereNow } from "../../../tui-harness.ts";
 
@@ -39,7 +40,19 @@ let stateWas: { value: string | undefined } | null = null;
 /** What the test awaits now (`until`): the test ended first, said, and the wait let go of. */
 let awaiting: { what: string; over: boolean } | null = null;
 
+/** The session's save a second after what's open changes (`publishState`), off for these tests: it reads slipbox's
+ *  state folder here (SD-D7: a write and the read it merges with stay on this thread), and with that folder under
+ *  `held`, a save coming due while a test holds it — a busy machine's second — holds this thread twice over and gives
+ *  up, a read no look made. What a look reads is these tests' business; the session's save is `own-folders.test.ts`'s. */
+let saves: Mock<() => void> | null = null;
+
+beforeEach(() => {
+  saves = spyOn(Session.prototype, "publishState").mockImplementation(() => {});
+});
+
 afterEach(() => {
+  saves?.mockRestore();
+  saves = null;
   setReadWait(null);
   const gaveUp = hold && { gaveUp: hold.gaveUp, here: hold.gaveUpHere };
   hold?.release();
@@ -209,6 +222,8 @@ async function scratchOpen(opts: Parameters<typeof harness>[0] = {}) {
   const scratch = openScratch(h);
   const buf = h.app.view!.buf;
   expect([buf.abs, buf.rel, buf.source]).toEqual([scratch, null, "# Scratch\n"]);
+  // The scratch opened changed what's open; no save of the session comes due under the hold.
+  expect(h.app.session.stateTimer).toBeNull();
   return { h, look, buf, scratch };
 }
 
