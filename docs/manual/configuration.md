@@ -55,6 +55,8 @@ images_remote = "ask"          # your file only. Pictures on the internet: ask (
 mermaid = "text"               # a Mermaid diagram: text (in the terminal's characters) | picture (where pictures
                                # are drawn)
 math = "text"                  # a display's maths: text (Unicode) | picture (typeset, where pictures are drawn)
+source_styles = true           # SOURCE view, the lens and a diff show bold, italic, links… as they read, the
+                               # markers kept in the markup colour; false, the light highlighting
 
 [walk]                         # which files a vault holds
 extensions = ["md", "markdown"] # a note's extensions; never empty
@@ -496,6 +498,7 @@ These are the roles of the screen most worth changing:
 | `diff_add`, `diff_del` | a diff's added and removed lines: the sign's colour, the row's tint (its `bg`) |
 | `diff_add_word`, `diff_del_word` | the words that changed in a changed line, on a stronger tint (its `bg`) |
 | `cell_line` | a code cell's lines, and the tree's between a class and its members |
+| `markup` | Markdown's markers in SOURCE view, the lens and a diff: `**`, `_`, `~~`, a link's brackets |
 | `lens` | the lens's rules and label |
 | `lens_band` | the lens's rows (its `bg`) |
 | `lens_edit`, `lens_band_edit` | the same while typing in it |
@@ -519,7 +522,7 @@ Every role, by what it colours:
   `code_block`, `code_label`, `code_gutter`, `link`, `link_unresolved`, `link_ambiguous`, `wikilink`, `embed`, `url`,
   `link_focus`, `quote`, `quote_bar`, `list_marker`, `check_done`, `check_todo`, `rule`, `table_border`,
   `table_header`, `fm_key`, `fm_value`, `fm_border`, `fm_error`, `callout_note`, `callout_tip`, `callout_important`,
-  `callout_warning`, `callout_caution`, `footnote`, `tag`, `html`, `image`, `math`.
+  `callout_warning`, `callout_caution`, `footnote`, `tag`, `html`, `image`, `math`, `markup`.
 - **Code's syntax:** `syn_keyword`, `syn_function`, `syn_string`, `syn_number`, `syn_comment`, `syn_type`,
   `syn_variable`, `syn_constant`, `syn_operator`, `syn_punctuation`, `syn_tag`, `syn_attr`, `syn_builtin`,
   `syn_meta`, `syn_regexp`, `syn_section`, `syn_addition`, `syn_deletion`.

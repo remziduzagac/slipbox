@@ -398,6 +398,10 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   (2026-10-14)
 - A keymap without modes, as ttt's default is VS Code's: typing types at once, no `i` first, and vim's keys are an
   option. The familiar keys are bound already (DS-D6); `i` is what a desktop editor's user still meets. (2026-10-14)
+- SOURCE view styling a note's inline Markdown as it reads, the markers kept (issue #103). (2026-11-10) Chosen
+  (SIS-D1–SIS-D6): the markers dimmed in a role of their own, the text in the render's roles, by the render's parse.
+- The markers in SOURCE view hidden off the cursor's line, as Obsidian's Live Preview hides them. (2026-11-10) Not
+  chosen (SIS-D1): it moves the text under the cursor, and READ and the lens are there for that.
 
 ## Concurrency
 

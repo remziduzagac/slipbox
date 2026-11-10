@@ -88,6 +88,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/foundation/platform/wsl.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/foundation/text/width.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/rendering/layout/ansi.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/rendering/layout/code/source-styles.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/rendering/layout/code/source.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/rendering/layout/markdown/render.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/rendering/media/diagrams/cold-load.test.ts", "UNIT_TIMEOUT_MS"],

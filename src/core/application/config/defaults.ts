@@ -19,6 +19,7 @@ export const DEFAULT_CONFIG: Config = {
     images_remote: "ask",
     mermaid: "text",
     math: "text",
+    source_styles: true,
   },
   walk: {
     extensions: ["md", "markdown"],

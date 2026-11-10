@@ -196,17 +196,17 @@ function show(app: App, r: Review): void {
     { spans: [] },
     blocks ? { blocks } : { rows: view.rows, from: view.before, to: view.after },
   ];
-  const { language, tabWidth } = diffLanguage(app, it.abs, view.after);
+  const { language, tabWidth, styles } = diffLanguage(app, it.abs, view.after);
   const buf = new NoteBuffer(null, `review:${it.path}`, `review:${it.path}`);
   buf.kind = { group: "text", format: "text" };
   buf.virtual = { save: () => true };
   buf.readOnly = "the review is read-only: y keeps a change, x reverts it";
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
-    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}`;
+    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${styles?.version}`;
     if (made?.key !== key) {
       const split = sideBySide(app, it.abs, width);
-      made = { key, layout: layoutScreen(parts, { width, language, tabWidth, split, ...how }) };
+      made = { key, layout: layoutScreen(parts, { width, language, tabWidth, styles, split, ...how }) };
     }
     return made.layout;
   };

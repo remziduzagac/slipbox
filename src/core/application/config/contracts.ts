@@ -38,6 +38,9 @@ export interface Config {
     mermaid: "text" | "picture";
     /** A display's maths (12.11, 12.17): Unicode text, or, where pictures are drawn, typeset as one. Text's in text. */
     math: "text" | "picture";
+    /** Markdown's inline styles in SOURCE view, the lens and a diff (SIS): bold, italic, links… as they read, their
+     *  markers kept and dimmed. False: the light highlighting of before. */
+    source_styles: boolean;
   };
   walk: {
     extensions: string[];

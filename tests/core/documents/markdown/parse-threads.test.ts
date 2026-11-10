@@ -1,5 +1,5 @@
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { newParseCache, parseMarkdown } from "../../../../src/core/documents/markdown/parse.ts";
@@ -93,6 +93,43 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
     const had = new Map(cache.chunks);
     expect(await parseInBackground(text, cache)).toBe(true);
     for (const [k, v] of had) expect(cache.chunks.get(k)).toBe(v); // none parsed again
+    stopParsePool();
+  });
+
+  test("on the workers, the chunks with their stand-ins too (SIS-D7): the parse here parses nothing", async () => {
+    const { adoptChunks, noteChunks, parseChunk, standInChunks } = await import(
+      "../../../../src/core/documents/markdown/parse.ts"
+    );
+    const { bodyProcessor, processor } = await import("../../../../src/core/documents/markdown/parse/engine.ts");
+    const { parseInBackground, stopParsePool, unparsed } = await import(
+      "../../../../src/core/documents/markdown/parse-pool.ts"
+    );
+    // Sections, each its own chunk, using a footnote and a reference the last defines; the first's front matter too.
+    const para = (s: number, i: number) => `Para ${s}.${i} with [^1] and [a link][ref].`;
+    const section = (s: number) => `## Part ${s}\n\n${Array.from({ length: 25 }, (_, i) => para(s, i)).join("\n\n")}`;
+    const body = Array.from({ length: 12 }, (_, s) => section(s)).join("\n\n");
+    const text = `---\ntitle: T\n---\n\n${body}\n\n[^1]: the note\n\n[ref]: https://example.invalid\n`;
+    // Its chunks alone in: what's left is their stand-ins'.
+    const chunks = newParseCache();
+    adoptChunks(
+      chunks,
+      noteChunks(text).map((c) => ({ text: c.text, children: parseChunk(c.text, c.first) })),
+    );
+    const left = standInChunks(text, chunks);
+    expect(left.length).toBeGreaterThan(3);
+    expect(unparsed(text, chunks)).toBe(left.reduce((n, c) => n + c.text.length, 0));
+    const cache = newParseCache();
+    expect(unparsed(text, cache)).toBe(noteChunks(text).reduce((n, c) => n + c.text.length, 0));
+    expect(await parseInBackground(text, cache)).toBe(true);
+    expect(unparsed(text, cache)).toBe(0);
+    const parses = [spyOn(processor, "parse"), spyOn(bodyProcessor, "parse")];
+    try {
+      const adopted = parseMarkdown(text, cache);
+      expect(parses.map((s) => s.mock.calls.length)).toEqual([0, 0]);
+      expect(strip(adopted.tree.children)).toBe(strip(parseMarkdown(text).tree.children));
+    } finally {
+      for (const s of parses) s.mockRestore();
+    }
     stopParsePool();
   });
 

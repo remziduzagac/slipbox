@@ -19,6 +19,7 @@ images = "auto"                 # pictures in notes, where the terminal draws th
 images_remote = "ask"           # pictures online: asked for on enter
 mermaid = "picture"             # diagrams as pictures where the terminal draws them; text elsewhere
 math = "text"                   # a display's maths as Unicode text
+source_styles = true            # SOURCE view's bold bold, its ** kept and dimmed
 
 [walk]
 extensions = ["md", "markdown", "mdx"]

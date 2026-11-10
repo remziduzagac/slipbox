@@ -13,7 +13,7 @@ import { chunkStarts, mergeLists, shifted } from "./parse/chunks.ts";
 import { bodyProcessor, processor } from "./parse/engine.ts";
 import { dropOffsets, finish } from "./parse/transforms.ts";
 import { type Frontmatter, ORIGIN, type ParseCache, type ParsedNote } from "./parse/contracts.ts";
-import { visit } from "./parse/visit.ts";
+import { isStandIn, type StandIn, standInsOf, standInText } from "./parse/stand-ins.ts";
 
 /** Frontmatter bigger than this isn't parsed as YAML: it shows as raw text (a size bomb otherwise). */
 const MAX_YAML = 64 * 1024;
@@ -85,30 +85,17 @@ export function parseMarkdown(
   // `whole`: one parse of the whole note; `chunkLines`: smaller chunks (tests compare both).
   const starts = opts.whole ? [0] : chunkStarts(lines, opts.chunkLines);
   const used = new Map<string, { children: Root["children"]; shift: number; stubbed?: boolean }>();
-  /** A chunk's nodes (cached by its text), with stand-in definitions for `stubs` at its end. */
-  const chunk = (from: number, to: number, stubs: { label: string; footnote: boolean }[]) => {
-    // Stand-ins go before the chunk (definitions count wherever they are, and a chunk ending in an
-    // unclosed fence would swallow them after) — but after, in the first, whose frontmatter must
-    // stay first. `pre`: the lines they add before.
-    const body = lines.slice(from, to).join("\n");
-    const defsText = stubs.map((d) => `[${d.footnote ? "^" : ""}${d.label}]: #`).join("\n\n");
-    const before = stubs.length > 0 && from > 0;
-    const text = !stubs.length ? body : before ? `${defsText}\n\n${body}` : `${body}\n\n${defsText}\n`;
-    const pre = before ? defsText.split("\n").length + 1 : 0;
+  /** A chunk's nodes (cached by its text), parsed with stand-in definitions for `stubs` (stand-ins.ts). */
+  const chunk = (from: number, to: number, stubs: StandIn[]) => {
+    const { text, pre } = standInText(lines.slice(from, to).join("\n"), from, stubs);
     let entry = used.get(text) ?? cache?.chunks.get(text);
     if (entry && entry.shift !== from)
       entry = { ...entry, children: shifted(entry.children, from - entry.shift), shift: from };
     if (!entry) {
       const root = (from === 0 ? processor : bodyProcessor).parse(text) as Root;
-      const own = to - from;
       // The stand-ins go: they were only there for the parser. All of them must come back as
       // definitions, or they were swallowed (by an unclosed comment…) and changed the chunk.
-      const isStub = (n: Root["children"][number]) => {
-        if (n.type !== "definition" && n.type !== "footnoteDefinition") return false;
-        const line = n.position?.start.line ?? 0;
-        return before ? line <= pre : line > own;
-      };
-      const kids = stubs.length ? root.children.filter((n) => !isStub(n)) : root.children;
+      const kids = stubs.length ? root.children.filter((n) => !isStandIn(n, pre, to - from)) : root.children;
       const stubbed = !stubs.length || root.children.length - kids.length === stubs.length;
       finish(kids, text);
       for (const k of kids) (k as unknown as Record<symbol, object>)[ORIGIN] = {};
@@ -119,53 +106,16 @@ export function parseMarkdown(
   };
   const ranges = starts.map((from, c) => [from, starts[c + 1] ?? lines.length] as const);
   const parts = ranges.map(([from, to]) => chunk(from, to, []));
-  // Reference definitions and footnotes are the note's, not a chunk's: a chunk that uses a label
-  // defined in another is parsed again with a stand-in definition at its end — so [text][ref] and
-  // [^1] parse as in the whole note. The labels come from the parse (a line that looks like one
-  // may be a paragraph's lazy text).
+  // A chunk using a label another defines is parsed again with a stand-in definition for it (stand-ins.ts).
   if (parts.length > 1 && tamed.includes("]:")) {
-    const defs: { label: string; id: string; footnote: boolean; part: number }[] = [];
-    parts.forEach((p, k) => {
-      for (const n of p.children)
-        visit(n, (x) => {
-          if (x.type === "definition" || x.type === "footnoteDefinition")
-            defs.push({
-              label: x.label ?? x.identifier,
-              id: x.identifier.toLowerCase(),
-              footnote: x.type === "footnoteDefinition",
-              part: k,
-            });
-          if (
-            x.type === "code" ||
-            x.type === "html" ||
-            x.type === "paragraph" ||
-            x.type === "heading" ||
-            x.type === "table"
-          )
-            return false;
-        });
+    const stubs = standInsOf(lines, ranges, parts);
+    // A link definition whose label starts with ^ can't be stood in for: such a note is parsed whole.
+    if (!stubs) return parseMarkdown(source, cache, { ...opts, whole: true });
+    ranges.forEach(([from, to], k) => {
+      if (!stubs[k]!.length) return;
+      const withStubs = chunk(from, to, stubs[k]!);
+      if (withStubs.stubbed) parts[k] = withStubs;
     });
-    // A link definition whose label starts with ^ can't be stood in for ([^x]: is a footnote's):
-    // such a note is parsed whole.
-    if (defs.some((d) => !d.footnote && d.label.startsWith("^")))
-      return parseMarkdown(source, cache, { ...opts, whole: true });
-    if (defs.length) {
-      ranges.forEach(([from, to], k) => {
-        const lower = lines.slice(from, to).join("\n").toLowerCase();
-        const own = new Set(defs.filter((d) => d.part === k).map((d) => `${d.footnote}:${d.id}`));
-        const seen = new Set<string>();
-        const stubs = defs.filter((d) => {
-          const key = `${d.footnote}:${d.id}`;
-          if (d.part === k || own.has(key) || seen.has(key) || !lower.includes(`[${d.footnote ? "^" : ""}${d.id}]`))
-            return false;
-          seen.add(key);
-          return true;
-        });
-        if (!stubs.length) return;
-        const withStubs = chunk(from, to, stubs);
-        if (withStubs.stubbed) parts[k] = withStubs;
-      });
-    }
   }
   const children: Root["children"] = [];
   /** Where each chunk after the first begins among `children`. */
@@ -226,4 +176,12 @@ export {
 } from "./parse/contracts.ts";
 export { parseLegacy } from "./parse/engine.ts";
 export { visit } from "./parse/visit.ts";
+export {
+  adoptStandIns,
+  chunkStandIns,
+  isStandIn,
+  type StandIn,
+  standInChunks,
+  standInText,
+} from "./parse/stand-ins.ts";
 export { anchorsOf, slugify, headingsOf, headingLabel, headingText, plainText, noteTitle } from "./parse/headings.ts";

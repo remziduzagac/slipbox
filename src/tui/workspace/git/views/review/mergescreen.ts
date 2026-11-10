@@ -232,7 +232,7 @@ function show(app: App, m: MergeState): void {
     ),
     { rows: result.rows, from: result.text, to: result.text },
   ];
-  const { language, tabWidth } = diffLanguage(app, path, m.read);
+  const { language, tabWidth, styles } = diffLanguage(app, path, m.read);
   const buf = new NoteBuffer(null, `merge:${m.rel}`, `merge:${m.rel}`);
   buf.kind = { group: "text", format: "text" };
   // `w` and, through `file.save`, `:w` and ctrl+s: the file saved as settled.
@@ -240,11 +240,11 @@ function show(app: App, m: MergeState): void {
   buf.readOnly = "the merge screen is read-only: o, t and b settle a conflict, e edits it in the lens";
   let made: { key: string; layout: Layout } | null = null;
   buf.drawn = (width, how) => {
-    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}`;
+    const key = `${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${styles?.version}`;
     if (made?.key !== key)
       made = {
         key,
-        layout: layoutScreen(parts, { width, language, tabWidth, split: sideBySide(app, path, width), ...how }),
+        layout: layoutScreen(parts, { width, language, tabWidth, styles, split: sideBySide(app, path, width), ...how }),
       };
     return made.layout;
   };

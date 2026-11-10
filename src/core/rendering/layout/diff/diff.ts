@@ -10,6 +10,7 @@ import type { Role } from "../../theme/theme.ts";
 import { graphemes, graphemeWidth } from "../../../foundation/text/width.ts";
 import type { CodeScroll, Layout, Line, Span } from "../ir.ts";
 import { layoutSource } from "../code/source.ts";
+import { type DiffStyles, styledSource } from "./diff-styles.ts";
 
 /** The sign and a space: where a row's text starts. The space is where a scrolled row's `‹` goes. */
 export const DIFF_GUTTER = 2;
@@ -24,6 +25,9 @@ export interface DiffLayoutOptions {
    *  rows are whole, and the window scrolls. */
   wrap: boolean;
   codeScroll: boolean;
+  /** A note's lines with Markdown's inline styles, their markers dimmed, as SOURCE view has them (SIS): each text's
+   *  kept here between layouts, held to SOURCE view's budget. */
+  styles?: DiffStyles;
 }
 
 /** What a changed line and its changed words are tinted with, by its sign. */
@@ -37,6 +41,8 @@ export interface Cell {
   w: number;
   role: Role;
   bg?: Role;
+  /** Attributes over the role's own (A_* bits): a note's inline styles' (SIS). */
+  attrs?: number;
 }
 
 /** A row across the diff, no line's: a head, a fold, or what changed that no line shows (`\ …`) — as it reads. */
@@ -55,8 +61,8 @@ export function layoutDiff(rows: DiffViewRow[], from: string, to: string, opts: 
   const tab = opts.tabWidth ?? 4;
   const want = (side: "from" | "to") =>
     rows.filter((r) => (side === "to" ? r.kind === "+" : r.kind === " " || r.kind === "-")).map((r) => r.own);
-  const before = highlighted(from, want("from"), opts.language, tab);
-  const after = highlighted(to, want("to"), opts.language, tab);
+  const before = highlighted(from, want("from"), opts.language, tab, opts.styles);
+  const after = highlighted(to, want("to"), opts.language, tab, opts.styles);
   const code: Cell[][] = rows.map((r) => {
     if (r.kind === "@@" || r.kind === "fold" || r.kind === "\\") return [];
     const tint = r.kind === " " ? null : TINT[r.kind];
@@ -111,19 +117,21 @@ export const diffText = (rows: DiffViewRow[]): string[] =>
 /**
  * One side's lines, those wanted (1-based), highlighted as source mode has them: a row each. Markdown's highlighter
  * carries what it knows from line to line (front matter, a fence), so it reads the text whole; code is highlighted a
- * line at a time, so only the lines shown are.
+ * line at a time, so only the lines shown are. `styles`: Markdown's inline styles too (SIS), parsed only where a line
+ * shown is, within SOURCE view's budget (`styledSource`).
  */
 export function highlighted(
   text: string,
   wanted: number[],
   language: string | null,
   tabWidth: number,
+  styles?: DiffStyles,
 ): Map<number, Line> {
   const out = new Map<number, Line>();
   if (!wanted.length) return out;
   const opts = { width: 1, wrap: false, headings: [], language, tabWidth, slice: true };
   if (language === null) {
-    const l = layoutSource(text, opts);
+    const l = styles ? styledSource(text, wanted, opts, styles) : layoutSource(text, opts);
     for (const k of wanted) {
       const row = l.lines[k - 1];
       if (row) out.set(k, row);
@@ -152,15 +160,17 @@ export function cellsOf(
 ): Cell[] {
   if (!row) return [];
   const out: Cell[] = [];
-  const put = (g: string, role: Role, at: number) => {
+  // A changed line's tint over the row's own backgrounds; an unchanged line keeps them (a highlight's, a heading's).
+  const put = (g: string, span: Span, at: number) => {
     const w = graphemeWidth(g);
     if (!w) return;
     const changed = !!words && inRanges(words, at);
-    out.push({ g, w, role, ...(tint ? { bg: changed ? tint.word : tint.line } : {}) });
+    const bg = tint ? (changed ? tint.word : tint.line) : span.bg;
+    out.push({ g, w, role: span.role, ...(bg ? { bg } : {}), ...(span.attrs ? { attrs: span.attrs } : {}) });
   };
   const map = row.srcMap;
   if (!map) {
-    for (const span of row.spans) for (const g of graphemes(span.text)) put(g, span.role, -1);
+    for (const span of row.spans) for (const g of graphemes(span.text)) put(g, span, -1);
     return out;
   }
   let k = 0;
@@ -168,19 +178,19 @@ export function cellsOf(
     for (let p = 0; p < span.text.length && k < map.cells.length; k++) {
       const at = map.cells[k]!;
       const len = Math.max(1, (map.cells[k + 1] ?? map.end) - at);
-      put(span.text.slice(p, p + len), span.role, at);
+      put(span.text.slice(p, p + len), span, at);
       p += len;
     }
   return out;
 }
 
-/** Cells as spans: a run of one role and tint, one span. */
+/** Cells as spans: a run of one role, tint and attributes, one span. */
 export function spansOf(cells: Cell[]): Span[] {
   const out: Span[] = [];
   for (const c of cells) {
     const last = out[out.length - 1];
-    if (last && last.role === c.role && last.bg === c.bg) last.text += c.g;
-    else out.push({ text: c.g, role: c.role, attrs: 0, ...(c.bg ? { bg: c.bg } : {}) });
+    if (last && last.role === c.role && last.bg === c.bg && last.attrs === (c.attrs ?? 0)) last.text += c.g;
+    else out.push({ text: c.g, role: c.role, attrs: c.attrs ?? 0, ...(c.bg ? { bg: c.bg } : {}) });
   }
   return out;
 }

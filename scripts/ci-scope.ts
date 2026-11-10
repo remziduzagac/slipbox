@@ -78,7 +78,12 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
     /^src\/core\/workspace\/git\/(?:branches\/(?:gitbranches|gitops|gitrebase|gitremote|operation)|history\/gitlog|gitrepos|review\/(?:gitreview|mergereview)|staging\/gitstage|merge\/conflicts)\.ts$/,
     ["git"],
   ],
-  [/^src\/core\/rendering\/layout\/diff\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
+  [/^src\/core\/rendering\/layout\/diff\/(diff|splitdiff|blockdiff|diff-styles)\.ts$/, ["git", "conflict"]],
+  // Markdown's inline styles in SOURCE view (SIS): its check, and what draws them besides — the lens, a diff.
+  [
+    /^src\/core\/rendering\/layout\/code\/source-styles\.ts$/,
+    ["markdown-inline", "editing", "git-diff", "git", "conflict"],
+  ],
   [
     /^src\/tui\/workspace\/git\/(?:views\/(?:panel\/(?:gitview|gitpanel|gitmouse)|changes\/gitchanges|history\/githistory|branches\/(?:gitreposview|gitbranchview|worktrees))|gitremote|gitquery)\.ts$/,
     ["git"],

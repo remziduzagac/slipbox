@@ -94,8 +94,8 @@ export function layoutSplitDiff(rows: DiffViewRow[], from: string, to: string, o
   const tab = opts.tabWidth ?? 4;
   const want = (side: "from" | "to") =>
     rows.filter((r) => (side === "to" ? r.kind === "+" : r.kind === " " || r.kind === "-")).map((r) => r.own);
-  const before = highlighted(from, want("from"), opts.language, tab);
-  const after = highlighted(to, want("to"), opts.language, tab);
+  const before = highlighted(from, want("from"), opts.language, tab, opts.styles);
+  const after = highlighted(to, want("to"), opts.language, tab, opts.styles);
   // An unchanged line is `from`'s, on both sides.
   const code = (i: number | undefined): Cell[] => {
     const r = i === undefined ? undefined : rows[i];

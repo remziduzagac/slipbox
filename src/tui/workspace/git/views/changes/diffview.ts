@@ -14,6 +14,7 @@ import { classify } from "../../../../../core/documents/model/filetypes.ts";
 import { indentFor } from "../../../../../core/documents/editing/indent.ts";
 import { layoutBlockDiff } from "../../../../../core/rendering/layout/diff/blockdiff.ts";
 import { diffText, layoutDiff } from "../../../../../core/rendering/layout/diff/diff.ts";
+import { type DiffStyles, newDiffStyles } from "../../../../../core/rendering/layout/diff/diff-styles.ts";
 import { type Layout, srcAt } from "../../../../../core/rendering/layout/ir.ts";
 import { layoutSplitDiff, SPLIT_MIN, splitColumns } from "../../../../../core/rendering/layout/diff/splitdiff.ts";
 import {
@@ -78,12 +79,27 @@ export function blocksOf(w: DiffWindow): BlockDiff {
   return b.diff;
 }
 
-/** How a file's diff is highlighted: its language (a note's, markdown's highlighter: null) and its tab's width. */
-export function diffLanguage(app: App, path: string, text: string): { language: string | null; tabWidth: number } {
+/** Each app's texts' inline styles in its diffs, kept between their layouts (SIS-D5): drawn again when one's parse
+ *  lands on the workers. */
+const diffStyles = new WeakMap<App, DiffStyles>();
+
+/**
+ * How a file's diff is highlighted: its language (a note's, markdown's highlighter: null) and its tab's width; a note's
+ * lines with their inline styles, as SOURCE view has them (SIS), from the app's kept styles — whose `version`, in a
+ * diff's layout's key, makes it again once a big text's styles land.
+ */
+export function diffLanguage(
+  app: App,
+  path: string,
+  text: string,
+): { language: string | null; tabWidth: number; styles: DiffStyles | undefined } {
   const kind = classify(path, app.config.walk.extensions);
   const language = kind.group === "note" ? readerFor(kind.format).language : kind.format;
   const tabWidth = indentFor(isAbsolute(path) ? path : join(app.loc.root, path), text).tabWidth;
-  return { language, tabWidth };
+  if (language !== null || !app.config.render.source_styles) return { language, tabWidth, styles: undefined };
+  let styles = diffStyles.get(app);
+  if (!styles) diffStyles.set(app, (styles = newDiffStyles(() => app.host.requestRender())));
+  return { language, tabWidth, styles };
 }
 
 /**
@@ -131,7 +147,7 @@ export function openDiff(app: App, d: DiffRequest): void {
     return;
   }
   if (app.floating && !app.overlays.closeFloating()) return;
-  const { language, tabWidth } = diffLanguage(app, d.path, now);
+  const { language, tabWidth, styles } = diffLanguage(app, d.path, now);
   const note = classify(d.path, app.config.walk.extensions).group === "note";
   const w: DiffWindow = {
     before,
@@ -152,9 +168,9 @@ export function openDiff(app: App, d: DiffRequest): void {
   buf.drawn = (width, how) => {
     const split = !w.blocks && sideBySide(app, d.path, width);
     const mode = w.blocks?.on ? "blocks" : split ? "split" : "lines";
-    const key = `${mode}:${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${buf.version}`;
+    const key = `${mode}:${width}:${how.glyphs.mode}:${how.wrap}:${how.codeScroll}:${buf.version}:${styles?.version}`;
     if (made?.key !== key) {
-      const opts = { width, language, tabWidth, ...how };
+      const opts = { width, language, tabWidth, styles, ...how };
       made = {
         key,
         layout: w.blocks?.on

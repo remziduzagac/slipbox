@@ -13,6 +13,14 @@ import { highlight, type Token } from "../markdown/highlight.ts";
 import { graphemes, graphemeWidth } from "../../../foundation/text/width.ts";
 import type { Layout, LayoutHeading, Line, Span } from "../ir.ts";
 import type { Role } from "../../theme/theme.ts";
+import {
+  applyPaints,
+  inlineStyles,
+  newStyleCache,
+  type Paint,
+  type StyleCache,
+  type StyleOptions,
+} from "./source-styles.ts";
 
 export interface SourceLayoutOptions {
   /** Columns to wrap at; with `wrap` off, rows keep their full length. */
@@ -33,6 +41,9 @@ export interface SourceLayoutOptions {
   /** A line in another language than the file's (16.22: a component's script, a page's style), by
    *  highlight.js's name; undefined: the file's own. */
   languageAt?: (line: number) => string | undefined;
+  /** Markdown's inline styles (SIS): bold, italic, links… as the render has them, their markers kept, dimmed, from
+   *  the render's parse. Without it, the light highlighting of before: code spans and links alone, by pattern. */
+  styles?: StyleOptions;
 }
 
 /** A displayed grapheme and the source offset (UTF-16, within its line) it came from. */
@@ -41,6 +52,8 @@ interface Cell {
   w: number;
   at: number;
   role: Role;
+  attrs: number;
+  bg?: Role;
 }
 
 const CONTROL = /^[\x00-\x08\x0b-\x1f\x7f-\x9f‪-‮⁦-⁩]/;
@@ -61,12 +74,14 @@ export interface SourceCache {
   rows: Line[][];
   naturals: number[];
   heads: (LineHeading | null)[];
+  /** The inline styles' paints by chunk, kept as the rows are (SIS). */
+  styles: StyleCache;
 }
 
 type LineHeading = Omit<LayoutHeading, "line" | "src">;
 
 export function newSourceCache(): SourceCache {
-  return { key: "", texts: [], states: [], rows: [], naturals: [], heads: [] };
+  return { key: "", texts: [], states: [], rows: [], naturals: [], heads: [], styles: newStyleCache() };
 }
 
 export function layoutSource(source: string, opts: SourceLayoutOptions, cache: SourceCache = newSourceCache()): Layout {
@@ -76,8 +91,10 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   const width = opts.wrap ? Math.max(1, opts.width) : Number.POSITIVE_INFINITY;
   const lang = opts.language ?? null;
   const fences = lang ? new Map<number, Token[]>() : fenceTokens(texts);
-  const syntax = texts.map((_, i) => JSON.stringify(fences.get(i) ?? null));
-  const cacheKey = `${width}:${tab}:${lang ?? "md"}`;
+  const styles = !lang && opts.styles ? inlineStyles(source, opts.styles, cache.styles) : null;
+  // A line looks different when its fence's colours do, or its inline styles: a closing `**` lines below restyles it.
+  const syntax = texts.map((_, i) => JSON.stringify(fences.get(i) ?? null) + (styles ? `|${styles.sigs[i]}` : ""));
+  const cacheKey = `${width}:${tab}:${lang ?? (styles ? "md+" : "md")}`;
   const old = cache.key === cacheKey ? cache : newSourceCache();
   const O = old.texts;
   const n = texts.length;
@@ -121,6 +138,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
       lang ? (opts.languageAt?.(i + 1) ?? lang) : lang,
       lineSpans,
       fences.get(i),
+      styles?.paints[i],
     );
     states.push(state);
     rows.push(built.rows);
@@ -150,6 +168,7 @@ export function layoutSource(source: string, opts: SourceLayoutOptions, cache: S
   }
 
   Object.assign(cache, { key: cacheKey, texts, states, syntax, rows, naturals, heads });
+  if (!styles) cache.styles = newStyleCache();
   const lines: Line[] = [];
   const firstRow: number[] = [];
   let natural = 0;
@@ -188,25 +207,28 @@ function layoutLine(
   lang: string | null = null,
   spans?: SyntaxSpan[],
   tokens?: Token[],
+  paints?: readonly Paint[],
 ): { rows: Line[]; natural: number; out: string } {
   const src = i + 1;
-  const hl = lang ? codeLine(raw, lang, spans) : highlightLine(raw, state, i, tokens);
+  const hl: Highlighted = lang ? codeLine(raw, lang, spans) : highlightLine(raw, state, i, tokens, paints);
   const text = raw.endsWith("\r") ? raw.slice(0, -1) : raw; // CRLF: the CR isn't shown
   const cells: Cell[] = [];
   let col = 0;
   let at = 0;
   for (const g of graphemes(text)) {
     const role = hl.roles[at] ?? "text";
+    const attrs = hl.attrs?.[at] ?? 0;
+    const bg = hl.bgs?.[at];
     if (g === "\t") {
       const k = tab - (col % tab);
-      for (let j = 0; j < k; j++) cells.push({ g: " ", w: 1, at, role });
+      for (let j = 0; j < k; j++) cells.push({ g: " ", w: 1, at, role, attrs, bg });
       col += k;
     } else if (CONTROL.test(g)) {
-      cells.push({ g: "�", w: 1, at, role: "dim" });
+      cells.push({ g: "�", w: 1, at, role: "dim", attrs: 0 });
       col += 1;
     } else {
       const w = graphemeWidth(g);
-      cells.push({ g, w, at, role });
+      cells.push({ g, w, at, role, attrs, bg });
       col += w;
     }
     at += g.length;
@@ -251,8 +273,8 @@ function toSpans(cells: Cell[], src: number): Span[] {
   const spans: Span[] = [];
   for (const c of cells) {
     const last = spans[spans.length - 1];
-    if (last && last.role === c.role) last.text += c.g;
-    else spans.push({ text: c.g, role: c.role, attrs: 0, src });
+    if (last && last.role === c.role && last.attrs === c.attrs && last.bg === c.bg) last.text += c.g;
+    else spans.push({ text: c.g, role: c.role, attrs: c.attrs, src, ...(c.bg ? { bg: c.bg } : {}) });
   }
   return spans;
 }
@@ -273,12 +295,28 @@ function codeLine(raw: string, lang: string, spans?: SyntaxSpan[]): { roles: Rol
   return { roles, out: "" };
 }
 
+/** A line's roles, each UTF-16 offset's; where inline styles were painted, attributes and backgrounds too. */
+interface Highlighted {
+  roles: Role[];
+  attrs?: number[];
+  bgs?: (Role | undefined)[];
+  out: string;
+}
+
 /**
  * A role for each UTF-16 offset of a line: light markdown highlighting with a little state carried
  * from line to line — "fm0" (a first line of "---"), "fm" (inside frontmatter), "c<fence>" (inside
- * fenced code), "" (neither). Anything it doesn't know is text.
+ * fenced code), "" (neither). Anything it doesn't know is text. `paints`: the line's inline styles
+ * (SIS), over its own colours, none guessed then; without them (styles off, or not had yet: a big
+ * note's parse pending or failed), code spans and links found by pattern.
  */
-function highlightLine(raw: string, state: string, i: number, tokens?: Token[]): { roles: Role[]; out: string } {
+function highlightLine(
+  raw: string,
+  state: string,
+  i: number,
+  tokens?: Token[],
+  paints?: readonly Paint[],
+): Highlighted {
   const text = raw.replace(/\r$/, "");
   const roles: Role[] = new Array(raw.length).fill("text");
   const paint = (from: number, to: number, role: Role) => {
@@ -320,7 +358,7 @@ function highlightLine(raw: string, state: string, i: number, tokens?: Token[]):
   const h = /^\s{0,3}(#{1,6})(\s|$)/.exec(text);
   if (h) {
     paint(0, text.length, `h${h[1]!.length}` as Role);
-    return { roles, out: "" };
+    return { roles, ...(paints?.length ? applyPaints(roles, paints) : {}), out: "" };
   }
   if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(text)) {
     paint(0, text.length, "rule");
@@ -342,6 +380,7 @@ function highlightLine(raw: string, state: string, i: number, tokens?: Token[]):
       paint(b, b + 3, li[4] === "[ ]" ? "check_todo" : "check_done");
     }
   }
+  if (paints) return { roles, ...(paints.length ? applyPaints(roles, paints) : {}), out: "" };
   // Inline: code spans, then links (`[text](url)`; `[[…]]` is text, 20.2) outside them.
   if (text.includes("`") || text.includes("[")) {
     const code: [number, number][] = [];

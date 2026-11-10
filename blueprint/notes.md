@@ -605,3 +605,19 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   four times that on macOS, where it only warns: a review found one and a half times too close, and macOS's times
   too loose to fail on. `SLOW_TESTS` is rewritten from a run's reports by a script, by hand, so the parts stay the
   tree's. Recorded as D276 (CIW-T9).
+
+## Inline styles in SOURCE view (2026-11-10)
+
+- Issue #103 asked for SOURCE view to show what its Markdown's markers do, the markers kept, after research into how
+  other editors show them: [research/source-inline-styles.md](research/source-inline-styles.md). Of seven editors,
+  only Emacs's markdown-mode dims the markers by default; VS Code, Zed and Obsidian's Source mode draw them in their
+  span's look; Obsidian's Live Preview and Typora hide them.
+- Opened and built as a workstream, [SIS](workstreams/source-inline-styles/README.md), its four open points decided with
+  the answer recommended, by the maintainer's instruction: the markers dimmed in a new `markup` role, the text in the
+  render's roles, a switch on by default, the render's own parse cut at every place it can be (SIS-D1 to SIS-D6).
+- The render's chunks were tried first and measured: a line added at the top of a 1 MB note parsed all of it again,
+  in 1.6 s. Cut at every block instead, a keystroke parses its paragraph; the workstream's notes have the numbers.
+  Consolidation waits for the maintainer.
+- Its pull request's review found three things, fixed in it: a note's diff held to the same budget as SOURCE view, the
+  stand-in parses counted against it and made on the parse workers with the rest of a big note (SIS-D7), and a piece
+  not styled yet keeping the light highlighting.
