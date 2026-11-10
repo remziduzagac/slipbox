@@ -1,12 +1,12 @@
 # Tasks: a slow disk never freezes the screen
 
 The workstream's work, one file per task, its ID in its H1; finished ones move to `archive/`. The design was agreed on
-2026-11-09; SD-T1 to SD-T11 are done. In SD-D1's order, most felt first:
-SD-T1, then SD-T2; then SD-T3, SD-T4 and SD-T5, in any order; then SD-T6, SD-T7, SD-T8 and SD-T9, in any order; SD-T10
-once SD-T5 and SD-T8 are in; SD-T11 last of the code; SD-T12 at the end. Each task's `blocked_by` says the same. Each is
-a pull request of its own into `dev`, with its unit tests, its terminal check, its design text and, where you'd notice,
-the user docs and a CHANGELOG line; before it merges, the terminal checks it reaches run locally, listed for approval
-first (SD-D14).
+2026-11-09; every task is done, and the workstream was consolidated on 2026-11-10 (SD-T12). In SD-D1's order, most felt
+first: SD-T1, then SD-T2; then SD-T3, SD-T4 and SD-T5, in any order; then SD-T6, SD-T7, SD-T8 and SD-T9, in any order;
+SD-T10 once SD-T5 and SD-T8 are in; SD-T11 last of the code; SD-T12 at the end. Each task's `blocked_by` says the same.
+Each is a pull request of its own into `dev`, with its unit tests, its terminal check, its design text and, where you'd
+notice, the user docs and a CHANGELOG line; before it merges, the terminal checks it reaches run locally, listed for
+approval first (SD-D14).
 
 - [SD-T1](archive/seam.md): every read the workstream moves through one seam the stand-in and the hold reach. Done.
 - [SD-T2](archive/disk-threads.md): the listing threads become the disk threads: stat, read, access, walk. Done.
