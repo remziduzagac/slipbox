@@ -126,10 +126,10 @@ export class HeadlessTerminal {
   /** When the program last wrote anything (performance.now()). */
   lastOutput = 0;
   /**
-   * The frames slipbox had painted when it wrote the last of its marks this terminal has read (`FRAME_SHOWN`, trace
-   * mode): every one of them is on the screen. 0 for each program spawned, until its first.
+   * Of each slipbox (its run, trace.ts), the number of the last frame whose mark this terminal has read
+   * (`FRAME_SHOWN`, trace mode): that frame, and every one before it, is on the screen.
    */
-  framesShown = 0;
+  readonly framesShown = new Map<string, number>();
   /** When the frame being drawn began (synchronized output, mode 2026), as xterm has read it: null between frames. */
   private frameSince: number | null = null;
   private readonly clock: () => number;
@@ -174,7 +174,11 @@ export class HeadlessTerminal {
     p.registerCsiHandler({ prefix: "?", final: "h" }, (ps) => frame(ps, true));
     p.registerCsiHandler({ prefix: "?", final: "l" }, (ps) => frame(ps, false));
     // slipbox's mark after a frame it wrote (trace.ts): read here, in order, so what came before it is on the screen.
-    p.registerOscHandler(FRAME_SHOWN, (d) => ((this.framesShown = Number(d) || 0), true));
+    p.registerOscHandler(FRAME_SHOWN, (d) => {
+      const [run, n] = d.split(";");
+      if (run && n) this.framesShown.set(run, Math.max(Number(n) || 0, this.framesShown.get(run) ?? 0));
+      return true;
+    });
     p.registerOscHandler(10, (d) => (d === "?" ? (this.reply(`\x1b]10;${oscColor(colors.fg)}\x07`), true) : false));
     p.registerOscHandler(11, (d) => (d === "?" ? (this.reply(`\x1b]11;${oscColor(colors.bg)}\x07`), true) : false));
     p.registerOscHandler(52, (d) => {
@@ -209,7 +213,6 @@ export class HeadlessTerminal {
   spawn(argv: string[], opts: { cwd: string; env: Record<string, string> }): Bun.Subprocess {
     this.kitty = [];
     this.frameSince = null;
-    this.framesShown = 0;
     // The program before is cut off: stopped if it still runs, and its terminal closed, so nothing it or a child still
     // holding that terminal writes from now on reaches this one's screen (what was read before is still drawn: a
     // session waits for it, `Session.start`).

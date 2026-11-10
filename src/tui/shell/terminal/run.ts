@@ -7,7 +7,7 @@ import { loadConfig } from "../../../core/application/config/config.ts";
 import { Graph, openGraph } from "../../../core/workspace/graph/graph.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { setWidthMethod } from "../../../core/foundation/text/width.ts";
-import { appendFileSync, statSync, writeSync } from "node:fs";
+import { statSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { dataHome, stateHome } from "../../../core/foundation/platform/paths.ts";
 import { installedBy, readChannel } from "../../../core/application/distribution/install.ts";
@@ -36,7 +36,7 @@ import { keyName } from "../input/keys.ts";
 import type { Canvas } from "./canvas.ts";
 import { AppRenderable, Pictures, toRGBA } from "./opentui.ts";
 import { checkNewFile, openingPath } from "./open-path.ts";
-import { FRAME_SHOWN } from "./trace.ts";
+import { FrameTrace } from "./trace.ts";
 
 /** What the App starts with, all found before the screen is taken. */
 export type Start = Omit<AppOptions, "host">;
@@ -356,19 +356,19 @@ export async function runTui(argv: string[]): Promise<number> {
   // again when they do.
   const picturesNow = () => `${pictures.protocol() ?? "-"}:${JSON.stringify(cell())}`;
   let picturesSeen = picturesNow();
-  // The terminal tests (SLIPBOX_TRACE, trace.ts), beside the commands run: a `key` line for every key and paste once
-  // handled, a `frame` line for every frame painted, and a mark in the output once a frame is out (`FRAME_SHOWN`). A
-  // test reads the screen once its terminal has read the mark of a frame painted after its last key: a loaded machine
-  // reads keys late, draws late, and writes what it drew later still.
-  const trace = process.env.SLIPBOX_TRACE;
-  let frames = 0;
-  const handled = trace ? () => appendFileSync(trace, "key\n") : () => {};
-  const painted = trace
-    ? () => {
-        frames++;
-        appendFileSync(trace, "frame\n");
-      }
-    : () => {};
+  // The terminal tests (SLIPBOX_TRACE, trace.ts), beside the commands run: a line for every key and paste once
+  // handled, and one for every frame written, marked in the output after it. A test reads the screen once its terminal
+  // has read the mark of a frame painted after its last key: a loaded machine reads keys late, draws late, and the
+  // terminal reads what was written later still.
+  const trace = process.env.SLIPBOX_TRACE
+    ? new FrameTrace(process.env.SLIPBOX_TRACE, {
+        write: (bytes) => session.write(bytes),
+        idle: () => session.idle(),
+        gone: () => renderer.isDestroyed,
+      })
+    : null;
+  const handled = () => trace?.key();
+  const painted = () => trace?.paint();
   // The whole of it one frame painted: a message said in any of it asks for no other (`App.whileDrawing`).
   const paint = (canvas: Canvas) =>
     app.whileDrawing(() => {
@@ -415,21 +415,7 @@ export async function runTui(argv: string[]): Promise<number> {
     app.resize(w, h);
     renderer.requestRender();
   });
-  if (trace) {
-    // A frame out (OpenTUI's `frame`, once it's written): the frames painted by then, marked through the frames' own
-    // output, after its bytes — the last frame painted is the one written, OpenTUI painting and writing one at a time.
-    // Output that's full takes nothing: marked again once it's idle.
-    const mark = (): void => {
-      if (renderer.isDestroyed) return;
-      try {
-        if (session.write(encoder.encode(`\x1b]${FRAME_SHOWN};${frames}\x07`))) return;
-      } catch {
-        return; // the renderer stopped or gone
-      }
-      void session.idle().then(mark, () => {});
-    };
-    renderer.on("frame", mark);
-  }
+  if (trace) renderer.on("frame", () => trace.frame());
   renderer.requestRender();
 
   // Every signal that ends the process saves positions and the session first.
