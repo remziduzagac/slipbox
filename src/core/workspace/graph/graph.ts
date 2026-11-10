@@ -38,6 +38,8 @@ import type { GraphStats } from "./graph-types.ts";
 import { LinkResolver } from "./graph-resolve.ts";
 import { type BuildGiven, GraphRefresh } from "./refresh.ts";
 import { GraphFeed } from "./feed.ts";
+import { NoteTexts } from "./texts.ts";
+import type { NoteText } from "../walk/io/notes.ts";
 import { GraphMoves } from "./moves/reconcile.ts";
 import { applyOverlay, overlayText, type EditorOverlay } from "./overlays/editor.ts";
 import { collectBacklinks, collectProblems, collectTags, findNote } from "./queries/indexes.ts";
@@ -139,6 +141,7 @@ export class Graph {
         detectMoves: (vanished, fresh, hashes) => this.moves.detectMoves(vanished, fresh, hashes),
       },
       asked,
+      this.texts,
     );
   }
 
@@ -188,6 +191,8 @@ export class Graph {
   }
 
   private readonly unparsed = new Map<string, NoteFile>();
+  /** Its notes' texts read elsewhere (SD-T6: the TUI's, on the disk threads), and what's asked of them partially. */
+  readonly texts = new NoteTexts(this.unparsed);
 
   get usesCache(): boolean {
     return this.refresh.usesCache;
@@ -348,8 +353,8 @@ export class Graph {
     this.feed.moved(pairs);
   }
 
-  updateFile(rel: string, file: NoteFile): boolean {
-    return this.feed.updateFile(rel, file);
+  updateFile(rel: string, file: NoteFile, text?: NoteText): boolean {
+    return this.feed.updateFile(rel, file, text);
   }
 
   onRetarget(fn: (r: Retarget[]) => void): () => void {

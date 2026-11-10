@@ -4,7 +4,6 @@
 
 import { basename } from "node:path";
 import type { Definition, Nodes } from "mdast";
-import { readText } from "../../foundation/platform/fsutil.ts";
 import { parseWikiTarget, type WikiLink } from "../../documents/markdown/wikilink.ts";
 import {
   type AnchorInfo,
@@ -20,31 +19,35 @@ import { ParseCache, sharedParseCache } from "../../documents/markdown/parsecach
 import { contentHash } from "../links/redirects.ts";
 import { noteFormat } from "../../documents/model/filetypes.ts";
 import type { NoteFile } from "../walk/walk.ts";
+import { type NoteText, readNoteText } from "../walk/io/notes.ts";
 import { type Hashtag, tagKey, tagName } from "../../documents/markdown/tags.ts";
 import type { LinkKind, LinkRef, Pos, NoteEntry } from "./graph-types.ts";
 
 import { INDEX_VERSION } from "./index/schema.ts";
 export { INDEX_VERSION } from "./index/schema.ts";
 
-/** Parse one note and extract what the graph needs. */
+/** Parse one note and extract what the graph needs: its text read here. */
 export function extractNote(
   file: NoteFile,
   cache: ParseCache | null = sharedParseCache(),
   chunks?: ChunkCache,
 ): NoteEntry {
+  return extractRead(file, readNoteText(file.abs), cache, chunks);
+}
+
+/** Parse one note from its text read already — here, or on a disk thread (SD-T6) — as `extractNote` parses it. */
+export function extractRead(
+  file: NoteFile,
+  read: NoteText,
+  cache: ParseCache | null = sharedParseCache(),
+  chunks?: ChunkCache,
+): NoteEntry {
+  if ("error" in read) return extractFromSource(file, "", [`unreadable: ${read.error}`]);
   const flags: string[] = [];
-  let text = "";
-  try {
-    const decoded = readText(file.abs);
-    text = decoded.text;
-    if (decoded.invalidUtf8) flags.push("invalid-utf8");
-    if (decoded.bom) flags.push("bom");
-    if (decoded.crlf) flags.push("crlf");
-  } catch (err) {
-    flags.push(`unreadable: ${(err as NodeJS.ErrnoException).code ?? "error"}`);
-    return extractFromSource(file, text, flags);
-  }
-  return extractText(file, text, flags, cache, chunks);
+  if (read.invalidUtf8) flags.push("invalid-utf8");
+  if (read.bom) flags.push("bom");
+  if (read.crlf) flags.push("crlf");
+  return extractText(file, read.text, flags, cache, chunks);
 }
 
 /** A note's text parsed, from the parse cache when any copy parsed it before (20.11): a file's, or git's (20.21). */

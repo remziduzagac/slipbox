@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: [SD-T3, SD-T4, SD-T5]
 tracker: [gh:#46]
@@ -65,6 +65,39 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
 - Notes not parsed yet: a key that needs them waits for their texts, nothing planned from notes not read; a hover or
   completion shown without them, then again (above). A list or a rename made from part of the vault would be wrong
   without saying so.
+
+## Open
+
+What the description left open, settled here for the maintainer to confirm (SD-D16); design.md's section it delivers
+says how.
+
+- The texts travel as the look's jobs (`notes`, `texts`; `core/workspace/walk/look-jobs.ts`), read by
+  `core/workspace/walk/io/notes.ts`, which holds no parser: the disk threads stay light. `DiskThreads` has no new
+  method (`walk-thread.ts` is at its ceiling).
+- `Texts` (`tui/app/runtime/texts.ts`, `app.watch.texts`) asks them: a batch's (`VaultFeed`'s `read`), an open file's
+  the look each second found changed, a slice's and a big note's. The graph takes what's given (`NoteTexts`,
+  `core/workspace/graph/texts.ts`, `Graph.texts`): `parseSome` parses only the notes whose texts came while they're
+  read elsewhere; the CLI and a test's App read here, as before.
+- Drawn, and asked by a completion or the Problems and Info panels, the notes are taken `partially`: a note not parsed
+  yet stays its stub and `ensureAll` returns at once. Every note's lists are of what's parsed so far; a heading link
+  into a note not parsed yet isn't checked yet (`NoteTexts.waits`).
+- The keys that need every note wait for the parse (`KeyReads.notes`): `Renaming.preview` (renames, moves, relinks,
+  conversions), the relink offered after moves made elsewhere, `tag.list` and a tag's notes, `backlinks.open`.
+- A rescan's own reload of each open file isn't made when the build is made on a disk thread: its answer looks at every
+  open file (`rebuilt` → `poll(true)`).
+- `watch.ts` reads only through the seam now (`disk.exists`), so it moved to `SEAM_READERS`.
+
+Still read on the screen's thread, for a later task or as kept:
+
+- A note not parsed yet that a key asks for alone: a heading link followed (`landingLine`), a hover's text, a note's
+  links listed, writing a link in the folder's convention (`Linking`, `conventionOf`), and a note typed into before
+  it's parsed (its overlay's entry).
+- The open note's own problems read its file (`noteProblems` → `textOf`) while the graph has no editor overlay for it.
+- What a rename's plan and apply read of the files they rewrite (kept, SD-D7), and the reads of the vault built again
+  taken in over it (`takeAgain`, SD-T8's).
+- Another vault's graph parsed here (`parseHere`), and a file reached (`reachFile`, 20.8).
+- A batch's note read whole when an open file has its path (at most one per open file); a note over
+  `walk.max_file_size` isn't parsed, as before.
 
 ## References
 

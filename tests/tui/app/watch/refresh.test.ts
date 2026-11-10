@@ -60,6 +60,8 @@ describe("background refresh and watcher delivery", () => {
     });
     const app = {
       graph: { pendingCount: 1, unparsedOver: () => [], parseSome: () => 0 },
+      // Its texts read here (no `Texts`): as a test's App reads them.
+      watch: {},
       indexing: 0,
       quitting: false,
       now: () => 100,

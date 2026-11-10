@@ -1,20 +1,23 @@
 // Keeping up with the disk (5.1–5.4): the graph indexed in the background, the watcher's batches applied, what it
-// can't see polled, the background auto-index (20.9), and a note changed on disk reloaded.
+// can't see polled, the background auto-index (20.9), and a note changed on disk reloaded — the TUI's texts read on a
+// disk thread first (SD-T6: `Texts`).
 
-import { existsSync } from "node:fs";
-import { readText, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
+import * as disk from "../../../core/foundation/platform/disk.ts";
+import { type DecodedFile, readText, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "../../documents/editing/editing.ts";
 import { planRelink } from "../../../core/workspace/mutations/rename/rename.ts";
 import type { AutoIndex } from "../../../core/workspace/graph/autoindex.ts";
 import { HOME_LIMITS, type WalkCap } from "../../../core/workspace/walk/walk.ts";
 import { isListed } from "../../../core/workspace/vaults/vault.ts";
-import { applyToGraph } from "../../../core/workspace/vaults/vault-feed.ts";
+import { applyToGraph, type BatchReads } from "../../../core/workspace/vaults/vault-feed.ts";
+import type { NoteRead } from "../../../core/workspace/walk/io/notes.ts";
 import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../../../core/workspace/graph/watch.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App } from "./app.ts";
 import { Builds } from "./builds.ts";
 import { GraphRefresh } from "./graph-refresh.ts";
 import { Look } from "./look.ts";
+import { Texts } from "./texts.ts";
 export { parseInSlices } from "./graph-refresh.ts";
 
 /** An open file as a look found it: its stamp on disk (null: gone, or unreadable). */
@@ -30,18 +33,21 @@ export class Watch {
   readonly look: Look;
   /** The vault open built again, its walk and index read on a disk thread (SD-T8). */
   readonly builds: Builds;
+  /** A changed note's text, and the background parse's, read on a disk thread (SD-T6). */
+  readonly texts: Texts;
 
   constructor(readonly app: App) {
     const delivery = { rememberSelections: () => this.rememberSelections(), rebuilt: () => this.rebuilt() };
     this.refresh = new GraphRefresh(app, delivery);
     this.look = new Look(app);
     this.builds = new Builds(app, delivery);
+    this.texts = new Texts(app);
   }
 
-  /** The disk not answering (SD-D6): the watcher's look given up on, or the look each second's — one warning on the
-   *  status line (`⚠ disk not answering`) until each answers again. */
+  /** The disk not answering (SD-D6): the watcher's look given up on, the look each second's, or a batch's texts — one
+   *  warning on the status line (`⚠ disk not answering`) until each answers again. */
   get notAnswering(): boolean {
-    return this.app.watcher?.notAnswering === true || this.look.notAnswering;
+    return this.app.watcher?.notAnswering === true || this.look.notAnswering || this.app.feed.notAnswering;
   }
 
   /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
@@ -59,6 +65,8 @@ export class Watch {
     this.stopAdoptFeed?.();
     const g = this.app.graph;
     this.builds.adopt(g);
+    // Its notes' texts read on a disk thread when the TUI's are (SD-T6): parsed as they come.
+    g.texts.elsewhere = () => this.texts.offThread;
     const stopBuild = g.onBuild(() => this.app.claimKnown());
     // A change to one file: its buffer alone, if one is open.
     const stopChange = g.onChange((c) => {
@@ -303,7 +311,9 @@ export class Watch {
         } else {
           // Told gone, back since (one reached, 20.8): reached again, as opening it reaches it.
           if (rel !== null && this.toldGone.delete(buf)) this.app.graph.reachFile(rel, { keep: true });
-          this.reloadBuffer(buf);
+          // Its text read on a disk thread first, when the TUI's are (SD-T6).
+          if (this.texts.offThread && !buf.virtual) this.texts.reload(buf);
+          else this.reloadBuffer(buf);
           changed = true;
         }
       } else if (rel === null) this.app.claim(buf);
@@ -317,7 +327,8 @@ export class Watch {
   /** The polled files told gone (`poll`): reached again when they're back (20.8). */
   private readonly toldGone = new WeakSet<NoteBuffer>();
 
-  applyChanges(given: WatchBatch): void {
+  /** A batch applied (`VaultFeed`'s `apply`): with its files as a disk thread read them (`reads`, SD-T6), when it did. */
+  applyChanges(given: WatchBatch, reads?: BatchReads): void {
     // A change to a note open only through a link not followed now (VV-D6: heard before it was forgotten): never read —
     // while its path is still through it (one made a note of the vault's own since is the vault's).
     const through = (rel: string) => {
@@ -334,7 +345,7 @@ export class Watch {
       if (c.kind === "moved") moves.push([c.from, c.to]);
     });
     try {
-      this.applyChangesNow(batch);
+      this.applyChangesNow(batch, reads);
     } finally {
       stop();
       keep();
@@ -344,10 +355,17 @@ export class Watch {
 
   /**
    * A batch of moves made elsewhere broke links (21.11): the relink offered once for it — its preview,
-   * nothing written unasked. Typing, or something else open: said instead, with where to find it.
+   * nothing written unasked. Typing, or something else open: said instead, with where to find it. While the background
+   * parse reads the notes on the disk threads (SD-T6), once it has every one: the links to look for are in all of them.
    */
   private offerRelink(moves: [string, string][]): void {
-    const plan = planRelink(this.app.graph, undefined, { pointers: false });
+    const g = this.app.graph;
+    if (this.texts.offThread && g.pendingCount)
+      return void this.texts.whenParsed(g, new AbortController().signal).then(
+        () => this.offerRelink(moves),
+        () => {},
+      );
+    const plan = planRelink(g, undefined, { pointers: false });
     if (!plan.files.length) return;
     const what = moves.length === 1 ? `${moves[0]![0]} moved to ${moves[0]![1]}` : `${moves.length} files moved`;
     const links = plan.files.reduce((n, f) => n + f.edits.length, 0);
@@ -384,12 +402,12 @@ export class Watch {
     };
   }
 
-  private applyChangesNow(batch: WatchBatch): void {
+  private applyChangesNow(batch: WatchBatch, reads?: BatchReads): void {
     const {
       structural: setChanged,
       warnings,
       listed,
-    } = applyToGraph(this.app.graph, batch, this.app.config.walk.max_file_size);
+    } = applyToGraph(this.app.graph, batch, this.app.config.walk.max_file_size, undefined, reads);
     for (const w of warnings) this.app.message("warn", w);
     if (batch.rescan) {
       this.indexInBackground();
@@ -401,9 +419,11 @@ export class Watch {
       // Home's graph is built from its walk kept (VV-D2): a folder that came is walked with the rest, while nobody works.
       this.walkHomeAgain();
       // The walk itself changed: any open note may have changed, appeared or gone — never read again through a link
-      // not followed now (VV-D6: one forgotten).
-      for (const buf of this.app.buffers.values())
-        if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
+      // not followed now (VV-D6: one forgotten). Built on a disk thread, each open file is looked at as it's taken
+      // (`rebuilt`: a look of every one, SD-T6).
+      if (!this.builds.offThread)
+        for (const buf of this.app.buffers.values())
+          if (buf.changedOnDisk() && (buf.elsewhere || !this.app.following.blocked(buf.abs))) this.reloadBuffer(buf);
     }
     if (batch.toWalk?.length) {
       // Folders come into home's top before its walk (VV-D2), listed: watched, never looked into — the walk, asked for
@@ -425,14 +445,17 @@ export class Watch {
     }
     for (const c of last.values()) {
       const buf = this.app.buffers.get(c.rel);
-      if (!buf || (c.isNote && c.kind !== "deleted" && !existsSync(buf.abs))) continue;
+      // Read on a disk thread (SD-T6): not if it's been saved, read again or opened since — what was read is older.
+      if (!buf || (reads && !this.texts.unchanged(reads, buf))) continue;
+      const read = reads?.get(buf.abs);
+      if (c.isNote && c.kind !== "deleted" && (read === undefined ? !disk.exists(buf.abs) : read === null)) continue;
       // Its file as it was read or written: nothing came to read again, or to settle with what's unsaved here — a
       // folder the watcher only now watches (a link followed) says each of its files came.
-      if (c.kind !== "deleted" && asRead(buf)) {
+      if (c.kind !== "deleted" && asRead(buf, read)) {
         this.app.claim(buf);
         continue;
       }
-      this.reloadBuffer(buf, c.kind === "deleted");
+      this.reloadBuffer(buf, c.kind === "deleted", read);
     }
     if (setChanged) {
       // New or removed notes change link statuses everywhere and the explorer.
@@ -442,24 +465,27 @@ export class Watch {
     } else if (batch.changes.length) {
       // Only changed notes: their own buffers reloaded above; others re-lay out only when they
       // link to one (its headings, and so a [[note#heading]]'s status, may have changed).
+      // One not parsed yet, its text read on a disk thread (SD-T6): laid out as it's parsed, not read here for this.
       const changed = new Set(batch.changes.map((c) => c.rel));
+      const links = (rel: string) => this.app.graph.texts.partially(() => this.app.graph.linksOf(rel));
       for (const b of this.app.buffers.values()) {
         if (!b.rel || changed.has(b.rel)) continue;
-        if (this.app.graph.linksOf(b.rel).some((l) => l.path !== null && l.path !== undefined && changed.has(l.path)))
+        if (links(b.rel).some((l) => l.path !== null && l.path !== undefined && changed.has(l.path)))
           b.invalidateLayouts();
       }
     }
   }
 
-  reloadBuffer(buf: NoteBuffer, deleted = false): void {
+  /** `buf` read again from its file — as `read` has it, read on a disk thread (SD-T6), else here — or told it's gone. */
+  reloadBuffer(buf: NoteBuffer, deleted = false, read?: NoteRead): void {
     // Back after being deleted (recreated): not deleted any more, whatever happens next.
-    if (!deleted && buf.deleted && existsSync(buf.abs)) buf.deleted = false;
+    if (!deleted && buf.deleted && (read === undefined ? disk.exists(buf.abs) : read !== null)) buf.deleted = false;
     if ((buf.dirty || buf.newFile) && !deleted) {
       // Unsaved changes here and a new version there: the conflict prompt decides (5.5).
       if (!buf.conflictKept) this.app.saving.conflictPrompt(buf);
       return;
     }
-    if (deleted || !buf.load()) {
+    if (deleted || !(read === undefined ? buf.load() : took(buf, read))) {
       buf.deleted = true;
       buf.changedAt = this.app.now();
       this.app.message("warn", `${buf.key} was deleted on disk — still showing the last version`);
@@ -499,12 +525,15 @@ export class Watch {
  * the buffer then left as a reload leaves it: the watcher's word that it came or changed brings nothing new. The text,
  * not the stamp: writes a moment apart can share an mtime. Never one gone since, or never written.
  */
-function asRead(buf: NoteBuffer): boolean {
+function asRead(buf: NoteBuffer, read?: NoteRead): boolean {
   if (buf.virtual || buf.deleted || buf.newFile) return false;
-  // Stamped before it's read: a write landing between the two leaves it changed on disk.
-  const at = stamp(buf.abs);
+  // Read on a disk thread (SD-T6): its stamp from the same open. Else stamped before it's read here: a write landing
+  // between the two leaves it changed on disk.
+  const given = read === undefined ? undefined : textOf(read);
+  if (given === null) return false;
+  const at = given ? given.stamp : stamp(buf.abs);
   try {
-    const d = readText(buf.abs);
+    const d = given ?? readText(buf.abs);
     // A byte that isn't UTF-8 reads as U+FFFD, as that character itself does: the same text, not the same file.
     if (d.text !== buf.baseText || d.bom !== buf.bom || d.invalidUtf8 !== buf.invalidUtf8) return false;
   } catch {
@@ -516,4 +545,18 @@ function asRead(buf: NoteBuffer): boolean {
   buf.conflictWaiting = false;
   if (!buf.dirty) buf.markers = false;
   return true;
+}
+
+/** An open file's text and stamp as a disk thread read it (SD-T6); null: gone, or unreadable. */
+function textOf(read: NoteRead): (DecodedFile & { stamp: Stamp }) | null {
+  if (!read?.text || "error" in read.text) return null;
+  return { ...read.text, stamp: { mtimeMs: read.mtimeMs, size: read.size } };
+}
+
+/** `buf` reloaded with what a disk thread read of its file (`load`'s answer: false, and deleted, when it's gone). */
+function took(buf: NoteBuffer, read: NoteRead): boolean {
+  const d = textOf(read);
+  if (d) return buf.took(d);
+  buf.deleted = true;
+  return false;
 }

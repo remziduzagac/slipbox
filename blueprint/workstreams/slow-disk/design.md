@@ -144,13 +144,27 @@ the second is let go of.
   question (its batches applied as git was last seen); a look wanted meanwhile is asked once the minute is over.
   Before a look has answered, and while it's given up on, the activity file's stamp isn't known, and the background
   index waits (20.9). A test's App looks on the screen's thread, at once, as before.
-- **A note's text** (SD-T6). A changed note's (the watcher's batch, an open note reloaded) and the background parse's
-  are read on a disk thread and parsed here as before (`extractText` from the text given); the background parse reads
-  the next slice's notes while one is parsed. What a hover or completion asks of a note not parsed yet is shown
-  without it, and again once it's parsed; a key that needs it waits (above). An open note the watcher's batch names is
-  checked against what it holds (`asRead`) with its text read there. What's drawn of every note — the Problems tab's
-  count, the Info panel's backlinks and convention — counts what's parsed so far, marked as partial while notes are
-  unread, and is drawn again when the parse is done (SD-D12).
+- **A note's text** (SD-T6, SD-D16). The look jobs carry it (`notes`: a note's stat and text from one open,
+  `walk.max_file_size` at most, as the walk takes it; `texts`: a note's text), in a background request with a look's
+  minute, read by `core/workspace/walk/io/notes.ts`, which holds no parser. The watcher's batch (`VaultFeed`): its
+  changed notes and the open files it names read in one request before it's applied (`Texts`,
+  `tui/app/runtime/texts.ts`), the graph parsing each from the text given (`extractRead`); one batch's out at a time,
+  those received meanwhile applied after it, a note changed in the graph meanwhile (a save of slipbox's own) left as
+  it is, and an answer for a vault left dropped. An open file is checked against what it holds (`asRead`) and reloaded
+  from what was read, unless it was saved, read again or opened since (its stamp moved): then what was read is older.
+  Given up on, the batch is said once (`⚠ disk not answering` until one answers), held, and read again a minute later,
+  never here. An open file the look each second found changed, and the graph doesn't know, is read there before it's
+  reloaded. The background parse (`parseInSlices`) asks the next slice's texts — up to 50 notes of one folder, so a
+  slow folder holds no other's in its request — while what's given is parsed: one slice out, two slices' texts at
+  most; `Graph.parseSome` parses only the notes whose texts were given (`NoteTexts`, `core/workspace/graph/texts.ts`).
+  A big note's text is read there before and after its parse on the parse threads. A slice given up on is said and put
+  aside a minute. What's drawn (`drawApp`), a completion and the Problems and Info panels ask of the notes
+  `partially`: a note not parsed yet is its stub, every note's list is of those parsed so far, a heading link into one
+  isn't checked yet, and the Problems tab's `All (n…)`, the Info panel's backlinks and convention are marked `…` until
+  the parse is done. A key that needs every note — a rename's or a relink's preview (`Renaming.preview`), the tags'
+  lists, the backlinks list — waits for the parse to have them all (`KeyReads.notes`): the keys after it wait,
+  `reading notes…` on the status line, `esc` gives it up; a slice given up on meanwhile is said. Anything else that
+  asks of a note not parsed yet reads it here, as before (the task's Open says which).
 - **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows — the view's, and each
   unfolded under it — are listed as the folders outside it are (`Listings`: kept, read again once a second old as the
   tree is built, and however old, the tree built again for it, once a vault one shows unmarked has its index said

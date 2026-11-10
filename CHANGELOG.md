@@ -154,6 +154,13 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   vault. The note it opens, or the tabs it brings back, say `reading the vault…` until the vault is read, the keys
   typed meanwhile wait for it, and `q` or `ctrl+c` quits. A quit before the tabs came back keeps them for next time.
 
+- With the vault open on a slow disk, the screen no longer stops while slipbox reads a note changed outside it or
+  indexes the vault's notes in the background. A note an agent rewrites shows its new links, and reloads if it's open,
+  once the disk has answered; one that doesn't within a minute shows `⚠ disk not answering` and is read again a
+  minute later. Until every note is read, the Problems and Info panels count the notes read so far, marked `…`, and the
+  list of tags, a note's backlinks and a rename's preview wait for the rest, the status line saying `reading notes…`
+  and `esc` giving the wait up.
+
 - **Breaking:** the `space` groups are named for what they act on, and their keys moved with them. `space f` (+file)
   acts on any file, a note or not; `space n` (+note) keeps what only a note has; finding is `space /` (+find);
   `space d` reads +directory and `space v` +vault. Each key kept its letter, so only the group's key is new.

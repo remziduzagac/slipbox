@@ -333,8 +333,9 @@ export class App {
       now: () => this.now(),
       locked: () => this.git.indexLocked(),
       asker: () => this.watch.look.asker(),
-      apply: (b) => {
-        this.watch.applyChanges(b);
+      ...this.watch.texts.feedOptions(),
+      apply: (b, reads) => {
+        this.watch.applyChanges(b, reads);
         this.host.requestRender();
       },
       headMoved: (was, now, moves) => this.git.headMoved(was, now, moves),

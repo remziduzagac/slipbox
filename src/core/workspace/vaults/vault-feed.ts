@@ -2,7 +2,8 @@
 // applied to the graph — or, while git writes (its index lock), held and applied together after,
 // and the files a branch switch brings and takes not taken for moves. The TUI keeps its graph by
 // one; what it does with the news is its own. Git's state is read here at once, or — the TUI's — given by its look
-// each second and asked of a disk thread when the feed must know it now (SD-T4), never read on the screen's thread.
+// each second and asked of a disk thread when the feed must know it now (SD-T4), never read on the screen's thread. So
+// are a batch's notes' texts, the TUI's read on a disk thread before it's applied (SD-T6), one batch's out at a time.
 
 import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
@@ -14,6 +15,7 @@ import { deepestOutside, inFolders } from "./home.ts";
 import { checkoutAt, type VaultLocation } from "./vault.ts";
 import { HOME_LIMITS } from "../walk/walk.ts";
 import type { WatchBatch } from "../graph/watch.ts";
+import type { NoteRead } from "../walk/io/notes.ts";
 
 /** HEAD as seen: its branch and its commit — a merge, a pull, a commit move it on the branch (20.21). */
 export interface Head {
@@ -59,17 +61,26 @@ export interface GitAsker {
 /** After HEAD moves, the watcher's batches for this long are the switch's too. */
 export const SWITCH_SETTLE_MS = 3000;
 
+/** What a batch is taken in with, read off the screen's thread (SD-T6): each file it changes, by its whole path — a
+ *  note's, as the graph takes it in (`readNote`), and an open file's. */
+export type BatchReads = ReadonlyMap<string, NoteRead>;
+
+/** A batch given up on, its texts not read in time (SD-D6), is read again this long after. */
+export const BATCH_AGAIN_MS = 60_000;
+
 /**
  * A batch applied to the graph: notes updated, added and removed, attachments, a rescan, folders listed for home's walk
  * (`listed`, of `toWalk`). `structural` when notes came or went — every link's status may have changed — and warnings
  * for what was left out. `maxNotes`: home's cap (VV-D2) — a note that comes past it is left to home's walk, which holds it,
- * unless it's in a folder asked for by name.
+ * unless it's in a folder asked for by name. `reads`: each note's file read already, off the screen's thread (SD-T6); one
+ * it hasn't is statted and read here.
  */
 export function applyToGraph(
   graph: Graph,
   batch: WatchBatch,
   maxFileSize: number,
   maxNotes = graph.home ? HOME_LIMITS.notes : Number.POSITIVE_INFINITY,
+  reads?: BatchReads,
 ): { structural: boolean; warnings: string[]; listed: string[] } {
   let structural = false;
   const warnings: string[] = [];
@@ -93,10 +104,12 @@ export function applyToGraph(
       continue;
     }
     const abs = join(graph.root, c.rel);
-    let st: { size: number; mtimeMs: number } | null = null;
-    try {
-      st = disk.stat(abs);
-    } catch {}
+    const read = reads?.get(abs);
+    let st: { size: number; mtimeMs: number } | null = read ?? null;
+    if (read === undefined)
+      try {
+        st = disk.stat(abs);
+      } catch {}
     if (!st) continue;
     // The walk's size cap holds for notes that appear or grow later too: out of the index; back in
     // when it shrinks under the cap again.
@@ -118,7 +131,7 @@ export function applyToGraph(
         if (out) graph.removeFile(out);
       }
       if (c.kind === "created" || !graph.notes.has(c.rel)) structural = true;
-      graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs });
+      graph.updateFile(c.rel, { rel: c.rel, abs, size: st.size, mtimeMs: st.mtimeMs }, read?.text);
     }
   }
   return { structural, warnings, listed };
@@ -129,8 +142,9 @@ export interface FeedOptions {
   checkout: () => Checkout | null;
   graph: () => Graph;
   now: () => number;
-  /** The batches held so far, as one: apply it (with `applyToGraph`, then whatever the face does). */
-  apply: (batch: WatchBatch) => void;
+  /** The batches held so far, as one: apply it (with `applyToGraph`, then whatever the face does) — with its files read
+   *  off the screen's thread (`read`), when they were. */
+  apply: (batch: WatchBatch, reads?: BatchReads) => void;
   /** HEAD moved from one place to another (not a repository appearing or going); `moves`: git's
    *  renames the graph took as evidence, if the branch moved on (20.21). */
   headMoved?: (was: Head, now: Head, moves: [string, string][]) => void;
@@ -141,6 +155,11 @@ export interface FeedOptions {
   /** Git's state asked off the screen's thread (the TUI's look, SD-T4): its look gives it each second (`saw`), and a
    *  batch received asks it, git's lock waited out by its stat alone. Null, or left out: read here at once. */
   asker?: () => GitAsker | null;
+  /** A batch's files read off the screen's thread (the TUI's, SD-T6): applied once they're in. Null, or left out: read
+   *  here as it's applied. */
+  read?: () => ((batch: WatchBatch) => Promise<BatchReads>) | null;
+  /** A batch's read given up on (SD-D6): said; the batch read again `BATCH_AGAIN_MS` later. */
+  gaveUp?: () => void;
 }
 
 export class VaultFeed {
@@ -159,6 +178,14 @@ export class VaultFeed {
   private asking = false;
   /** Bumped by each vault (`reset`): an answer asked for another is dropped. */
   private resets = 0;
+  /** A batch's files out, read off the screen's thread (SD-T6): those received meanwhile go once it's applied. */
+  private reading = false;
+  /** A batch given up on, read again when this goes off (SD-D6): those received meanwhile wait with it. */
+  private again: ReturnType<typeof setTimeout> | null = null;
+  /** How long after a batch given up on it's read again; a test's, sooner. */
+  againMs = BATCH_AGAIN_MS;
+  /** A batch's files didn't answer in time: the disk isn't answering, till one does. */
+  notAnswering = false;
 
   constructor(private readonly o: FeedOptions) {
     this.head = this.headNow();
@@ -250,9 +277,12 @@ export class VaultFeed {
   }
 
   /** The held batches applied as one — a switch that came with them seen first, and their files
-   *  not taken for moves (a note only one branch has comes and goes; nothing moved). */
+   *  not taken for moves (a note only one branch has comes and goes; nothing moved). Their files read off the screen's
+   *  thread first, when they are (SD-T6): one batch's out at a time, those received meanwhile applied after it. */
   flush(): void {
+    if (this.reading || this.again) return;
     this.applying = true;
+    let out = false;
     try {
       const batches = this.held;
       this.held = [];
@@ -265,12 +295,75 @@ export class VaultFeed {
         ...(toWalk.length ? { toWalk } : {}),
       };
       this.o.gitNews?.();
-      if (this.o.now() - this.switchedAt < SWITCH_SETTLE_MS) this.o.graph().pauseMoves(() => this.o.apply(merged));
-      else this.o.apply(merged);
+      // Within a switch's settle as it's asked: applied so, whenever its files come.
+      const paused = this.o.now() - this.switchedAt < SWITCH_SETTLE_MS;
+      const read = this.o.read?.();
+      if (read && merged.changes.some((c) => c.kind !== "deleted")) {
+        out = true;
+        return this.readThenApply(merged, read, paused);
+      }
+      this.land(merged, undefined, paused);
     } finally {
-      this.applying = false;
-      for (const fn of this.afterApplied.splice(0)) fn();
+      if (!out) this.applied();
     }
+  }
+
+  /** `batch` applied, with its files as read (`reads`) — its moves paused, within a switch's settle. */
+  private land(batch: WatchBatch, reads: BatchReads | undefined, paused: boolean): void {
+    if (paused) this.o.graph().pauseMoves(() => this.o.apply(batch, reads));
+    else this.o.apply(batch, reads);
+  }
+
+  /** Done applying: what waited for it run, and the batches held meanwhile applied — unless git's state is asked for
+   *  them, or its lock waited out, which flush them themselves. */
+  private applied(): void {
+    this.applying = false;
+    for (const fn of this.afterApplied.splice(0)) fn();
+    if (this.held.length && !this.reading && !this.asking && !this.wait && !this.again) this.flush();
+  }
+
+  /**
+   * `batch`'s files read off the screen's thread, then applied (SD-T6) — for the vault it was asked for alone; what
+   * changed in the graph meanwhile (a save of slipbox's own, a file reached) left as it is, newer than the read (SD-D5).
+   * Given up on (SD-D6): said, the batch held first again and read again `againMs` later, those received meanwhile
+   * with it — never read here instead.
+   */
+  private readThenApply(batch: WatchBatch, read: (b: WatchBatch) => Promise<BatchReads>, paused: boolean): void {
+    this.reading = true;
+    const at = this.resets;
+    const since = new Set<string>();
+    const stop = this.o.graph().onChange((c) => {
+      if (c.kind === "moved") since.add(c.from).add(c.to);
+      else since.add(c.path);
+    });
+    const done = (reads: BatchReads | null) => {
+      stop();
+      if (this.closed || at !== this.resets) return;
+      this.reading = false;
+      if (!reads) return this.later(batch);
+      this.notAnswering = false;
+      const changes = since.size ? batch.changes.filter((c) => !since.has(c.rel)) : batch.changes;
+      try {
+        this.land({ ...batch, changes }, reads, paused);
+      } finally {
+        this.applied();
+      }
+    };
+    read(batch).then(done, () => done(null));
+  }
+
+  /** `batch` given up on, its files not read in time: said once, held first again, and read again `againMs` later. */
+  private later(batch: WatchBatch): void {
+    this.held.unshift(batch);
+    if (!this.notAnswering) this.o.gaveUp?.();
+    this.notAnswering = true;
+    const at = this.resets;
+    this.again = setTimeout(() => {
+      this.again = null;
+      if (!this.closed && at === this.resets) this.flush();
+    }, this.againMs);
+    (this.again as { unref?: () => void }).unref?.();
+    this.applied();
   }
 
   /**
@@ -278,7 +371,7 @@ export class VaultFeed {
    * for them), once they are: what git wrote lands before what's looked at after a build.
    */
   whenApplied(fn: () => void): void {
-    if (this.applying) this.afterApplied.push(fn);
+    if (this.applying || this.reading) this.afterApplied.push(fn);
     else fn();
   }
 
@@ -316,6 +409,14 @@ export class VaultFeed {
     this.asking = false;
     if (this.wait) clearTimeout(this.wait);
     this.wait = null;
+    // A batch's files out, or given up on, for the vault left: dropped, what waited for it run.
+    if (this.again) clearTimeout(this.again);
+    this.again = null;
+    this.notAnswering = false;
+    if (this.reading) {
+      this.reading = false;
+      this.applied();
+    }
     this.seen = null;
     this.head = this.headNow();
   }
@@ -324,5 +425,7 @@ export class VaultFeed {
     this.closed = true;
     if (this.wait) clearTimeout(this.wait);
     this.wait = null;
+    if (this.again) clearTimeout(this.again);
+    this.again = null;
   }
 }

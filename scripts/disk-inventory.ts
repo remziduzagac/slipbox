@@ -140,6 +140,8 @@ export const SEAM_READERS = [
   "src/tui/app/runtime/key-reads.ts",
   "src/tui/app/runtime/look.ts",
   "src/tui/app/runtime/startup.ts",
+  "src/tui/app/runtime/texts.ts",
+  "src/tui/app/runtime/watch.ts",
   "src/tui/app/settings/settings.ts",
   "src/tui/documents/buffers/buffer.ts",
   "src/tui/documents/buffers/opening.ts",
@@ -196,7 +198,6 @@ export const DISK_READERS: Record<string, string> = {
   "src/core/workspace/vaults/symlinks.ts":
     "a link's own read as it's answered or a rename moves it: kept (SD-D7); the answers kept, the TUI's look's (SD-T9)",
   "src/tui/app/distribution/update-observation.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
-  "src/tui/app/runtime/watch.ts": "an open note the watcher's batch names, checked with a disk thread's `read` (SD-T6)",
   "src/tui/app/scratch/scratch.ts": "the scratch's places, kept and asked of a disk thread (SD-T11)",
   "src/tui/documents/media/images.ts": "a picture's file, as it's drawn (SD-T11)",
   "src/tui/documents/saving/saving.ts": "a save's own checks: kept (SD-D7)",

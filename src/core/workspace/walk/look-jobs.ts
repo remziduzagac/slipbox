@@ -1,9 +1,11 @@
 // What the TUI's look each second asks of a disk thread besides a stat of each path (SD-T4; disk-jobs.ts hands these
 // here, a look's jobs and stats asked as one request): each open file's way checked for a link not followed and, none
 // there, the file statted; git's state where the vault is; your config and the vault's read and parsed; the root's
-// tool's settings; the answers kept for links followed (SD-T9). Each read as the screen's thread would read it — the
-// same code, through the seam (SD-D10) — with what that thread knows given in the request (the links being looked at)
-// or carried with it (`walkContext`: the environment, the root markers).
+// tool's settings; the answers kept for links followed (SD-T9). And, in the background as the looks are, notes' texts
+// (SD-T6): the files a watcher's batch changes, as the graph takes them in, and the next slice the background parse
+// parses. Each read as the screen's thread would read it — the same code, through the seam (SD-D10) — with what that
+// thread knows given in the request (the links being looked at) or carried with it (`walkContext`: the environment, the
+// root markers).
 
 import { loadConfig } from "../../application/config/config.ts";
 import type { LoadedConfig } from "../../application/config/contracts.ts";
@@ -13,6 +15,7 @@ import { type ToolRead, toolRead } from "../links/convention.ts";
 import { blockingLink, type LinkPlace, type LinksRead, readLinks } from "../vaults/symlinks.ts";
 import { configFilesFor, type VaultLocation } from "../vaults/vault.ts";
 import { type GitSeen, gitSeenAt } from "../vaults/vault-feed.ts";
+import { type NoteRead, type NoteText, readNote, readNoteText } from "./io/notes.ts";
 import { type PathStat, statOf } from "./io/stamps.ts";
 
 /** A place, as `loc` is to the look: a vault's, home's, Elsewhere's. */
@@ -37,14 +40,18 @@ export type LookJob =
   | { op: "git"; loc: Place }
   | { op: "config"; loc: Place; configFile?: string; lastGood: [string, Record<string, unknown>][] }
   | { op: "tool"; root: string }
-  | { op: "links" };
+  | { op: "links" }
+  | { op: "notes"; paths: string[]; max: (number | null)[] }
+  | { op: "texts"; paths: string[] };
 
 export type LookJobAnswer =
   | { ways: WayAnswer[] }
   | { git: GitSeen }
   | { config: ConfigRead }
   | { tool: ToolRead | null }
-  | { links: LinksRead };
+  | { links: LinksRead }
+  | { notes: NoteRead[] }
+  | { texts: NoteText[] };
 
 /** The config files a place reads, in order (`loadConfig`'s): yours (`--config`, `SLIPBOX_CONFIG` or the XDG one), the
  *  vaults' enclosing it, its own. */
@@ -93,5 +100,9 @@ export function answerLookJob(job: LookJob): LookJobAnswer {
       return { tool: toolRead(job.root) };
     case "links":
       return { links: readLinks() };
+    case "notes":
+      return { notes: job.paths.map((p, i) => readNote(p, job.max[i] ?? null)) };
+    case "texts":
+      return { texts: job.paths.map(readNoteText) };
   }
 }

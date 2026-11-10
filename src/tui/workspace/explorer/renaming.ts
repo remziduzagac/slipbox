@@ -27,12 +27,21 @@ export class Renaming {
 
   /**
    * A rename's preview (7.2): every line it changes, in every vault, and the warnings (7.3); enter
-   * carries it out, esc leaves everything as it was. Refused while a file it touches is unsaved.
+   * carries it out, esc leaves everything as it was. Refused while a file it touches is unsaved. Made once every note
+   * is parsed — the links to rewrite are in all of them — the keys waiting meanwhile (SD-T6: `KeyReads.notes`).
    */
   preview(
     make: () => RenamePlan,
     apply: (plan: RenamePlan) => void = (plan) => this.apply(plan),
     /** Rows of the plan's own (the converter's links to pick for), and what enter on one does: true when it's theirs. */
+    extra?: (plan: RenamePlan) => { items: ListItem[]; pick: (item: ListItem) => boolean },
+  ): void {
+    void this.app.reads.notes(() => this.previewNow(make, apply, extra), "nothing changed");
+  }
+
+  private previewNow(
+    make: () => RenamePlan,
+    apply: (plan: RenamePlan) => void,
     extra?: (plan: RenamePlan) => { items: ListItem[]; pick: (item: ListItem) => boolean },
   ): void {
     let plan: RenamePlan;

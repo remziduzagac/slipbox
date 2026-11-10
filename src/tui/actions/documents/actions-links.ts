@@ -121,34 +121,38 @@ export function linkActions(): Record<string, Run> {
             "info",
             `no backlinks in ${ELSEWHERE}: it has no index — a note in a vault or home has them`,
           );
-        if (!v.buf.rel) return a.message("info", "backlinks are kept for the notes of a vault");
-        const bl = a.graph.backlinks(v.buf.rel);
-        if (!bl.length) return a.message("info", `no notes link to ${v.buf.rel}`);
-        a.overlays.openList({
-          title: `Linking to ${v.buf.name} (${bl.length})`,
-          // Another root's link (17.11): by its path, as files are shown (21.9).
-          items: bl.map((b) => ({
-            label: b.vault ? a.graph.shownPath(b.from) : b.from,
-            detail: b.text,
-            hint: `${b.line}`,
-            // The link here, marked in the preview (EG-D2).
-            place: {
-              abs: a.absOf(b.from),
-              line: b.line,
-              ...(b.end.line === b.line ? { range: [b.column - 1, b.end.column - 1] as [number, number] } : {}),
-              text: b.text,
+        const rel = v.buf.rel;
+        if (!rel) return a.message("info", "backlinks are kept for the notes of a vault");
+        // Once every note is parsed: a link to it may be in any (SD-T6: `KeyReads.notes`).
+        return a.reads.notes(() => {
+          const bl = a.graph.backlinks(rel);
+          if (!bl.length) return a.message("info", `no notes link to ${rel}`);
+          a.overlays.openList({
+            title: `Linking to ${v.buf.name} (${bl.length})`,
+            // Another root's link (17.11): by its path, as files are shown (21.9).
+            items: bl.map((b) => ({
+              label: b.vault ? a.graph.shownPath(b.from) : b.from,
+              detail: b.text,
+              hint: `${b.line}`,
+              // The link here, marked in the preview (EG-D2).
+              place: {
+                abs: a.absOf(b.from),
+                line: b.line,
+                ...(b.end.line === b.line ? { range: [b.column - 1, b.end.column - 1] as [number, number] } : {}),
+                text: b.text,
+              },
+              data: b,
+            })),
+            places: "backlinks",
+            accept: (item) => {
+              const b = item.data as { from: string; line: number };
+              const at = { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line };
+              // From another vault: read in a peek, at the link (VV-D7), going there a choice.
+              if (peekInstead(a, b.from, at)) return;
+              a.open(b.from, at);
             },
-            data: b,
-          })),
-          places: "backlinks",
-          accept: (item) => {
-            const b = item.data as { from: string; line: number };
-            const at = { heading: null, headingIndex: 0, offset: b.line - 1, line: b.line };
-            // From another vault: read in a peek, at the link (VV-D7), going there a choice.
-            if (peekInstead(a, b.from, at)) return;
-            a.open(b.from, at);
-          },
-        });
+          });
+        }, "no backlinks listed");
       }),
     "link.convert": (a, arg) => {
       // A note named: its links; else every note's.

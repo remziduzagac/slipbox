@@ -142,6 +142,12 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // The TUI's look each second (SD-T4), asked of those threads: the open files no watcher sees and their ways, the
   // config, git's state and what's drawn of it, the root's tool's settings for the links' convention.
   [/^src\/(?:core\/workspace\/walk\/look-jobs|tui\/app\/runtime\/look)\.ts$/, ["slow disk", ...LOOK_CHECKS]],
+  // A note's text read on those threads (SD-T6): a changed note's, an open one reloaded, the background parse's; and
+  // what waits for every note (the tags, the backlinks, a rename) or counts those parsed so far (the Problems panel).
+  [
+    /^src\/(?:core\/workspace\/(?:walk\/io\/notes|graph\/texts)|tui\/app\/runtime\/texts)\.ts$/,
+    ["slow disk", "watching", "tags", "backlinks", "rename", "problems"],
+  ],
   // The explorer's listings, of the folders outside the vault open and of its own (SD-T7), and the rows the walk didn't
   // give built from them: what the walk leaves out (busy, ignored, hidden, `walk.exclude`), a file made since, home's
   // folders before its walk, a link's folder, a nested vault's name, and its row's mark once its index is built.

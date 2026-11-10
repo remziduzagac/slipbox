@@ -39,7 +39,8 @@ export function linkItems(
   more?: (others: () => CompletionItem[]) => boolean,
 ): CompletionItem[] {
   const g = app.graph;
-  const c = conventionOf(g, app.config, app.settings.origins, style, app.settings.tool());
+  // From the notes parsed so far, the rest's texts read on a disk thread (SD-T6): offered at once.
+  const c = g.texts.partially(() => conventionOf(g, app.config, app.settings.origins, style, app.settings.tool()));
   const home = homeFolder();
   const tilde = (abs: string) => (abs.startsWith(`${home}/`) ? `~/${relative(home, abs)}` : abs);
   // Each other vault's pointer name worked out once, not once per note: per note it read every named folder.
