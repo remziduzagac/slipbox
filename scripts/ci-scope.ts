@@ -204,7 +204,8 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/core\/(documents\/editing\/replace|workspace\/mutations\/replace-files)\.ts$/, ["replace", "find"]],
   [/^src\/tui\/documents\/search\/replacing\.ts$/, ["replace"]],
   [/^src\/core\/workspace\/mutations\/rename\/rename[\w-]*\.ts$/, ["rename", "naming", ...VAULT_CHECKS]],
-  [/^src\/tui\/workspace\/explorer\/renaming\.ts$/, ["rename", "naming"]],
+  // A rename's or move's folders listed again before the keys after it act, what it moved selected then (SD-T7).
+  [/^src\/tui\/workspace\/explorer\/renaming\.ts$/, ["rename", "naming", "files"]],
   // Features of a window or a command of their own.
   [/^src\/tui\/shell\/overlays\/palette\.ts$/, ["palette", "help", "which-key"]],
   // Text objects, syntax jumps and growing the selection by the structure (EG-D6, EG-D7).

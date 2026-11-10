@@ -253,6 +253,8 @@ export class Mouse {
       const row = this.app.explorer.rows()[idx];
       if (!row) return;
       this.app.sidebar.selected = idx;
+      // Moved by you, as a key moves it (`ExplorerActions.action`): a row meant to be selected once listed isn't any more.
+      this.app.explorer.wanted = null;
       // A note: one click selects it, a double-click opens it as a tab (enter too, from the keys).
       // A root (another vault) likewise: a double-click goes there.
       if ((row.kind === "note" || row.kind === "root") && clicks < 2) return;

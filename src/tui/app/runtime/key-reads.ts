@@ -1,6 +1,7 @@
 // A key's own reads (SD-D4, SD-T5): what a key asks of the disk and acts on — a note opened, `:e!` and a reload by
 // hand, `:e`'s file looked for, a file looked for before git opens it, git's stats before its read, a folder zoomed
-// into or unfolded (SD-T7) — asked of a disk thread. The key waits for it, and the keys after it wait their turn
+// into or unfolded, the folders a file operation changed listed again (SD-T7: `Explorer.afterOp`) — asked of a disk
+// thread. The key waits for it, and the keys after it wait their turn
 // (`Input.processKey`), as for a big note's parse; a click meanwhile is dropped (`Mouse.handle`). The screen draws:
 // `reading <note>…` in the window the note will be in (`Views.layoutFor`). `esc` gives it up at once, out of turn
 // (`Input.handleKey`), the window as it was; past its deadline (SD-D6: a key's minute) it's said. Either way the keys

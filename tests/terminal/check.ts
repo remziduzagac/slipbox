@@ -308,9 +308,12 @@ export async function explorerClosed(s: Session): Promise<void> {
   await s.until(closed, undefined, "space e to close the explorer");
 }
 
-/** Select the explorer's row named `name` (it has focus, the row on screen): from the top, down to it. */
+/**
+ * Select the explorer's row named `name` (it has focus, the row on screen): once it's shown, from the top, down to it —
+ * the `j`s counted from the rows on screen, and counted again when those rows moved before the keys were handled (a
+ * folder's `listing…` row gone, its listing come): a `j` counted past a row that went lands a row too far.
+ */
 export async function explorerRow(s: Session, name: string): Promise<void> {
-  await s.keys("g", "g");
   // Its rows: left of its border (in code points: the Nerd glyphs are two units), past the left rail. Read once the
   // explorer shows the row: a busy slipbox draws it late.
   const find = () => {
@@ -324,9 +327,19 @@ export async function explorerRow(s: Session, name: string): Promise<void> {
     const at = screen.findIndex((r, i) => i >= first && new RegExp(`\\b${name}\\b`).test(left(r)));
     return first >= 0 && at >= first ? { first, at } : null;
   };
-  await s.until(() => find() !== null, undefined, `the explorer to show ${name}`);
-  const { first, at } = find()!;
-  for (let i = first; i < at; i++) await s.keys("j");
+  const shown = async () => {
+    await s.until(() => find() !== null, undefined, `the explorer to show ${name}`);
+    return find()!;
+  };
+  await shown();
+  for (let tries = 1; ; tries++) {
+    await s.keys("g", "g");
+    const counted = await shown();
+    for (let i = counted.first; i < counted.at; i++) await s.keys("j");
+    const now = await shown();
+    if (now.first === counted.first && now.at === counted.at) return;
+    if (tries === 5) throw new Error(`the explorer's rows kept moving on the way to ${name}`);
+  }
 }
 
 /** A file an export wrote (in halden's copy, `~/…`, or a whole path), waited for: there, and starting with `magic`. */

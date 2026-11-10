@@ -175,8 +175,9 @@ export class Files {
     const name = posix.basename(rel).replace(/\.[^.]+$/, "");
     const content = kind.group === "note" ? `# ${name}\n\n` : "";
     let stamp: { mtimeMs: number; size: number };
+    let made: string | undefined;
     try {
-      mkdirSync(dirname(abs), { recursive: true });
+      made = mkdirSync(dirname(abs), { recursive: true });
       stamp = writeNote(this.app.loc.root, abs, content, this.through(abs));
     } catch (err) {
       this.app.message("error", `can't create ${rel}: ${(err as Error).message}`);
@@ -194,6 +195,8 @@ export class Files {
       this.app.explorer.invalidateTree();
       this.app.relayoutAll(); // links to it resolve now
     }
+    // The folder it came in listed again: the first folder made's, when it made some (a kept one: `a/` for `a/b/c.md`).
+    this.app.explorer.afterOp([made ? relative(this.app.loc.root, made) : rel]);
     this.app.message("info", `created ${rel}${this.notIndexed(abs)}`);
     return { rel, created: true, open };
   }
@@ -424,7 +427,7 @@ export class Files {
       // Open notes that went with it show their last text, marked deleted (as when deleted on disk).
       for (const b of this.app.buffers.values())
         if (b.rel !== null && (b.rel === item.rel || b.rel.startsWith(`${item.rel}/`))) b.deleted = true;
-      this.afterFileOp();
+      this.afterFileOp([item.rel]);
       this.app.message("info", `deleted ${item.rel} to the trash — u in the explorer (or :trash) restores it`);
       then?.();
     });
@@ -447,8 +450,7 @@ export class Files {
     if (this.lastTrashed === id) this.lastTrashed = null;
     for (const b of this.app.buffers.values())
       if (b.deleted && (b.abs === item.abs || b.abs.startsWith(`${item.abs}/`))) this.app.watch.reloadBuffer(b);
-    this.afterFileOp();
-    this.app.explorer.select(item.shown);
+    this.afterFileOp([item.shown], item.shown);
     this.app.message("info", `restored ${item.shown}`);
   }
 
@@ -530,17 +532,19 @@ export class Files {
     } catch (err) {
       return this.app.message("warn", (err as Error).message);
     }
-    this.afterFileOp();
-    this.app.explorer.select(r.to);
+    this.afterFileOp([r.to], r.to);
     this.app.message("info", `copied ${r.from} → ${r.to}${this.notIndexed(join(this.app.loc.root, r.to), r.dir)}`);
   }
 
-  /** After files moved, came or went: the tree, the watcher and the layouts follow. */
-  afterFileOp(): void {
+  /** After files moved, came or went — `touched`, by their paths in the vault, `select` selected after: the tree, the
+   *  watcher and the layouts follow. */
+  afterFileOp(touched: readonly string[] = [], select?: string): void {
     this.app.git.refresh();
-    // The vault's folders listed a level at a time (what its walk leaves out, the vaults in it) listed again (T12).
+    // The vault's folders listed a level at a time (what its walk leaves out, the vaults in it) listed again (T12),
+    // those it changed at once, the keys waiting for them (SD-T7).
     this.app.explorer.listings.stale(this.app.loc.root);
     this.app.explorer.invalidateTree();
+    this.app.explorer.afterOp(touched, select);
     this.app.watcher?.sync(
       isListed(this.app.loc) ? [""] : this.app.graph.dirs,
       this.app.watch.knownFromGraph(),
@@ -569,8 +573,9 @@ export class Files {
       this.app.message("warn", `${rel} exists`);
       return null;
     }
+    let made: string | undefined;
     try {
-      mkdirSync(abs, { recursive: true });
+      made = mkdirSync(abs, { recursive: true });
     } catch (err) {
       this.app.message("error", `can't create ${rel}: ${(err as Error).message}`);
       return null;
@@ -582,8 +587,8 @@ export class Files {
     this.app.explorer.invalidateTree();
     this.app.panels.switchLeftView("explorer");
     this.app.panels.showSidebar(true);
-    const at = this.app.explorer.rows().findIndex((r) => r.kind === "dir" && r.path === rel);
-    if (at >= 0) this.app.sidebar.selected = at;
+    // Listed again where the first folder made came: `drafts/` for `drafts/2026/q4`, never `drafts/2026`, just made.
+    this.app.explorer.afterOp([made ? relative(this.app.loc.root, made) : rel], rel);
     this.app.region = "sidebar";
     this.app.message("info", `created ${rel}/${this.notIndexed(abs, true)}`);
     return rel;

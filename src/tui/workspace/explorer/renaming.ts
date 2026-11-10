@@ -241,9 +241,10 @@ export class Renaming {
         },
       });
     }
-    this.app.files.afterFileOp();
-    if (plan.move) this.app.explorer.select(relative(this.app.loc.root, plan.move.to));
-    if (plan.makeVault || plan.unmakeVault) this.app.explorer.select(plan.from);
+    // The folders it moved out of and into listed again, what it moved selected once they're read (SD-T7).
+    const went = plan.move && [relative(this.app.loc.root, plan.move.from), relative(this.app.loc.root, plan.move.to)];
+    const made = plan.makeVault || plan.unmakeVault ? plan.from : undefined;
+    this.app.files.afterFileOp(went || (made ? [made] : []), went ? went[1] : made);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
     // A note or folder moved where the vault never indexes it (D246): said after where it went.
     const left =

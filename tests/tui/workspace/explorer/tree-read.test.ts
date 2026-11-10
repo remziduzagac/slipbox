@@ -732,3 +732,185 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
     }
   });
 });
+
+describe("a file operation's folders listed again before the keys after it act (SD-T7)", () => {
+  // The clock stopped once the folders are listed: none grows old meanwhile, read again by its age.
+  let clock: { mockRestore: () => void } | null = null;
+  afterEach(() => clock?.mockRestore());
+
+  /** The explorer shown, the folders listed (`listed`), the clock stopped. */
+  async function shown(h: Harness): Promise<void> {
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    await listed(h);
+    clock = spyOn(Date, "now").mockReturnValue(Date.now());
+  }
+
+  /** A folder of notes and a file, the explorer shown and unfolded on it, `handbook/people.md` selected. */
+  async function onPeople(): Promise<Harness> {
+    const h = await vaultWith({
+      "handbook/ops.md": "# Ops\n",
+      "handbook/people.md": "# People\n",
+      "handbook/safety.adoc": "= Safety\n",
+      "handbook/writing.md": "# Writing\n",
+    });
+    h.app.explorer.select("handbook/people.md");
+    await shown(h);
+    h.app.explorer.select("handbook/people.md");
+    return h;
+  }
+  const selected = (h: Harness) => h.app.explorer.rows()[h.app.sidebar.selected]?.path;
+
+  test("deleted: a key after it waits for its folder read again — never on the deleted note's row, still listed from before", async () => {
+    const h = await onPeople();
+    const late = answerHeld(join(h.root, "handbook"));
+    try {
+      await h.keys("d", "y");
+      await late.read;
+      expect(names(h)).toContain("  people.md"); // listed from before: the folder's answer held
+      const y = press(h, "y");
+      expect(h.app.files.clip).toBeNull();
+      late.release();
+      await y;
+      expect(names(h)).not.toContain("  people.md");
+      expect(h.app.files.clip?.rel).toBe("handbook/safety.adoc");
+    } finally {
+      late.restore();
+    }
+  });
+
+  test("restored, the watcher's word of the delete late: a key after it acts on the note restored, never on its neighbour", async () => {
+    const h = await onPeople();
+    await h.keys("d", "y");
+    await h.app.reads.settled();
+    expect(selected(h)).toBe("handbook/safety.adoc");
+    const late = answerHeld(join(h.root, "handbook"));
+    try {
+      await press(h, "u");
+      await late.read;
+      // The watcher's batch of the delete, come after the restore: the walk lets the note go, and the listing kept from
+      // after the delete doesn't have it — the selection on its neighbour meanwhile.
+      h.app.watch.applyChanges({
+        changes: [{ rel: "handbook/people.md", kind: "deleted", isNote: true }],
+        rescan: false,
+      });
+      expect(selected(h)).toBe("handbook/safety.adoc");
+      const y = press(h, "y");
+      expect(h.app.files.clip).toBeNull();
+      late.release();
+      await y;
+      expect(selected(h)).toBe("handbook/people.md");
+      expect(h.app.files.clip?.rel).toBe("handbook/people.md");
+    } finally {
+      late.restore();
+    }
+  });
+
+  test("deleted, the walk's filter moved while its folder is read again (a `.gitignore` changed): the key after it waits for the read asked under the filter now, never on the deleted note's row", async () => {
+    const h = await onPeople();
+    const late = answerHeld(join(h.root, "handbook"));
+    try {
+      await h.keys("d", "y");
+      await late.read;
+      // Its answer, read under the filter before, is read again under the one now: no listing taken by it.
+      h.app.graph.filter.invalidate("");
+      const y = press(h, "y");
+      late.release();
+      await y;
+      expect(names(h)).not.toContain("  people.md");
+      expect(h.app.files.clip?.rel).toBe("handbook/safety.adoc");
+    } finally {
+      late.restore();
+    }
+  });
+
+  test("deleted, a vault in its folder indexed while it's read again: the key after it waits for the read asked since, never on the deleted note's row", async () => {
+    const h = await vaultWith({
+      "nest/.slipbox/config.toml": "",
+      "nest/n.md": "# N\n",
+      "ops.md": "# Ops\n",
+      "people.md": "# People\n",
+      "safety.adoc": "= Safety\n",
+    });
+    await shown(h);
+    h.app.explorer.select("people.md");
+    const late = answerHeld(h.root);
+    try {
+      await h.keys("d", "y");
+      await late.read;
+      // The folder's listing shows the vault not indexed: its answer, read before, dropped (`indexed`).
+      writtenElsewhere(join(h.root, "nest"));
+      indexWritten([vaultKey(join(h.root, "nest"))]);
+      const y = press(h, "y");
+      late.release();
+      await y;
+      expect(names(h)).not.toContain("people.md");
+      expect(h.app.files.clip?.rel).toBe("safety.adoc");
+    } finally {
+      late.restore();
+    }
+  });
+
+  for (const [what, make] of [
+    ["a folder", (h: Harness) => h.app.files.createFolder("2026/q4", "archive")],
+    ["a note", (h: Harness) => h.app.files.createNote("2026/q4", "archive")],
+  ] as const)
+    test(`${what} made two deep in a folder the walk leaves out: the folder its first folder was made in listed again before the keys after it, that folder's row there`, async () => {
+      const h = await vaultWith(
+        { "archive/old.md": "# Old\n" },
+        { config: (c) => void (c.walk.exclude = ["archive"]) },
+      );
+      const archive = join(h.root, "archive");
+      h.app.explorer.expanded.add(archive);
+      await shown(h);
+      expect(names(h)).toContain("  old.md");
+      const late = answerHeld(archive);
+      try {
+        make(h);
+        expect(h.app.reads.busy).toBe(true);
+        await late.read;
+        expect(names(h)).not.toContain("  2026");
+        late.release();
+        await h.app.reads.settled();
+        expect(names(h)).toContain("  2026");
+      } finally {
+        late.restore();
+      }
+    });
+});
+
+describe("a row meant to be selected once its folder is listed (T12)", () => {
+  test("held: a click on the row selected meanwhile — the same index — drops it: once the folder's listing comes, the selection stays where you clicked, never on the row revealed", async () => {
+    const h = await vaultWith({ "notes/.gitignore": "out/\n", "notes/out/x.md": "# X\n", "notes/a.md": "# A\n" });
+    const ex = h.app.explorer;
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    ex.select("notes/a.md");
+    await listed(h);
+    ex.select("notes/a.md");
+    // The clock stopped: no listing grows old meanwhile, read again by its age.
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    const out = join(h.root, "notes/out");
+    const late = answerHeld(out);
+    try {
+      // A note in a folder `.gitignore` leaves out, revealed before that folder's listing comes: meant to be selected.
+      ex.reveal(join(out, "x.md"));
+      await late.read;
+      const at = h.app.sidebar.selected;
+      expect(ex.rows()[at]?.path).toBe("notes/a.md");
+      expect(ex.wanted).toMatchObject({ at });
+      h.frame();
+      const g = h.app.geometry!.sidebar!;
+      for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: g.x + 2, y: g.y + at, button: 0 });
+      late.release();
+      await listed(h);
+      expect(names(h)).toContain("    x.md");
+      expect(ex.rows()[h.app.sidebar.selected]?.path).toBe("notes/a.md");
+    } finally {
+      late.restore();
+      clock.mockRestore();
+    }
+  });
+});

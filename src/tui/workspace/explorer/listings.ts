@@ -40,6 +40,9 @@ interface Kept {
   settings: string;
   /** The tree it was last shown in (`newTree`): never let go of while that's the tree shown. */
   tree: number;
+  /** The keys waiting for it (`relist`): settled once a listing of it is taken, whichever read takes it — the one they
+   *  asked, or one asked since (the settings changed, `reread`), their deadline its — failed by one with no answer. */
+  waits: { taken: () => void; failed: (err: Error) => void }[];
 }
 
 /** Why a listing's thread gave no answer, as its row says it — of the folder (`walkFailure` says it of the walk). */
@@ -127,7 +130,7 @@ export class Listings {
       this.kept.delete(key);
       this.kept.set(key, k);
     } else {
-      k = { dir, own, listing: null, reading: null, asked: Date.now(), at: 0, settings, tree: this.tree };
+      k = { dir, own, listing: null, reading: null, asked: Date.now(), at: 0, settings, tree: this.tree, waits: [] };
       this.kept.set(key, k);
       // Still not listed then: its rows say it's being listed.
       const t = setTimeout(() => {
@@ -168,9 +171,12 @@ export class Listings {
   }
 
   /** The listings of `dir` and of every folder in it let go of (moved away): read afresh when next shown, a read under
-   *  way dropped. */
+   *  way dropped, a key waiting for one let go. */
   forget(dir: string): void {
-    for (const [key] of [...this.under(dir, true)]) this.kept.delete(key);
+    for (const [key, k] of [...this.under(dir, true)]) {
+      this.kept.delete(key);
+      this.settle(k);
+    }
   }
 
   /** The listings of `dir` and of every folder in it read again when next shown, shown as they were meanwhile: what's in
@@ -209,32 +215,73 @@ export class Listings {
   }
 
   /** `k` read again when next shown, shown as it was meanwhile, however lately it was read. A read of it under way is
-   *  dropped, its answer taken for none: it may have read the folder before what changed. */
+   *  dropped, its answer taken for none: it may have read the folder before what changed. A key waiting for it
+   *  (`relist`): read again at once, for that key. */
   private reread(k: Kept): void {
     k.at = 0;
     k.reading = null;
+    if (k.waits.length) this.read(keyOf(k.dir, k.own), k, this.settings(k.own));
   }
 
+  /** The keys waiting for `k` let go: a listing of it taken (or none to wait for), or `err`, its read's. */
+  private settle(k: Kept, err?: Error): void {
+    const waits = k.waits;
+    k.waits = [];
+    for (const w of waits)
+      if (err) w.failed(err);
+      else w.taken();
+  }
+
+  /**
+   * The kept listings of `dirs` read again at once, on either side of the vault, a key's own read (SD-D4: a key's
+   * deadline): what a file operation of slipbox's changed in them (`Explorer.afterOp`). Settled once a listing of each
+   * read since has been taken — by the read asked here, or by one asked after it (the walk's filter moved meanwhile, an
+   * index written); failed when one gave no answer, or once `stop` gives up waiting — that read goes on, taken if it
+   * comes.
+   */
+  relist(dirs: readonly string[], stop: AbortSignal): Promise<void> {
+    const waits: Promise<void>[] = [];
+    for (const [key, k] of this.kept) {
+      if (!dirs.includes(k.dir)) continue;
+      waits.push(new Promise((taken, failed) => k.waits.push({ taken, failed })));
+      this.read(key, k, this.settings(k.own));
+    }
+    const givenUp = new Promise<never>((_, no) =>
+      stop.addEventListener("abort", () => no(Error("given up")), { once: true }),
+    );
+    return Promise.race([Promise.all(waits).then(() => {}), givenUp]);
+  }
+
+  /** Whether a listing of one of `dirs` is kept. */
+  keeps(dirs: readonly string[]): boolean {
+    for (const k of this.kept.values()) if (dirs.includes(k.dir)) return true;
+    return false;
+  }
+
+  /** `k` read on a disk thread, by the explorer — or as a key's, one waiting for it (`relist`): the keys failed then by
+   *  what its thread said. */
   private read(key: string, k: Kept, settings: string): void {
     const n = ++this.serial;
     k.reading = n;
     const dir = k.dir;
     const empty = { dir, entries: [], notes: false, scope: null };
     const own = k.own ? { ...this.judge(), walked: this.walkedIn(dir) } : undefined;
-    diskThreads()
-      .list(dir, this.app.config.walk, this.app.ui.hidden_files, "explorer", own)
+    const by = k.waits.length ? "key" : "explorer";
+    void diskThreads()
+      .list(dir, this.app.config.walk, this.app.ui.hidden_files, by, own)
       .then(
         (listing) => this.answered(key, n, settings, listing),
         (err: Error) => {
+          // Read again since: that read answers for it.
+          const was = this.kept.get(key);
+          if (was?.reading !== n) return;
+          this.settle(was, err);
           // Its thread gave no answer, the folder listed before: shown as it was, read again later. Only a first
           // listing says it couldn't be read.
-          const was = this.kept.get(key);
-          if (was?.reading === n && was.listing && was.listing.error === null) {
+          if (was.listing && was.listing.error === null) {
             was.reading = null;
             was.at = Date.now();
-            return;
-          }
-          this.answered(key, n, settings, { ...empty, error: noAnswer(err) });
+          } else this.answered(key, n, settings, { ...empty, error: noAnswer(err) });
         },
       );
   }
@@ -255,6 +302,7 @@ export class Listings {
     k.listing = listing;
     k.settings = settings;
     if (changed) this.redraw();
+    this.settle(k);
   }
 
   /** The tree built again with what came, and drawn: the row the explorer meant to select selected once it's there
