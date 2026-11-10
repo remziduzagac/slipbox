@@ -568,7 +568,8 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(start.open).toBe(join(root, "notes", "alpha.md"));
     expect(start.themeName).toBe("nord");
     expect(start.folder).toBeUndefined();
-    expect(start.graph.notes.has("notes/alpha.md")).toBe(true);
+    // Its graph not built yet: the screen builds it once it's up (SD-D9).
+    expect(start.graph.notes.size).toBe(0);
     const loose = mkdtempSync(join(sandbox, "loose-"));
     writeFileSync(join(loose, "a.md"), "# A\n");
     const config = join(loose, "config.toml");
