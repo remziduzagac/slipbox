@@ -1,4 +1,4 @@
-// The slow-disk workstream's inventory (SD-D12; blueprint/workstreams/slow-disk/README.md § The inventory), for
+// The slow-disk workstream's inventory (SD-D12; blueprint/workstreams/archive/slow-disk/README.md § The inventory), for
 // `check:boundary`: each of its files reads the disk through the seam (SD-D10, `DISK_SEAM`), or `DISK_READERS` says
 // why it still imports a read of node:fs. scripts/check-boundary.ts runs it over the repository, whose tree always
 // holds it; a test's small tree, written for the other rules, asks to be left out (`--no-inventory`).

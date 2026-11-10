@@ -195,10 +195,11 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   followed only when you say so). The "no" asking again stays open.
 - A link not followed still has its target statted on the main thread, by the walk, Elsewhere's listing and the
   explorer: a mount that hangs behind it can hold them up; only followed links are probed off the thread.
-  (2026-10-17) Open. (2026-11-09) Taken up in [SD](workstreams/slow-disk/README.md), agreed: the explorer's tree of
-  the vault open (SD-T7), and the vault open's walk and Elsewhere's listing (SD-T8), read on the disk threads. Until
-  SD-T8, a vault's walk for the TUI's builds is still made on the main thread (`GraphRefresh.build`, `refresh.ts:175`);
-  T12 moved home's walk and the background index's off it.
+  (2026-10-17) Open. (2026-11-09) Taken up in [SD](workstreams/archive/slow-disk/README.md), agreed: the explorer's
+  tree of the vault open (SD-T7), and the vault open's walk and Elsewhere's listing (SD-T8), read on the disk threads.
+  Until SD-T8, a vault's walk for the TUI's builds is still made on the main thread (`GraphRefresh.build`,
+  `refresh.ts:175`); T12 moved home's walk and the background index's off it. (2026-11-10) Done: SD built both and was
+  consolidated (design/tui.md § A slow disk; what stays on the main thread, § Known limits).
 - A folder link out of the vault goes into the vault holding it, from a peek too: looking moves you there, where
   VV-D7 says it never does. Peek at a folder, or ask. (2026-10-17) Open.
 - A peek's cost and freshness: the first peek into a vault builds its graph on the main thread, and a backlinks list

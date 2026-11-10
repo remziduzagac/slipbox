@@ -561,7 +561,7 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 ## A slow disk: the workstream drafted (2026-11-09)
 
 - Issue #46, what T12 left on the screen's thread, drafted as a workstream for the maintainer's approval:
-  [SD](workstreams/slow-disk/README.md). Its inventory was checked against the code on `dev` (0df9a0a6) and adds
+  [SD](workstreams/archive/slow-disk/README.md). Its inventory was checked against the code on `dev` (0df9a0a6) and adds
   what the issue didn't name: the `.gitignore` stamped every look, the events' settle by stat, the config's and git's
   stamps every second, the activity file, what drawing a note reads, the Problems panel's notes.
 - Nothing is decided: its decisions are proposed (SD-D1 to SD-D10) and its questions open, for the maintainer.
@@ -621,3 +621,16 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - Its pull request's review found three things, fixed in it: a note's diff held to the same budget as SOURCE view, the
   stand-in parses counted against it and made on the parse workers with the rest of a big note (SIS-D7), and a piece
   not styled yet keeping the light highlighting.
+
+## A slow disk: the workstream closed (2026-11-10)
+
+- SD's eleven code tasks merged between 2026-11-09 and 2026-11-10, each with its held tests and its terminal check,
+  and SD-T12 consolidated it: design.md's changes applied to design/tui.md (§ A slow disk, new), roots.md, testing.md
+  and how-it-works.md, requirements.md's quality goal added, and the folder archived
+  ([SD](workstreams/archive/slow-disk/README.md)).
+- What the tasks left on the screen's thread, each in its task's Open or Log, was gathered into one list in
+  design/tui.md § Known limits, by what keeps it there: the writes and their reads (SD-D7), the start before the screen
+  (SD-D9), the parse and its cache, the search index, another vault's graph, and a few small reads a key or a draw
+  makes, SD-T11's measurement among them. None of them has a task yet.
+- The user docs gather what you see on a slow disk, and what still holds the screen, in How slipbox works § On a slow
+  disk, with a line beside the explorer's listings and the save.
