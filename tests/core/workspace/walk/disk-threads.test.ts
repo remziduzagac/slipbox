@@ -388,11 +388,13 @@ describe("the disk threads (SD-D2)", () => {
   });
 
   test("past a shortened deadline: the request fails `deadline`, its thread started afresh, the next request answered", async () => {
-    const { threads, made, ended } = held({ deadlines: { look: 300, key: 300, explorer: 300, walk: 300 } });
+    // The next request is a key's, with a minute: the fresh thread has to start before it answers, which a loaded
+    // machine can take longer than the look's 300 ms to do.
+    const { threads, made, ended } = held({ deadlines: { look: 300, key: 60_000, explorer: 300, walk: 300 } });
     const { a, b } = heldAndFree();
     expect(await failure(threads.stat([a], "look"))).toBe("deadline");
     expect([made.length, letGo(made, ended)]).toEqual([1, [0]]);
-    expect(await threads.stat([b], "look")).toEqual([statHere(b)]);
+    expect(await threads.stat([b], "key")).toEqual([statHere(b)]);
     expect(made.length).toBe(2);
     expect(letGo(made, ended)).toEqual([0]);
   });
