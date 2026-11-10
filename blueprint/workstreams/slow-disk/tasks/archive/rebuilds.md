@@ -92,8 +92,11 @@ What the description left open, settled here for the maintainer to confirm; desi
   going into a vault whose state folder is on a slow disk, the session read held one thread, the vault's first walk
   waited behind it, and the keys with it, though its notes were on a local disk. Two walks still never hold both.
 - A key's build: every build asked inside `Builds.forKey` is a key's, whether through the rebuilder or asked
-  outright. That covers a rename's `apply`, a folder restored from the trash and one pasted (`files.ts`), and the
-  vault's own config renamed (a graph made anew). The keys after it wait (`reads.hold`); `reading the vault…` takes
+  outright. That covers a rename's `apply`, a folder restored from the trash and one pasted (`files.ts`), the
+  vault's own config renamed (a graph made anew), and the vault walked again for a link followed or forgotten
+  (`Following.walkAgain`; its target answering as slipbox starts too) — as it was built on the screen's thread, the
+  next key found the link's notes; read on a disk thread, a switcher opened meanwhile listed them only on its next
+  opening. The keys after it wait (`reads.hold`); `reading the vault…` takes
   the watcher's place in the status line, or stands alone when no note is open. It can't be stopped from the
   background tasks either.
 - A graph never built (`builds === 0`: a vault gone into, until its first answer) has every build asked of it a

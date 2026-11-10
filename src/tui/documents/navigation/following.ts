@@ -177,9 +177,12 @@ export class Following {
     }
   }
 
-  /** The vault walked again, a link followed now: Elsewhere has nothing to walk. */
+  /** The vault walked again, a link followed now — or forgotten: Elsewhere has nothing to walk. Read on a disk thread
+   *  (SD-T8), a key's build: the keys after it wait for the graph that follows it, so the next finds what's through
+   *  the link, or no longer does. */
   walkAgain(): void {
-    if (this.app.loc.mode !== "folder") this.app.watch.applyChanges({ changes: [], rescan: true });
+    const rescan = () => this.app.watch.applyChanges({ changes: [], rescan: true });
+    if (this.app.loc.mode !== "folder") this.app.watch.builds.forKey(rescan);
     this.app.explorer.invalidateTree();
   }
 
