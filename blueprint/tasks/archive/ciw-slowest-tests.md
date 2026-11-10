@@ -63,3 +63,6 @@ process's 20-second deadline. JUnit reporting and file-level budgets remain this
   system, so the note was dropped: whether a file still needs its own is for both systems' reports. `SLOW_TESTS`
   rewritten from that run's Linux reports with `bun scripts/test-times.ts slow 42777169917`: 546 files measured, 12
   of eight seconds or more.
+- 2026-11-10: that run's macOS job showed its summary with budgets four times Linux's, its report uploaded, no file
+  over (the samples' 100.5 s of 200, the parse threads' 35.5 of 120). One test of this change's own failed there: the
+  command's, run on macOS, expected Linux's budget; it now reads the budget of the system it runs on.
