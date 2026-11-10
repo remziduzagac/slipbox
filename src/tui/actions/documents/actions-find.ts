@@ -7,6 +7,7 @@ import * as V from "../../shell/input/vim.ts";
 import { computeFind, computeFindReady } from "../../documents/search/find.ts";
 import { compilePattern } from "../../../core/documents/editing/replace.ts";
 import type { FindState, ListItem, PromptOverlay, App, View } from "../../app/runtime/app.ts";
+import { andThen } from "../../app/runtime/key-reads.ts";
 import { readText, climbsOut } from "../../../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import * as E from "../../documents/editing/editing.ts";
@@ -152,9 +153,10 @@ export function findActions(): Record<string, Run> {
           places: "find",
           accept: (item) => {
             const { rel, line } = item.data as { rel: string; line: number };
-            a.open(rel, { heading: null, headingIndex: 0, offset: 0, line });
-            const v = a.view;
-            if (v?.buf.rel === rel) E.placeAt(a, v, v.buf.lineStarts()[line - 1] ?? 0);
+            void andThen(a.open(rel, { heading: null, headingIndex: 0, offset: 0, line }), () => {
+              const v = a.view;
+              if (v?.buf.rel === rel) E.placeAt(a, v, v.buf.lineStarts()[line - 1] ?? 0);
+            });
           },
         });
       };

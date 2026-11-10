@@ -125,18 +125,25 @@ export const SEAM_READERS = [
   "src/core/workspace/links/convention.ts",
   "src/core/workspace/vaults/vault-feed.ts",
   "src/core/workspace/walk/filtering/filter.ts",
+  "src/core/workspace/walk/key-jobs.ts",
   "src/core/workspace/walk/look-jobs.ts",
   "src/core/workspace/walk/traversal/symlinks.ts",
   "src/tui/actions/documents/actions-edit.ts",
+  "src/tui/actions/documents/actions-links.ts",
+  "src/tui/actions/workspace/actions-files.ts",
   "src/tui/app/runtime/graph-refresh.ts",
+  "src/tui/app/runtime/key-reads.ts",
   "src/tui/app/runtime/look.ts",
   "src/tui/app/runtime/startup.ts",
   "src/tui/app/settings/settings.ts",
   "src/tui/documents/buffers/buffer.ts",
+  "src/tui/documents/buffers/opening.ts",
   "src/tui/documents/diagnostics/draw-problems.ts",
   "src/tui/documents/diagnostics/problems.ts",
+  "src/tui/documents/navigation/peek/history.ts",
   "src/tui/documents/navigation/peek/opening.ts",
   "src/tui/documents/tools/info/info.ts",
+  "src/tui/shell/overlays/preview.ts",
   "src/tui/shell/screen/topbar/where.ts",
   "src/tui/workspace/explorer/actions/items.ts",
   "src/tui/workspace/explorer/explorer-disk.ts",
@@ -144,6 +151,8 @@ export const SEAM_READERS = [
   "src/tui/workspace/explorer/marks.ts",
   "src/tui/workspace/explorer/navigation.ts",
   "src/tui/workspace/explorer/renaming.ts",
+  "src/tui/workspace/git/gitquery.ts",
+  "src/tui/workspace/git/views/log/log.ts",
   "src/tui/workspace/git/views/panel/draw-git.ts",
   "src/tui/workspace/session/session.ts",
 ] as const;
@@ -156,10 +165,10 @@ export const SEAM_READERS = [
  * `readJson`) passes it, and so does a call to the seam made synchronously on the screen's thread. The seam keeps two
  * listings apart (disk.ts): the walk's (`readFolder`), which the stand-in slows on every thread, the screen's too, so
  * T12's checks see a walk put back there; and the rest (`entries`, each stat and read), which it slows on every thread
- * but the screen's, and a test holds on the thread it asks — so the screen's thread reads those as it did. No held test
- * takes the hold there yet: each later task's held test takes it on the screen's thread for the reads that task moves,
- * and a read of them left there holds the test's key past the hold's deadline (`gaveUp`). The net grows task by task;
- * the check keeps the list honest.
+ * but the screen's, and a test holds on the thread it asks — so the screen's thread reads those as it did. A task's
+ * held tests take the hold on the screen's thread too, for the reads it moves (SD-T5's first): a read of them left
+ * there holds the test's key past the hold's deadline (`gaveUp`). The net grows task by task; the check keeps the list
+ * honest.
  */
 export const DISK_READERS: Record<string, string> = {
   "src/core/application/distribution/install.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
@@ -178,23 +187,17 @@ export const DISK_READERS: Record<string, string> = {
   "src/core/workspace/vaults/symlinks.ts":
     "the answers kept (SD-T9); a link's own read as a rename moves it: kept (SD-D7)",
   "src/core/workspace/walk/listing.ts": "a nested vault's name and branch, read with the tree's listing (SD-T7)",
-  "src/tui/actions/workspace/actions-files.ts": "a file opened by its path (`isFile`), a key's own read (SD-T5)",
   "src/tui/app/distribution/update-observation.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
   "src/tui/app/runtime/watch.ts": "an open note the watcher's batch names, checked with a disk thread's `read` (SD-T6)",
   "src/tui/app/scratch/scratch.ts": "the scratch's places, kept and asked of a disk thread (SD-T11)",
-  "src/tui/documents/buffers/opening.ts": "an open's writability (`lockedSaid`), asked with its read (SD-T5)",
   "src/tui/documents/editing/completion/items.ts": "link completion's other vaults (SD-T9)",
   "src/tui/documents/media/images.ts": "a picture's file, as it's drawn (SD-T11)",
   "src/tui/documents/saving/saving.ts": "a save's own checks: kept (SD-D7)",
-  "src/tui/shell/overlays/preview.ts": "a list's preview, read on a disk thread (SD-T5)",
   "src/tui/shell/terminal/run.ts": "what's read before the screen is taken: kept (SD-D9)",
   "src/tui/workspace/explorer/rows/paths.ts": "whether a row is left out, from the tree's listings (SD-T7)",
   "src/tui/workspace/explorer/rows/tree.ts": "Elsewhere's top and the nested vaults' names, listed (SD-T7)",
-  "src/tui/workspace/git/git.ts": "a file looked for before the git panel or a merge opens it (SD-T5)",
-  "src/tui/workspace/git/gitquery.ts": "the stats before a git read, a key's own (SD-T5)",
-  "src/tui/workspace/git/views/log/log.ts": "a file looked for before the log opens it (SD-T5)",
-  "src/tui/workspace/git/views/panel/gitview.ts":
-    "a file looked for before it's opened (SD-T5); a file read for its diff (`readForDiff`), a key's own",
+  "src/tui/workspace/git/git.ts": "git's lock looked for (`indexLocked`), with the TUI's look (SD-T4)",
+  "src/tui/workspace/git/views/panel/gitview.ts": "a file read for its diff (`readForDiff`), a key's own: kept",
   "src/tui/workspace/vaults/vaults.ts": "a vault gone into and a branch's tabs, from a disk thread's `walk` (SD-T8)",
 };
 

@@ -280,9 +280,10 @@ export class RepoView {
     if (typeof now !== "string") return app.message("info", `${row.entry.path}: ${now.why}`);
     // A rename: before, under the name it had.
     const was = row.entry.from ?? row.entry.path;
-    const query = beginGitRead(app, "Reading repository version");
+    const query = await beginGitRead(app, "Reading repository version");
+    if (!query) return;
     const before = row.entry.x === "?" ? "" : ((await showLater(c, "HEAD", was, query.signal)) ?? "");
-    if (!query.current()) return;
+    if (!(await query.current())) return;
     const from = app.region;
     const named = row.entry.from ? `${row.entry.from} → ${row.entry.path}` : row.entry.path;
     openDiff(app, {

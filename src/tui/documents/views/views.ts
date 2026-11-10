@@ -66,8 +66,10 @@ export class Views {
   }
 
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
-    // A big note parsing on other threads (15.1): a line saying so, and nothing of the view moved
-    // (its reading position stays for the real layout, a moment later).
+    // A note read on a disk thread for this window (SD-D4), or a big note parsing on other threads (15.1): a line
+    // saying so, and nothing of the view moved (its reading position stays for the real layout, a moment later).
+    const reading = this.app.reads.shownIn(view);
+    if (reading) return saying(reading, this.textWidth(paneWidth, gutter));
     if (!view.source && !view.live && view.buf.parseAhead())
       return this.readingLayout(view.buf, this.textWidth(paneWidth, gutter));
     // A layout of its own (a diff, GIT-D2): drawn whatever the window's mode, at the whole text column less a column.
@@ -173,17 +175,10 @@ export class Views {
         this.app.host.requestRender();
       });
     }
-    const text = truncate(
+    return saying(
       `reading ${this.app.displayName(buf)} — ${buf.lineStarts().length.toLocaleString("en")} lines…`,
       width,
     );
-    return {
-      lines: [{ spans: [{ text, role: "dim", attrs: 0 }], src: 1 }],
-      links: [],
-      headings: [],
-      width,
-      clipped: 0,
-    };
   }
 
   /** Big notes' parses running on other threads: a key waits for them, a click is dropped. */
@@ -494,4 +489,10 @@ export class Views {
     this.bracketMemo = { buf: view.buf, version: view.buf.version, at, insert: !!view.insert, marks };
     return marks;
   }
+}
+
+/** A window's one dimmed line saying what it waits for, in `width` columns. */
+function saying(text: string, width: number): Layout {
+  const spans = [{ text: truncate(text, width), role: "dim" as const, attrs: 0 }];
+  return { lines: [{ spans, src: 1 }], links: [], headings: [], width, clipped: 0 };
 }

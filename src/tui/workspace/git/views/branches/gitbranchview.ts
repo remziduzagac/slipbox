@@ -232,7 +232,8 @@ export class BranchView {
     const app = this.app;
     const c = app.git.checkout;
     if (!c) return;
-    const query = beginGitRead(app, "Reading branch version");
+    const query = await beginGitRead(app, "Reading branch version");
+    if (!query) return;
     const b = row.branch;
     let before = "";
     let now = "";
@@ -240,7 +241,7 @@ export class BranchView {
     if (row.against === "uncommitted" && b.worktree) {
       before = (await showLater({ root: b.worktree.path }, "HEAD", row.path, query.signal)) ?? "";
       // Overtaken meanwhile (another diff asked for, the vault left): nothing read or said for this one.
-      if (!query.current()) return;
+      if (!query.live()) return;
       const read = readForDiff(join(b.worktree.path, row.path));
       if (typeof read !== "string") return app.message("info", `${row.path}: ${read.why}`);
       now = read;
@@ -250,7 +251,7 @@ export class BranchView {
       before = from ? ((await showLater(c, from, row.from ?? row.path, query.signal)) ?? "") : "";
       now = (await showLater(c, b.tip, row.path, query.signal)) ?? "";
     }
-    if (!query.current()) return;
+    if (!(await query.current())) return;
     const against = row.against === "base" ? `against ${sanitize(row.base ?? "")}` : "not committed";
     openDiff(app, {
       before,

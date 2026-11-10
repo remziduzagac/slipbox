@@ -54,7 +54,8 @@ export async function webLinkHere(app: App, view: View, how: "copy" | "open"): P
   // Read before the selection goes: the window's own text, unsaved typing included, which the lines are of.
   const now = view.buf.source;
   if (view.sel) Object.assign(view, { visual: null, sel: null });
-  const query = beginGitRead(app, "Reading the remote");
+  const query = await beginGitRead(app, "Reading the remote");
+  if (!query) return;
   const branch = headOf(c).branch;
   const upstream = branch
     ? (await gitReadLater(c, ["config", "--get", `branch.${branch}.remote`], false, query.signal))?.trim()
@@ -62,13 +63,13 @@ export async function webLinkHere(app: App, view: View, how: "copy" | "open"): P
   // A branch tracking one of this repository's own (`.`) has no forge of its own: origin's.
   const remote = upstream && upstream !== "." ? upstream : "origin";
   const url = (await gitReadLater(c, ["remote", "get-url", "--end-of-options", remote], false, query.signal))?.trim();
-  if (!query.current()) return;
+  if (!query.live()) return;
   if (!url) return app.message("info", `no remote named ${sanitize(remote)}: no web link`);
   const forge = forgeOf(url);
   if (!forge)
     return app.message("info", `${sanitize(remote)} isn't on GitHub or GitLab (${sanitize(url)}): no web link`);
   const head = await showLater(c, commit, path, query.signal);
-  if (!query.current()) return;
+  if (!query.live()) return;
   if (head === null) return app.message("info", `${sanitize(path)} isn't committed yet: no web link`);
   const at = linesInHead(head, now, lines.from, lines.to);
   if (!at) return app.message("info", `${said(lines)} isn't committed yet: no web link`);
@@ -79,7 +80,7 @@ export async function webLinkHere(app: App, view: View, how: "copy" | "open"): P
     false,
     query.signal,
   );
-  if (!query.current()) return;
+  if (!(await query.current())) return;
   const link = webLink(forge, commit, path, at.from, at.to);
   const where = `the web link to ${said(at)} of ${sanitize(path)}`;
   const unpushed = on !== null && !on.trim() ? `${commit.slice(0, 7)} isn't on ${sanitize(remote)} yet` : "";

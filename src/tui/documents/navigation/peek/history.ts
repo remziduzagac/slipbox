@@ -1,55 +1,51 @@
 // Move through peek history, keep tabs and change its display size.
 
-import { readText } from "../../../../core/foundation/platform/fsutil.ts";
-import { rootLabel, tildePath } from "../../../../core/workspace/vaults/names.ts";
+import { tildePath } from "../../../../core/workspace/vaults/names.ts";
 import { linkSaid } from "../../../../core/workspace/vaults/symlinks.ts";
 import { locateVault, type VaultLocation } from "../../../../core/workspace/vaults/vault.ts";
 import type { App } from "../../../app/runtime/app.ts";
 import { here, peekOf } from "./state.ts";
 import { goThere, unfollowed } from "./paths.ts";
-import { notRead } from "./presentation.ts";
-import { show } from "./opening.ts";
+import { readPeek, said, show } from "./opening.ts";
 
 /** `ctrl+o` (back) and forward inside the peek: the file a link moved it from, where it was read. */
 export function peekStep(app: App, dir: "back" | "forward"): void {
   const p = peekOf(app);
   if (!p) return;
   const from = dir === "back" ? p.back : p.fwd;
-  const to = here(app)!;
   const place = from.at(-1);
   if (!place)
     return app.message(
       "info",
       dir === "back" ? "the peek's first place — esc closes it, o goes there" : "no later place in the peek",
     );
-  // Read as a link to it is: not through a link not followed, which can have changed since (VV-D6).
-  const b = unfollowed(app, place.abs, place.loc);
-  let text: string;
-  if (b) text = notRead(b, rootLabel(place.loc));
-  else
-    try {
-      text = readText(place.abs).text;
-    } catch {
-      from.pop();
-      return app.message("warn", `${tildePath(place.abs)} is gone`);
-    }
-  from.pop();
-  const back = dir === "back" ? p.back : [...p.back, to];
-  const fwd = dir === "back" ? [...p.fwd, to] : p.fwd;
-  show(
+  // Moved there once it's read, from where the peek is then: its list with its text, none through a link not followed.
+  const open = (text: string, unread?: true) => {
+    from.pop();
+    const to = here(app)!;
+    const back = dir === "back" ? p.back : [...p.back, to];
+    const fwd = dir === "back" ? [...p.fwd, to] : p.fwd;
+    const shown = { abs: place.abs, loc: place.loc, back, fwd, full: p.full, ...(unread ? { unread } : {}) };
+    show(app, { ...shown, ...(place.rows && !unread ? { rows: place.rows } : {}) }, text, place.top, place.cursor);
+  };
+  // Read as a link to it is: not through a link not followed, which can have changed since (VV-D6). On a disk thread
+  // (SD-T5), the peek where it is meanwhile; gone since, it stays there, the place let go of and that said.
+  readPeek(
     app,
-    {
-      abs: place.abs,
-      loc: place.loc,
-      back,
-      fwd,
-      full: p.full,
-      ...(b ? { unread: true } : {}),
-      ...(place.rows && !b ? { rows: place.rows } : {}),
+    place.abs,
+    place.loc,
+    open,
+    (why) => {
+      from.pop();
+      return said(
+        app,
+        "warn",
+        why === "binary"
+          ? `${tildePath(place.abs)} holds binary bytes; slipbox opens text`
+          : `${tildePath(place.abs)} is gone`,
+      );
     },
-    text,
-    place.top,
-    place.cursor,
+    { anchor: place.top, cursor: place.cursor, stay: true },
   );
 }
 

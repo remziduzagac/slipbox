@@ -3,6 +3,7 @@ import { baseFor, baseForLater } from "../../../../core/workspace/git/gitbase.ts
 import { type Checkout, headOf } from "../../../../core/workspace/git/git.ts";
 import { baseBranch, baseBranchLater } from "../../../../core/workspace/git/branches/gitops.ts";
 import type { GitBaseHost } from "./contracts.ts";
+import type { GitQuery } from "../gitquery.ts";
 
 export class GitBases {
   constructor(private readonly host: GitBaseHost) {}
@@ -47,13 +48,14 @@ export class GitBases {
    * the fallback (`[git] base`, else main or master). Null when the read is no longer wanted, or there's none: then
    * said.
    */
-  async baseLater(c: Checkout, query: { signal: AbortSignal; current: () => boolean }): Promise<string | null> {
+  async baseLater(c: Checkout, query: Pick<GitQuery, "signal" | "live">): Promise<string | null> {
     const branch = headOf(c).branch;
     const config = this.app.config.git;
     const base =
       (branch ? (await baseForLater(c, branch, config, query.signal))?.base : null) ??
       (await baseBranchLater(c, config.base, query.signal));
-    if (!query.current()) return null;
+    // Its caller asks of git's files once it's read all it reads.
+    if (!query.live()) return null;
     if (!base)
       this.app.message(
         "warn",

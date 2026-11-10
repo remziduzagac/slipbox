@@ -13,6 +13,8 @@ import type { Files } from "../../workspace/explorer/files.ts";
 import type { Explorer } from "../../workspace/explorer/explorer.ts";
 import type { Vaults } from "../../workspace/vaults/vaults.ts";
 import type { Level } from "../notifications/contracts.ts";
+import type { Graph } from "../../../core/workspace/graph/graph.ts";
+import { defaultNote } from "../../documents/navigation/opening.ts";
 
 export const RECENT_MAX = 5;
 /** Notes the switcher lists first, most recent first. */
@@ -20,6 +22,7 @@ export const RECENT_NOTES_MAX = 30;
 
 export interface InitialWindowsContext {
   readonly loc: VaultLocation;
+  readonly graph: Pick<Graph, "notes">;
   readonly config: Pick<Config, "ui">;
   readonly handoff: Pick<Handoff, "remoteServer">;
   readonly history: Pick<History, "recentNotes">;
@@ -34,7 +37,6 @@ export interface InitialWindowsContext {
   readonly ui: UiState;
   recentCommands: string[];
   glyphs: Glyphs;
-  defaultNote(folder: string | null): string | null;
   openInNewTab(path: string): void;
   message(level: Level, text: string): void;
 }
@@ -58,7 +60,7 @@ export function openInitialWindows(
   context.glyphs = context.settings.glyphSet(context.ui.glyphs);
   if (!restored) {
     if (options.newFile && options.open) context.files.openNew(options.open);
-    const first = options.open ?? context.defaultNote(context.homeFolder);
+    const first = options.open ?? defaultNote(context.graph, context.homeFolder);
     if (first) context.openInNewTab(first);
   }
   // The view starts at the folder opened (VV-D5): `x/y` shows y, in vault x — set once its notes are open, so

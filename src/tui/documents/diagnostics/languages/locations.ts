@@ -2,6 +2,7 @@
 
 import { offsetOf } from "../../editing/editing.ts";
 import type { App, View } from "../../../app/runtime/app.ts";
+import { andThen } from "../../../app/runtime/key-reads.ts";
 
 /** A position in a source-mode view as the protocol counts it: line and UTF-16 character, from 0. */
 export function position(app: Parameters<typeof offsetOf>[0], view: View): { line: number; character: number } {
@@ -21,11 +22,12 @@ export function openLocation(
 ): void {
   const inVault = abs.startsWith(`${app.loc.root}/`);
   const target = inVault ? abs.slice(app.loc.root.length + 1) : abs;
-  app.open(target, { heading: null, headingIndex: 0, offset: 0, line: line + 1 });
-  const v = app.view;
-  if (!v || v.buf.abs !== abs) return;
-  const start = v.buf.lineStarts()[line] ?? 0;
-  const text = v.buf.source.slice(start, start + character);
-  app.placeAtLine(v, line + 1, [...text].length + 1);
-  app.region = "content";
+  void andThen(app.open(target, { heading: null, headingIndex: 0, offset: 0, line: line + 1 }), () => {
+    const v = app.view;
+    if (!v || v.buf.abs !== abs) return;
+    const start = v.buf.lineStarts()[line] ?? 0;
+    const text = v.buf.source.slice(start, start + character);
+    app.placeAtLine(v, line + 1, [...text].length + 1);
+    app.region = "content";
+  });
 }

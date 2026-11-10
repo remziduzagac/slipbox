@@ -69,8 +69,8 @@ export class Mouse {
     // A press or a wheel puts the jump labels away (EG-D3): the keys after it are the screen's again, and no label
     // stays on for a row scrolled out of sight.
     if (ev.type === "down" || ev.type === "scroll") this.app.labels.shown = null;
-    // A big note still parsing (15.1): a click or a scroll would land on its placeholder.
-    if (this.app.views.parses.size) return;
+    // A big note parsing (15.1), a key's read out (SD-D4): a click or a scroll would land on what's about to go.
+    if (this.app.views.parses.size || this.app.reads.busy) return;
     this.handleNow(ev);
     // As after a key: a click can save, load theirs, tick a task — the idle clock and the stale list
     // follow it too.

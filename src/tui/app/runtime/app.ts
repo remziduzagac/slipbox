@@ -5,8 +5,8 @@ export type { Host, Loc, Selection, FindState, View, Tab, PromptOverlay } from "
 export type { Overlay, SidePaneState, UiState, AppOptions, Region } from "./contracts.ts";
 import { uiDefaults } from "../settings/ui-state.ts";
 export { uiDefaults } from "../settings/ui-state.ts";
-export { lockedSaid, fileUnwritable } from "../../documents/buffers/opening.ts";
 import { BufferOpening } from "../../documents/buffers/opening.ts";
+import { KeyReads } from "./key-reads.ts";
 import { Opening } from "../../documents/navigation/opening.ts";
 import { ViewPolicy } from "../../documents/views/policy.ts";
 import { Frame } from "../../shell/screen/frame.ts";
@@ -286,12 +286,13 @@ export class App {
   readonly renaming = new Renaming(this);
   /** Links out of the vault, followed only when you say so (VV-D6). */
   readonly following = new Following(this);
+  readonly reads = new KeyReads(this); // a key's own reads, on a disk thread (SD-D4): a note opened, `:e!`, git's stats
   /** Reporting a problem (RPT): the report's window, the screen kept for it, its sending. */
   readonly report = new Reporter(this);
   /** The update offer, `:upgrade`, `:restart` (UPG). */
   readonly updates = new Updates(this);
 
-  private readonly bufferOpening = new BufferOpening(this, { vaultGraph: (root) => vaultGraph(this, root) });
+  readonly bufferOpening = new BufferOpening(this, { vaultGraph: (root) => vaultGraph(this, root) });
   private readonly opening = new Opening(this, {
     cancelGitRead: () => cancelGitRead(this),
     stopInsert: (view) => stopInsert(this, view),
@@ -305,7 +306,7 @@ export class App {
   constructor(opts: AppOptions) {
     this.loc = opts.loc;
     this.explorer.top = this.explorer.trail = opts.loc.root;
-    if (opts.listOffThread) this.explorer.listings = new Listings(this, true);
+    if (opts.listOffThread) [this.explorer.listings, this.reads.offThread] = [new Listings(this, true), true];
     this.config = opts.config;
     this.graph = opts.graph;
     // This machine sees the root (17.6); a named folder moved here by hand brought its state (21.8).
@@ -369,7 +370,7 @@ export class App {
     for (const e of this.graph.errors) this.message("warn", e);
     if (carriedFrom) this.message("info", carried(this.loc, carriedFrom));
 
-    openInitialWindows(this, opts, carriedFrom);
+    this.reads.here(() => openInitialWindows(this, opts, carriedFrom)); // the start reads here until SD-T10
     this.stopLazy = this.viewPolicy.followLazy();
     this.session.publishState();
     this.settings.recordStamps();
@@ -441,10 +442,6 @@ export class App {
     return t ? (t.views[t.active] ?? null) : null;
   }
 
-  defaultNote(folder: string | null = null): string | null {
-    return this.opening.defaultNote(folder);
-  }
-
   absOf(pathOrRel: string): string {
     return this.opening.absOf(pathOrRel);
   }
@@ -473,16 +470,16 @@ export class App {
     return this.viewPolicy.isCodeDocument(buf);
   }
 
-  openInNewTab(path: string, anchor?: Anchor): void {
-    this.opening.openInNewTab(path, anchor);
+  openInNewTab(path: string, anchor?: Anchor): void | Promise<void> {
+    return this.opening.openInNewTab(path, anchor);
   }
 
-  openOrSwitchTab(path: string): void {
-    this.opening.openOrSwitchTab(path);
+  openOrSwitchTab(path: string): void | Promise<void> {
+    return this.opening.openOrSwitchTab(path);
   }
 
-  open(path: string, anchor?: Anchor, view = this.view): void {
-    this.opening.open(path, anchor, view);
+  open(path: string, anchor?: Anchor, view = this.view): void | Promise<void> {
+    return this.opening.open(path, anchor, view);
   }
 
   currentLayout(view: View): Layout {
@@ -509,12 +506,12 @@ export class App {
   // -------------------------------------------------------------------------------------------
   // A file opened at a line, a command run, the screen drawn.
 
-  openWhere(rel: string, line: number, where: "here" | "tab" | "split"): void {
-    this.opening.openWhere(rel, line, where);
+  openWhere(rel: string, line: number, where: "here" | "tab" | "split"): void | Promise<void> {
+    return this.opening.openWhere(rel, line, where);
   }
 
-  openAt(rel: string, line: number, column = 1, where: "here" | "tab" | "split" = "here"): void {
-    this.opening.openAt(rel, line, column, where);
+  openAt(rel: string, line: number, column = 1, where: "here" | "tab" | "split" = "here"): void | Promise<void> {
+    return this.opening.openAt(rel, line, column, where);
   }
 
   placeAtLine(v: View, line: number, column = 1): void {

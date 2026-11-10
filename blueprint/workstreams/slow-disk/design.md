@@ -52,16 +52,26 @@ among the background tasks (`reading the vault…`, beside `Indexing`), `listing
 `⚠ disk not answering` on the status line while the watcher's look, or the TUI's look each second, doesn't answer.
 
 **A key's own read** (SD-D4). Opening a note — as a tab, by a link, from a list, at the start — zooming into or
-unfolding a folder, `:e!` and a reload by hand (`space n r`) read on a disk thread. The key waits, and the keys after
-it wait their turn (`Input.handleKey`), as for a big note's parse (§ Known limits); the screen draws, `reading
-<note>…` in the window the note will be in. `esc` is taken at once, out of turn: it gives the read up and leaves you
-where you were. Past its deadline the read is said (`<note> didn't answer: not opened`), nothing opened. A list's
-preview reads without holding the keys, `reading…` in the preview until it comes. A click while a read waits is
-dropped, as during a big note's parse. At a start the tab shown is read first, then the rest in order, one at a time.
-A key that needs notes not parsed yet — a rename's or a move's plan, the tags, the problems, the link forms, a
-backlinks list — waits for their texts the same way (`reading notes…`), and nothing is planned from notes not read.
-The open's check of the way for a link not followed is made with its read; git's keys ask their stats (git's index,
-`HEAD`, the note's) and whether a file is there before opening it the same way.
+unfolding a folder, `:e!` and a reload by hand (`space n r`) read on a disk thread. The key waits, and the keys after it
+wait their turn (`Input.handleKey`), as for a big note's parse (§ Known limits); the screen draws, `reading <note>…` in
+the window the note will be in. `esc` is taken at once, out of turn: it gives the read up and leaves you where you were.
+Past its deadline the read is said (`<note> didn't answer: not opened`), nothing opened. The keys typed meanwhile are
+dropped when the read is given up, fails or opens nothing. A list's preview and a peek read without holding the keys,
+`reading…` in the preview or the peek until it comes; a newer selection, or another peek, drops its answer, the read
+itself withdrawn while it waits for a thread, else left to finish, its thread not started afresh; they're read in the
+background, on one thread at most. A step back or forward in a peek stays where it is until the place is read; a place
+gone since is said and let go of. A click while a read waits is dropped, as during a big note's parse. When the
+session's tabs are brought back, the tab shown is read first — a vault gone into with a file named, the tab with it —
+the keys waiting for it alone; then the rest in order, one at a time, in the background, on one thread at most. None of
+them readable, the vault's own note opens, as when none was kept. A key that needs notes not parsed yet — a rename's or
+a move's plan, the tags, the problems, the link forms, a backlinks list — waits for their texts the same way (`reading
+notes…`), and nothing is planned from notes not read. The open's check of the way for a link not followed is made with
+its read, a preview's and a peek's with theirs (`answerOpen`, `key-jobs.ts`): a link of the vault's that keeps an open
+or a peek asks its question then, as opening it here would, and the file is read again once answered; a note open
+already has its way checked again before a key shows it, since a link followed may lead elsewhere now; a preview says it
+isn't followed. What a key does once its note is open — its line found, a new note typed into — waits for it. git's keys
+ask their stats (git's index, `HEAD`, the note's) and whether a file is there before opening it the same way; the stats
+are asked again once, in the background, when all a git read reads is in, before it's shown.
 
 **Every answer checked** (SD-D5). A request carries what it was read for, and its answer is taken only while that
 holds: the watcher's `sync`s, the graph's `builds` and the vault open, a buffer's version and stamp, the tree's

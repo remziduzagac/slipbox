@@ -44,17 +44,18 @@ export async function blameHere(app: App): Promise<void> {
   if (path === null) return;
   const c = app.git.checkout!;
   const line = cursorLine(app, view!);
-  const query = beginGitRead(app, "Reading blame");
+  const query = await beginGitRead(app, "Reading blame");
+  if (!query) return;
   const head = await showLater(c, "HEAD", path, query.signal);
-  if (!query.current()) return;
+  if (!query.live()) return;
   if (head === null) return app.message("info", `${path} isn't in the last commit: every line is new`);
   const at = lineInHead(head, view!.buf.source, line);
   if (at === null) return app.message("info", `line ${line} is changed since the last commit: not committed yet`);
   const b = await blameLineLater(c, path, at, query.signal);
-  if (!query.current()) return;
+  if (!query.live()) return;
   if (!b) return app.message("warn", `git couldn't blame line ${line}`);
   const message = (await messageLater(c, b.hash, query.signal)) || b.subject;
-  if (!query.current()) return;
+  if (!(await query.current())) return;
   app.overlays.openHover(
     `**${b.hash.slice(0, 8)}** · ${b.author} · ${day(b.time)}\n\n\`\`\`text\n${message}\n\`\`\`\n\nThis file's history, in the git panel or the palette, lists its commits`,
     `line ${line}, last changed in ${b.hash.slice(0, 8)}`,
@@ -66,9 +67,10 @@ export async function historyHere(app: App): Promise<void> {
   const view = app.view;
   const path = fileHere(app, view);
   if (path === null) return;
-  const query = beginGitRead(app, "Reading history");
+  const query = await beginGitRead(app, "Reading history");
+  if (!query) return;
   const log = await fileLogLater(app.git.checkout!, path, 500, query.signal);
-  if (!query.current()) return;
+  if (!(await query.current())) return;
   if (log === null) return app.message("warn", "git couldn't read its history");
   if (!log.length) return app.message("info", `${path} has no commits yet`);
   app.overlays.openList({
@@ -85,9 +87,10 @@ export async function historyHere(app: App): Promise<void> {
 /** A version picked: read it, as it was — or its diff to the text as it is now. */
 async function pickVersion(app: App, view: View, path: string, x: CommitInfo): Promise<void> {
   const c = app.git.checkout!;
-  const query = beginGitRead(app, "Reading version");
+  const query = await beginGitRead(app, "Reading version");
+  if (!query) return;
   const text = await showLater(c, x.hash, x.path, query.signal);
-  if (!query.current()) return;
+  if (!(await query.current())) return;
   if (text === null) return app.message("warn", `git has no ${x.path} at ${x.hash.slice(0, 7)}`);
   const at = `${x.path} at ${x.hash.slice(0, 7)} (${day(x.time)})`;
   app.overlays.openList({

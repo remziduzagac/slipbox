@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 import type { Anchor } from "../../../../core/workspace/session/position.ts";
 import { isInside, locateVault, type VaultLocation } from "../../../../core/workspace/vaults/vault.ts";
+import { linkPlace, type OpenAsk } from "../../../../core/workspace/walk/key-jobs.ts";
 import type { App } from "../../../app/runtime/app.ts";
 
 /**
@@ -13,6 +14,16 @@ import type { App } from "../../../app/runtime/app.ts";
  */
 export function unfollowed(app: App, abs: string, loc: VaultLocation): { link: string; target: string | null } | null {
   return app.following.blocked(abs) ?? app.following.blockedThere(abs, loc);
+}
+
+/**
+ * `abs` read for a peek or a list's preview (SD-T5): its text alone, its way checked as `unfollowed` checks it — this
+ * vault's links on it first (`own`: whether they're asked; a block `at` 0 is theirs), then the place it's in (`loc`).
+ */
+export function peekAsk(app: App, abs: string, loc: VaultLocation): { ask: OpenAsk; own: boolean } {
+  const own = app.loc.mode === "folder" || isInside(app.loc.root, abs);
+  const ways = [...(own ? [linkPlace(app.loc)] : []), linkPlace(loc)];
+  return { ask: { path: abs, outside: false, ways, looking: [...app.following.looking], textOnly: true }, own };
 }
 
 /**

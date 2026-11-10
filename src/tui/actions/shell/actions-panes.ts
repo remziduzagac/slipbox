@@ -21,6 +21,7 @@ import {
   openMergeScreen,
 } from "../../workspace/git/views/review/mergescreen.ts";
 import { gitAbort, gitContinue, gitRebase, gitSkip } from "../../workspace/git/views/review/rebase.ts";
+import { openWorktrees } from "../../workspace/git/views/branches/worktrees.ts";
 import {
   openReview,
   reviewGo,
@@ -211,7 +212,7 @@ export function paneActions(): Record<string, Run> {
     "git.log": (a) => a.gitLog.open(),
     "git.web_copy": (a) => withView(a, (v) => webLinkHere(a, v, "copy")),
     "git.web_open": (a) => withView(a, (v) => webLinkHere(a, v, "open")),
-    "git.worktrees": (a) => a.git.openWorktrees(),
+    "git.worktrees": (a) => openWorktrees(a),
     "git.merge_review": (a) => a.git.openMergeReview(),
     // The remote's commands and stash (26.6): in the background, asked for, never on a timer.
     "git.fetch": (a) => gitFetch(a),

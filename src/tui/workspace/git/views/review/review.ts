@@ -107,7 +107,8 @@ export function openReview(app: App): void {
   const view = app.view;
   void app.git.refreshNow().then(async () => {
     if (app.quitting || app.git.checkout?.root !== c.root || app.view !== view) return;
-    const query = beginGitRead(app, "Reading review versions", true);
+    const query = await beginGitRead(app, "Reading review versions", true);
+    if (!query) return;
     const s = sections(app.git.entries ?? []);
     const files = [
       ...s.unstaged.map((e) => ({ e, untracked: false })),
@@ -120,7 +121,7 @@ export function openReview(app: App): void {
       const text = deleted ? "" : onDisk(abs);
       if (text === null) continue;
       const staged = untracked ? null : await showLater(c, "", e.path, query.signal);
-      if (!query.current()) return;
+      if (!query.live()) return;
       if (!untracked && staged === null) continue;
       const now = linesOf(text);
       const kind = untracked ? "untracked" : deleted ? "deleted" : "changed";
@@ -128,6 +129,8 @@ export function openReview(app: App): void {
       for (const change of gitChanges(staged, text))
         items.push({ path: e.path, rel, abs, kind, change, now, state: "open", noted: false });
     }
+    // git's files asked after once, all read: not a disk thread's round trip a file.
+    if (!(await query.current())) return;
     if (!items.length)
       return app.message("info", "nothing to review: the working tree has no change that isn't staged");
     show(app, { items, at: 0, lines: [] });
@@ -229,10 +232,11 @@ function onward(app: App, r: Review): void {
 
 /** The hunk among its file's changes now — the index or the file may have moved — the index's text, and the file's. */
 async function fresh(app: App, it: Item): Promise<{ staged: string; change: GitChange; text: string } | null> {
-  const query = beginGitRead(app, "Reading staged version", true);
+  const query = await beginGitRead(app, "Reading staged version", true);
+  if (!query) return null;
   const review = reviewOf(app);
   const staged = await showLater(app.git.checkout!, "", it.path, query.signal);
-  if (!query.current() || reviewOf(app) !== review || review?.items[review.at] !== it) return null;
+  if (!(await query.current()) || reviewOf(app) !== review || review?.items[review.at] !== it) return null;
   const text = onDisk(it.abs);
   if (staged === null || text === null) return null;
   const change = findChange(gitChanges(staged, text), it.change);

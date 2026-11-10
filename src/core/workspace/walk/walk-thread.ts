@@ -25,6 +25,7 @@ import type {
 } from "./disk-jobs.ts";
 import type { FolderListing } from "./listing.ts";
 import type { LookJob, LookJobAnswer } from "./look-jobs.ts";
+import type { GitAnswer, GitAsk, OpenAnswer, OpenAsk } from "./key-jobs.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
 import { walkContext } from "../../foundation/workers/worker-context.ts";
@@ -371,14 +372,27 @@ export class DiskThreads {
   }
 
   /** Each of `paths` statted, its links followed (or its own, `own`), in the order asked; each its error's code if it
-   *  has one. */
-  async stat(paths: string[], by: Asker, own = false): Promise<PathStat[]> {
-    return (await this.ask<{ stats: PathStat[] }>({ op: "stat", paths, ...(own ? { own } : {}) }, by)).stats;
+   *  has one. `giveUp` aborted (a key's read, `esc`): withdrawn, or its thread started afresh, as past a deadline. */
+  async stat(paths: string[], by: Asker, own = false, giveUp?: AbortController): Promise<PathStat[]> {
+    return (await this.ask<{ stats: PathStat[] }>({ op: "stat", paths, ...(own ? { own } : {}) }, by, giveUp)).stats;
   }
 
   /** A file's text, decoded as `readText` decodes it, and its stamp; or its error's code (`ENOTREG`: not a file). */
-  async read(path: string, by: Asker): Promise<ReadAnswer> {
-    return (await this.ask<{ read: ReadAnswer }>({ op: "read", path }, by)).read;
+  async read(path: string, by: Asker, giveUp?: AbortController): Promise<ReadAnswer> {
+    return (await this.ask<{ read: ReadAnswer }>({ op: "read", path }, by, giveUp)).read;
+  }
+
+  /** A file read for opening it (key-jobs.ts), a key's own (SD-T5); `giveUp` as `stat`'s. `background`: one no key
+   *  waits for (the session's tabs after the one shown, a preview's, a peek's), on one thread at most, a key's going
+   *  past it. `withdraw`: given up while it waits for a thread, never once it's sent — a read moved past (a preview's,
+   *  a peek's) left to finish, its answer dropped, its thread not started afresh. */
+  async open(ask: OpenAsk, giveUp?: AbortController, background = false, withdraw?: AbortSignal): Promise<OpenAnswer> {
+    return (await this.ask<{ opened: OpenAnswer }>({ op: "open", ask }, "key", giveUp, background, withdraw)).opened;
+  }
+
+  /** What a git read is read against (key-jobs.ts), a key's own (SD-T5); `giveUp` and `background` as `open`'s. */
+  async gitRead(ask: GitAsk, giveUp?: AbortController, background = false): Promise<GitAnswer> {
+    return (await this.ask<{ gitRead: GitAnswer }>({ op: "gitRead", ask }, "key", giveUp, background)).gitRead;
   }
 
   /** Why the folder `dir` can't be listed and gone into, in `folderUnreadable`'s words; null when it can. */
@@ -419,11 +433,17 @@ export class DiskThreads {
    *  deadline its asker's, counted from then — a walk's from when it was asked. One of a batch that fails gives the
    *  batch up (`batch`) before its thread is free for the next: the rest of it still waiting for one withdrawn, never
    *  sent, and what of it was sent given up, its thread started afresh, as past a deadline. A background request
-   *  (`background`) waits while another holds a thread. */
-  private async ask<A>(request: DiskAsk, by: Asker, batch?: AbortController, background = false): Promise<A> {
+   *  (`background`) waits while another holds a thread. `withdraw` gives it up only while it waits for one. */
+  private async ask<A>(
+    request: DiskAsk,
+    by: Asker,
+    batch?: AbortController,
+    background = false,
+    withdraw?: AbortSignal,
+  ): Promise<A> {
     const walk = request.op === "walk";
     const asked = this.now();
-    const on = await this.take(walk, batch?.signal, background);
+    const on = await this.take(walk, batch?.signal ?? withdraw, background);
     try {
       const deadline = this.deadlines[by] - (walk ? this.now() - asked : 0);
       if (deadline <= 0) throw pastDeadline();

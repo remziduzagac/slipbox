@@ -4,7 +4,6 @@
 // with its state letter; `enter` on one shows that commit's change to it in the diff window, as every diff is drawn,
 // `esc` back where it was asked from. Read in the background (reads.ts); rows known by what they are (D261).
 
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { headOf } from "../../../../../core/workspace/git/git.ts";
 import { type Changed, inVault, showLater } from "../../../../../core/workspace/git/branches/gitops.ts";
@@ -14,6 +13,7 @@ import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { match } from "../../../../shell/overlays/match.ts";
 import type { App } from "../../../../app/runtime/app.ts";
 import { beginGitRead } from "../../gitquery.ts";
+import { andThen } from "../../../../app/runtime/key-reads.ts";
 import { openDiff } from "../changes/diffview.ts";
 import { backToPanel } from "../panel/gitview.ts";
 import type { CommitFileRow, CommitRow, PanelRow } from "../contracts.ts";
@@ -138,12 +138,13 @@ export class GitLog {
     if (!c) return;
     const k = row.commit;
     const f = row.file;
-    const query = beginGitRead(app, "Reading the commit's change");
+    const query = await beginGitRead(app, "Reading the commit's change");
+    if (!query) return;
     const [before, now] = await Promise.all([
       k.parent && f.state !== "new" ? showLater(c, k.parent, f.from ?? f.path, query.signal) : Promise.resolve(""),
       f.state === "deleted" ? Promise.resolve("") : showLater(c, k.hash, f.path, query.signal),
     ]);
-    if (!query.current()) return;
+    if (!(await query.current())) return;
     openDiff(app, {
       before: before ?? "",
       now: now ?? "",
@@ -155,13 +156,21 @@ export class GitLog {
     app.host.requestRender();
   }
 
-  /** `o` on a commit's file: the file as it is now, opened. */
-  private openFile(row: CommitFileRow): void {
+  /** `o` on a commit's file: the file as it is now, opened — looked for first, a key's read on a disk thread (SD-T5). */
+  private openFile(row: CommitFileRow): Promise<void> | void {
     const app = this.app;
-    if (row.rel === null) return app.message("warn", `${row.file.path} is outside this vault`);
-    if (!existsSync(join(app.loc.root, row.rel))) return app.message("info", `${row.rel} isn't here now`);
-    app.openOrSwitchTab(row.rel);
-    app.region = "content";
+    const rel = row.rel;
+    if (rel === null) return app.message("warn", `${row.file.path} is outside this vault`);
+    return app.reads.whenThere(
+      join(app.loc.root, rel),
+      rel,
+      app.view,
+      () =>
+        andThen(app.openOrSwitchTab(rel), () => {
+          if (app.view?.buf.rel === rel) app.region = "content";
+        }),
+      () => app.message("info", `${rel} isn't here now`),
+    );
   }
 
   /** A commit's menu, or its file's (`.`, a right click): what its keys do, and copying it. */

@@ -252,13 +252,16 @@ function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
 }
 
 /** `:e!`, and `space f r`'s discard once asked: the file loaded again over unsaved changes, one `u` away. */
-export function revert(a: App, buf: View["buf"]): void {
+export function revert(a: App, buf: View["buf"]): Promise<void> | void {
   for (const w of a.allViews()) if (w.buf === buf) w.insert = false;
   // Out of insert so, a snippet being typed in it is over too (25.8).
   if (a.snippet?.view.buf === buf) endSnippet(a);
-  if (!buf.load()) return a.message("warn", `${buf.key} is gone from disk`);
-  for (const w of a.allViews()) if (w.buf === buf) w.layoutKey = "";
-  a.message("info", `${a.displayName(buf)} reloaded from disk — u brings your changes back`);
+  // Read on a disk thread, a key's own (SD-T5): the keys after it wait for it.
+  return a.reads.reload(buf, (there) => {
+    if (!there) return a.message("warn", `${buf.key} is gone from disk`);
+    for (const w of a.allViews()) if (w.buf === buf) w.layoutKey = "";
+    a.message("info", `${a.displayName(buf)} reloaded from disk — u brings your changes back`);
+  });
 }
 
 const noRange: V.Range = { from: 0, to: 0, linewise: false };
