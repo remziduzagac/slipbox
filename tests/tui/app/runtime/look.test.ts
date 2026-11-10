@@ -40,19 +40,24 @@ let stateWas: { value: string | undefined } | null = null;
 /** What the test awaits now (`until`): the test ended first, said, and the wait let go of. */
 let awaiting: { what: string; over: boolean } | null = null;
 
-/** The session's save a second after what's open changes (`publishState`), off for these tests: it reads slipbox's
- *  state folder here (SD-D7: a write and the read it merges with stay on this thread), and with that folder under
- *  `held`, a save coming due while a test holds it — a busy machine's second — holds this thread twice over and gives
- *  up, a read no look made. What a look reads is these tests' business; the session's save is `own-folders.test.ts`'s. */
-let saves: Mock<() => void> | null = null;
+/** The session's save, off for these tests: it reads slipbox's state folder here (SD-D7: a write and the read it
+ *  merges with stay on this thread), and with that folder under `held`, a save coming due while a test holds it — a
+ *  busy machine's second — holds this thread twice over and gives up, a read no look made. Off both ways: none put
+ *  off a second after what's open changes (`publishState`), and none made (`save`) — an App another file left, its
+ *  save already put off, saves into the state folder the test's environment names now. What a look reads is these
+ *  tests' business; the session's save is `own-folders.test.ts`'s. */
+let saves: Mock<() => void>[] = [];
 
 beforeEach(() => {
-  saves = spyOn(Session.prototype, "publishState").mockImplementation(() => {});
+  saves = [
+    spyOn(Session.prototype, "publishState").mockImplementation(() => {}),
+    spyOn(Session.prototype, "save").mockImplementation(() => {}),
+  ];
 });
 
 afterEach(() => {
-  saves?.mockRestore();
-  saves = null;
+  for (const s of saves) s.mockRestore();
+  saves = [];
   setReadWait(null);
   const gaveUp = hold && { gaveUp: hold.gaveUp, here: hold.gaveUpHere };
   hold?.release();
@@ -228,6 +233,14 @@ async function scratchOpen(opts: Parameters<typeof harness>[0] = {}) {
 }
 
 describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
+  test("a session's save left due — another file's App's, its second come — reads nothing here while the state folder's held", async () => {
+    const held = holding();
+    const { h } = await scratchOpen();
+    holdNow(held);
+    h.app.session.save();
+    noneGaveUp(held);
+  });
+
   test("the scratch outside the vault, held: a key handled and drawn while its stat is out; let go, what an agent wrote meanwhile is read", async () => {
     const held = holding();
     const { h, look, buf, scratch } = await scratchOpen();
@@ -239,8 +252,8 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     expect(buf.source).toBe("# Scratch\n");
     held.release();
     await look.settled();
-    expect(buf.source).toBe("# Scratch\n\nAn agent's line.\n");
     noneGaveUp(held);
+    expect(buf.source).toBe("# Scratch\n\nAn agent's line.\n");
   });
 
   test("git's folder held: a key handled and drawn, the top bar the branch kept, while HEAD is asked; let go, a branch switched meanwhile seen and drawn, then a rebase started meanwhile", async () => {
