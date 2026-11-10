@@ -6,7 +6,8 @@
 // watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts), and
 // so are the entries of the explorer's folders of the vault open's own tree (`own`, SD-T7), by the same filter. The
 // TUI's look's own jobs (a way, git's state, the config, a tool's settings) are look-jobs.ts's, asked with its stats as
-// one request (`look`); slipbox's own folders' reads (SD-T9), own-jobs.ts's (`own`).
+// one request (`look`); slipbox's own folders' reads (SD-T9), own-jobs.ts's (`own`); what drawing asks (SD-T11),
+// draw-jobs.ts's (`draw`).
 
 import type { Config } from "../../application/config/config.ts";
 import * as disk from "../../foundation/platform/disk.ts";
@@ -36,6 +37,7 @@ import { codeOf, type PathStat, statOf } from "./io/stamps.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
 import { answerLookJob, type LookJob, type LookJobAnswer } from "./look-jobs.ts";
 import { answerOwnJob, type OwnAnswer, type OwnJob } from "./own-jobs.ts";
+import { answerDraw, type DrawAnswer, type DrawAsk } from "./draw-jobs.ts";
 import { listDirectory, walkVault } from "./traversal/walk.ts";
 import { answerGit, answerOpen, type GitAnswer, type GitAsk, type OpenAnswer, type OpenAsk } from "./key-jobs.ts";
 
@@ -121,6 +123,7 @@ export type DiskRequest = { context: WalkContext } & (
   | { op: "open"; ask: OpenAsk }
   | { op: "gitRead"; ask: GitAsk }
   | { op: "own"; job: OwnJob }
+  | { op: "draw"; ask: DrawAsk }
 );
 
 export type DiskAnswer =
@@ -132,7 +135,8 @@ export type DiskAnswer =
   | LookRequestAnswer
   | { opened: OpenAnswer }
   | { gitRead: GitAnswer }
-  | { own: OwnAnswer };
+  | { own: OwnAnswer }
+  | { drawn: DrawAnswer };
 
 const DISK_OPS: ReadonlySet<string> = new Set([
   "list",
@@ -144,6 +148,7 @@ const DISK_OPS: ReadonlySet<string> = new Set([
   "open",
   "gitRead",
   "own",
+  "draw",
 ]);
 
 /** Whether `req` is one the disk threads answer. */
@@ -250,5 +255,7 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
       return { gitRead: answerGit(req.ask) };
     case "own":
       return { own: answerOwnJob(req.job) };
+    case "draw":
+      return { drawn: answerDraw(req.ask) };
   }
 }

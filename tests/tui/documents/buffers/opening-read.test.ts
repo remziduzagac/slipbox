@@ -33,6 +33,23 @@ async function vaultWith(files: Record<string, string>, root = makeVault()): Pro
 /** A key handled, not awaited: it may wait on a read. */
 const press = (h: Harness, key: string) => h.app.input.handleKey(key);
 
+/** Whether a read here is a key's resolution of a link: made at once, as before (SD-D17: only drawing answers a link
+ *  from what's kept) — the stat of its file and, on a disk that folds case (macOS), the folders on its way listed for
+ *  its name's case (`onDisk`) — and through the seam since SD-T11, so a hold sees it. Its way and its text are read on
+ *  a disk thread, and held here. */
+function resolvingHere(): boolean {
+  const was = Error.stackTraceLimit;
+  Error.stackTraceLimit = 50;
+  try {
+    return /\b(?:onDisk|resolvePath)\b/.test(new Error().stack ?? "");
+  } finally {
+    Error.stackTraceLimit = was;
+  }
+}
+
+/** What this thread holds under `held` as a link there is followed: all but the key's resolution of it. */
+const followedHere = () => !resolvingHere();
+
 /** The switcher open, `typed` typed in it: its rows those files. */
 async function switcher(h: Harness, typed: string): Promise<void> {
   await h.keys("ctrl+p");
@@ -197,7 +214,8 @@ describe("a note opened reads on a disk thread (SD-T5)", () => {
     writeFileSync(join(root, "index.md"), "# Index\n\n[far](held/far.md)\n");
     const h = await harness({ root, open: "index.md" });
     h.app.reads.offThread = true;
-    const held = holding();
+    h.app.drawn.offThread = true;
+    const held = holding(followedHere);
     await h.keys("tab");
     const enter = press(h, "enter");
     await untilHeld(held);
@@ -231,12 +249,10 @@ describe("a note opened reads on a disk thread (SD-T5)", () => {
     h.app.following.forget(join(root, "held"));
     await h.app.open("index.md");
     h.app.reads.offThread = true;
+    h.app.drawn.offThread = true;
     await h.keys("tab");
-    const held = holding();
+    const held = holding(followedHere);
     const enter = press(h, "enter");
-    // This thread holds the link while the key is taken, not while drawing: what's drawn of the note's links reads
-    // through it here, a later task's (SD-T11).
-    setReadWait(null);
     await untilHeld(held);
     held.release();
     await enter;
@@ -518,11 +534,11 @@ describe("a note opened reads on a disk thread (SD-T5)", () => {
       const end = performance.now() + 10_000;
       while (!done() && performance.now() < end) await Bun.sleep(5);
     };
-    const held = holding((path) => path === join(root, "held"));
+    const held = holding((path) => path === join(root, "held") && followedHere());
     await h.keys("tab");
     const enter = press(h, "enter");
-    // This thread holds the link while the key is taken, not after: the other vault's graph the peek shows is built
-    // here, through it, once it's open (SD-D7).
+    // This thread holds the link while the key is taken, but for the key's resolution of it, not after: the other
+    // vault's graph the peek shows is built here, through it, once it's open (SD-D7).
     setReadWait(null);
     await enter;
     await untilHeld(held);

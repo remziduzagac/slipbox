@@ -7,6 +7,7 @@ import { uiDefaults } from "../settings/ui-state.ts";
 export { uiDefaults } from "../settings/ui-state.ts";
 import { BufferOpening } from "../../documents/buffers/opening.ts";
 import { KeyReads } from "./key-reads.ts";
+import { Drawn } from "./drawn.ts";
 import { Opening } from "../../documents/navigation/opening.ts";
 import { ViewPolicy } from "../../documents/views/policy.ts";
 import { Frame } from "../../shell/screen/frame.ts";
@@ -283,11 +284,11 @@ export class App {
   readonly saving = new Saving(this);
   /** Vaults: switching, making and unmaking, named folders. */
   readonly vaults = new Vaults(this);
-  /** Renames and their previews. */
-  readonly renaming = new Renaming(this);
+  readonly renaming = new Renaming(this); // renames and their previews
   /** Links out of the vault, followed only when you say so (VV-D6). */
   readonly following = new Following(this);
   readonly reads = new KeyReads(this); // a key's own reads, on a disk thread (SD-D4): a note opened, `:e!`, git's stats
+  readonly drawn = new Drawn(this); // what drawing asks of the disk: kept, asked of a disk thread (SD-D13)
   /** Reporting a problem (RPT): the report's window, the screen kept for it, its sending. */
   readonly report = new Reporter(this);
   /** The update offer, `:upgrade`, `:restart` (UPG). */

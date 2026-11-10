@@ -99,30 +99,33 @@ export class Views {
     this.app.languages.ensureServers(view.buf);
     // Its pictures as this window shows them (PIC): their key places its cursor and top again, though the rows be as many.
     const pictures = !drawn && !view.source && !view.live && !code ? this.app.pictures.forView(view, width) : undefined;
-    const layout = drawn
-      ? drawn(width, { glyphs: this.app.glyphs, wrap: this.app.ui.wrap, codeScroll: this.app.code.scrolls() })
-      : view.source
-        ? view.buf.sourceLayout(width, this.app.ui.wrap, this.app.glyphs, this.app.config.render.source_styles)
-        : view.live
-          ? this.app.lens.liveLayout(view, width)
-          : code
-            ? view.buf.codeLayout(
-                width,
-                this.app.ui.wrap,
-                this.app.glyphs,
-                this.app.ui.code_cells,
-                this.app.code.cellProblems(view),
-              )
-            : view.buf.layout(
-                width,
-                this.app.glyphs,
-                this.app.ui.urls,
-                view.buf.rel ? this.app.graph : null,
-                pictures,
-                this.app.code.scrolls(),
-                this.app.config.render.caption,
-                this.app.html.options(view.buf),
-              );
+    // What it asks of the disk (its links, embeds, pictures) answered from what's kept, asked of a disk thread (SD-T11).
+    const layout = this.app.drawn.during(() =>
+      drawn
+        ? drawn(width, { glyphs: this.app.glyphs, wrap: this.app.ui.wrap, codeScroll: this.app.code.scrolls() })
+        : view.source
+          ? view.buf.sourceLayout(width, this.app.ui.wrap, this.app.glyphs, this.app.config.render.source_styles)
+          : view.live
+            ? this.app.lens.liveLayout(view, width)
+            : code
+              ? view.buf.codeLayout(
+                  width,
+                  this.app.ui.wrap,
+                  this.app.glyphs,
+                  this.app.ui.code_cells,
+                  this.app.code.cellProblems(view),
+                )
+              : view.buf.layout(
+                  width,
+                  this.app.glyphs,
+                  this.app.ui.urls,
+                  view.buf.rel ? this.app.graph : null,
+                  pictures,
+                  this.app.code.scrolls(),
+                  this.app.config.render.caption,
+                  { ...this.app.html.options(view.buf), ...this.app.drawn.embeds() },
+                ),
+    );
     const block = view.live && view.liveBase ? `${view.liveBase.active[0]}-${view.liveBase.active[1]}` : "";
     const key = `${view.source ? "s" : view.live ? "l" : "r"}${block}:${width}:${this.app.glyphs.mode}:${this.app.ui.urls}:${layout.lines.length}:${view.buf.version}:${view.height}:${view.live ? (view.liveBase?.pictures ?? "") : (pictures?.key ?? "")}`;
     if (view.layoutKey !== key) {

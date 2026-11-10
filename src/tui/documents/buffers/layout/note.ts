@@ -22,7 +22,7 @@ export function noteLayout(
   },
   codeScroll = false,
   caption: "bottom" | "top" = "bottom",
-  html: Pick<NoteRenderOptions, "htmlTheme" | "htmlDetails"> = {},
+  html: Pick<NoteRenderOptions, "htmlTheme" | "htmlDetails" | "embedded"> = {},
 ): Layout {
   const key = `${width}:${glyphs.mode}:${showUrls ? 1 : 0}:${codeScroll ? 1 : 0}:${pictures?.key ?? "-"}:${caption}`;
   const variant = key + ":" + html.htmlTheme + ":" + JSON.stringify([...(html.htmlDetails ?? [])]);

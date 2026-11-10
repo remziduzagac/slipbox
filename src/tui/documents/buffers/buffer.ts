@@ -591,7 +591,7 @@ export class NoteBuffer {
     },
     codeScroll = false,
     caption: "bottom" | "top" = "bottom",
-    html: Pick<NoteRenderOptions, "htmlTheme" | "htmlDetails"> = {},
+    html: Pick<NoteRenderOptions, "htmlTheme" | "htmlDetails" | "embedded"> = {},
   ): Layout {
     return noteLayout(this.layoutContext, width, glyphs, showUrls, graph, pictures, codeScroll, caption, html);
   }

@@ -1,9 +1,9 @@
 // Candidate lookup for one graph's resolver: live graph reads and its existing name, export-mark and remote caches.
-import { statSync } from "node:fs";
 import { isAbsolute, join, posix, relative } from "node:path";
 import { parsePointer, resolvePointer } from "../links/pointer.ts";
 import { checkoutRemotes, hostedHere } from "../links/hosting.ts";
 import { normKey, pathLink, pickCandidate, wikiPathCandidates } from "../links/links.ts";
+import { probe } from "../links/path-probe.ts";
 import { checkoutOf } from "../git/git.ts";
 import { isMarkdownExport } from "../../rendering/export/mark.ts";
 import { classify } from "../../documents/model/filetypes.ts";
@@ -139,9 +139,11 @@ export class LinkLookup {
    * A branch not checked out here: the file as git has it there, read-only. Else why not.
    */
   byPointer(target: string, fromRel: string): Target {
-    const p = parsePointer(target);
+    // The machine's named folders as whatever answers now has them: the disk, or a drawing's kept list (SD-T11).
+    const folders = probe().folders();
+    const p = parsePointer(target, folders);
     if (!p) return { resolvedKind: "unresolved", path: null, candidates: [] };
-    const t = resolvePointer(p);
+    const t = resolvePointer(p, folders);
     if (t.status === "ambiguous")
       return { resolvedKind: "ambiguous", path: null, candidates: t.candidates, reason: t.reason };
     if (t.status === "unresolved") return { resolvedKind: "unresolved", path: null, candidates: [], reason: t.reason };
@@ -205,7 +207,7 @@ export class LinkLookup {
    * ref than the branch checked out is kept, to be said. Null when it isn't one, or names none here.
    */
   byHosting(url: string, fromRel: string): Target | null {
-    const t = hostedHere(url, this.g.root, { remotes: this.ownRemotes() });
+    const t = hostedHere(url, this.g.root, { remotes: this.ownRemotes(), folders: probe().folders() });
     if (!t) return null;
     const other = t.other ? { hosted: t.other } : {};
     const hit = pathLink(join(t.top, t.path), join(this.g.root, fromRel || "_"), false, undefined, true);
@@ -244,13 +246,7 @@ export class LinkLookup {
     if (!this.g.nestedRoots().some((r) => p.startsWith(`${r}/`))) return null;
     const abs = join(this.g.root, p);
     const candidates = wiki ? wikiPathCandidates(abs) : [abs];
-    const hit = candidates.find((c) => {
-      try {
-        return statSync(c).isFile();
-      } catch {
-        return false;
-      }
-    });
+    const hit = candidates.find((c) => probe().isFile(c));
     if (!hit) return null;
     return {
       resolvedKind: classify(hit, this.g.config.walk.extensions).group === "note" ? "note" : "file",

@@ -6,8 +6,8 @@ was agreed: SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9 by the maintainer's answ
 SD-D11 and SD-D12, the questions the tasks had left open, by the maintainer's instruction to take the recommended
 answer; SD-D13 and SD-D14, and the notes of 2026-11-10 under SD-D1, SD-D6, SD-D8 and SD-D12, the same way, from the
 design's review; the notes under SD-D10 and SD-D14, from SD-T1's; SD-D15, the start's choices, the same way, as SD-T10
-was built; SD-D16, SD-T6's, the same way, as it was built. An entry is never rewritten; a dated note goes under it
-(blueprint/README.md § How things are recorded).
+was built; SD-D16, SD-T6's, the same way, as it was built; SD-D17, what's drawn, as SD-T11 was. An entry is never
+rewritten; a dated note goes under it (blueprint/README.md § How things are recorded).
 
 ## SD-D1: The parts, in order (2026-11-09)
 
@@ -472,3 +472,41 @@ minute before it goes on with the rest. A count drawn while the parse goes on is
 
 **Not chosen:** a request per note (thousands of requests at a vault's open); a key that acts on part of the vault and
 says so (a rename that misses links); reading here once a request gives up (SD-D6).
+
+## SD-D17: What's drawn, asked (2026-11-10)
+
+Agreed by the maintainer's instruction to take the recommended answer, as SD-T11 was built: what its description left
+open.
+
+**Decision:**
+
+- **One request, a batch.** What drawing asks — what's at some paths, the names some folders hold, some files' texts,
+  the machine's named folders — goes to a disk thread as one `draw` request in the background (`draw-jobs.ts`), with a
+  look's minute to answer, one batch out at a time; what's asked meanwhile waits for the next. Given up on, it's asked
+  again a minute later (SD-D6), drawn as it was meanwhile.
+- **Asked again two seconds on.** A kept answer drawn two seconds after it was read is asked again, drawn as it was
+  until the new one comes, as the scratch's places were checked (D229); a file the watcher sees change is asked again
+  as it's next drawn, however lately read.
+- **The walk's answers first.** A note, a file or a folder of the vault open the walk gave is answered from it, never
+  asked; a picture's own file is always asked, so a picture changed on disk is drawn anew. A path the walk didn't give,
+  in a folder it listed, is drawn as not there until the disk says otherwise, and asked all the same: the walk leaves
+  out what its filter does.
+- **A link's questions answered only while it's drawn.** The layout and the Problems panel's own problems of a note
+  answer them from what's kept (`Drawn.during`); every other asker — the CLI, a key, the vault's problems — reads at
+  once, as before.
+- **Before the first answer:** a path the walk can't speak for is drawn as there (SD-D12's note); the named folders
+  are none, so a pointer is drawn as not found and a hosting link as a web link for that moment; a picture's or an
+  embedded note's place is said; a scratch place is said nothing of; the vault's lint findings are shown unfiltered.
+
+**Why:** One request a frame's worth of questions keeps a disk thread for the keys (SD-D2) however many links a note
+has. Two seconds is what the scratch's places already took to see a change; the watcher's word is quicker where it
+has one. The walk has answered for every path of the vault open already. A link's questions answered from what's kept
+everywhere would give the CLI and a key's follow a stale answer they never had before.
+
+**Cost:** For a moment on a slow disk, a link to a missing file is drawn as found, a pointer as not found, and a
+picture or an embedded note as its place; a changed picture or embedded note the watcher doesn't see is drawn anew up
+to two seconds late.
+
+**Not chosen:** a request per question (as many requests as links); answers kept until the watcher says otherwise
+(the watcher sees no file outside the vault); the named folders read at the start (a read the start doesn't need,
+SD-D9).

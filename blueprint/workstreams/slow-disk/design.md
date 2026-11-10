@@ -267,10 +267,24 @@ the second is let go of.
   follow the first build (`Builds.after`). A vault that doesn't answer in time: its note shown as its text if its own
   read answered (`awaited` no longer), its links drawn as resolved, the vault asked again a minute later and the note
   drawn again when it comes; its read given up too, both said, nothing opened. A restart is brought back the same way.
-- **What's drawn** (SD-D13; SD-T11, the last code task, measured first). A draw never reads the disk and never
-  waits. What a layout asks of the disk (a `/…` link's first folder, a nested vault's file, a name's case on macOS, a
-  picture), and the scratch's places, are answered from what's kept, and asked of a disk thread when they aren't, drawn
-  again when they answer; meanwhile a link is drawn as resolved, and a picture's place is said.
+- **What's drawn** (SD-D13, SD-D17; SD-T11, the last code task, measured first). A draw never reads the disk and never
+  waits. What a layout asks of the disk — a link's path (a `/…` link's first folder, a nested vault's file, a file
+  outside the vault), a name's case on a disk that folds it, the machine's named folders for a pointer or a hosting
+  link, an embedded note's text, a picture's file and an SVG's text — the scratch's places' files and the notes the
+  Problems panel's vault lint names are answered from what's kept (`Drawn`, `tui/app/runtime/drawn.ts`): a path of the
+  vault open from the walk, the rest from what a disk thread last answered. What isn't kept is asked of a disk thread
+  in the background, one `draw` batch out at a time with a look's minute (`core/workspace/walk/draw-jobs.ts`), and the
+  layouts are drawn again from their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn
+  as resolved — but one to a path the walk didn't give in a folder it listed, drawn broken as the walk says (a note
+  not written yet) — a pointer as not found until the named folders come, a picture's or an embedded note's place is
+  said, a scratch place is said nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn
+  two seconds after it was read is asked again, drawn as it was until the new one comes; one of a file the watcher
+  sees change, as it's next drawn. Given up on, the batch is asked again a minute later (SD-D6). A link's questions go
+  through one probe (`core/workspace/links/path-probe.ts`), the seam's at once unless the drawing answers for the
+  layout it makes and a note's own problems it checks (`Drawn.during`): the CLI, a key's follow and the vault's
+  problems read as before. The host's picture takes its file's mtime from the drawing and keeps it for the picture it
+  draws; an SVG's rasterised PNG is looked for in the cache folder here. A test's App reads at once, here, unless it
+  asks (`listOffThread`).
 
 **What stays on the screen's thread** (SD-D7). A note's save (`App.writeBuffer`: its check that the file is as read,
 its atomic write, its write through a link, D220, its stamp told to the watcher), a file operation with the checks its
@@ -426,6 +440,13 @@ Previously: "the TUI makes its own walks, and lists the explorer's folders, on t
 - In the paragraph on `app/runtime/watch.ts`, after its `GraphRefresh` sentence: "Its `Builds` collaborator in
   `builds.ts` builds the vault open again from a walk and an index read on a disk thread: what's asked, the answer
   checked and taken, a key's build holding the keys after it (SD-D5, SD-D11)" (built by SD-T8).
+- A row added after `disk-jobs.ts`'s: "`core/workspace/walk/draw-jobs.ts` | SD-D17 | what drawing asks a disk thread:
+  paths statted, folders' names, files' texts with their stamps, the named folders, one batch" (built by SD-T11).
+- A row added after `links.ts`'s: "`core/workspace/links/path-probe.ts` | SD-D17 | what a link's resolution asks of the
+  disk, the seam's at once unless something answers for a while" (built by SD-T11).
+- A paragraph added after the one on `app/runtime/watch.ts`: "`app/runtime/drawn.ts`'s `Drawn` (`app.drawn`) keeps
+  what drawing asks of the disk, asks a disk thread for what it doesn't keep, and draws the layouts again when an
+  answer changes them (SD-D13, SD-D17)" (built by SD-T11).
 
 Previously: "the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked"; no row for
-`disk-jobs.ts` or `disk.ts`; no sentence on `Builds`.
+`disk-jobs.ts`, `disk.ts`, `draw-jobs.ts` or `path-probe.ts`; no sentence on `Builds`, nor paragraph on `drawn.ts`.

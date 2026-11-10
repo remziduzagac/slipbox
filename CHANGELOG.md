@@ -161,6 +161,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   list of tags, a note's backlinks and a rename's preview wait for the rest, the status line saying `reading notes…`
   and `esc` giving the wait up.
 
+- A note on a slow disk no longer freezes the screen as it's drawn. Its pictures, the notes it embeds and the files its
+  links name are read in the background: meanwhile a picture shows its `▣` line, an embedded note its link, and a link
+  is drawn as found; the note is drawn again, where you were, once they're read. The scratch's places and the lint
+  findings in the Problems panel's vault tab are checked the same way.
+
 - **Breaking:** the `space` groups are named for what they act on, and their keys moved with them. `space f` (+file)
   acts on any file, a note or not; `space n` (+note) keeps what only a note has; finding is `space /` (+find);
   `space d` reads +directory and `space v` +vault. Each key kept its letter, so only the group's key is new.

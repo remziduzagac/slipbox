@@ -1,9 +1,9 @@
 // Rendering a vault note: parse, resolve its links against the graph, lay it out.
 // Shared by `slipbox render` and the TUI so both show exactly the same thing.
 
-import { statSync } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import type { Heading, ListItem, Paragraph, Root, RootContent } from "mdast";
+import * as disk from "../../foundation/platform/disk.ts";
 import { readText } from "../../foundation/platform/fsutil.ts";
 import type { Glyphs } from "../../rendering/theme/glyphs.ts";
 import type { Graph } from "../../workspace/graph/graph.ts";
@@ -44,6 +44,9 @@ export interface NoteRenderOptions {
   /** What its pictures are sized for besides the width (PIC): see RenderOptions.pictureKey. */
   pictureKey?: string;
   caption?: "bottom" | "top";
+  /** An embedded note's parse (1.11), as the host reads it — the TUI's drawing: kept, read on a disk thread (SD-T11);
+   *  else read here, once a change of its file. Null: not drawn in place. */
+  embedded?: (abs: string) => ParsedNote | null;
 }
 
 export function linkResolver(graph: Graph | null, rel: string | null) {
@@ -108,7 +111,7 @@ export function layoutNote(
   opts: NoteRenderOptions,
   cache?: RenderCache,
 ): Layout {
-  const embeds = graph && rel !== null ? { embed: embedder(graph, rel), embedFrom: graph.abs(rel) } : {};
+  const embeds = graph && rel !== null ? { embed: embedder(graph, rel, opts.embedded), embedFrom: graph.abs(rel) } : {};
   return renderTree(
     parsed.tree,
     { ...opts, resolveLink: linkResolver(graph, rel), ...embeds },
@@ -126,7 +129,7 @@ const parsedNotes = new Map<string, { mtimeMs: number; size: number; parsed: Par
 function parsedAt(abs: string): ParsedNote | null {
   let st: { mtimeMs: number; size: number };
   try {
-    st = statSync(abs);
+    st = disk.stat(abs);
   } catch {
     return null;
   }
@@ -208,7 +211,11 @@ function blockOf(tree: Root, id: string): RootContent[] | null {
  * all of it (no frontmatter), a heading's section or a block — its own links and embeds resolved
  * from where it is. Null for a picture or any file that isn't a note: those stay references.
  */
-export function embedder(g: Graph, fromRel: string, read = parsedAt): RenderOptions["embed"] {
+export function embedder(
+  g: Graph,
+  fromRel: string,
+  read: (abs: string) => ParsedNote | null = parsedAt,
+): RenderOptions["embed"] {
   return (target, heading, block, kind = "embed") => {
     if (!target) return null;
     // A path's (`![…](note.md)`, 20.1) from the note's folder; a wikilink's by its name.
@@ -235,7 +242,7 @@ export function embedder(g: Graph, fromRel: string, read = parsedAt): RenderOpti
       nodes,
       ...(nodes ? {} : { missing: heading ? `no heading "${heading}" in ${name}` : `no block ^${block} in ${name}` }),
       resolveLink: there && rel ? linkResolver(there, rel) : undefined,
-      embed: there && rel ? embedder(there, rel) : undefined,
+      embed: there && rel ? embedder(there, rel, read) : undefined,
       locate: pictureLocator(there, rel, abs),
       ...(isAbsolute(r.path) ? {} : { from: r.path }),
     };
