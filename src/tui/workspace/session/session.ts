@@ -3,6 +3,7 @@
 // on start; and the state published for the command line — the notes unsaved here (9.9), what's on screen. The code
 // keeps the word session (WSP-D6); users read workspace.
 
+import { resolve } from "node:path";
 import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
 import {
   SESSION_BRANCHES,
@@ -15,7 +16,9 @@ import {
   type TabSet,
 } from "../../../core/workspace/session/position.ts";
 import { listThemes } from "../../../core/rendering/theme/index.ts";
-import type { App, View, UiState } from "../../app/runtime/app.ts";
+import type { App, Tab, View, UiState } from "../../app/runtime/app.ts";
+import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
+import { defaultNote } from "../../documents/navigation/opening.ts";
 import { uiDefaults } from "../../app/runtime/app.ts";
 
 /** The workspaces kept and restored, and the state published for the CLI. */
@@ -95,12 +98,22 @@ export class Session {
     }
   }
 
-  restore(): boolean {
+  /**
+   * The session's tabs brought back here: whether they are, or come (read on the disk threads, SD-T5) — then `how.none`
+   * once none of them could be read, the window left empty; the tab with `how.open` (absolute) shown first.
+   */
+  restore(how: TabsHow = {}): boolean {
     const s = loadSession(this.app.loc);
     if (!s) return false;
     const set = this.tabsOf(s);
     if (!set) return false;
-    return this.apply(s, set);
+    return this.apply(s, set, how);
+  }
+
+  /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own. */
+  openDefault(): void {
+    const first = defaultNote(this.app.graph, this.app.homeFolder);
+    if (first) void this.app.openInNewTab(first);
   }
 
   /** A window's own session restored, as a restart's note keeps it (UPG-D4): never `session.json`'s, which another
@@ -109,9 +122,16 @@ export class Session {
     return this.apply(s, s);
   }
 
-  private apply(s: SessionState, set: Pick<TabSet, "tabs" | "activeTab">): boolean {
-    this.openTabs(set.tabs, set.activeTab);
-    if (!this.app.tabs.length) return false;
+  /** The tab shown being brought back on the disk threads (SD-T5), till it's read: what opens after it waits. */
+  restoring: Promise<void> | null = null;
+  /** The tabs after it, read in the background till the last is: the keys never wait for them. */
+  behind: Promise<void> | null = null;
+
+  private apply(s: SessionState, set: Pick<TabSet, "tabs" | "activeTab">, how: TabsHow = {}): boolean {
+    const coming = this.openTabs(set.tabs, set.activeTab, how);
+    this.restoring = coming instanceof Promise ? coming : null;
+    // Read on the disk threads, the tabs come as they're read: brought back, unless none is kept.
+    if (this.restoring ? !set.tabs.length : !this.app.tabs.length) return false;
     this.app.sidebar.visible = s.sidebar;
     if (s.outline !== undefined) this.app.outline.visible = s.outline;
     if (s.sidebar_width) this.app.panels.sideW = s.sidebar_width;
@@ -140,32 +160,81 @@ export class Session {
     return (home ? s.folders?.[""] : undefined) ?? s;
   }
 
-  /** Tabs from the session opened, after any there are; the active one as it was. */
-  openTabs(tabs: SessionTab[], activeTab: number): void {
+  /**
+   * Tabs from the session opened, after any there are; the active one as it was. Read on the disk threads (SD-T5,
+   * SD-D12), a promise of the tab shown, read first, the keys waiting for it as for any note opened; then the rest in
+   * order, one at a time, in the background, each in its place as it comes, the keys free meanwhile — so a thread stays
+   * free for the watcher's look and a key's read — and `how.none` once none could be read. A test's App, and the start
+   * (SD-T10's), read here at once.
+   */
+  openTabs(tabs: SessionTab[], activeTab: number, how: TabsHow = {}): void | Promise<void> {
     // In home, their folders asked for first (VV-D2): a tab in one its walk hasn't reached is a note of home's all the same.
     this.app.vaults.askTabs(tabs);
+    if (this.app.reads.offThread) return this.readTabs(tabs, activeTab, how);
     for (const t of tabs) {
-      const views: View[] = [];
-      for (const p of t.panes) {
-        const buf = this.app.buffer(p.path);
-        if (!buf) continue;
-        const view = this.app.makeView(buf, p.anchor, p.cursor);
-        // Its history too, so back, forward and the history list go on where they were.
-        view.back = [...(p.back ?? [])];
-        view.fwd = [...(p.fwd ?? [])];
-        views.push(view);
-      }
-      if (views.length)
-        this.app.tabs.push({
-          views,
-          active: Math.min(t.active, views.length - 1),
-          orientation: t.orientation ?? "side",
-          ratio: t.ratio ?? this.app.config.ui.split_ratio,
-          ...(t.pinned ? { pinned: true } : {}),
-        });
+      const tab = this.tabOf(t, (path) => this.app.buffer(path));
+      if (tab) this.app.tabs.push(tab);
     }
     this.app.activeTab = Math.max(0, Math.min(activeTab, this.app.tabs.length - 1));
-    for (const t of this.app.tabs) t.active = Math.max(0, Math.min(t.active, t.views.length - 1));
+  }
+
+  /** `openTabs` off the screen's thread: the tab shown, the keys waiting for it, then the rest, each read and put in its
+   *  place; none once the vault is left. The tab with `how.open` is the one shown, when there's one. */
+  private readTabs(tabs: SessionTab[], activeTab: number, how: TabsHow): Promise<void> {
+    const loc = this.app.loc;
+    const has = (t: SessionTab) => t.panes.some((p) => resolve(loc.root, p.path) === how.open);
+    const shown = (how.open ? tabs.find(has) : undefined) ?? tabs[Math.max(0, Math.min(activeTab, tabs.length - 1))];
+    const placed = new Map<SessionTab, Tab>();
+    const place = async (t: SessionTab): Promise<boolean> => {
+      const first = t === shown;
+      const read = new Map<string, NoteBuffer | null>();
+      for (const p of t.panes)
+        if (!read.has(p.path))
+          read.set(p.path, await this.app.bufferOpening.load(p.path, first ? this.app.view : null, !first));
+      if (this.app.loc !== loc || this.app.quitting) return false;
+      const tab = this.tabOf(t, (path) => read.get(path) ?? null);
+      if (!tab) return true;
+      // Before the first of those come so far that the session has after it; the tab you're on stays yours.
+      const on = this.app.tab;
+      const after = [...placed].filter(([x]) => tabs.indexOf(x) > tabs.indexOf(t)).map(([, x]) => x);
+      const at = after.length ? Math.min(...after.map((x) => this.app.tabs.indexOf(x))) : this.app.tabs.length;
+      this.app.tabs.splice(at, 0, tab);
+      placed.set(t, tab);
+      this.app.activeTab = Math.max(0, this.app.tabs.indexOf(first || !on ? tab : on));
+      if (first) this.app.explorer.reveal();
+      this.app.host.requestRender();
+      return true;
+    };
+    // The rest after it, in the background: a read of one is a background read (`load`'s), never held.
+    const rest = async (): Promise<void> => {
+      for (const t of tabs) if (t !== shown && !(await place(t))) return;
+      if (!placed.size && !this.app.tabs.length) how.none?.();
+    };
+    const first = shown ? this.app.reads.hold(place(shown)) : Promise.resolve(false);
+    this.behind = first.then((on) => (on ? rest() : undefined));
+    return first.then(() => {});
+  }
+
+  /** A tab of the session's, its windows of the notes `bufferOf` gives (null: not opened, left out); null with none. */
+  private tabOf(t: SessionTab, bufferOf: (path: string) => NoteBuffer | null): Tab | null {
+    const views: View[] = [];
+    for (const p of t.panes) {
+      const buf = bufferOf(p.path);
+      if (!buf) continue;
+      const view = this.app.makeView(buf, p.anchor, p.cursor);
+      // Its history too, so back, forward and the history list go on where they were.
+      view.back = [...(p.back ?? [])];
+      view.fwd = [...(p.fwd ?? [])];
+      views.push(view);
+    }
+    if (!views.length) return null;
+    return {
+      views,
+      active: Math.max(0, Math.min(t.active, views.length - 1)),
+      orientation: t.orientation ?? "side",
+      ratio: t.ratio ?? this.app.config.ui.split_ratio,
+      ...(t.pinned ? { pinned: true } : {}),
+    };
   }
 
   /** This window's session as it is now: what `save` keeps, and what a restart's note carries (UPG). */
@@ -222,6 +291,13 @@ export class Session {
     s.branches = recent(branches, SESSION_BRANCHES);
     saveSession(this.app.loc, s);
   }
+}
+
+/** How the session's tabs come back: the tab with `open` (absolute) shown first; `none` once none could be read, read on
+ *  the disk threads (here, `restore` says false). */
+interface TabsHow {
+  open?: string | null;
+  none?: () => void;
 }
 
 /** The `n` sets of tabs left most recently, `keep`'s always among them. */

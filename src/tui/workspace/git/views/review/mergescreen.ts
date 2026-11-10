@@ -34,6 +34,7 @@ import { comparable, type DiffViewRow, diffView } from "../../../../../core/work
 import { TOP } from "../../../../../core/workspace/session/position.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import type { App } from "../../../../app/runtime/app.ts";
+import { andThen } from "../../../../app/runtime/key-reads.ts";
 import { editable } from "../../../../documents/editing/editable.ts";
 import { NoteBuffer } from "../../../../documents/buffers/buffer.ts";
 import { asBlocks, diffLanguage, isNote, LINES_ONLY, sideBySide, switchedText } from "../changes/diffview.ts";
@@ -97,11 +98,12 @@ export async function openMergeScreen(app: App, rel?: string): Promise<void> {
   if (was?.read === text) return show(app, was);
   const path = inCheckout(c, app.loc.root, target);
   // The markers read with git's stages: they choose between ways to read a conflict, and its base where it's not marked.
-  const query = beginGitRead(app, "Reading merge versions", true);
+  const query = await beginGitRead(app, "Reading merge versions", true);
+  if (!query) return;
   const [base, ours, theirs] = await Promise.all(
     [":1", ":2", ":3"].map((ref) => showLater(c, ref, path, query.signal)),
   );
-  if (!query.current() || buf.source !== text) return;
+  if (!(await query.current()) || buf.source !== text) return;
   const file = readConflicts(text, { base: base!, ours: ours!, theirs: theirs! });
   if (!conflictsOf(file).length)
     return app.message(
@@ -343,12 +345,13 @@ export function mergeEdit(app: App): void {
   app.floating = null;
   put(app, m, buf);
   left.get(app)?.delete(m.rel);
-  app.openAt(buf.rel, line);
-  const v = app.view;
-  if (v?.buf === buf && !editable(v)) {
-    app.lens.setViewMode(v, app.lens.editMode(v));
-    app.placeAtLine(v, line);
-  }
+  void andThen(app.openAt(buf.rel, line), () => {
+    const v = app.view;
+    if (v?.buf === buf && !editable(v)) {
+      app.lens.setViewMode(v, app.lens.editMode(v));
+      app.placeAtLine(v, line);
+    }
+  });
   app.message(
     "info",
     `${m.rel}, unsaved: settle conflict ${m.at + 1} by hand, then :w${m.prompt ? "" : " — x opens the merge screen on what's left"}`,

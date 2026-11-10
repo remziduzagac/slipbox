@@ -343,19 +343,23 @@ export class Vaults {
     this.app.settings.applyTheme();
     this.app.glyphs = this.app.settings.glyphSet(this.app.ui.glyphs);
     this.app.host.setMouse?.(this.app.ui.mouse);
-    const restored = this.app.config.ui.restore_session && this.app.session.restore();
-    if (open) {
+    // Read on the disk threads (SD-T5): the default note once none of the tabs could be, as when none was kept.
+    const none = open ? undefined : () => this.app.session.openDefault();
+    const restored = this.app.config.ui.restore_session && this.app.session.restore({ open, none });
+    // The file asked for once the tab shown is back — the keys waiting for both, the rest coming in the background.
+    const coming = restored ? this.app.session.restoring : null;
+    const opened = () => {
+      if (!open) return;
       const i = this.app.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === open));
-      if (i >= 0) {
-        this.app.activeTab = i;
-        const t = this.app.tabs[i]!;
-        t.active = t.views.findIndex((x) => x.buf.abs === open);
-        if (anchor) this.app.history.jumpTo(t.views[t.active]!, anchor);
-      } else this.app.openInNewTab(open, anchor);
-    } else if (!restored) {
-      const first = this.app.defaultNote(this.app.homeFolder);
-      if (first) this.app.openInNewTab(first);
-    }
+      if (i < 0) return this.app.openInNewTab(open, anchor);
+      this.app.activeTab = i;
+      const t = this.app.tabs[i]!;
+      t.active = t.views.findIndex((x) => x.buf.abs === open);
+      if (anchor) this.app.history.jumpTo(t.views[t.active]!, anchor);
+    };
+    if (coming && open) void this.app.reads.hold(coming.then(opened));
+    else if (open) void opened();
+    else if (!restored) this.app.session.openDefault();
     if (from && !how.back) this.trail.push(from);
     this.app.region = "content";
     if (carriedFrom) {

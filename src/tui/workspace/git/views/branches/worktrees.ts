@@ -1,7 +1,8 @@
 // Worktree and new-branch UI flows retain App interaction and branch-owner visit/selection guards.
-import { sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import { headOf } from "../../../../../core/workspace/git/git.ts";
-import { branchesOf } from "../../../../../core/workspace/git/branches/gitops.ts";
+import { branchesOf, worktreeList } from "../../../../../core/workspace/git/branches/gitops.ts";
+import { isVaultRoot, rootAt, rootMarkers } from "../../../../../core/workspace/vaults/vault.ts";
 import {
   addWorktreeLater,
   badBranchName,
@@ -306,4 +307,49 @@ export class BranchWorktrees {
       },
     });
   }
+}
+
+/**
+ * `:worktrees` (5.14): the repository's checkouts by branch; enter goes into one, at this note — looked for there first,
+ * a key's read on a disk thread (SD-T5).
+ */
+export function openWorktrees(app: App): void {
+  const c = app.git.checkout;
+  if (!c) return app.message("info", "not in a git repository");
+  const list = worktreeList(c);
+  if (!list?.length) return app.message("warn", "git couldn't list the worktrees");
+  const here = relative(c.root, app.loc.root);
+  const note = app.view?.buf.rel ?? null;
+  app.overlays.openList({
+    title: `Worktrees (${list.length}) — enter: this note there`,
+    items: list.map((w) => ({
+      label: `${w.path === c.root ? "● " : "  "}${app.glyphs.branch} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}`,
+      detail: `${w.path}${w.main ? "  (main)" : ""}`,
+      data: w,
+    })),
+    accept: (item) => {
+      const w = item.data as { path: string };
+      if (w.path === c.root) return;
+      const vault = join(w.path, here);
+      if (!isVaultRoot(vault))
+        return app.message("warn", `${vault} isn't a vault on that branch (none of ${rootMarkers().join(", ")} in it)`);
+      const go = (there: string | null) => {
+        const v = app.view;
+        const missing = () => {
+          if (note && !there) app.message("info", `${note} isn't on that branch: its vault opened instead`);
+        };
+        const anchor = there && v ? { ...v.topAnchor } : undefined;
+        if (app.vaults.switchVault(rootAt(vault), there, anchor, { after: missing })) missing();
+      };
+      if (!note) return go(null);
+      const at = join(vault, note);
+      return app.reads.whenThere(
+        at,
+        note,
+        null,
+        () => go(at),
+        () => go(null),
+      );
+    },
+  });
 }

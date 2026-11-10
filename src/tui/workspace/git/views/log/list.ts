@@ -47,9 +47,10 @@ export async function openLog(app: App, selected?: string): Promise<void> {
         : "HEAD is detached: :log lists a branch's commits since its base",
     );
   }
-  const query = beginGitRead(app, "Reading the branch's commits");
+  const query = await beginGitRead(app, "Reading the branch's commits");
+  if (!query) return;
   const commits = await branchLogLater(c, here.base, here.branch, MAX_COMMITS, query.signal);
-  if (!query.current()) return;
+  if (!(await query.current())) return;
   if (commits === null) return app.message("warn", "git couldn't list the branch's commits");
   if (!commits.length) return app.message("info", `no commits since ${sanitize(here.base)}`);
   app.overlays.openList({
@@ -72,9 +73,10 @@ export async function openLog(app: App, selected?: string): Promise<void> {
 async function openCommit(app: App, k: BranchCommit, selected?: string): Promise<void> {
   const c = app.git.checkout;
   if (!c) return;
-  const query = beginGitRead(app, "Reading the commit's files");
+  const query = await beginGitRead(app, "Reading the commit's files");
+  if (!query) return;
   const changed = await commitFilesLater(c, k, query.signal);
-  if (!query.current()) return;
+  if (!(await query.current())) return;
   if (changed === null) return app.message("warn", `git couldn't list ${k.hash.slice(0, 7)}'s files`);
   const back = () => openLog(app, k.hash);
   if (!changed.length) {

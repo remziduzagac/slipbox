@@ -21,6 +21,7 @@ import type { NoteBuffer } from "../buffers/buffer.ts";
 import { match } from "../../shell/overlays/match.ts";
 import { keyChar } from "../../shell/input/keys.ts";
 import type { App, View } from "../../app/runtime/app.ts";
+import { andThen } from "../../app/runtime/key-reads.ts";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
 
 import type { ProblemRow, ProblemsPanel, PanelList } from "./problems/contracts.ts";
@@ -348,7 +349,7 @@ export class Problems {
     // The clicked row, of the filtered list (as enter in the filter): the filter clears.
     p.all.filter = "";
     p.all.filtering = false;
-    return this.openRow(row, rows);
+    return void this.openRow(row, rows);
   }
 
   /** Its rows: each section's heading (with its count), its problems under it unless folded; `/` filters. */
@@ -357,32 +358,33 @@ export class Problems {
   }
 
   /** Open a problem's note at it: the line, the cursor on the link. */
-  jumpTo(l: LinkProblem, where: "here" | "tab" | "split" = "here"): void {
-    this.app.openWhere(l.from, l.line, where);
-    const v = this.app.view;
-    if (v && v.buf.rel === l.from) {
-      // Rendered, onto the link as drawn (the ones with its target on its line, in order); in source mode, its text.
-      const same = this.at(l.from).filter((x) => x.line === l.line && x.target === l.target);
-      const drawn = this.app.currentLayout(v).links.filter((x) => x.src === l.line && x.target === l.target)[
-        Math.max(0, same.indexOf(l))
-      ];
-      if (drawn && drawn.line >= 0 && !this.app.currentLayout(v).lines[drawn.line]?.srcMap)
-        this.app.moveCursor(v, { row: drawn.line, col: drawn.col });
-      else placeAt(this.app, v, (v.buf.lineStarts()[l.line - 1] ?? 0) + l.column - 1);
-    }
-    this.app.region = "content";
-    if (this.app.panels.narrow || this.app.ui.zen) this.app.sidebar.overlay = false;
+  jumpTo(l: LinkProblem, where: "here" | "tab" | "split" = "here"): void | Promise<void> {
+    return andThen(this.app.openWhere(l.from, l.line, where), () => {
+      const v = this.app.view;
+      if (v && v.buf.rel === l.from) {
+        // Rendered, onto the link as drawn (the ones with its target on its line, in order); in source mode, its text.
+        const same = this.at(l.from).filter((x) => x.line === l.line && x.target === l.target);
+        const drawn = this.app.currentLayout(v).links.filter((x) => x.src === l.line && x.target === l.target)[
+          Math.max(0, same.indexOf(l))
+        ];
+        if (drawn && drawn.line >= 0 && !this.app.currentLayout(v).lines[drawn.line]?.srcMap)
+          this.app.moveCursor(v, { row: drawn.line, col: drawn.col });
+        else placeAt(this.app, v, (v.buf.lineStarts()[l.line - 1] ?? 0) + l.column - 1);
+      }
+      this.app.region = "content";
+      if (this.app.panels.narrow || this.app.ui.zen) this.app.sidebar.overlay = false;
+    });
   }
 
   /** Open a linter's finding: its note at its line (and column, when it says one). */
-  jumpToLint(i: LintIssue, where: "here" | "tab" | "split" = "here"): void {
-    this.app.openAt(relative(this.app.loc.root, i.file), i.line, i.column ?? 1, where);
+  jumpToLint(i: LintIssue, where: "here" | "tab" | "split" = "here"): void | Promise<void> {
+    return this.app.openAt(relative(this.app.loc.root, i.file), i.line, i.column ?? 1, where);
   }
 
   /** A Problems row opened — in a tab by default (`enter`, a click), as the explorer opens a note: its problem; a note's
    *  row, the note at its first in that section, of `rows` (the ones shown, so a filter's pick) — an orphan's, the
    *  note. A heading's does nothing. */
-  private openRow(row: ProblemRow, rows: ProblemRow[], where: "here" | "tab" | "split" = "tab"): void {
+  private openRow(row: ProblemRow, rows: ProblemRow[], where: "here" | "tab" | "split" = "tab"): void | Promise<void> {
     if (row.conflict) return this.app.openAt(row.conflict.path, row.conflict.line, 1, where);
     if (row.frontmatter) return this.app.openAt(row.frontmatter.path, row.frontmatter.line, 1, where);
     if (row.link) return this.jumpTo(row.link, where);
@@ -487,7 +489,7 @@ export class Problems {
         if (!row) return;
         s.filter = "";
         s.filtering = false;
-        return this.openRow(row, all);
+        return void this.openRow(row, all);
       }
       case "down":
       case "ctrl+n":

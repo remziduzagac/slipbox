@@ -132,6 +132,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- A note on a slow disk, such as a network share or a drive that's asleep, no longer freezes the screen while it's
+  opened. The window says `reading <note>…`, the keys typed meanwhile act on the note once it's there, and `esc` gives
+  the read up. A list's preview, a peek, `:e!` and the git panel's keys read the same way.
+
 - **Breaking:** the `space` groups are named for what they act on, and their keys moved with them. `space f` (+file)
   acts on any file, a note or not; `space n` (+note) keeps what only a note has; finding is `space /` (+find);
   `space d` reads +directory and `space v` +vault. Each key kept its letter, so only the group's key is new.

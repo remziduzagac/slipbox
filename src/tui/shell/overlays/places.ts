@@ -6,6 +6,7 @@ import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import type { Anchor } from "../../../core/workspace/session/position.ts";
 import { leadsOut, ownPath, peekAt } from "../../documents/navigation/peek.ts";
 import type { App } from "../../app/runtime/app.ts";
+import { andThen } from "../../app/runtime/key-reads.ts";
 import type { ListItem, ListOverlay, ListPlace } from "./list-types.ts";
 
 /** Where a pick opens. */
@@ -80,21 +81,19 @@ export class Places {
  * A place opened in this window, the split's other one or a new tab, at its line. Another vault's file, or one outside
  * every vault, is read in a peek instead, as a link out of the vault is (VV-D7): looking never moves you.
  */
-export function openPlace(app: App, place: ListPlace, where: Where): void {
+export function openPlace(app: App, place: ListPlace, where: Where): void | Promise<void> {
   const anchor: Anchor | undefined =
     place.line > 0 ? { heading: null, headingIndex: 0, offset: 0, line: place.line } : undefined;
   const out = leadsOut(app, place.abs);
   if (out) return peekAt(app, place.abs, out.loc, anchor);
   const rel = ownPath(app, place.abs);
-  if (where === "tab") app.openInNewTab(rel, anchor);
-  else {
-    if (where === "split") app.windows.other();
-    app.open(rel, anchor);
-  }
-  const v = app.view;
-  if (!v || v.buf.abs !== place.abs || place.line <= 0) return;
-  // On the hit's column in SOURCE view (a rendered row has none), as the list's own pick lands.
-  const start = v.buf.lineStarts()[place.line - 1] ?? 0;
-  app.placeAtLine(v, place.line, [...v.buf.source.slice(start, start + (place.range?.[0] ?? 0))].length + 1);
-  app.region = "content";
+  if (where === "split") app.windows.other();
+  return andThen(where === "tab" ? app.openInNewTab(rel, anchor) : app.open(rel, anchor), () => {
+    const v = app.view;
+    if (!v || v.buf.abs !== place.abs || place.line <= 0) return;
+    // On the hit's column in SOURCE view (a rendered row has none), as the list's own pick lands.
+    const start = v.buf.lineStarts()[place.line - 1] ?? 0;
+    app.placeAtLine(v, place.line, [...v.buf.source.slice(start, start + (place.range?.[0] ?? 0))].length + 1);
+    app.region = "content";
+  });
 }

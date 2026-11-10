@@ -16,8 +16,8 @@ import { describeCap } from "../../../core/workspace/vaults/home.ts";
 import { describeBackground, backgroundStatus } from "../../../core/workspace/graph/autoindex.ts";
 import { cacheDir, stateDir, untildePath } from "../../../core/foundation/platform/paths.ts";
 import { openPathPrompt } from "../../shell/overlays/open-path.ts";
-import { statSync } from "node:fs";
 import type { App } from "../../app/runtime/app.ts";
+import type { PathStat } from "../../../core/workspace/walk/disk-jobs.ts";
 
 /** Files and vaults: notes and folders made, opened, moved, renamed, exported and deleted; vaults made and switched; trust. */
 export function fileActions(): Record<string, Run> {
@@ -51,29 +51,17 @@ export function fileActions(): Record<string, Run> {
       const r = a.graph.findNote(arg, a.loc.root);
       if (r.status === "resolved") return a.open(r.path);
       if (r.status === "ambiguous") return a.message("warn", `"${arg}" matches ${r.candidates.join(", ")}`);
-      // A file by its whole path outside this vault: gone to, into its vault — Elsewhere's among them (VV-D3, VV-D4).
-      if (isAbsolute(arg) && (a.loc.mode === "folder" || !isInside(a.loc.root, arg)) && isFile(arg)) return a.open(arg);
       // Any other file of the vault, by its path with its extension (16.4), as :e opens it in vim — from the vault's
       // top, or its whole path inside the vault.
       const rel = isAbsolute(arg) ? relative(a.loc.root, arg) : arg.replace(/^\.?\//, "");
-      if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
       const abs = join(a.loc.root, rel);
-      // Through a link not followed (VV-D6): never made the vault's unasked — opened, it asks first.
-      if (rel && isInside(a.loc.root, abs) && isFile(abs) && a.following.blocked(abs)) return a.open(rel);
-      // There on disk, but the vault hasn't heard of it yet (written a moment ago, the watcher not yet
-      // told): the vault told now, as the watcher would, and it opened as its own.
-      if (rel && isInside(a.loc.root, abs) && isFile(abs) && walked(a, rel)) {
-        const isNote = classify(rel, a.config.walk.extensions).group === "note";
-        a.watch.applyChanges({ changes: [{ rel, kind: "created", isNote }], rescan: false });
-        return fileLink(a, rel);
-      }
-      // Git-ignored, or in a hidden folder: reached by opening it (20.8), it's the vault's from now on.
-      if (rel && isInside(a.loc.root, abs) && a.graph.reachFile(rel, { keep: true }))
-        return a.graph.notes.has(rel) ? a.open(rel) : fileLink(a, rel);
-      // Left out and never reached (D249) — a busy folder (D237), `walk.exclude`, a vault of its own, home's skip list
-      // (VV-D2): opened as the explorer opens its `⊘` row, by the row's path, and never indexed.
-      if (rel && isInside(a.loc.root, abs) && isFile(abs)) return a.open(a.explorer.rowPath(abs));
-      a.message("warn", `no note or file "${arg}"`);
+      // A file by its whole path outside this vault: gone to, into its vault — Elsewhere's among them (VV-D3, VV-D4).
+      const outside = isAbsolute(arg) && (a.loc.mode === "folder" || !isInside(a.loc.root, arg));
+      const inside = !!rel && isInside(a.loc.root, abs);
+      if (!outside && a.graph.filePaths().includes(rel)) return fileLink(a, rel);
+      if (!outside && !inside) return a.message("warn", `no note or file "${arg}"`);
+      // Whether it's a file, asked of a disk thread: a key's own read (SD-T5).
+      return a.reads.statted(abs, outside ? arg : rel, a.view, (st) => openFound(a, arg, rel, abs, outside, st));
     },
     // A file by its path, asked for and completed as it's typed (`space f e`); given one, opened as `:e` opens it.
     "file.open_path": (a, arg) => (arg ? a.run(`file.open ${arg}`) : openPathPrompt(a)),
@@ -273,12 +261,35 @@ export function fileActions(): Record<string, Run> {
   };
 }
 
-export function isFile(abs: string): boolean {
-  try {
-    return statSync(abs).isFile();
-  } catch {
-    return false;
+/** `:e`'s path, statted (`st`): opened as what it is — a file outside the vault, or one of the vault's however it's
+ *  reached — else said it's none. */
+function openFound(
+  a: App,
+  arg: string,
+  rel: string,
+  abs: string,
+  outside: boolean,
+  st: PathStat,
+): void | Promise<void> {
+  const file = !("error" in st) && st.kind === "file";
+  const inside = !!rel && isInside(a.loc.root, abs);
+  if (file && outside) return a.open(arg);
+  if (a.graph.filePaths().includes(rel)) return fileLink(a, rel);
+  // Through a link not followed (VV-D6): never made the vault's unasked — opened, it asks first.
+  if (inside && file && a.following.blocked(abs)) return a.open(rel);
+  // There on disk, but the vault hasn't heard of it yet (written a moment ago, the watcher not yet
+  // told): the vault told now, as the watcher would, and it opened as its own.
+  if (inside && file && walked(a, rel)) {
+    const isNote = classify(rel, a.config.walk.extensions).group === "note";
+    a.watch.applyChanges({ changes: [{ rel, kind: "created", isNote }], rescan: false });
+    return fileLink(a, rel);
   }
+  // Git-ignored, or in a hidden folder: reached by opening it (20.8), it's the vault's from now on.
+  if (inside && a.graph.reachFile(rel, { keep: true })) return a.graph.notes.has(rel) ? a.open(rel) : fileLink(a, rel);
+  // Left out and never reached (D249) — a busy folder (D237), `walk.exclude`, a vault of its own, home's skip list
+  // (VV-D2): opened as the explorer opens its `⊘` row, by the row's path, and never indexed.
+  if (inside && file) return a.open(a.explorer.rowPath(abs));
+  a.message("warn", `no note or file "${arg}"`);
 }
 
 /** Whether the vault's walk takes a path: it and each folder above it (a hidden folder, a busy one, an ignored one aren't). */

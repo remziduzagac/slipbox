@@ -567,6 +567,14 @@ If a note can't be read there, it is shown as its source, and a message says why
 running out of time or stopping, opening the note again tries once more. Editing the note always does. Your vault's
 index isn't affected: the note's links, tags and headings are read all the same.
 
+**A slow disk.** A note on a slow disk, such as a network share or a drive that's asleep, is read away from the
+screen. Its window says `reading <note>…` while it waits, and the keys you type meanwhile act on the note once it's
+there; a click meanwhile does nothing. `esc` gives the read up and leaves the window as it was. A note that doesn't
+answer within a minute isn't opened, and a message says so: `notes/far.md didn't answer: not opened`. `:e!` reads a
+note again the same way. A list's preview and a peek say `reading…` until their file comes, and your keys go on
+meanwhile. When slipbox brings your tabs back, the tab shown is read first and your keys wait for it alone; the others
+come in behind it while you work.
+
 **Text that isn't UTF-8.** Bytes that aren't valid UTF-8 are drawn as `�`, and a message says so.
 
 **Text that could fool your terminal.** A note can't send your terminal commands. slipbox removes terminal escape

@@ -14,7 +14,7 @@ import { parseData } from "../../../core/documents/model/data.ts";
 import type { FileKind } from "../../../core/documents/model/filetypes.ts";
 import { newRenderCache } from "../../../core/rendering/layout/markdown/render.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
-import { readText, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
+import { type DecodedFile, readTextStamped, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
 import type { Layout } from "../../../core/rendering/layout/ir.ts";
 import type { NoteRenderOptions } from "../../../core/documents/model/note.ts";
 import { newSourceCache } from "../../../core/rendering/layout/code/source.ts";
@@ -230,41 +230,45 @@ export class NoteBuffer {
   load(): boolean {
     if (this.virtual) return true;
     try {
-      const d = readText(this.abs);
-      this.bom = d.bom;
-      this.eol = d.crlf ? "\r\n" : "\n";
-      this.invalidUtf8 = d.invalidUtf8;
-      if (this.loaded && d.text !== this.source) {
-        // A reload is one more undo step (4.5): the new text replaces the old where they differ,
-        // so `u` brings back what was here — an agent's rewrite, or :e! dropping your changes.
-        this.endStep(0);
-        let head = 0;
-        const a = this.source;
-        const b = d.text;
-        while (head < a.length && head < b.length && a[head] === b[head]) head++;
-        let tail = 0;
-        while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail])
-          tail++;
-        this.edit(head, a.length - head - tail, b.slice(head, b.length - tail), head);
-      } else if (!this.loaded) {
-        this.source = d.text;
-        this.version++;
-      }
-      this.loaded = true;
-      this.conflictKept = false;
-      this.markers = false;
-      this.conflictWaiting = false;
-      this.savedVersion = this.version;
-      this.savedText = this.source;
-      this.stamp = stamp(this.abs);
-      this.deleted = false;
-      this.newFile = false;
-      this.layouts.clear();
-      return true;
+      return this.took(readTextStamped(this.abs));
     } catch {
       this.deleted = true;
       return false;
     }
+  }
+
+  /** Its file's text and stamp, read here (`load`) or on a disk thread (SD-T5), taken in: as read, or as a reload. */
+  took(d: DecodedFile & { stamp: Stamp | null }): boolean {
+    this.bom = d.bom;
+    this.eol = d.crlf ? "\r\n" : "\n";
+    this.invalidUtf8 = d.invalidUtf8;
+    if (this.loaded && d.text !== this.source) {
+      // A reload is one more undo step (4.5): the new text replaces the old where they differ,
+      // so `u` brings back what was here — an agent's rewrite, or :e! dropping your changes.
+      this.endStep(0);
+      let head = 0;
+      const a = this.source;
+      const b = d.text;
+      while (head < a.length && head < b.length && a[head] === b[head]) head++;
+      let tail = 0;
+      while (tail < a.length - head && tail < b.length - head && a[a.length - 1 - tail] === b[b.length - 1 - tail])
+        tail++;
+      this.edit(head, a.length - head - tail, b.slice(head, b.length - tail), head);
+    } else if (!this.loaded) {
+      this.source = d.text;
+      this.version++;
+    }
+    this.loaded = true;
+    this.conflictKept = false;
+    this.markers = false;
+    this.conflictWaiting = false;
+    this.savedVersion = this.version;
+    this.savedText = this.source;
+    this.stamp = d.stamp;
+    this.deleted = false;
+    this.newFile = false;
+    this.layouts.clear();
+    return true;
   }
 
   /** True when the file on disk differs from what we loaded. */

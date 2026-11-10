@@ -6,7 +6,7 @@
 // Each check builds a small home of its own.
 
 import { chmodSync, existsSync } from "node:fs";
-import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open } from "../check.ts";
+import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open, switcherListed } from "../check.ts";
 import type { Session } from "../session.ts";
 import { crumbs, git, lastMessage, listed } from "../support/links.ts";
 
@@ -489,6 +489,49 @@ export const SLOW_DISK: Check[] = [
       // Your config, changed: read and parsed there, and applied.
       s.write(`~/${SLOW}/config.toml`, "[ui]\nline_numbers = true\n");
       await s.message("config reloaded", 60_000);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: a note opened on a slow disk says it's being read; the keys typed meanwhile act on it once it's there, and esc gives it up",
+    covers: { cases: ["notes"], commands: [] },
+    options: {
+      startAt: "home/notes/index.md",
+      // Source mode: `x` deletes the character under the cursor.
+      config: "[render]\nnotes = false\n",
+      // Each stat and read of its notes takes a second on a disk thread — an open's way, its read, whether it may be
+      // written: some five — its listing none to speak of.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:1::1000` },
+      setup: (s) =>
+        smallHome(s, {
+          [`~/notes/${SLOW}/far.md`]: "alpha line\nbeta line\n",
+          [`~/notes/${SLOW}/near.md`]: "# Near\n",
+        }),
+    },
+    run: async (s) => {
+      // Both in the switcher once the walk has listed their folder.
+      await s.keys("ctrl+p");
+      await s.type("far");
+      await s.until(() => switcherListed(s, `${SLOW}/far.md`), 15_000, "far.md in the switcher");
+      // Sent, not waited for: the key waits for the read, the screen drawn meanwhile.
+      s.term.key("enter");
+      await s.see(`reading ${SLOW}/far.md…`, 2500);
+      s.term.key("j");
+      s.term.key("x");
+      // `j` down a line, `x` its first character: "beta" becomes "eta".
+      await s.see(/\beta line/, 20_000);
+      s.expect(!s.text().includes("beta line"), "`x` deleted a character of the line `j` moved to, once it was read");
+      // Another, given up: the window left on far.md, nothing opened.
+      await s.keys("ctrl+p");
+      await s.type("near");
+      await s.until(() => switcherListed(s, `${SLOW}/near.md`), 15_000, "near.md in the switcher");
+      s.term.key("enter");
+      await s.see(`reading ${SLOW}/near.md…`, 2500);
+      await s.keys("escape");
+      await s.notSee(`reading ${SLOW}/near.md…`, 1000);
+      await Bun.sleep(4000);
+      s.expect(s.rowOf(/\beta line/) >= 0 && !s.text().includes("# Near"), "far.md still shown, near.md not opened");
+      await s.status("far.md");
     },
   },
 ];

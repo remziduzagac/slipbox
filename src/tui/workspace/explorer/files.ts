@@ -23,6 +23,7 @@ import { isInside, isListed } from "../../../core/workspace/vaults/vault.ts";
 import { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { match } from "../../shell/overlays/match.ts";
 import type { App, ListItem, PromptOverlay } from "../../app/runtime/app.ts";
+import { andThen } from "../../app/runtime/key-reads.ts";
 import { editable } from "../../documents/editing/editable.ts";
 import type { ExplorerItem } from "./explorer.ts";
 
@@ -240,8 +241,7 @@ export class Files {
       };
       // Made in a vault of its own (a nested one): typed into once gone there, which is asked first (D270).
       if (this.app.vaults.intoOther(abs, undefined, typeInto)) return;
-      this.app.open(r.open);
-      typeInto();
+      void andThen(this.app.open(r.open), typeInto);
     };
     this.app.overlays.prompt(`new note in ${base ? `${base}/` : "the vault's top folder"}`, make);
     if (prefill && this.app.overlay?.kind === "prompt") this.app.overlay.text = prefill;

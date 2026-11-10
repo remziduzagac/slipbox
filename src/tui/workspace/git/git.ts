@@ -1,9 +1,9 @@
 // Source control in the TUI (5.9–5.14, 26.x): the checkout the vault is in, each file's state as git sees it,
 // asked in the background; the changes, the diffs, branches, worktrees and merges; committing.
 
-import { beginGitRead } from "./gitquery.ts";
+import { beginGitRead, type GitQuery } from "./gitquery.ts";
 import { existsSync } from "node:fs";
-import { basename, join, relative } from "node:path";
+import { basename, join } from "node:path";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
 import { startInsert } from "../../documents/editing/editing.ts";
 import { fence, fenceLanguage } from "../../../core/workspace/mutations/capture.ts";
@@ -18,7 +18,6 @@ import {
   inCheckout,
   inVault,
   showLater,
-  worktreeList,
 } from "../../../core/workspace/git/branches/gitops.ts";
 import {
   commentFor,
@@ -39,7 +38,6 @@ import {
   reviewMerge,
 } from "../../../core/workspace/git/review/mergereview.ts";
 import { openDiff } from "./views/changes/diffview.ts";
-import { isVaultRoot, rootAt, rootMarkers } from "../../../core/workspace/vaults/vault.ts";
 import { isTrusted } from "../../../core/workspace/vaults/trust.ts";
 import type { Head } from "../../../core/workspace/vaults/vault-feed.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
@@ -152,7 +150,7 @@ export class Git {
    * the fallback (`[git] base`, else main or master). Null when the read is no longer wanted, or there's none: then
    * said.
    */
-  private async baseLater(c: Checkout, query: { signal: AbortSignal; current: () => boolean }): Promise<string | null> {
+  private async baseLater(c: Checkout, query: Pick<GitQuery, "signal" | "live">): Promise<string | null> {
     return this.bases.baseLater(c, query);
   }
 
@@ -160,11 +158,12 @@ export class Git {
   async openChanges(): Promise<void> {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
-    const query = beginGitRead(this.app, "Reading branch changes");
+    const query = await beginGitRead(this.app, "Reading branch changes");
+    if (!query) return;
     const base = await this.baseLater(c, query);
     if (!base) return;
     const r = await changedSinceLater(c, base, query.signal);
-    if (!query.current()) return;
+    if (!(await query.current())) return;
     if (!r) return this.app.message("warn", "git couldn't say what changed");
     const files = r.files
       .map((f) => ({ ...f, rel: inVault(c, this.app.loc.root, f.path) }))
@@ -204,16 +203,17 @@ export class Git {
   async showDiff(rel: string, back?: () => void | Promise<void>, title?: string): Promise<void> {
     const c = this.checkout;
     if (!c) return this.app.message("info", "not in a git repository");
-    const query = beginGitRead(this.app, "Reading diff version");
+    const query = await beginGitRead(this.app, "Reading diff version");
+    if (!query) return;
     const base = await this.baseLater(c, query);
     if (!base) return;
     const mergeBase = (
       await gitReadLater(c, ["merge-base", "--end-of-options", base, "HEAD"], false, query.signal)
     )?.trim();
-    if (!query.current()) return;
+    if (!query.live()) return;
     if (!mergeBase) return this.app.message("warn", `this branch and ${base} have no commit in common`);
     const before = (await showLater(c, mergeBase, inCheckout(c, this.app.loc.root, rel), query.signal)) ?? "";
-    if (!query.current()) return;
+    if (!(await query.current())) return;
     // The file as it is, or would be written: with its byte order mark, as git has it.
     let now = "";
     const open = this.app.buffers.get(rel);
@@ -251,9 +251,10 @@ export class Git {
       title,
       none,
       back,
-      go: (line) => {
-        if (existsSync(join(this.app.loc.root, rel))) this.app.openAt(rel, line);
-      },
+      go: (line) =>
+        void this.app.reads.whenThere(join(this.app.loc.root, rel), rel, this.app.view, () =>
+          this.app.openAt(rel, line),
+        ),
     });
   }
 
@@ -345,45 +346,6 @@ export class Git {
     void this.refreshNow().then(() => this.app.host.requestRender());
   }
 
-  /** `:worktrees` (5.14): the repository's checkouts by branch; enter goes into one, at this note. */
-  openWorktrees(): void {
-    const c = this.checkout;
-    if (!c) return this.app.message("info", "not in a git repository");
-    const list = worktreeList(c);
-    if (!list?.length) return this.app.message("warn", "git couldn't list the worktrees");
-    const here = relative(c.root, this.app.loc.root);
-    const note = this.app.view?.buf.rel ?? null;
-    this.app.overlays.openList({
-      title: `Worktrees (${list.length}) — enter: this note there`,
-      items: list.map((w) => ({
-        label: `${w.path === c.root ? "● " : "  "}${this.app.glyphs.branch} ${w.branch ?? `(${w.head?.slice(0, 7) ?? "detached"})`}`,
-        detail: `${w.path}${w.main ? "  (main)" : ""}`,
-        data: w,
-      })),
-      accept: (item) => {
-        const w = item.data as { path: string };
-        if (w.path === c.root) return;
-        const vault = join(w.path, here);
-        if (!isVaultRoot(vault))
-          return this.app.message(
-            "warn",
-            `${vault} isn't a vault on that branch (none of ${rootMarkers().join(", ")} in it)`,
-          );
-        const there = note && existsSync(join(vault, note)) ? join(vault, note) : null;
-        const v = this.app.view;
-        const missing = () => {
-          if (note && !there) this.app.message("info", `${note} isn't on that branch: its vault opened instead`);
-        };
-        if (
-          this.app.vaults.switchVault(rootAt(vault), there, there && v ? { ...v.topAnchor } : undefined, {
-            after: missing,
-          })
-        )
-          missing();
-      },
-    });
-  }
-
   /**
    * `:merge-review` (20.21): before a merge, the links it would break — git's tentative result, the working tree
    * untouched. A branch picked: this branch into its base — its own (GIT-D10), else `[git] base`, main or master, as
@@ -437,9 +399,14 @@ export class Git {
       })),
       accept: (item) => {
         const b = item.data as MergeBreak;
-        if (!existsSync(join(this.app.loc.root, b.path)))
-          return this.app.message("info", `${b.path} isn't here yet: it comes with ${r.from}`);
-        this.app.openAt(b.path, b.line, b.column);
+        const at = join(this.app.loc.root, b.path);
+        return this.app.reads.whenThere(
+          at,
+          b.path,
+          this.app.view,
+          () => this.app.openAt(b.path, b.line, b.column),
+          () => this.app.message("info", `${b.path} isn't here yet: it comes with ${r.from}`),
+        );
       },
       cancel: () => this.openMergeReview(),
     });
@@ -476,8 +443,10 @@ export class Git {
           );
         this.app.overlay = null;
         this.app.tabs = [];
-        this.app.session.openTabs(theirs.tabs, theirs.activeTab);
-        if (!this.app.tabs.length) this.app.session.restore();
+        // None of them readable, the last ones; none of those, the default note — never an empty window.
+        const last = () => this.app.session.restore({ none: () => this.app.session.openDefault() });
+        const none = () => void (last() || this.app.session.openDefault());
+        if (!this.app.session.openTabs(theirs.tabs, theirs.activeTab, { none }) && !this.app.tabs.length) none();
         return this.app.message("info", `switched to ${name(now)}: its tabs are back`);
       }
     }
@@ -583,9 +552,10 @@ export class Git {
    */
   async showFromGit(ref: { root: string; rel: string; branch: string }, link: string): Promise<void> {
     const c = checkoutOf(ref.root);
-    const query = beginGitRead(this.app, "Reading branch version");
+    const query = await beginGitRead(this.app, "Reading branch version");
+    if (!query) return;
     const text = c ? await showLater(c, ref.branch, ref.rel, query.signal) : null;
-    if (!query.current()) return;
+    if (!(await query.current())) return;
     if (text === null) return this.app.message("warn", `${link}: no ${ref.rel} on ${ref.branch}`);
     const note = /\.(md|markdown)$/i.test(ref.rel);
     this.app.overlays.openHover(

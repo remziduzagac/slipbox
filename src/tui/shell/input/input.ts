@@ -127,16 +127,18 @@ export class Input {
   /**
    * A key from the terminal. Keys are handled one at a time, in order: a key arriving while
    * another is still being handled (a fast typist, a paste, a command that awaits) waits its turn.
+   * But `esc` while a key's read is out (SD-D4): taken at once, out of turn, it gives the read up.
    */
   handleKey(key: string): Promise<void> {
     // When it arrived, not when its turn comes: a dialog that opens on its own drops what arrived as it opened.
     const arrived = this.app.now();
     this.app.lastInputAt = arrived;
     const at = ++this.keysSeen;
+    if (key === "escape" && this.app.reads.giveUp()) return Promise.resolve();
     const start = () => {
       this.keysInFlight++;
       this.keyAt = at;
-      return this.processKey(key, arrived).finally(() => this.keysInFlight--);
+      return this.processKey(key, arrived, at).finally(() => this.keysInFlight--);
     };
     // Nothing in flight: start now (a click's key acts at once); else after the ones before it.
     this.keyQueue = this.keysInFlight === 0 ? start() : this.keyQueue.then(start);
@@ -156,13 +158,17 @@ export class Input {
     return this.keysInFlight > 0;
   }
 
-  /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. `at`: when it arrived. */
-  async processKey(key: string, at = this.app.now()): Promise<void> {
+  /** Handle a key now, not queued: `.` replays its keys through this, inside its own turn. `at`: when it arrived;
+   *  `seen`: which key it is (`keysSeen`), dropped once its turn comes if a read it was typed for gave up. */
+  async processKey(key: string, at = this.app.now(), seen?: number): Promise<void> {
     // A report waiting for its frame (`space r`): the keys after it are its (RPT-D2). Else no wait: a key acts at once.
     const report = this.app.report.waitForWindow();
     if (report) await report;
-    // A big note still parsing (15.1): the key acts on it once it's there, not on its placeholder.
+    // A big note still parsing (15.1): the key acts on it once it's there, not on its placeholder. A key's read
+    // (SD-D4) the same: on the note it opens — or, given up or opening nothing, the key typed for it dropped.
     while (this.app.views.parses.size) await Promise.all(this.app.views.parses);
+    if (this.app.reads.busy) await this.app.reads.settled();
+    if (seen !== undefined && seen <= this.app.reads.droppedThrough) return;
     this.app.panels.fixRegion();
     try {
       await this.dispatchKey(key, at);

@@ -72,7 +72,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   ],
   [/^src\/core\/rendering\/layout\/diff\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
   [
-    /^src\/tui\/workspace\/git\/(?:views\/(?:panel\/(?:gitview|gitpanel|gitmouse)|changes\/gitchanges|history\/githistory|branches\/(?:gitreposview|gitbranchview))|gitremote)\.ts$/,
+    /^src\/tui\/workspace\/git\/(?:views\/(?:panel\/(?:gitview|gitpanel|gitmouse)|changes\/gitchanges|history\/githistory|branches\/(?:gitreposview|gitbranchview|worktrees))|gitremote|gitquery)\.ts$/,
     ["git"],
   ],
   [
@@ -100,19 +100,18 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   [/^src\/tui\/documents\/diagnostics\/spelling\.ts$/, ["spelling"]],
   // A slow disk read off the main thread (T12): the walk's and the listings' threads, the explorer's listings. The seam
   // every read of the disk goes through (SD-D10, core/foundation/platform/disk.ts) is left out on purpose: every feature
-  // reads through it, so a change to it alone runs every check, never the slow disk's alone.
+  // reads through it, so a change to it alone runs every check, never the slow disk's alone. So are the disk threads
+  // (walk-thread.ts's `DiskThreads`, disk-jobs.ts, key-jobs.ts) since every note opened is read on them (SD-T5).
   [
-    /^src\/core\/(?:workspace\/walk\/(?:walk-thread|walk-jobs|walk-worker|walkers)|workspace\/graph\/index-job)\.ts$/,
+    /^src\/core\/(?:workspace\/walk\/(?:walk-jobs|walk-worker|walkers)|workspace\/graph\/index-job)\.ts$/,
     ["slow disk", "home", "view"],
   ],
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
-  // marks read; and the disk threads that list them (SD-D2: `DiskThreads` in walk-thread.ts, what they answer in
-  // disk-jobs.ts). The TUI asks those threads for its listings and the watcher's looks (SD-T3) until SD-T4 to SD-T11
-  // move its other reads there: each adds its features' checks here as it does, and once every read goes through them,
-  // the two leave this entry to run every check, as the seam does.
+  // marks read; and the thread that lists them (SD-D2). The disk threads themselves left this entry once every note
+  // opened was read on them (SD-T5): a change to them runs every check, as the seam's does.
   [
-    /^src\/core\/workspace\/walk\/(listing|list-worker|walk-thread|disk-jobs)\.ts$/,
-    ["slow disk", "home", "view", "Elsewhere", "marks", "home-watching", ...LOOK_CHECKS],
+    /^src\/core\/workspace\/walk\/(listing|list-worker)\.ts$/,
+    ["slow disk", "home", "view", "Elsewhere", "marks", "home-watching"],
   ],
   // The TUI's look each second (SD-T4), asked of those threads: the open files no watcher sees and their ways, the
   // config, git's state and what's drawn of it, the root's tool's settings for the links' convention.

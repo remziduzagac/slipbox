@@ -28,6 +28,7 @@ import { codeOf, type PathStat, statOf } from "./io/stamps.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
 import { answerLookJob, type LookJob, type LookJobAnswer } from "./look-jobs.ts";
 import { listDirectory, walkVault } from "./traversal/walk.ts";
+import { answerGit, answerOpen, type GitAnswer, type GitAsk, type OpenAnswer, type OpenAsk } from "./key-jobs.ts";
 
 export type { PathStat };
 
@@ -85,6 +86,8 @@ export type DiskRequest = { context: WalkContext } & (
   | { op: "access"; dir: string }
   | { op: "walk"; ask: WalkAsk }
   | ({ op: "look" } & LookRequest)
+  | { op: "open"; ask: OpenAsk }
+  | { op: "gitRead"; ask: GitAsk }
 );
 
 export type DiskAnswer =
@@ -93,9 +96,11 @@ export type DiskAnswer =
   | { read: ReadAnswer }
   | { access: string | null }
   | { walked: WalkAnswer }
-  | LookRequestAnswer;
+  | LookRequestAnswer
+  | { opened: OpenAnswer }
+  | { gitRead: GitAnswer };
 
-const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access", "walk", "look"]);
+const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access", "walk", "look", "open", "gitRead"]);
 
 /** Whether `req` is one the disk threads answer. */
 export const isDiskRequest = (req: { op: string }): req is DiskRequest => DISK_OPS.has(req.op);
@@ -163,5 +168,9 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
       const jobs = req.jobs.map(answerLookJob);
       return { ...statsOf(req.stat ?? { paths: [] }), jobs };
     }
+    case "open":
+      return { opened: answerOpen(req.ask) };
+    case "gitRead":
+      return { gitRead: answerGit(req.ask) };
   }
 }

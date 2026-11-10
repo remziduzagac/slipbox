@@ -5,17 +5,17 @@
 // open; another vault's file through its graph, as a peek reads it. `ctrl+t` hides or shows it for every list of
 // places, until it's pressed again.
 
-import { readFile } from "node:fs/promises";
 import { basename, relative } from "node:path";
-import { decodeText } from "../../../core/foundation/platform/fsutil.ts";
 import { classify } from "../../../core/documents/model/filetypes.ts";
 import type { Layout } from "../../../core/rendering/layout/ir.ts";
 import { rootLabel } from "../../../core/workspace/vaults/names.ts";
+import { answerOpen, type OpenAnswer } from "../../../core/workspace/walk/key-jobs.ts";
+import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import { linkSaid } from "../../../core/workspace/vaults/symlinks.ts";
 import type { Anchor } from "../../../core/workspace/session/position.ts";
 import { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { leadsOut, peekTitle, vaultGraph } from "../../documents/navigation/peek.ts";
-import { unfollowed } from "../../documents/navigation/peek/paths.ts";
+import { peekAsk } from "../../documents/navigation/peek/paths.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import type { Rect } from "../screen/geometry.ts";
 import type { ListOverlay, ListPlace } from "./list-types.ts";
@@ -35,8 +35,10 @@ export class ListPreview {
   /** The files read for the list, by absolute path, the newest last; and why one couldn't be. */
   private readonly read = new Map<string, NoteBuffer>();
   private readonly failed = new Map<string, string>();
-  /** The file being read: the selection moved on before it came, it's dropped. */
+  /** The file being read: the selection moved on before it came, its answer is dropped — the read itself withdrawn
+   *  while it waits for a thread, else left to finish, its thread not started afresh for it. */
   private reading: string | null = null;
+  private waiting: AbortController | null = null;
   /** The window shown, for the place it shows. */
   private current: { key: string; shown: Shown } | null = null;
 
@@ -52,7 +54,8 @@ export class ListPreview {
     this.list = list;
     this.read.clear();
     this.failed.clear();
-    this.reading = null;
+    this.waiting?.abort();
+    this.reading = this.waiting = null;
     this.current = null;
   }
 
@@ -98,16 +101,24 @@ export class ListPreview {
     if (this.reading === abs) return;
     this.reading = abs;
     const out = leadsOut(this.app, abs);
-    const loc = out?.loc ?? this.app.loc;
-    // Not through a link the place it's in hasn't followed (VV-D6): said, as a peek says it.
-    const blocked = unfollowed(this.app, abs, loc);
-    if (blocked) return this.settled(o, abs, `${linkSaid(blocked.link, blocked.target)} isn't followed here`);
     const kind = classify(abs, this.app.config.walk.extensions);
     if (kind.group === "binary") return this.settled(o, abs, `${basename(abs)} is a binary file`);
-    void readFile(abs).then(
-      (bytes) => {
+    // On a disk thread (SD-T5), its way checked with it; a test's App reads it here (SD-D10), once the keys taken so far
+    // are: never waited for.
+    const { ask } = peekAsk(this.app, abs, out?.loc ?? this.app.loc);
+    // In the background, no key waiting: a key's read finds a thread free.
+    this.waiting?.abort();
+    const waiting = (this.waiting = new AbortController());
+    const read: Promise<OpenAnswer> = this.app.reads.offThread
+      ? diskThreads().open(ask, undefined, true, waiting.signal)
+      : new Promise<void>((later) => setTimeout(later, 0)).then(() => answerOpen(ask));
+    void read.then(
+      ({ read: r, blocked }) => {
         if (this.list !== o || this.reading !== abs) return; // moved on before it came: dropped
-        const text = decodeText(bytes).text;
+        // Not through a link the place it's in hasn't followed (VV-D6): said, as a peek says it.
+        if (blocked) return this.settled(o, abs, `${linkSaid(blocked.link, blocked.target)} isn't followed here`);
+        if (!r || "error" in r) return this.settled(o, abs, `${basename(abs)} can't be read`);
+        const text = r.text;
         if (kind.group !== "note" && text.slice(0, 8192).includes("\u0000"))
           return this.settled(o, abs, `${basename(abs)} holds binary bytes`);
         const graph = out && out.loc.mode !== "folder" ? vaultGraph(this.app, out.loc.root) : null;
@@ -123,7 +134,9 @@ export class ListPreview {
         while (this.read.size > KEPT) this.read.delete(this.read.keys().next().value!);
         this.settled(o, abs);
       },
-      () => this.settled(o, abs, `${basename(abs)} can't be read`),
+      () => {
+        if (this.list === o && this.reading === abs) this.settled(o, abs, `${basename(abs)} didn't answer`);
+      },
     );
   }
 

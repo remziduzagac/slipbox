@@ -136,11 +136,12 @@ export class Saving {
   resolveConflict(buf: NoteBuffer, choice: string): void {
     const name = this.app.displayName(buf);
     const views = this.app.allViews().filter((v) => v.buf === buf);
-    if (choice === "l") {
-      if (!buf.load()) return this.app.message("warn", `${buf.key} is gone from disk`);
-      for (const v of views) v.layoutKey = "";
-      return this.app.message("info", `loaded theirs — u brings yours back`);
-    }
+    if (choice === "l")
+      return void this.app.reads.reload(buf, (there) => {
+        if (!there) return this.app.message("warn", `${buf.key} is gone from disk`);
+        for (const v of views) v.layoutKey = "";
+        this.app.message("info", `loaded theirs — u brings yours back`);
+      });
     if (choice === "k") {
       buf.conflictKept = true;
       return this.app.message("info", `keeping yours — autosave is off for ${name} until you save (it asks first)`);

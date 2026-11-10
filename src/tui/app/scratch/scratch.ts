@@ -18,6 +18,7 @@ import {
 } from "../../../core/workspace/mutations/capture.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App, UiState, View } from "../runtime/app.ts";
+import { andThen } from "../runtime/key-reads.ts";
 import { editable } from "../../documents/editing/editable.ts";
 
 /** The most of a file read to check a place in it. */
@@ -98,12 +99,13 @@ export class Scratch {
     const loc = this.location();
     // The scratch opened on the entry (#43), typing after its **Note:** (D229): a word about it said at once.
     const at = text.length - 1;
-    this.open(undefined, at);
-    const v = this.app.floating?.kind === "scratch" ? this.app.floating.view : this.app.tabView;
-    if (v?.buf.abs !== loc.path) return;
-    if (!editable(v)) this.app.lens.setViewMode(v, this.app.lens.editMode(v)); // the lens opened on the entry, or the source
-    startInsert(this.app, v, () => at);
-    this.app.message("info", `added to the scratch${this.notIndexed()}; add a note, esc then q closes it`);
+    void andThen(this.open(undefined, at), () => {
+      const v = this.app.floating?.kind === "scratch" ? this.app.floating.view : this.app.tabView;
+      if (v?.buf.abs !== loc.path) return;
+      if (!editable(v)) this.app.lens.setViewMode(v, this.app.lens.editMode(v)); // the lens opened on the entry, or the source
+      startInsert(this.app, v, () => at);
+      this.app.message("info", `added to the scratch${this.notIndexed()}; add a note, esc then q closes it`);
+    });
   }
 
   /** A capture's fence language: a code file's, highlighted in the scratch; none for a note's lines, read as written. */
@@ -173,7 +175,7 @@ export class Scratch {
    * rendered, the lens to edit it. The cursor goes to `at` (a capture's entry), else where it was left. Empty, it opens
    * too, to be typed in; closed, what was typed is saved.
    */
-  open(where: UiState["scratch_in"] = this.app.ui.scratch_in, at?: number): void {
+  open(where: UiState["scratch_in"] = this.app.ui.scratch_in, at?: number): void | Promise<void> {
     const f = this.app.floating;
     if (f?.kind === "scratch" && where === "float") {
       if (at !== undefined) placeAt(this.app, f.view, at);
@@ -189,21 +191,24 @@ export class Scratch {
     if (where === "right") {
       const t = this.app.tab;
       if (!t) return this.app.openInNewTab(loc.path);
+      const placed = () => {
+        const v = this.app.tabView;
+        if (at !== undefined && v?.buf.abs === loc.path) placeAt(this.app, v, at);
+        this.app.region = "content";
+      };
       const shown = t.views.findIndex((v) => v.buf.abs === loc.path);
-      if (shown >= 0) t.active = shown;
-      else {
-        const here = t.views[0]!;
-        if (t.views.length === 1) {
-          t.orientation = "side";
-          t.views.push(this.app.makeView(here.buf, { ...here.topAnchor }, { ...here.curAnchor }));
-        }
-        t.active = 1;
-        this.app.open(loc.path, undefined, t.views[1]);
+      if (shown >= 0) {
+        t.active = shown;
+        return placed();
       }
-      const v = this.app.tabView;
-      if (at !== undefined && v?.buf.abs === loc.path) placeAt(this.app, v, at);
-      this.app.region = "content";
-      return;
+      const here = t.views[0]!;
+      if (t.views.length === 1) {
+        t.orientation = "side";
+        t.views.push(this.app.makeView(here.buf, { ...here.topAnchor }, { ...here.curAnchor }));
+      }
+      t.active = 1;
+      // Its place once it's there: read on a disk thread, a key's read.
+      return andThen(this.app.open(loc.path, undefined, t.views[1]), placed);
     }
     const buf = this.app.buffer(loc.path);
     if (!buf) return;

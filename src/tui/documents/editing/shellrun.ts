@@ -14,6 +14,7 @@ import {
   type ShellResult,
 } from "../../../core/foundation/platform/shell.ts";
 import type { App, View } from "../../app/runtime/app.ts";
+import { andThen } from "../../app/runtime/key-reads.ts";
 import { editable } from "./editable.ts";
 import { cannotEdit, placeAt } from "./editing.ts";
 import { exLines } from "../search/replacing.ts";
@@ -92,9 +93,10 @@ export function placeIn(app: App, line: string): { rel: string; line: number } |
 function openPlace(app: App, line: string): void {
   const p = placeIn(app, line);
   if (!p) return;
-  app.open(p.rel, { heading: null, headingIndex: 0, offset: 0, line: p.line });
-  const v = app.view;
-  if (v?.buf.rel === p.rel) placeAt(app, v, v.buf.lineStarts()[p.line - 1] ?? 0);
+  void andThen(app.open(p.rel, { heading: null, headingIndex: 0, offset: 0, line: p.line }), () => {
+    const v = app.view;
+    if (v?.buf.rel === p.rel) placeAt(app, v, v.buf.lineStarts()[p.line - 1] ?? 0);
+  });
 }
 
 /**

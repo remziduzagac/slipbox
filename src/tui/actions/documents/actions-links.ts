@@ -8,16 +8,15 @@ import { prettyKey } from "../../shell/input/keys.ts";
 import { peekGo, peekKeep, peekFill, peekInstead, ownPath } from "../../documents/navigation/peek.ts";
 import { planRelink, planVaultRename } from "../../../core/workspace/mutations/rename/rename.ts";
 import type { App, View, ListItem } from "../../app/runtime/app.ts";
+import { andThen } from "../../app/runtime/key-reads.ts";
 import type { LayoutLink } from "../../../core/rendering/layout/ir.ts";
 import * as E from "../../documents/editing/editing.ts";
 import { linkTokens } from "../../../core/documents/syntax/syntax.ts";
 import { readerFor } from "../../../core/documents/model/readers.ts";
 import type { Anchor } from "../../../core/workspace/session/position.ts";
-import { existsSync } from "node:fs";
 import { isAbsolute, join, posix } from "node:path";
 import { parseRef, type Ref } from "../../../core/workspace/mutations/capture.ts";
 import { isNotePath, pathLink, pathForm } from "../../../core/workspace/links/links.ts";
-import { isFile } from "../workspace/actions-files.ts";
 import { isPointer, parsePointer, resolvePointer } from "../../../core/workspace/links/pointer.ts";
 import { ELSEWHERE, tildePath } from "../../../core/workspace/vaults/names.ts";
 import { slugName } from "../../../core/workspace/vaults/registry.ts";
@@ -209,13 +208,21 @@ type Into = "here" | "split" | "tab";
 
 /**
  * A note or file opened where a link goes: here, in the split's other window, or a tab of its own. Out of this vault —
- * another vault's, or outside every vault — read in a peek instead, or, `go`, gone into at once (VV-D7).
+ * another vault's, or outside every vault — read in a peek instead, or, `go`, gone into at once (VV-D7). `then`, once
+ * it's there: the key waits for an open; a peek's read, no key waits for (SD-T5).
  */
-function openInto(a: App, into: Into, path: string, anchor?: Anchor, go = false): void {
-  if (peekInstead(a, path, anchor, go)) return;
-  if (into === "tab") return a.openInNewTab(path, anchor);
+function openInto(
+  a: App,
+  into: Into,
+  path: string,
+  anchor?: Anchor,
+  go = false,
+  then?: () => void,
+): void | Promise<void> {
+  if (peekInstead(a, path, anchor, go, then)) return;
   if (into === "split") a.windows.other();
-  a.open(path, anchor);
+  const opened = into === "tab" ? a.openInNewTab(path, anchor) : a.open(path, anchor);
+  return then ? andThen(opened, then) : opened;
 }
 
 /** A scratch entry's place: its reference, its path from the vault's top (or as written, absolute). */
@@ -253,11 +260,17 @@ function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void |
       // A scratch entry's place (D229): its file, at its first line.
       const place = refPlace(a, link.target);
       if (!place) return a.message("warn", `${link.target}: not a place (path:line)`);
-      if (!existsSync(place.path)) return a.message("warn", `${place.ref.path}: no such file`);
       // Its lines moved since captured: where they are now.
       const line =
         (view.buf.abs === a.scratch.location().path && a.scratch.movedTo(link.target)) || place.ref.startLine;
-      return openInto(a, into, place.path, { heading: null, headingIndex: 0, offset: 0, line }, goOut);
+      // Looked for on a disk thread first, a key's own read (SD-T5).
+      return a.reads.whenThere(
+        place.path,
+        place.ref.path,
+        a.view,
+        () => openInto(a, into, place.path, { heading: null, headingIndex: 0, offset: 0, line }, goOut),
+        () => a.message("warn", `${place.ref.path}: no such file`),
+      );
     }
     case "footnote": {
       const layout = lay(a, view);
@@ -331,8 +344,13 @@ function followLink(a: App, link: LayoutLink, into: Into, goOut = false): void |
           if (!path && frag) return jumpToHeading(a, view, frag);
           // A plain `b.md` is from its folder too: no vault's top to start from.
           const hit = path ? pathLink(pathForm(path) ? path : `./${path}`, view.buf.abs, false) : null;
-          if (hit && isFile(hit.abs)) return go(hit.abs, frag);
-          return a.message("warn", `broken link: ${link.target}`);
+          if (!hit) return a.message("warn", `broken link: ${link.target}`);
+          // Looked for on a disk thread first, a key's own read (SD-T5).
+          return a.reads.statted(hit.abs, path, a.view, (st) =>
+            !("error" in st) && st.kind === "file"
+              ? go(hit.abs, frag)
+              : a.message("warn", `broken link: ${link.target}`),
+          );
         }
         return a.message(
           "warn",
@@ -437,16 +455,25 @@ function pickPointerFolder(a: App, target: string, frag: string | null, into: In
   });
 }
 
-export function fileLink(a: App, path: string, heading: string | null = null, into: Into = "here", go = false): void {
+export function fileLink(
+  a: App,
+  path: string,
+  heading: string | null = null,
+  into: Into = "here",
+  go = false,
+): void | Promise<void> {
   // This vault's file by its path in it; another's absolute.
   const rel = ownPath(a, path);
   // A data or text file opens (16.4) — at a data file's section when the link names one
   // (`[[config.toml#editor]]`); a binary one (a picture, a PDF) never opens: its path is copied.
   if (classify(rel, a.config.walk.extensions).group !== "binary") {
     const line = heading ? lineAnchor(heading) : undefined;
-    openInto(a, into, rel, line, go);
-    if (heading && !line && a.view) jumpToHeading(a, a.view, heading);
-    return;
+    // Its section once it's there: read on a disk thread, it may come later (SD-T5).
+    const section = () => {
+      const v = a.view;
+      if (v?.buf.abs === (isAbsolute(rel) ? rel : join(a.loc.root, rel))) jumpToHeading(a, v, heading!);
+    };
+    return openInto(a, into, rel, line, go, heading && !line ? section : undefined);
   }
   // Another vault's attachment by its own absolute path, never this vault's root before it.
   a.copy(isAbsolute(rel) ? rel : join(a.loc.root, rel), false);

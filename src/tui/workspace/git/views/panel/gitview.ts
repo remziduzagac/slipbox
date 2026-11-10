@@ -5,7 +5,7 @@
 // stages everything and `U` unstages it. `enter` shows a file's or a change's diff, `o` opens the file there. The
 // panel's keys, buttons and mouse are gitpanel.ts's and gitmouse.ts's; these are what they run.
 
-import { existsSync, lstatSync, readlinkSync } from "node:fs";
+import { lstatSync, readlinkSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { type GitChange, gitChanges } from "../../../../../core/workspace/git/gitsigns.ts";
 import { showLater } from "../../../../../core/workspace/git/branches/gitops.ts";
@@ -27,6 +27,7 @@ import {
 import { climbsOut, decodeText, readRegular } from "../../../../../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { openDiff } from "../changes/diffview.ts";
+import { andThen } from "../../../../app/runtime/key-reads.ts";
 import { match } from "../../../../shell/overlays/match.ts";
 import type { App } from "../../../../app/runtime/app.ts";
 import type { ChangeRow, FileRow, GitSection, HeadingRow } from "../contracts.ts";
@@ -304,19 +305,28 @@ export function showWorkDiff(app: App, row: WorkRow): void {
     none: `${e.path}: nothing to show`,
     back: backToPanel(app),
     go: (line) => {
-      if (rel !== null && existsSync(join(app.loc.root, rel))) app.openAt(rel, line);
+      if (rel !== null) void app.reads.whenThere(join(app.loc.root, rel), rel, app.view, () => app.openAt(rel, line));
     },
   });
 }
 
-/** `o`: the file opened, at the change (a file's first). */
-export function openWorkFile(app: App, row: WorkRow): void {
+/** `o`: the file opened, at the change (a file's first) — looked for first, a key's read on a disk thread (SD-T5). */
+export function openWorkFile(app: App, row: WorkRow): Promise<void> | void {
   const e = row.entry;
   const rel = relOf(app, e.path);
   if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
-  if (!existsSync(join(app.git.checkout!.root, e.path)))
-    return app.message("info", `${e.path} is deleted — enter shows what it had`);
-  app.openOrSwitchTab(rel);
+  return app.reads.whenThere(
+    join(app.git.checkout!.root, e.path),
+    rel,
+    app.view,
+    () => andThen(app.openOrSwitchTab(rel), () => openedAt(app, row, e)),
+    () => app.message("info", `${e.path} is deleted — enter shows what it had`),
+  );
+}
+
+/** `openWorkFile`'s file opened: the cursor at its change. Not opened (refused, its read given up): nothing. */
+function openedAt(app: App, row: WorkRow, e: WorkRow["entry"]): void {
+  if (app.view?.buf.rel !== relOf(app, e.path)) return;
   app.region = "content";
   const v = app.view;
   const place = (change: GitChange | undefined) => {
@@ -349,7 +359,7 @@ export function workAction(app: App, row: WorkRow, action: string): void {
     case "open":
       return showWorkDiff(app, row);
     case "go":
-      return openWorkFile(app, row);
+      return void openWorkFile(app, row);
     case "stage":
       return stage(app, row);
     case "unstage":

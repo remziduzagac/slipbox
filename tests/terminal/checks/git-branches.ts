@@ -597,11 +597,15 @@ export const GIT_BRANCHES: Check[] = [
       await panelRow(s, "big.md");
       await on(s, "big.md");
       await saidAsItCame(s, "larger than 8 MB", "Reading branch version");
-      // Clicked, then the next one clicked before git answers the first: the first says nothing.
+      // Clicked, then the next one picked before git answers the first: the first says nothing. Picked by keys, which
+      // wait their turn while the first asks what git reads against, a key's own read; a click meanwhile is dropped.
       await s.notSee("larger than 8 MB");
       const big = rowWith(s, "big.md");
-      const small = rowWith(s, "small.md");
-      await s.send(`\x1b[<0;8;${big + 1}M\x1b[<0;8;${big + 1}m\x1b[<0;8;${small + 1}M\x1b[<0;8;${small + 1}m`);
+      s.expect(rowWith(s, "small.md") === big + 1, "small.md the row under big.md");
+      // All sent at once: the keys come while the first is still read.
+      s.term.write(`\x1b[<0;8;${big + 1}M\x1b[<0;8;${big + 1}m`);
+      s.term.key("j");
+      s.term.key("enter");
       await s.see("small.md not committed");
       await Bun.sleep(1000);
       s.expect(s.rowOf("larger than 8 MB") < 0, "nothing said for the file clicked past");
