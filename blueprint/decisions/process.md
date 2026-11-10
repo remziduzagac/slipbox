@@ -462,8 +462,9 @@ runner, as long as one test may take; or, for a file known to be slow, its own i
 `check:size` caps a file past its limit: such a file doesn't fail, and can't grow past its own unseen. Five files have
 one, 45 or 50 seconds. On macOS every budget is four times Linux's (`MACOS_FACTOR`). Each budget is at least one and
 a half times (`MARGIN`) the longest its file took, on each system, in the runs it was chosen from. The log says a file
-within its budget but not by that margin and, on Linux, a file with a budget of its own that took BUDGET over the
-margin or less (its entry may go); neither fails. A report missing, or a file that isn't one, fails the step.
+within its budget but not by that margin, without failing. Whether a file still needs a budget of its own is left to
+whoever reads both systems' reports: one run sees one system. A report missing, or a file that isn't one, fails the
+step.
 `SLOW_TESTS`, which weighs the Linux parts (D275), is rewritten from runs' reports by `bun scripts/test-times.ts slow
 <run>…`: each file's longest over the runs' Linux reports, eight seconds or more, a file the runs didn't measure kept
 as it was. It's run by hand and committed, so a tree's parts stay the same from one run of it to the next. Amends

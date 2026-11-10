@@ -141,15 +141,18 @@ describe("the budget: a test file over its own fails the job", () => {
       "test-times: tests/slow.test.ts took 50.5 s, over its budget of 50 s (its own in BUDGETS, scripts/test-times.ts): " +
         "make it faster or split it; or, slow for a reason, give it a budget of its own, with why",
     ]);
-    // Fast again on Linux, well within BUDGET: its own may go, said, not failed.
-    const fast = check(reportFile({ "tests/slow.test.ts": 5 }), "linux", own);
-    expect([fast.errors, fast.notes]).toEqual([
-      [],
-      ["test-times: tests/slow.test.ts took 5.0 s, within BUDGET by 1.5: its own budget may go"],
+    // Near its own, said; within its own by the margin, nothing, though past BUDGET's; fast, nothing: whether it still
+    // needs its own is for both systems' times, not one run's.
+    expect(check(reportFile({ "tests/slow.test.ts": 40 }), "linux", own).notes).toEqual([
+      "test-times: tests/slow.test.ts took 40.0 s, within its budget of 50 s, but not by 1.5",
     ]);
+    for (const seconds of [25, 5]) {
+      const r = check(reportFile({ "tests/slow.test.ts": seconds }), "linux", own);
+      expect([seconds, r.errors, r.notes]).toEqual([seconds, [], []]);
+    }
   });
 
-  test("on macOS each budget is MACOS_FACTOR times Linux's; only Linux says an exception may go", () => {
+  test("on macOS each budget is MACOS_FACTOR times Linux's", () => {
     expect([factorFor("darwin"), factorFor("linux")]).toEqual([MACOS_FACTOR, 1]);
     const times = { "tests/a.test.ts": BUDGET * 2, "tests/slow.test.ts": 5 };
     expect(check(reportFile(times), "linux", own).errors).toHaveLength(1);
@@ -173,7 +176,7 @@ describe("the budget: a test file over its own fails the job", () => {
     expect([empty.errors, empty.summary]).toEqual([[], "### Test times\n\nNo test file ran.\n"]);
   });
 
-  test("each file in the report judged once, in its order: over, near, or with a budget it no longer needs", () => {
+  test("each file in the report judged once, in its order: over, near, or neither", () => {
     const r = report({ "tests/a.test.ts": 31, "tests/slow.test.ts": 1, "tests/b.test.ts": 25, "tests/c.test.ts": 40 });
     expect(judge(r, 1, own)).toEqual({
       over: [
@@ -181,7 +184,6 @@ describe("the budget: a test file over its own fails the job", () => {
         { file: "tests/c.test.ts", seconds: 40, budget: 30 },
       ],
       near: [{ file: "tests/b.test.ts", seconds: 25, budget: 30 }],
-      unneeded: [{ file: "tests/slow.test.ts", seconds: 1, budget: 50 }],
     });
   });
 

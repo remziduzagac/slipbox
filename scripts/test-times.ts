@@ -7,7 +7,8 @@
 // A test file's budget is BUDGET seconds on a GitHub Linux runner, or its own in BUDGETS: a file known to be slow, with
 // why, so it doesn't fail, and can't grow unnoticed past its own. On macOS, each is MACOS_FACTOR times that. Each
 // budget is MARGIN times the longest the file was seen to take, or more, so a runner slower than usual doesn't fail it.
-// A file past its budget over MARGIN, or with a budget of its own it no longer needs, is said in the log, not failed.
+// A file within its budget but not by MARGIN is said in the log, not failed. Whether a file still needs a budget of its
+// own is a question for both systems' times, a run's of one can't answer it.
 //
 // `bun scripts/test-times.ts slow <run>…` rewrites `SLOW_TESTS` (scripts/ci-shard.ts), which weighs the Linux parts,
 // from those runs' Linux reports: by hand, so the parts stay the tree's, the same from one run of it to the next.
@@ -68,7 +69,7 @@ export const BUDGETS: Record<string, { seconds: number; why: string }> = {
   },
   "tests/core/rendering/layout/markdown/samples.test.ts": {
     seconds: 50,
-    why: "renders every sample and reference-set note at several widths, each in two sets of glyphs (28.5 s; 121.4 on macOS)",
+    why: "renders every sample and reference-set note at several widths and glyphs (28.5 s; 121.4 on macOS)",
   },
 };
 
@@ -148,23 +149,21 @@ export const budgetOf = (file: string, factor = 1, budgets = BUDGETS, budget = B
 export type Judged = { file: string; seconds: number; budget: number };
 
 /**
- * A report's files against their budgets, each list in the report's order: those over (`over`); those within it but
- * past it over MARGIN (`near`); and, on Linux, those with a budget of their own that took BUDGET over MARGIN or less
- * (`unneeded`).
+ * A report's files against their budgets, each list in the report's order: those over (`over`), and those within it
+ * but not by MARGIN (`near`).
  */
 export function judge(
   report: Report,
   factor = 1,
   budgets = BUDGETS,
   budget = BUDGET,
-): { over: Judged[]; near: Judged[]; unneeded: Judged[] } {
-  const out = { over: [] as Judged[], near: [] as Judged[], unneeded: [] as Judged[] };
+): { over: Judged[]; near: Judged[] } {
+  const out = { over: [] as Judged[], near: [] as Judged[] };
   for (const { file, seconds } of report.files) {
     const own = budgetOf(file, factor, budgets, budget);
     const judged = { file, seconds, budget: own };
     if (seconds > own) out.over.push(judged);
     else if (seconds * MARGIN > own) out.near.push(judged);
-    else if (factor === 1 && file in budgets && seconds * MARGIN <= budget) out.unneeded.push(judged);
   }
   return out;
 }
@@ -204,7 +203,7 @@ export function summary(report: Report, factor = 1, n = 10, budgets = BUDGETS, b
 
 /**
  * What `bun run test:times <report>` says of the report at `path`: its summary, a failure for each file over its
- * budget (and for a report missing, or not one), and notes for those near it or with a budget they no longer need.
+ * budget (and for a report missing, or not one), and a note for each within it but not by MARGIN.
  */
 export function check(
   path: string | undefined,
@@ -223,7 +222,7 @@ export function check(
     return { ...none, errors: [`test-times: ${path}: ${(e as Error).message}`] };
   }
   const factor = factorFor(platform);
-  const { over, near, unneeded } = judge(report, factor, budgets, budget);
+  const { over, near } = judge(report, factor, budgets, budget);
   const whose = (file: string) => (file in budgets ? "its own in BUDGETS" : "BUDGET");
   return {
     summary: summary(report, factor, 10, budgets, budget),
@@ -232,15 +231,9 @@ export function check(
         `test-times: ${o.file} took ${sec(o.seconds)} s, over its budget of ${o.budget} s (${whose(o.file)}, ` +
         "scripts/test-times.ts): make it faster or split it; or, slow for a reason, give it a budget of its own, with why",
     ),
-    notes: [
-      ...near.map(
-        (n) =>
-          `test-times: ${n.file} took ${sec(n.seconds)} s, within its budget of ${n.budget} s, but not by ${MARGIN}`,
-      ),
-      ...unneeded.map(
-        (u) => `test-times: ${u.file} took ${sec(u.seconds)} s, within BUDGET by ${MARGIN}: its own budget may go`,
-      ),
-    ],
+    notes: near.map(
+      (n) => `test-times: ${n.file} took ${sec(n.seconds)} s, within its budget of ${n.budget} s, but not by ${MARGIN}`,
+    ),
   };
 }
 

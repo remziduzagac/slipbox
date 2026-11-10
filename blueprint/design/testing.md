@@ -183,8 +183,8 @@ test may take; or, for a file known to be slow, its own in `BUDGETS` with why, a
 limit; on macOS, four times either (`MACOS_FACTOR`), as a file's time there moves far more from run to run. Each is at
 least one and a half times (`MARGIN`) the longest its file was seen to take, so a slower runner doesn't fail it. A file
 over is made faster or split, or, slow for a reason, given a budget of its own with why, in the same pull request. The
-log says a file within its budget but not by the margin, and on Linux a file whose own budget is no longer needed;
-neither fails. A unit test holds the budgets to files there are, each past `BUDGET`.
+log says a file within its budget but not by the margin, without failing. A unit test holds the budgets to files there
+are, each past `BUDGET`.
 
 ### Waiting and measurement
 

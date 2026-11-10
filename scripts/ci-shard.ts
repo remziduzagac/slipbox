@@ -59,23 +59,19 @@ export const SLOW = 8;
  * parts are the same in every run of it. A test holds each to a file there is: one moved is renamed here.
  */
 export const SLOW_TESTS: Record<string, number> = {
-  // runs 42726853524, 42762627359 (2026-11-10), each file's longest, from the job logs before the reports
-  "tests/tui/workspace/explorer/walk-thread.test.ts": 31,
-  "tests/distribution/release.test.ts": 26,
-  "tests/cli/agents/skill.test.ts": 24,
-  "tests/worker-requests.test.ts": 24,
-  "tests/core/rendering/layout/markdown/samples.test.ts": 21,
-  "tests/terminal-harness.test.ts": 20,
-  "tests/tui/documents/views/parse-threads.test.ts": 15,
-  "tests/cli/diagnostics/servers.test.ts": 14,
-  "tests/cli/editing/writing.test.ts": 14,
-  "tests/cli/files/operations.test.ts": 12,
-  "tests/tui/shell/updates/updates.test.ts": 11,
+  // runs 42777169917 (2026-11-10): 546 files measured, each its longest
+  "tests/tui/workspace/explorer/walk-thread.test.ts": 27,
+  "tests/distribution/release.test.ts": 21,
+  "tests/cli/agents/skill.test.ts": 20,
+  "tests/terminal-harness.test.ts": 19,
+  "tests/worker-requests.test.ts": 18,
+  "tests/core/rendering/layout/markdown/samples.test.ts": 16,
+  "tests/cli/editing/writing.test.ts": 13,
+  "tests/cli/diagnostics/servers.test.ts": 12,
+  "tests/cli/files/operations.test.ts": 10,
   "tests/core/documents/servers/client.test.ts": 10,
-  "tests/tui/documents/editing/server-completion.test.ts": 9,
-  "tests/tui/documents/views/header.test.ts": 9,
-  "tests/cli/reading/metadata.test.ts": 8,
-  "tests/cli/reading/render.test.ts": 8,
+  "tests/tui/documents/views/parse-threads.test.ts": 9,
+  "tests/tui/shell/updates/updates.test.ts": 9,
 };
 
 /** A test file's seconds, for the split: its own if it's slow, else one. */

@@ -50,9 +50,16 @@ process's 20-second deadline. JUnit reporting and file-level budgets remain this
   `ci:scope` hands `bun test` the reporter when `SCOPE_REPORT` is set, or writes an empty report for a part with
   nothing to run. Each `test` job: `SCOPE_REPORT` in the runner's temporary folder, a `test times` step once the tests
   ran, and the report uploaded (`test-times-<system>-<part>`). Tests in `tests/test-times.test.ts`: the report read
-  (nested describes, a skip, a failure, the escapes; the empty one; not one); a file over BUDGET failing with its name,
-  time and budget, one at it passing; one near it said; an exception passing past BUDGET and failing past its own, and
-  said when no longer needed; macOS's factor; a report missing, not one, or none named; the summary's slowest, its
-  cells; the command's exit, step summary and annotation; `ci:scope`'s report for each part, the empty part's, none
-  without `SCOPE_REPORT`; both jobs' steps; `SLOW_TESTS` from the times and rewritten in `scripts/ci-shard.ts`, the
-  file as it is written back the same.
+  (nested describes, a skip, a failure, the escapes, a describe closed where it opens; the empty one; not one); a file
+  over BUDGET failing with its name, time and budget, one at it passing; one near it said; an exception passing past
+  BUDGET and failing past its own, near its own said; macOS's factor; a report missing, not one, or none named; the
+  summary's slowest, its cells; the command's exit, step summary and annotation; `ci:scope`'s report for each part, the
+  empty part's, none without `SCOPE_REPORT`; both jobs' steps; `SLOW_TESTS` from the times and rewritten in
+  `scripts/ci-shard.ts`, the file as it is written back the same; each file's longest over several runs' reports.
+  Mutation-checked, twenty mutations, each killed.
+- 2026-11-10: the pull request's first run, 42777169917, ran every test (it changes the workflow): each part's
+  summary in its log and step summary, its report uploaded, no file over its budget. A note there said the samples'
+  own budget could go, as they took 15.8 s on Linux; but that budget is for macOS's 121 seconds. One run sees one
+  system, so the note was dropped: whether a file still needs its own is for both systems' reports. `SLOW_TESTS`
+  rewritten from that run's Linux reports with `bun scripts/test-times.ts slow 42777169917`: 546 files measured, 12
+  of eight seconds or more.
