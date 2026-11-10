@@ -3543,13 +3543,15 @@ the second is let go of.
   picture's file and an SVG's text — the scratch's places' files and the notes the Problems panel's vault lint names
   are answered from what's kept (`Drawn`, `tui/app/runtime/drawn.ts`): a path of the vault open from the walk, the
   rest from what a disk thread last answered. What isn't kept is asked of a disk thread in the background, one `draw`
-  batch out at a time with a look's minute (`core/workspace/walk/draw-jobs.ts`), and the layouts are drawn again from
-  their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn as resolved — but one to a path
-  the walk didn't give in a folder it listed, drawn broken as the walk says (a note not written yet) — a pointer as
-  not found until the named folders come, a picture's or an embedded note's place is said, a scratch place is said
-  nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn two seconds after it was read is
-  asked again, drawn as it was until the new one comes; one of a file the watcher sees change, as it's next drawn.
-  Given up on, the batch is asked again a minute later (SD-D6). A link's questions go through one probe
+  batch out at a time with a look's minute (`core/workspace/walk/draw-jobs.ts`), and the layouts — the tabs' and the
+  peek's — are drawn again from their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn as
+  resolved — but one to a path the walk didn't give in a folder it listed, drawn broken as the walk says (a note not
+  written yet) — a pointer as not found until the named folders come, a picture's or an embedded note's place is said,
+  a scratch place is said nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn two
+  seconds after it was read is asked again, drawn as it was until the new one comes; one drawn sooner, once it's two
+  seconds old, though nothing draws it then, so a file come where no watcher looks is drawn within two seconds of a
+  draw; one of a file the watcher sees change, as it's next drawn. Given up on, the batch is asked again a minute later
+  (SD-D6). A link's questions go through one probe
   (`core/workspace/links/path-probe.ts`), the seam's at once unless the drawing answers for the layout it makes and a
   note's own problems it checks (`Drawn.during`): the CLI, a key's follow and the vault's problems read as before. The
   host's picture takes its file's mtime from the drawing and keeps it for the picture it draws; an SVG's rasterised
