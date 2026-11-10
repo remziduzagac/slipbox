@@ -424,8 +424,9 @@ The status line describes the file in the focused window. From the left:
 - **Whether slipbox sees changes on disk**:
   - `● watching`
   - `⚠ not watching`, when watching failed
-  - `⚠ disk not answering`, when the disk didn't answer slipbox's look for changes within a minute (a network share,
-    a drive that's asleep): it looks again a minute later, and goes back to `● watching` once the disk answers
+  - `⚠ disk not answering`, when the disk didn't answer within a minute (a network share, a drive that's asleep) as
+    slipbox looked for changes, or checked your config, git and the files you have open: it looks again a minute
+    later, and the warning goes once the disk answers
   - `○ not watching`, when it's turned off (`watch.enabled = false`)
 
 At the right end:

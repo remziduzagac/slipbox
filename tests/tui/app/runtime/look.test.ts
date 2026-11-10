@@ -25,7 +25,7 @@ import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { diskThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { LOOK_AGAIN_MS, type Look } from "../../../../src/tui/app/runtime/look.ts";
 import { HELD_MS, Hold, heldReads } from "../../../fixtures/walk/slow.ts";
-import { answerSwitch, type Harness, harness, makeSandbox, whereNow } from "../../../tui-harness.ts";
+import { answerSwitch, type Harness, harness, makeSandbox, statusRow, whereNow } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
 
@@ -149,6 +149,9 @@ function repo(free = false): { root: string; gitDir: string } {
   return { root, gitDir };
 }
 
+/** A screen wide enough for the top bar to say what's under way after the vault's path, however long the sandbox's. */
+const WIDE = 200;
+
 /** The vault's scratch, as an agent has written it, opened: outside the vault, in slipbox's state folder — under
  *  `held` once `stateHeld`, where a look reads git's state, then stats it, and waits. */
 function openScratch(h: Harness): string {
@@ -203,7 +206,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
   test("git's folder held: a key handled and drawn, the top bar the branch kept, while HEAD is asked; let go, a branch switched meanwhile seen and drawn, then a rebase started meanwhile", async () => {
     const held = holding();
     const r = repo();
-    const h = await harness({ root: r.root, open: "index.md" });
+    const h = await harness({ root: r.root, open: "index.md", width: WIDE });
     const look = offThread(h);
     await looked(look);
     expect(whereNow(h)).toContain("main");
@@ -473,37 +476,70 @@ describe("a look given up on (SD-D6)", () => {
     await wanted;
     expect(asked.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
+
+  test("`⚠ disk not answering` on the status line, as for the watcher's look given up on, until a look answers", async () => {
+    holding();
+    let now = 1_000_000;
+    const h = await harness({ now: () => now });
+    const look = offThread(h);
+    await looked(look);
+    expect(statusRow(h.frame())).not.toContain("disk not answering");
+    spyOn(diskThreads(), "look").mockRejectedValueOnce(
+      new WorkerRequestError("worker request deadline exceeded", "deadline"),
+    );
+    look.tick();
+    await look.settled();
+    expect(statusRow(h.frame())).toContain("⚠ disk not answering");
+    // A minute on, a look answered: gone.
+    now += LOOK_AGAIN_MS;
+    look.tick();
+    await look.settled();
+    expect(statusRow(h.frame())).not.toContain("disk not answering");
+  });
 });
 
 describe("git's state taken in the order it was asked, whatever order the answers come in", () => {
   test("a look asked before a checkout, answered after the feed's question asked since: HEAD never moves back", async () => {
-    const held = holding();
+    holding();
     const r = repo(true);
-    stateHeld();
     const h = await harness({ root: r.root, open: "index.md" });
     const look = offThread(h);
-    openScratch(h);
     await looked(look);
-    holdNow(held);
+    // The look's answer, read (main), kept back till the feed's question asked after it has been answered: the disk
+    // threads' background requests answer in the order asked, but nothing here counts on it.
+    const threads = diskThreads();
+    const real = threads.look.bind(threads);
+    let read = () => {};
+    const wasRead = new Promise<void>((r) => {
+      read = r;
+    });
+    let letGo = () => {};
+    const kept = new Promise<void>((r) => {
+      letGo = r;
+    });
+    spyOn(threads, "look").mockImplementationOnce(async (batch) => {
+      const answer = await real(batch);
+      read();
+      await kept;
+      return answer;
+    });
     look.request();
-    // git's state read (main), the look now waiting on the scratch.
-    await untilHeld(held);
+    await wasRead;
     expect(git(r.root, "checkout", "-q", "-b", "feat").exitCode).toBe(0);
-    // A batch the watcher brings: git's state asked again, on the other thread, and answered first.
+    // A batch the watcher brings: git's state asked again, and answered first.
     h.app.feed.receive({ changes: [], rescan: false });
     await until(() => said(h, "switched to").length > 0, "the feed's question answered");
-    held.release();
+    letGo();
     await look.settled();
     expect(said(h, "switched to")).toEqual(["switched to branch feat"]);
     expect(whereNow(h)).toContain("feat");
-    expect(held.gaveUp).toBe(0);
   });
 
   test("what's under way read again by a key (a rebase aborted) after a look was asked: the look's answer, older, never draws it back", async () => {
     const held = holding();
     const r = repo(true);
     stateHeld();
-    const h = await harness({ root: r.root, open: "index.md" });
+    const h = await harness({ root: r.root, open: "index.md", width: WIDE });
     const look = offThread(h);
     openScratch(h);
     mkdirSync(join(r.gitDir, "rebase-merge"));
@@ -570,6 +606,32 @@ describe("what a look holds and stamps", () => {
     expect([held.letGo, s && "kind" in s ? s.kind : s]).toEqual([false, "dir"]);
     held.release();
     await look.settled();
+    expect(held.gaveUp).toBe(0);
+  });
+
+  test("in the background, as the watcher's look: while one of its requests is out, the look and the feed's question wait their turn, and a key's read takes the other thread", async () => {
+    const held = holding();
+    const h = await harness();
+    const look = offThread(h);
+    await looked(look);
+    const slow = join(folder("look-watcher"), "held");
+    mkdirSync(slow);
+    held.again();
+    // The watcher's look, its stat held.
+    const watcher = diskThreads().look({ stat: { paths: [slow] }, background: true });
+    await untilHeld(held);
+    let answered = false;
+    const wanted = look.request().then(() => {
+      answered = true;
+    });
+    h.app.feed.receive({ changes: [], rescan: false });
+    await until(() => diskThreads().waiting === 2, "the look and the feed's question waiting their turn");
+    const [s] = await diskThreads().stat([folder("look-free")], "key");
+    expect([s && "kind" in s ? s.kind : s, answered, diskThreads().waiting]).toEqual(["dir", false, 2]);
+    held.release();
+    await watcher;
+    await wanted;
+    await until(() => diskThreads().waiting === 0, "the feed's question asked");
     expect(held.gaveUp).toBe(0);
   });
 

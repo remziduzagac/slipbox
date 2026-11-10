@@ -36,6 +36,12 @@ export class Watch {
     this.look = new Look(app);
   }
 
+  /** The disk not answering (SD-D6): the watcher's look given up on, or the look each second's — one warning on the
+   *  status line (`⚠ disk not answering`) until each answers again. */
+  get notAnswering(): boolean {
+    return this.app.watcher?.notAnswering === true || this.look.notAnswering;
+  }
+
   /** A batch from the watcher: applied now — or, while git writes, held with the rest it writes. */
   receiveBatch(b: WatchBatch): void {
     this.app.feed.receive(b);

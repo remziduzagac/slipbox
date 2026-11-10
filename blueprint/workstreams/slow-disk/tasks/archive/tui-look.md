@@ -70,9 +70,10 @@ the maintainer's standing instruction; design.md's sections it delivers say how.
   disk thread: as `LookAsk.jobs`, a `git` job and a `way` job, then a `stat` of the open files outside the vault, the
   config files, the activity file and the tool's files (their folders stamped by whether they're there, Obsidian
   rewriting what's in `.obsidian/` while it runs). The config and the tool's settings are read in a second batch only
-  when their stamps moved. The new jobs live in `src/core/workspace/walk/look-jobs.ts` (`answerLook`, the `look`
-  request); `disk-jobs.ts` only dispatches to it, and `walk-thread.ts`'s `look()` sends a batch's jobs with its stats
-  as one request.
+  when their stamps moved. The new jobs live in `src/core/workspace/walk/look-jobs.ts` (`answerLookJob`, a path's
+  stat `io/stamps.ts`'s `statOf`); `disk-jobs.ts` answers the `look` request, its jobs first and then its stats, as a
+  `stat` request's (judged when the watcher asks), and `walk-thread.ts`'s `look()` sends a batch's jobs with its stats
+  as one request, in the background when asked (`LookAsk.background`).
 - Git's state taken in the order it was asked: each question numbered as it's asked (`askGit`), the feed's (`saw`) and
   the operation kept (`keepOperation`) take an answer only when no later question's has come first; a key's own read
   of the operation (`operationAgain`) counts as one asked then. A key that ran git awaits `Git.checkHead()`, settled
@@ -94,6 +95,8 @@ the maintainer's standing instruction; design.md's sections it delivers say how.
 - The feed asks too (`VaultFeed`'s `asker`): a batch the watcher brings asks git's state there and is applied once it
   answers, one question out at a time; git's lock waited out by its stat alone every 100 ms, one out at a time (the
   decision of 2026-11-09); given up on, the batches are applied with the state last seen, never held for good.
+- The look, its second batch, the feed's question and the lock's stat are the disk threads' background requests, as
+  the watcher's look is (SD-T3): one at a time among them all, so a key's read always finds the other thread.
 - What's drawn: the branch is `Look.head()`, the feed's last answer (its start's `HEAD` before the first); the
   operation is kept for the App (`keepOperation`), nothing for a vault gone into until the look answers. A key that
   acts on a rebase reads it at once (`operationAgain`) and keeps what it read. The checkout is the look's
@@ -101,12 +104,13 @@ the maintainer's standing instruction; design.md's sections it delivers say how.
 - Which App looks off the screen's thread: the one whose explorer's listings are read there, `AppOptions.listOffThread`,
   the TUI's; no new option. A test's App looks here, at once, as before, unless the test says (`look.offThread`).
 - Given up on, a minute on (SD-D6): said once in Messages, `disk not answering: the look at your config, git and the
-  open files gave up; it looks again in a minute`, worded beside the watcher's (SD-T3), whose status line indicator
-  covers both; asked again a minute later (`LOOK_AGAIN_MS`), and said again only after one has answered. Nothing is
-  asked meanwhile, however it's asked for: a look wanted (git ran, a build's look of every file, one wanted while the
-  last was out) is kept for the minute's end; the feed's question isn't asked, its batches applied as git was last
-  seen. The activity file's stamp is unknown till a look answers again, and unknown isn't quiet: the background index
-  waits. Stopped (quitting) says nothing.
+  open files gave up; it looks again in a minute`, worded beside the watcher's (SD-T3), and the watcher's status line
+  indicator, `⚠ disk not answering`, covers both (`Watch.notAnswering`) until each has answered; asked again a minute
+  later (`LOOK_AGAIN_MS`), and said again only after one has answered. Nothing is asked meanwhile, however it's asked
+  for: a look wanted (git ran, a build's look of every file, one wanted while the last was out) is kept for the
+  minute's end; the feed's question isn't asked, its batches applied as git was last seen. The activity file's stamp is
+  unknown till a look answers again, and unknown isn't quiet: the background index waits. Stopped (quitting) says
+  nothing.
 - Left on the screen's thread, for other tasks: the start's reads (the feed's `HEAD`, the operation until the first
   answer, the config: SD-T9, SD-T10); a vault gone into (SD-T9); autosave's check of git's lock before a save
   (`Git.indexLocked`, SD-D7); a changed open file's text, read here as before (SD-T5, SD-T6). The held tests met two

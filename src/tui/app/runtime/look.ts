@@ -75,9 +75,11 @@ export class Look {
   private out = false;
   /** Asked for while one was out, or while the look rests (git ran, a build): asked once it may be. */
   private wanted: Wanted | null = null;
-  /** Given up on: no look before then (SD-D6); said once, until one answers. */
+  /** Given up on: no look before then (SD-D6). */
   private restAt = Number.NEGATIVE_INFINITY;
-  private said = false;
+  /** Given up on, and none answered since: said once, and `⚠ disk not answering` on the status line with the
+   *  watcher's (`Watch.notAnswering`). */
+  notAnswering = false;
   /** The tool's settings' stamps as they were last read, with their root. */
   private toolAt = "";
   /** The vault the last look was asked for: what's drawn of another's operation goes when it changes. */
@@ -157,14 +159,14 @@ export class Look {
       git: async (asked) => {
         if (this.resting()) throw new Error("the look given up on: asked again in a minute");
         const loc = this.app.loc;
-        const [answer] = (await diskThreads().look({ jobs: [{ op: "git", loc: place(loc) }] })).jobs;
+        const [answer] = (await diskThreads().look({ jobs: [{ op: "git", loc: place(loc) }], background: true })).jobs;
         const seen = (answer as { git: GitSeen }).git;
         if (this.app.loc === loc) this.keepGit(seen, asked);
         return seen;
       },
       locked: async (lock) => {
         if (this.resting()) return false;
-        const [s] = await diskThreads().stat([lock], "look");
+        const [s] = (await diskThreads().look({ stat: { paths: [lock] }, background: true })).stats;
         return !!s && !("error" in s);
       },
     };
@@ -213,9 +215,11 @@ export class Look {
     const a = this.plan(all);
     const asked = askGit();
     const first = await diskThreads().look(this.batchOf(a));
-    if (!this.current(a)) return false;
-    this.said = false;
-    let changed = this.taken(a, first, asked);
+    // The disk answered: the status line's warning goes (with the watcher's, if that one answers too).
+    const cleared = this.notAnswering;
+    this.notAnswering = false;
+    if (!this.current(a)) return cleared;
+    let changed = this.taken(a, first, asked) || cleared;
     const stats = first.stats.slice(a.plain.length);
     const config = stats.slice(0, a.config.length);
     const tool = stats.slice(a.config.length + 1);
@@ -232,7 +236,7 @@ export class Look {
       jobs.push({ op: "config", loc: place(a.loc), ...configFile, lastGood: [...app.settings.lastGood] });
     }
     if (toolMoved && a.tool.length) jobs.push({ op: "tool", root: a.loc.root });
-    const second = jobs.length ? await diskThreads().look({ jobs }) : { jobs: [] };
+    const second = jobs.length ? await diskThreads().look({ jobs, background: true }) : { jobs: [] };
     if (!this.current(a)) return changed;
     this.toolAt = toolAt;
     for (const j of second.jobs) {
@@ -259,7 +263,7 @@ export class Look {
   }
 
   /** One batch, one request: git's state, the ways, and a stat of every path (the files, the config's, the activity
-   *  file, the tool's). */
+   *  file, the tool's) — in the background, as the watcher's are, so the two never hold both threads (SD-D2). */
   private batchOf(a: Asked): LookAsk {
     const { loc } = a;
     const jobs: LookJob[] = [{ op: "git", loc: place(loc) }];
@@ -269,7 +273,7 @@ export class Look {
       jobs.push({ op: "way", place: at, looking, paths: a.ways.map((w) => w.buf.abs) });
     }
     const paths = [...a.plain.map((p) => p.buf.abs), ...a.config, activityFile(), ...a.tool.map((t) => t.path)];
-    return { stat: { paths }, jobs };
+    return { stat: { paths }, jobs, background: true };
   }
 
   /** Whether an answer is for what's open now: the vault it was asked for, the TUI not quitting. */
@@ -310,15 +314,15 @@ export class Look {
     keepOperation(this.app, seen.operation, asked);
   }
 
-  /** The look given up on (SD-D6): said once, until one answers; the next a minute later, the activity file's stamp
-   *  unknown till then. Quitting: nothing. */
+  /** The look given up on (SD-D6): said once, and on the status line, until one answers; the next a minute later, the
+   *  activity file's stamp unknown till then. Quitting: nothing. */
   private gaveUp(err: Error): void {
     const kind = err instanceof WorkerRequestError ? err.kind : null;
     if (this.app.quitting || kind === "stopped") return;
     this.restAt = this.app.now() + LOOK_AGAIN_MS;
     this.activityAt = null;
-    if (this.said) return;
-    this.said = true;
+    if (this.notAnswering) return;
+    this.notAnswering = true;
     this.app.message(
       "warn",
       "disk not answering: the look at your config, git and the open files gave up; it looks again in a minute",

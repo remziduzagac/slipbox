@@ -229,7 +229,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const w = app.watcher;
   const watch = w?.degraded
     ? { text: "⚠ not watching", role: "warn" as Role }
-    : w?.notAnswering
+    : app.watch.notAnswering
       ? { text: "⚠ disk not answering", role: "warn" as Role }
       : w
         ? {
