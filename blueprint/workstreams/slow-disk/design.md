@@ -86,9 +86,10 @@ go of.
 **What's read where:**
 
 - **The watcher's look** (SD-D8, SD-T3; § Bun's watcher, and what covers its gaps). The watcher keeps its state and
-  logic here, and its `fs.watch` registrations, whose events come here. Each tick asks one batch — a `stat` request of
-  every path it stats and a `list` request of each folder it lists, asked together — of the watched folders' stamps,
-  their `.gitignore`s', the notes followed into folders left to home's walk, the polled folders' listings; and every
+  logic here, and its `fs.watch` registrations, whose events come here. Each tick asks its stats a hundred a request
+  (`SLICE`), each taken as it answers — the watched folders' stamps, each with its `.gitignore`'s, and the notes
+  followed into folders left to home's walk — and last, in a request of their own, a `list` of each polled folder, so
+  one that doesn't answer (a network mount, most often) costs only its listing, asked again at the next tick; and every
   15th tick the sweep's stats of the known notes, a hundred a request, each asked when the last answers; a sweep still
   under way at the next 15th tick goes on, and none other starts. A tick whose answer hasn't come asks nothing new. A
   folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, a hundred a
@@ -97,15 +98,18 @@ go of.
   filter (`exclusion`) and a link's verdict (`symlinkVerdict`), as the explorer's are
   (`core/workspace/graph/watch/judging.ts`), the filter made once on each thread and made again once the watcher's
   moves on (`WalkFilter.epoch`: a `.gitignore` seen changed, the mount table read again). A folder registered asks its
-  stamps there — its own and its `.gitignore`'s, with the next look — compared, when they come, with the walk's that
-  found it (`Graph.dirStamps`); one that came is listed there a folder at a time, nearest first, each stamped as it's
-  listed and watched as it answers. A look given up on keeps what answered before: what it settled is said, what it
-  didn't, and the folders it hadn't listed, are pending again. The watcher's logic is written as looks
-  (`watch/reads.ts`), each yielding the batch it needs: one out at a time, a flush asked meanwhile made once it
-  answers, the sweep a chain of its own that asks nothing while the looks are paused; the warning cleared only by an
-  answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a time, so a
-  key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on the thread
-  that asks, with the same code.
+  stamps there — its own and its `.gitignore`'s, with the next look, a hundred a request — compared, when they come,
+  with the walk's that found it (`Graph.dirStamps`); one that came is listed there a folder at a time, nearest first,
+  each stamped as it's listed and watched as it answers. A look given up on keeps what answered before: what it settled
+  is said, what it didn't, and the folders it hadn't listed, are pending again; a tick's folder gone or `.gitignore`
+  changed stays seen, the folders not stamped yet are stamped by the next look, and the next tick starts after the
+  slice given up on and goes round to it, no slice across the end, so one that never answers keeps none behind it from
+  being looked at. The watcher's logic is written as looks (`watch/reads.ts`), each yielding the batch it needs: one
+  out at a time, a flush asked meanwhile made once it answers — or, a look in slices (a tick's, the stamps'), between
+  two of its slices — the sweep a chain of its own that asks nothing while the looks are paused; the warning cleared
+  only by an answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a
+  time, so a key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on
+  the thread that asks, with the same code.
 - **The TUI's look each second** (SD-T4; § External changes). One request a second: the open files no watcher sees,
   your config's and the vault's `.slipbox/config.toml`'s stamps, git's `HEAD`, its branch's ref, its `index.lock` and
   its rebase folders and what an operation under way leaves there, and the CLI's activity file, which the background
@@ -206,8 +210,8 @@ Previously: "Events are debounced (`watch.debounce_ms`) and settled by `stat` (D
 
 ## MODIFIED design/tui.md § Bun's watcher, and what covers its gaps
 
-- "So each tick stats every watched directory" becomes "So each tick stats every watched directory, one batch on a
-  disk thread (§ A slow disk; a tick whose answer hasn't come asks nothing new),".
+- "So each tick stats every watched directory" becomes "So each tick stats every watched directory on a disk thread, a
+  hundred a request (§ A slow disk; a tick whose answer hasn't come asks nothing new),".
 - "The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes." becomes "The tick runs every
   `watch.poll_ms`, and every 15th tick sweeps all known notes, a hundred a request, each asked when the last
   answers."

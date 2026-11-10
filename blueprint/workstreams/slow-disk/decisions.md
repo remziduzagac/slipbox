@@ -204,6 +204,16 @@ crossing threads before their events).
 > the explorer's are (SD-T7): the walk's filter (`exclusion`), a link's verdict (`symlinkVerdict`) and where a note that
 > went has gone (`movedTo`).
 
+> **Note (2026-11-10), from SD-T3's review:** a look's stats go a hundred a request (`SLICE`), as the sweep's do: a
+> tick's (each watched folder's stamp with its `.gitignore`'s, the notes followed), the stamps of the folders
+> registered, a settle's. Each slice is taken as it answers, and a flush wanted meanwhile runs between two slices, not
+> after the last. One given up on keeps what answered before it; the next tick starts after it and goes round to it, so
+> a slice that never answers keeps none behind it from being looked at, and the folders still unstamped are stamped by
+> the next look. The polled folders are still listed every tick (SD-D12's answer for SD-T3), but last, in a request of
+> their own: a polled folder is most often a network mount, and one that doesn't answer costs only its listing, asked
+> again at the next tick. As one request, a tick of a vault with thousands of folders on a slow disk could miss its
+> minute every time, and keep nothing it had read.
+
 ## SD-D9: The start takes the screen first (2026-11-09)
 
 Agreed: question 5, answered (a).

@@ -2,9 +2,10 @@
 // what's known when it comes — dropped once the watcher was synced to a build since, a path we wrote since settled
 // again; a look the disk doesn't answer in time said once, the looks paused a minute — the sweep too — cleared by the
 // next answer to a look asked after; home's notes moved into a folder left to its walk found there by a listing on a
-// thread; a flush and a tree taken in asked in pieces, what answered kept; a key's read never behind the watcher on
-// both threads; one filter a thread, made again when a `.gitignore` changes. What waits is told by the hold (`Hold`,
-// this thread's reads too) or a thread's crash, never by a clock (#75); work is counted, not timed.
+// thread; a tick, the folders' stamps, a flush and a tree taken in asked in pieces, what answered kept; a key's read
+// never behind the watcher on both threads; one filter a thread, made again when a `.gitignore` changes. What waits is
+// told by the hold (`Hold`, this thread's reads too) or a thread's crash, never by a clock (#75); work is counted, not
+// timed.
 
 import { afterEach, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
@@ -332,6 +333,179 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       await quiet(w);
       expect(said.sort()).toEqual(first.map((rel) => `created ${rel}`).sort());
       expect([...state.pending].sort()).toEqual([...rest].sort());
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a tick stats its folders a slice at a time: a folder gone before the slice held is pending meanwhile, and stays pending when that slice is given up on", async () => {
+    const held = holding();
+    // A folder's stamp and its `.gitignore`'s: `""`, `gone` and 48 more fill the first slice, `held` the second.
+    const dirs = ["", "gone", ...Array.from({ length: SLICE / 2 - 2 }, (_, i) => `f${i}`), "held"];
+    const notes = dirs.map((d) => (d ? `${d}/n.md` : "n.md"));
+    const root = tree(Object.fromEntries(notes.map((rel) => [rel, "# N\n"])));
+    let clock = Date.now();
+    const { w, state, said } = await watching(root, dirs, notes, { now: () => clock });
+    try {
+      unwatched(state);
+      rmSync(join(root, "gone"), { recursive: true });
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      expect(asked.mock.calls.map(([b]) => b.stat?.paths.length)).toEqual([SLICE, 2]);
+      expect([...state.pending]).toEqual(["gone"]);
+      crash((s) => s.paths.includes(join(root, "held")));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      expect([...state.pending]).toEqual(["gone"]);
+      // A minute later, the next tick looks at every folder again and settles what's pending.
+      held.release();
+      clock += 60_001;
+      w.pollTick();
+      await quiet(w);
+      expect(said).toEqual(["deleted gone/n.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("folders registered are stamped a slice at a time: those answered before one given up on stay stamped, the rest stamped by the next tick", async () => {
+    const held = holding();
+    const dirs = [...Array.from({ length: SLICE / 2 }, (_, i) => `f${i}`), "held"];
+    const root = tree({ "a.md": "# A\n", ...Object.fromEntries(dirs.map((d) => [`${d}/n.md`, "# N\n"])) });
+    let clock = Date.now();
+    const { w, state } = await watching(root, [""], ["a.md"], { now: () => clock });
+    try {
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.sync(["", ...dirs], new Map());
+      await untilHeld(held);
+      expect(asked.mock.calls.map(([b]) => b.stat?.paths.length)).toEqual([SLICE, 2]);
+      expect(dirs.filter((d) => state.stamps.has(d))).toEqual(dirs.slice(0, -1));
+      crash((s) => s.paths.includes(join(root, "held")));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      expect([...state.unstamped.keys()]).toEqual(["held"]);
+      expect(dirs.filter((d) => state.stamps.has(d))).toEqual(dirs.slice(0, -1));
+      held.release();
+      clock += 60_001;
+      w.pollTick();
+      await quiet(w);
+      expect(state.stamps.has("held")).toBe(true);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a flush wanted while a tick is out runs between its slices: the settle's stats asked before the tick's next slice", async () => {
+    const held = holding();
+    // `held` and 49 more fill the first slice; `""`, last, the second.
+    const dirs = ["held", ...Array.from({ length: SLICE / 2 - 1 }, (_, i) => `f${i}`), ""];
+    const notes = dirs.map((d) => (d ? `${d}/n.md` : "n.md"));
+    const root = tree(Object.fromEntries(notes.map((rel) => [rel, "# N\n"])));
+    const { w, state, said } = await watching(root, dirs, notes);
+    try {
+      unwatched(state);
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      writeFileSync(join(root, "n.md"), "# N, changed\n");
+      state.pending.add("n.md");
+      w.flush();
+      held.release();
+      await quiet(w);
+      const paths = asked.mock.calls.slice(0, 3).map(([b]) => b.stat?.paths ?? []);
+      expect([paths[0]!.length, paths[1], paths[2]!.length]).toEqual([SLICE, [join(root, "n.md")], 2]);
+      expect(said).toEqual(["changed n.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a flush wanted while folders registered are stamped runs between their slices", async () => {
+    const held = holding();
+    const dirs = ["held", ...Array.from({ length: SLICE / 2 - 1 }, (_, i) => `f${i}`), "g"];
+    const root = tree({ "a.md": "# A\n", ...Object.fromEntries(dirs.map((d) => [`${d}/n.md`, "# N\n"])) });
+    const { w, state, said } = await watching(root, [""], ["a.md"]);
+    try {
+      unwatched(state);
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.sync(["", ...dirs], knownIn(root, ["a.md"]).known);
+      await untilHeld(held);
+      writeFileSync(join(root, "a.md"), "# A, changed\n");
+      state.pending.add("a.md");
+      w.flush();
+      held.release();
+      await quiet(w);
+      const paths = asked.mock.calls.slice(0, 3).map(([b]) => b.stat?.paths ?? []);
+      expect([paths[0]!.length, paths[1], paths[2]!.length]).toEqual([SLICE, [join(root, "a.md")], 2]);
+      expect(said).toEqual(["changed a.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a tick given up on at a slice that never answers: the next starts after it, so the folders behind it are looked at", async () => {
+    const held = holding();
+    // `""`, `held` and 48 more fill the first slice; `gone`, last, the second.
+    const dirs = ["", "held", ...Array.from({ length: SLICE / 2 - 2 }, (_, i) => `f${i}`), "gone"];
+    const notes = dirs.map((d) => (d ? `${d}/n.md` : "n.md"));
+    const root = tree(Object.fromEntries(notes.map((rel) => [rel, "# N\n"])));
+    let clock = Date.now();
+    const { w, state } = await watching(root, dirs, notes, { now: () => clock });
+    try {
+      unwatched(state);
+      rmSync(join(root, "gone"), { recursive: true });
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      crash((s) => s.paths.includes(join(root, "held")));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      expect(state.pending.size).toBe(0);
+      // A minute later, `held` still not answering: the next tick asks `gone` first, then goes round to `held`.
+      clock += 60_001;
+      w.pollTick();
+      await until("the next tick's second slice asked", () => asked.mock.calls.length === 3);
+      expect(asked.mock.calls.map(([b]) => b.stat?.paths.length)).toEqual([SLICE, 2, SLICE]);
+      expect([...state.pending]).toEqual(["gone"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a polled folder that doesn't answer costs only its listing: the tick's stats answered and settled, the folder listed again at the next tick", async () => {
+    const held = holding();
+    const root = tree({ "n.md": "# N\n", "gone/n.md": "# N\n", "held/n.md": "# N\n" });
+    let clock = Date.now();
+    const { w, state, said } = await watching(root, ["", "gone"], ["n.md", "gone/n.md", "held/n.md"], {
+      now: () => clock,
+    });
+    try {
+      unwatched(state);
+      state.polled.add("held");
+      rmSync(join(root, "gone"), { recursive: true });
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      // The stats asked on their own and settled: `gone` said while the listing waits in `held`.
+      expect(asked.mock.calls[0]![0].list ?? []).toEqual([]);
+      expect(said).toEqual(["deleted gone/n.md"]);
+      crash((s) => s.dir === join(root, "held"));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      // A minute later, the next tick lists it again: a note made there meanwhile found.
+      held.release();
+      writeFileSync(join(root, "held/m.md"), "# M\n");
+      clock += 60_001;
+      w.pollTick();
+      await quiet(w);
+      expect(said).toEqual(["deleted gone/n.md", "created held/m.md"]);
     } finally {
       w.close();
     }

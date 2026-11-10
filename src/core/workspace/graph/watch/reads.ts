@@ -37,6 +37,52 @@ export const SLICE = 100;
 /** A look's logic: what it asks, yielded batch by batch, and what it comes to. */
 export type Look<R = void> = Generator<WatchAsk, R, WatchAnswer>;
 
+/** Paths a look stats together, and what it makes of their stats, in the order asked. */
+export interface StatGroup {
+  paths: string[];
+  seen(stats: PathStat[]): void;
+}
+
+/** How a look's stats go in slices (`statsInSlices`). */
+export interface Slicing {
+  /** The group the slices start at (taken modulo their count): from it to the last, then from the first up to it —
+   *  no slice across the end, so a slice given up on is the same slice at each turn. */
+  from?: number;
+  /** What runs between one slice and the next: a flush wanted meanwhile. */
+  between?: () => Look;
+  /** Told of the group after each slice as it's asked: where the next look starts, should this one be given up on. */
+  asking?: (next: number) => void;
+}
+
+/**
+ * `groups`' stats asked a slice at a time — at most `SLICE` paths a request, a group never split — each slice taken
+ * (`seen`) as it answers, so what answered is kept when a later one isn't.
+ */
+export function* statsInSlices(groups: StatGroup[], how: Slicing = {}): Look {
+  const n = groups.length;
+  const from = n ? (how.from ?? 0) % n : 0;
+  let asked = false;
+  for (const [start, end] of from ? [[from, n] as const, [0, from] as const] : [[0, n] as const]) {
+    for (let i = start; i < end; ) {
+      if (asked && how.between) yield* how.between();
+      const slice: StatGroup[] = [];
+      let size = 0;
+      for (; i < end && (!slice.length || size + groups[i]!.paths.length <= SLICE); i++) {
+        slice.push(groups[i]!);
+        size += groups[i]!.paths.length;
+      }
+      how.asking?.(i % n);
+      const { stats } = yield { stat: { paths: slice.flatMap((g) => g.paths) } };
+      asked = true;
+      let k = 0;
+      for (const g of slice) {
+        g.seen(stats.slice(k, k + g.paths.length));
+        k += g.paths.length;
+      }
+    }
+  }
+}
+
 /** Where the watcher's reads are made: here, at once (`here`), or on the disk threads. */
 export interface WatchReads {
   readonly here: boolean;
