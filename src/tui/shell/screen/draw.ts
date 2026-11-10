@@ -31,7 +31,13 @@ import { drawTabs } from "../../windows/drawing/tabs.ts";
 import { drawContent } from "../../windows/drawing/content.ts";
 import { drawJoints, drawRail } from "./frame/drawing.ts";
 
+/** The screen drawn — from the notes parsed so far while the rest's texts are read on a disk thread (SD-T6, SD-D12):
+ *  a frame never reads one here. */
 export function drawApp(app: App, c: Canvas): Geometry {
+  return app.graph.texts.partially(() => drawFrame(app, c));
+}
+
+function drawFrame(app: App, c: Canvas): Geometry {
   c.cursor?.(null);
   // ASCII glyphs: what a console without Unicode can draw, every text drawn (drawText).
   c.asciiGlyphs = app.glyphs.mode === "ascii";

@@ -28,7 +28,7 @@ export function drawProblemsPanel(app: App, c: Canvas, rect: Rect, geo: Geometry
   let x = rect.x + 1;
   for (const [tab, title] of [
     ["file", `This file (${file.length})`],
-    ["all", `All (${app.problems.count()})`],
+    ["all", `All (${app.problems.count()}${app.graph.texts.unread ? "…" : ""})`],
   ] as const) {
     const id = `ptab:${tab}`;
     const on = p.tab === tab;

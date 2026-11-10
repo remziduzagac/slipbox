@@ -196,6 +196,8 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
         if (l.gitRef) break;
         const path = l.resolvedKind === "anchor" ? rel : l.path!;
         const where = l.resolvedKind === "anchor" ? "this note" : isAbsolute(path) ? posix.basename(path) : path;
+        // Its text not read yet, drawn meanwhile (SD-T6): checked once it's parsed.
+        if (g.texts.waits(path)) break;
         const hit = landing(g, path, frag, l.block, wiki);
         // A heading named by its text, several of that text: the first is meant — said, never silent.
         if (hit?.ambiguous)

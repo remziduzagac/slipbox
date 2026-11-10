@@ -53,7 +53,7 @@ function argCandidates(a: App, cmd: string): string[] | null {
     case "note.export":
       return FORMATS.map((f) => f.name);
     case "tag.list":
-      return a.graph.tags().map((t) => t.tag);
+      return a.graph.texts.partially(() => a.graph.tags()).map((t) => t.tag);
     case "type.list":
       return rootTypes(a.graph).map((t) => t.name);
     default:

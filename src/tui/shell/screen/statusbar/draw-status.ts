@@ -92,7 +92,7 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
     // Without a note, only the selected explorer row's explanation follows the chip; location stays on the top bar. A
     // key's build out (a vault gone into, its note waiting for it: SD-T8) is said instead.
     x += 1;
-    const reading = app.watch.builds.holding ? "reading the vault…" : "";
+    const reading = keyWait(app) ?? "";
     if (reading || whyText)
       drawText(c, x, y, truncate(reading || whyText.trimEnd(), Math.max(0, c.width - x - 1)), reading ? info : dim);
     return;
@@ -235,9 +235,9 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
     ? { text: "⚠ not watching", role: "warn" as Role }
     : app.watch.notAnswering
       ? { text: "⚠ disk not answering", role: "warn" as Role }
-      : // A key's build read on a disk thread (SD-D11): the keys after it wait for it.
-        app.watch.builds.holding
-        ? { text: "reading the vault…", role: "info" as Role }
+      : // A key's build read on a disk thread (SD-D11), or every note's parse (SD-T6): the keys after it wait for it.
+        keyWait(app)
+        ? { text: keyWait(app)!, role: "info" as Role }
         : w
           ? {
               text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`,
@@ -288,6 +288,12 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
 
 /** The marker after the status line's path (its length is what the right side must leave room for);
  *  `short`: in symbols only, for a narrow screen. */
+/** What the keys wait for, read on a disk thread, as the status line says it: a key's build (SD-D11), or every note's
+ *  parse (SD-T6); null when they wait for neither. */
+function keyWait(app: App): string | null {
+  return app.watch.builds.holding ? "reading the vault…" : app.reads.readingNotes ? "reading notes…" : null;
+}
+
 function pathMarker(app: App, view: View, short = false): string {
   const buf = view.buf;
   // A report is never saved anywhere (RPT-D1): typed in, it's no more "unsaved" than it was.

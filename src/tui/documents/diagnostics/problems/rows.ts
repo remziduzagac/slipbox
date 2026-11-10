@@ -19,7 +19,7 @@ export function problemRows(
 ): ProblemRow[] {
   if (owner.app.loc.mode === "folder") return [];
   const q = owner.panel.all.filter;
-  const p = owner.app.graph.problems();
+  const p = owner.app.graph.texts.partially(() => owner.app.graph.problems());
   const out: ProblemRow[] = [];
   const written = (l: LinkProblem) => (l.kind === "wiki" || l.kind === "embed" ? `[[${l.target}]]` : l.target);
   const section = (name: string, list: LinkProblem[], why: (l: LinkProblem) => string) => {

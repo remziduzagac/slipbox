@@ -350,7 +350,9 @@ function acceptPointer(app: App, c: CompletionState, to: string, style: LinkStyl
     if (view.buf.version !== version)
       return app.message("warn", "the note changed while you picked: complete the link again");
     const text = linkDestination(
-      conventionOf(app.graph, app.config, app.settings.origins, style, app.settings.tool()),
+      app.graph.texts.partially(() =>
+        conventionOf(app.graph, app.config, app.settings.origins, style, app.settings.tool()),
+      ),
       style,
       ends,
     );

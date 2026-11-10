@@ -162,6 +162,34 @@ export class KeyReads {
     return this.hold(loaded());
   }
 
+  /** Keys waiting for every note's parse (`notes`): `reading notes…` on the status line meanwhile. */
+  private waitingNotes = 0;
+  get readingNotes(): boolean {
+    return this.waitingNotes > 0;
+  }
+
+  /**
+   * `then` once every note of the vault open is parsed: at once when they are, or when they're read here (a test's
+   * App). Else, their texts read on the disk threads (SD-T6, SD-D12), a key's wait — the keys after it wait too,
+   * `reading notes…` on the status line, `esc` gives it up; a slice given up on meanwhile is said (`the notes didn't
+   * answer: <notDone>`). What needs them all: a rename's preview, the tags' lists, the backlinks list.
+   */
+  notes(then: () => unknown, notDone = "not done"): void | Promise<void> {
+    const g = this.app.graph;
+    if (!this.app.watch.texts.offThread || !g.pendingCount) return void then();
+    const waited = async (): Promise<void> => {
+      this.waitingNotes++;
+      const parsed = await this.ask(
+        "the notes",
+        null,
+        async (_t, stop) => (await this.app.watch.texts.whenParsed(g, stop.signal), true),
+        notDone,
+      ).finally(() => this.waitingNotes--);
+      if (parsed && this.app.graph === g) await then();
+    };
+    return this.hold(waited());
+  }
+
   /** `esc` while a key's read is out: each given up — its thread started afresh — and the keys typed meanwhile
    *  dropped. Whether one was. */
   giveUp(): boolean {

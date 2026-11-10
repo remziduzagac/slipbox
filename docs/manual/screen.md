@@ -425,13 +425,16 @@ The status line describes the file in the focused window. From the left:
   - `● watching`
   - `⚠ not watching`, when watching failed
   - `⚠ disk not answering`, when the disk didn't answer within a minute (a network share, a drive that's asleep) as
-    slipbox looked for changes, or checked your config, git and the files you have open: it looks again a minute
-    later, and the warning goes once the disk answers
+    slipbox looked for changes, read a note changed outside it, or checked your config, git and the files you have
+    open: it looks again a minute later, and the warning goes once the disk answers
   - `○ not watching`, when it's turned off (`watch.enabled = false`)
   - `reading the vault…`, after a rename or a folder moved, copied or restored, while slipbox reads the vault again,
     and when slipbox has just started or you've just gone into another vault, until it's first read: the keys you type
     meanwhile wait for it, so the next one acts on the vault as it is, and `q` or `ctrl+c` quits. With no window open,
     it follows the chip.
+  - `reading notes…`, while the list of tags, a note's backlinks or a rename's preview waits for slipbox to have read
+    every note of a vault on a slow disk: the keys you type meanwhile wait for it, and `esc` gives it up. Until then,
+    the Problems panel's `All` count and the Info panel's backlinks are of the notes read so far, marked `…`.
 
 At the right end:
 

@@ -6,7 +6,8 @@ was agreed: SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9 by the maintainer's answ
 SD-D11 and SD-D12, the questions the tasks had left open, by the maintainer's instruction to take the recommended
 answer; SD-D13 and SD-D14, and the notes of 2026-11-10 under SD-D1, SD-D6, SD-D8 and SD-D12, the same way, from the
 design's review; the notes under SD-D10 and SD-D14, from SD-T1's; SD-D15, the start's choices, the same way, as SD-T10
-was built. An entry is never rewritten; a dated note goes under it (blueprint/README.md § How things are recorded).
+was built; SD-D16, SD-T6's, the same way, as it was built. An entry is never rewritten; a dated note goes under it
+(blueprint/README.md § How things are recorded).
 
 ## SD-D1: The parts, in order (2026-11-09)
 
@@ -435,3 +436,39 @@ the tabs come back, a change to the session isn't saved until they're in.
 
 **Not chosen:** the tab placed only once the graph is built (the note's read made after the walk, not beside it); `q`
 quitting at the start alone; `esc` closing the window that waits.
+
+## SD-D16: How SD-T6 reads a note's text (2026-11-10)
+
+Agreed by the maintainer's instruction to take the recommended answer, the questions SD-T6 left open as it was built.
+
+**Decision:**
+
+- **The transport:** the look's jobs (`notes`, `texts`), in a background request with a look's minute: no new kind of
+  request, and one at a time across the pool, so a key's read always finds a thread (SD-D2's note).
+- **A slice:** the next notes not parsed yet, up to 50, of one folder; one slice out, the next asked once fewer than
+  50 texts wait to be parsed, so two slices' texts at most. A slice given up on is said, and its notes put aside a
+  minute; a big note's read given up on, the same.
+- **A batch:** one batch's texts out at a time; those received meanwhile wait and go together after it. A note the
+  graph took in meanwhile (a save of slipbox's own, a file reached) is left as it is. Given up on: said once, the
+  status line's `⚠ disk not answering` until a batch answers, and the batch read again a minute later with those
+  received since.
+- **An open file:** checked and reloaded from the batch's read only while its stamp is as it was when the batch was
+  asked; otherwise it was saved, read again or opened since, and what was read is older.
+- **What waits for every note:** a rename's preview and the relink offered after moves made elsewhere
+  (`Renaming.preview`, which every rename, move, relink and conversion plan goes through), the tags' lists and the
+  backlinks list. What's drawn, a completion and the Problems and Info panels use what's parsed so far, their counts
+  marked `…`.
+- **Where it doesn't reach yet:** what else asks of a note not parsed yet reads it here, as before — a key's one
+  entry (a heading link followed, a hover), a note typed into before it's parsed, writing a link in the folder's
+  convention (`Linking`), another vault's graph parsed here, and the reads of the vault built again (`takeAgain`).
+  The task's Open lists them.
+
+**Why:** Each keeps a moved read as small as the one it replaces, and a key never acts on part of the vault without
+waiting for the rest (SD-D12). Folders apart, because a slow folder is most often a mount: its notes' request holds
+only its own.
+
+**Cost:** A vault's notes in one slow folder, before the others in the walk's order, hold the parse there up to a
+minute before it goes on with the rest. A count drawn while the parse goes on is short, marked `…`.
+
+**Not chosen:** a request per note (thousands of requests at a vault's open); a key that acts on part of the vault and
+says so (a rename that misses links); reading here once a request gives up (SD-D6).

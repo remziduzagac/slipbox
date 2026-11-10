@@ -1,5 +1,6 @@
 // Incremental file mutations and ordered change/build/retarget delivery for one Graph.
-import { extractNote } from "./graph-extract.ts";
+import { extractNote, extractRead } from "./graph-extract.ts";
+import type { NoteText } from "../walk/io/notes.ts";
 import type { LinkRef, NoteEntry, Retarget, Target, VaultChange } from "./graph-types.ts";
 import type { LinkIndex } from "../links/links.ts";
 import type { NoteFile } from "../walk/walk.ts";
@@ -69,14 +70,15 @@ export class GraphFeed {
     for (const [from, to] of pairs) this.emit({ kind: "moved", from, to });
   }
 
-  /** Incremental single-file update (1.8). Returns false when the file is not part of the vault. */
-  updateFile(rel: string, file: NoteFile): boolean {
+  /** Incremental single-file update (1.8): parsed from `text`, read already (SD-T6: on a disk thread), else read here.
+   *  Returns false when the file is not part of the vault. */
+  updateFile(rel: string, file: NoteFile, text?: NoteText): boolean {
     const g = this.graph;
     const isNew = !g.notes.has(rel);
     const watch = isNew ? this.namesakeLinks(rel) : null;
     this.unparsed.delete(rel);
     this.hooks.dirty();
-    const entry = extractNote(file);
+    const entry = text === undefined ? extractNote(file) : extractRead(file, text);
     // An editor's unsaved text still stands for the note: the file's entry is kept behind it.
     const over = this.overlays.get(rel);
     if (over) over.disk = entry;

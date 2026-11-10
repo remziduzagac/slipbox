@@ -22,11 +22,12 @@ import {
 import type { IndexRead, WalkAnswer } from "../walk/disk-jobs.ts";
 import { homeWalk, inFolders, walksInto, type HomeWalk } from "../vaults/home.ts";
 import { isListed, type VaultLocation } from "../vaults/vault.ts";
-import { extractNote, INDEX_VERSION } from "./graph-extract.ts";
+import { extractNote, extractRead, INDEX_VERSION } from "./graph-extract.ts";
 import type { GraphStats, NoteEntry, VaultChange } from "./graph-types.ts";
 import type { IndexFile } from "./index/schema.ts";
 import { cacheEntries, isUnreadable, persistIndex, reuseEntries, stub } from "./index/storage.ts";
 import type { EditorOverlay } from "./overlays/editor.ts";
+import type { NoteTexts } from "./texts.ts";
 import { neverIndexed, reachable, reachLinked } from "./reach/files.ts";
 
 interface RefreshGraph {
@@ -102,6 +103,8 @@ export class GraphRefresh {
     private readonly overlays: Map<string, EditorOverlay>,
     private readonly hooks: RefreshHooks,
     asked: readonly string[],
+    /** The notes' texts read elsewhere (SD-T6): the TUI's background parse's, given as they come. */
+    private readonly texts: NoteTexts,
   ) {
     this.asked = [...asked];
   }
@@ -185,6 +188,8 @@ export class GraphRefresh {
     const g = this.graph;
     const t0 = performance.now();
     g.builds++;
+    // Its notes' stubs made anew: a text read elsewhere for one before is for none of them.
+    this.texts.clear();
     // A walk read on a disk thread: when it began, not when it's taken — seconds later on a slow disk, a note written in
     // a folder it had listed would be older than that, and the watcher would never list the folder again (SD-T10).
     g.walkedAt = (given && "began" in given && given.began) || Date.now();
@@ -367,14 +372,20 @@ export class GraphRefresh {
     return [...this.unparsed.values()].filter((f) => f.size >= min);
   }
 
-  /** The parsed entry for a note, parsing it now if needed (its chunks from `chunks` when parsed elsewhere). */
+  /**
+   * The parsed entry for a note, parsing it now if needed (its chunks from `chunks` when parsed elsewhere): from its text
+   * given, read elsewhere (SD-T6), else read here — but, asked `partially` while texts are read elsewhere, its stub.
+   */
   entry(rel: string, chunks?: ChunkCache): NoteEntry | undefined {
     const g = this.graph;
     const adopted = this.adopted.get(rel);
     if (adopted) return adopted;
     const f = this.unparsed.get(rel);
     if (f) {
-      const e = extractNote(f, sharedParseCache(), chunks);
+      const given = this.texts.take(f);
+      if (given === undefined && this.texts.partial) return g.notes.get(rel);
+      const cache = sharedParseCache();
+      const e = given === undefined ? extractNote(f, cache, chunks) : extractRead(f, given, cache, chunks);
       if (isUnreadable(e)) g.errors.push(`${rel}: ${e.flags.find((x) => x.startsWith("unreadable"))}`);
       g.notes.set(rel, e);
       this.unparsed.delete(rel);
@@ -386,11 +397,12 @@ export class GraphRefresh {
     return g.notes.get(rel);
   }
 
-  /** Parse for up to `budgetMs`; returns how many remain. The TUI calls this between frames. */
+  /** Parse for up to `budgetMs`; returns how many remain. The TUI calls this between frames: the notes whose texts are
+   *  given alone, when they're read elsewhere (SD-T6). */
   parseSome(budgetMs: number, skip?: ReadonlySet<string>): number {
     const g = this.graph;
     const end = performance.now() + budgetMs;
-    for (const rel of this.unparsed.keys()) {
+    for (const rel of this.texts.readElsewhere ? this.texts.ready() : this.unparsed.keys()) {
       // Being parsed elsewhere (a big note, on other threads): not here, not now.
       if (skip?.has(rel)) continue;
       g.entry(rel);
@@ -402,6 +414,8 @@ export class GraphRefresh {
 
   ensureAll(): void {
     const g = this.graph;
+    // Asked `partially`, the texts read elsewhere: what's parsed so far, the rest left to the background parse (SD-T6).
+    if (this.texts.partial) return;
     // Until none is left: a note parsed can reach more (20.8).
     while (this.unparsed.size) for (const rel of [...this.unparsed.keys()]) g.entry(rel);
     if (this.cacheDirty) this.writeCache();

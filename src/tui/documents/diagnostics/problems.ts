@@ -321,7 +321,7 @@ export class Problems {
   count(): number {
     // Elsewhere has no index to check its links across (VV-D3): none counted; the tab says why.
     if (this.app.loc.mode === "folder") return 0;
-    const p = this.app.graph.problems();
+    const p = this.app.graph.texts.partially(() => this.app.graph.problems());
     const conflicts = [...(this.app.git.states ?? [])].filter(([, st]) => st === "conflict").length;
     const frontmatter = frontmatterFindings(this.app.graph).reduce((n, f) => n + f.problems.length, 0);
     return (
@@ -404,7 +404,7 @@ export class Problems {
 
   /** A note's problems, as the graph has them. */
   private at(rel: string): LinkProblem[] {
-    const p = this.app.graph.problems();
+    const p = this.app.graph.texts.partially(() => this.app.graph.problems());
     return [...p.broken, ...p.ambiguous].filter((x) => x.from === rel);
   }
 

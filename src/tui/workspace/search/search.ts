@@ -212,8 +212,13 @@ export class Search {
     if (seed) list.title = titled(list.title);
   }
 
-  /** The vault's tags (1.6), with how many notes carry each, nested ones under their parents: pick one for its notes. */
+  /** The vault's tags (1.6), with how many notes carry each, nested ones under their parents: pick one for its notes.
+   *  Once every note is parsed (SD-T6: `KeyReads.notes`). */
   openTagList(): void {
+    void this.app.reads.notes(() => this.tagList(), "no tags listed");
+  }
+
+  private tagList(): void {
     const tags = this.app.graph.tags();
     if (!tags.length) return this.app.message("info", "no tags here: #tag in a note, or tags: in its frontmatter");
     this.app.overlays.openList({
@@ -291,8 +296,12 @@ export class Search {
     this.app.message("info", `${t.name} ${i + dir + 1} of ${list.length}${next.status ? ` — ${next.status}` : ""}`);
   }
 
-  /** The notes with a tag (1.6) — its nested tags' too: pick one to open. */
+  /** The notes with a tag (1.6) — its nested tags' too: pick one to open. Once every note is parsed (SD-T6). */
   openTagNotes(tag: string): void {
+    void this.app.reads.notes(() => this.tagNotes(tag), "no notes listed");
+  }
+
+  private tagNotes(tag: string): void {
     const t = this.app.graph.tagged(tag);
     if (!t) return this.app.message("info", `no note has #${tag.replace(/^#/, "")}`);
     this.app.overlays.openList({

@@ -40,15 +40,20 @@ export class Info {
     return out;
   }
 
-  /** The rows' data, for the file on screen: made again when its text, or the notes', change. */
+  /** The rows' data, for the file on screen: made again when its text, or the notes', change — while notes' texts are
+   *  read on a disk thread, from those parsed so far, what counts every note marked partial (`…`, SD-T6, SD-D13). */
   private data(): Omit<InfoRow, "folded">[] {
+    return this.app.graph.texts.partially(() => this.dataNow());
+  }
+
+  private dataNow(): Omit<InfoRow, "folded">[] {
     const view = this.app.view;
     if (!view) return [];
     const b = view.buf;
     // Why it isn't indexed (VV-D9): its row's `⊘` in the explorer, or its folder's.
     const why = b.virtual ? null : this.app.explorer.marks.whyAt(b.abs);
     const exported = b.rel ? this.app.exporter.lastPath(b.rel) : null;
-    const key = `${exported}:${b.key}:${b.version}:${this.app.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}:${why}`;
+    const key = `${exported}:${b.key}:${b.version}:${this.app.graph.generation}:${b.dirty}:${b.deleted}:${!!b.parsing}:${why}:${this.app.graph.texts.unread}`;
     if (this.cache?.key === key) return this.cache.rows;
     const rows: Omit<InfoRow, "folded">[] = [];
     const head = (section: string) =>
@@ -168,6 +173,8 @@ export class Info {
     }
     // What it links to and what links to it.
     head("Links");
+    // Counted from the notes parsed so far, the rest's texts still read on a disk thread (SD-D13): marked partial.
+    const partial = this.app.graph.texts.unread ? "…" : "";
     const links = b.rel ? this.app.graph.linksOf(b.rel) : [];
     const broken = links.filter((l) => l.resolvedKind === "unresolved").length;
     row("Links", "links", `${links.length}${broken ? ` (${broken} unresolved)` : ""}`, { run: "links.open" });
@@ -177,7 +184,7 @@ export class Info {
       // Elsewhere has no index (VV-D3): none to count, said so, not shown as none.
       this.app.loc.mode === "folder"
         ? `none in ${ELSEWHERE}: it has no index`
-        : String(b.rel ? this.app.graph.backlinks(b.rel).length : 0),
+        : `${b.rel ? this.app.graph.backlinks(b.rel).length : 0}${partial}`,
       { run: "backlinks.open" },
     );
     row("Links", "headings", String(this.app.currentLayout(view).headings.length), { run: "outline.toggle" });
@@ -203,8 +210,8 @@ export class Info {
               ? "Obsidian"
               : "zk"
             : p.source === "notes"
-              ? `notes ${p.share}%`
-              : "ours";
+              ? `notes ${p.share}%${partial}`
+              : `ours${partial}`;
       const one = new Set([c.style, c.path, c.extension].map(by)).size === 1;
       const shown = (value: string, p: ConventionPart<string>) => (one ? value : `${value} (${by(p)})`);
       row("Links", "writes", shown(c.style.value === "wiki" ? "wikilinks" : "markdown", c.style), copy);

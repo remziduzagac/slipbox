@@ -6,7 +6,8 @@ import type { Graph } from "../../../core/workspace/graph/graph.ts";
 import { describeCap, type HomeWalk, inFolders, keepHomeWalk, walksInto } from "../../../core/workspace/vaults/home.ts";
 import { homeFolder, type VaultLocation } from "../../../core/workspace/vaults/vault.ts";
 import type { IndexRead } from "../../../core/workspace/walk/disk-jobs.ts";
-import type { WalkCap } from "../../../core/workspace/walk/walk.ts";
+import type { NoteText } from "../../../core/workspace/walk/io/notes.ts";
+import type { NoteFile, WalkCap } from "../../../core/workspace/walk/walk.ts";
 import { walkFailure, walkThread } from "../../../core/workspace/walk/walk-thread.ts";
 import { mtimeOf } from "../../../core/workspace/walk/look-jobs.ts";
 import { newParseCache } from "../../../core/documents/markdown/parse.ts";
@@ -15,6 +16,7 @@ import { BACKGROUND_PARSE } from "../../documents/buffers/buffer.ts";
 import type { Level } from "../notifications/contracts.ts";
 import type { Background } from "./background.ts";
 import { type Builds, takeAgain } from "./builds.ts";
+import type { Texts } from "./texts.ts";
 
 /** Live index inputs and the effects a completed pass delivers. */
 interface GraphRefreshContext {
@@ -29,6 +31,7 @@ interface GraphRefreshContext {
   readonly watch: {
     readonly look: { readonly offThread: boolean; readonly activityAt: number | null };
     readonly builds: Pick<Builds, "after">;
+    texts: Texts;
   };
   readonly explorer: { invalidateTree(): void };
   readonly buffers: ReadonlyMap<string, { invalidateLayouts(): void }>;
@@ -39,53 +42,74 @@ interface GraphRefreshContext {
   relayoutAll(): void;
 }
 
+/** A note's text read here: the background parse's, unless the disk threads read it (`Texts`). */
+function readHere(f: NoteFile): NoteText {
+  try {
+    return readText(f.abs);
+  } catch (err) {
+    return { error: (err as NodeJS.ErrnoException).code ?? "error" };
+  }
+}
+
 /**
  * A graph's notes not parsed yet, parsed between frames, a slice at a time (5.1): a big note on other threads first
  * (15.1), the main thread only putting its chunks together — parsed here whole, one would hold every key for seconds;
  * where threads can't start, it's parsed here after all. `graph` is asked again at each slice; `slice` hears how many
- * are left after each, `done` that none is.
+ * are left after each, `done` that none is. `texts`, reading on the disk threads (the TUI's, SD-T6): each note's text
+ * read there — the next slice's asked while this one's are parsed (`Texts.ahead`), a big note's before and after its
+ * parse — and only notes whose texts have come parsed here; a text given up on is put aside a minute.
  */
 export function parseInSlices(
   graph: () => Graph,
-  opts: { stopped: () => boolean; paused?: () => boolean; slice?: (left: number) => void; done: () => void },
+  opts: {
+    stopped: () => boolean;
+    paused?: () => boolean;
+    slice?: (left: number) => void;
+    done: () => void;
+    texts?: Texts;
+  },
 ): void {
   const elsewhere = new Set<string>();
   const failed = new Set<string>();
+  // A big note on the parse threads: true once it's parsed (or given to parse here), false when the threads couldn't.
+  const big = async (f: NoteFile, off: Texts | null): Promise<boolean> => {
+    const read = off ? await off.text(graph(), f) : readHere(f);
+    if (opts.stopped() || !read) return true;
+    // Unreadable: the parse here says so, from what was read.
+    if ("error" in read) {
+      if (off) graph().texts.give(f, read);
+      return false;
+    }
+    const chunks = newParseCache();
+    // The threads couldn't: parsed here after all (parseSome) — never indexed from a parse that failed.
+    if (!(await parseInBackground(read.text, chunks).catch(() => false))) return false;
+    if (opts.stopped()) return true;
+    const now = off ? await off.text(graph(), f) : readHere(f);
+    // Unreadable now: the parse here says so. Changed while it parsed: its new text goes to the threads on the next
+    // tick, not parsed here with chunks of the old.
+    if (opts.stopped() || !now) return true;
+    if ("error" in now) return false;
+    if (now.text === read.text && (!off || graph().texts.give(f, now))) graph().entry(f.rel, chunks);
+    return true;
+  };
   const tick = () => {
     if (opts.stopped()) return;
     if (opts.paused?.()) return void setTimeout(tick, 50);
+    const off = opts.texts?.offThread ? opts.texts : null;
     for (const f of graph().unparsedOver(BACKGROUND_PARSE)) {
-      if (elsewhere.has(f.rel) || failed.has(f.rel)) continue;
-      let text: string;
-      try {
-        text = readText(f.abs).text;
-      } catch {
-        continue; // unreadable: the parse here says so
-      }
-      const chunks = newParseCache();
+      if (elsewhere.has(f.rel) || failed.has(f.rel) || off?.isAside(graph(), f.rel)) continue;
       elsewhere.add(f.rel);
-      void parseInBackground(text, chunks)
-        .catch(() => false)
-        .then((ok) => {
-          elsewhere.delete(f.rel);
-          if (opts.stopped()) return;
-          // The threads couldn't: parsed here after all (parseSome) — never indexed from a parse that failed.
-          if (!ok) return void failed.add(f.rel);
-          let now: string;
-          try {
-            now = readText(f.abs).text;
-          } catch {
-            return void failed.add(f.rel); // unreadable now: the parse here says so
-          }
-          // Changed while it parsed: its new text goes to the threads on the next tick, not parsed here with
-          // chunks of the old.
-          if (now === text) graph().entry(f.rel, chunks);
-        });
+      void big(f, off).then((ok) => {
+        elsewhere.delete(f.rel);
+        if (!ok) failed.add(f.rel);
+      });
     }
+    off?.ahead(graph(), (f) => elsewhere.has(f.rel) || (f.size >= BACKGROUND_PARSE && !failed.has(f.rel)));
     const left = graph().parseSome(12, elsewhere);
     opts.slice?.(left);
-    // Only notes parsing elsewhere left: look again in a while, not every millisecond.
-    if (left) return void setTimeout(tick, left > elsewhere.size ? 1 : 50);
+    // Only notes parsing elsewhere left, or whose texts haven't come: look again in a while, not every millisecond.
+    const more = left > elsewhere.size && (!off || graph().texts.ready().length > 0);
+    if (left) return void setTimeout(tick, more ? 1 : 50);
     opts.done();
   };
   setTimeout(tick, 1);
@@ -127,6 +151,7 @@ export class GraphRefresh {
     finished.update(`Indexing 0/${total} files`);
     // This vault's graph as it is at each slice: switched to another, the pass goes on with that one's notes.
     parseInSlices(() => this.app.graph, {
+      texts: this.app.watch.texts,
       paused: () => paused,
       stopped: () => {
         if (this.app.quitting || cancelled) {

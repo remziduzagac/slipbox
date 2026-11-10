@@ -684,4 +684,30 @@ export const SLOW_DISK: Check[] = [
       s.expect(s.exitCode() === 0, `a clean exit, not ${s.exitCode()}`);
     },
   },
+  {
+    area: "links-and-files",
+    name: "slow disk: an agent's change to a note on a slow disk — the keys answer while it's read; its links and backlinks there once read",
+    covers: { cases: ["vault", "watching"], commands: ["backlinks.open"] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      // Each stat and read under the folder takes three seconds, on a disk thread: the watcher's look at the note, then
+      // its text, read before the batch is applied (SD-T6).
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:1::3000` },
+      setup: (s) => smallHome(s, { [`~/notes/${SLOW}/near.md`]: "# Near\n" }),
+    },
+    run: async (s) => {
+      await s.where(/^~\/notes(?: │|$)/, /index\.md/, 30_000);
+      const wrote = performance.now();
+      s.write(`~/notes/${SLOW}/near.md`, "# Near\n\nBack to [the index](../index.md).\n");
+      // Keys through the look and the read, each answered short of a read's three seconds.
+      const waits: number[] = [];
+      while (performance.now() - wrote < 12_000) {
+        waits.push(await answered(s));
+        await Bun.sleep(300);
+      }
+      s.expect(Math.max(...waits) < 1000, `every key answered within a second meanwhile: ${waits.join(", ")} ms`);
+      await backlinkFrom(s, /near\.md/);
+    },
+  },
 ];
