@@ -399,6 +399,13 @@ How: design/distribution.md § What the site tells search engines and agents.
   while the graph builds in the background or comes from the cache; editing a big note costs what changed. Checked
   by `bun scripts/bench.ts` (design/testing.md § Timings; the measurements in design/how-it-works.md § Performance,
   measured).
+- **A slow disk never freezes the screen** (SD-D1–SD-D9). What the TUI reads of the vault open's disk, or of its own
+  folders, on a timer or in the background never holds up the keys or the screen: what it knew stays on the screen
+  until the read answers. A read a key asks for is that key's: the keys after it wait for it while the screen draws,
+  and `esc` gives it up. Nothing that doesn't answer in time is read on the screen's thread instead. Writes stay where
+  they are (SD-D7), and what a slow disk still holds the screen for is said (design/tui.md § Known limits). Checked by
+  a held folder in the unit tests and a slow disk stood in for in the terminal checks (design/testing.md § The terminal
+  tests).
 - **Nothing identifying leaves the machine** (D199). The update check asks for the newest release its channel offers
   (on the preview channel, the newest preview as well: GR-D15) and sends nothing that identifies you; only the TUI
   checks, never the CLI; `DO_NOT_TRACK` or the config turns it off. Bun's own crash reports are turned off at start

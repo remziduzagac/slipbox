@@ -9,8 +9,8 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
 - Draft: [ENG](execution-engine/README.md), the execution engine; not built.
 - Active: [EG](editor-gaps/README.md), what LazyVim and Helix users reach for; settled item by item on 2026-11-08,
   being built.
-- Active: [SD](slow-disk/README.md), issue #46: what still reads a slow disk on the screen's thread, and how it moves
-  off; agreed on 2026-11-09, being built.
+- Consolidated 2026-11-10: [SD](archive/slow-disk/README.md), issue #46: what read a slow disk on the screen's thread
+  moved off it, onto the disk threads; what still holds the screen there is in design/tui.md § Known limits.
 - Active: [SIS](source-inline-styles/README.md), issue #103: Markdown's inline styles in SOURCE view, the markers kept
   and dimmed; built on 2026-11-10, its consolidation waiting for the maintainer.
 - Consolidated before 2026-10-26: [DOC](archive/user-docs/README.md),

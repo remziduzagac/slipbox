@@ -749,15 +749,14 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 
 ## A slow disk never freezes the screen (#46)
 
-*Not a phase. Drafted and agreed 2026-11-09; being built: SD-T1, the seam its reads go through, SD-T2, the disk threads,
-SD-T3, the watcher's look, SD-T4, the TUI's look each second, SD-T5, a note opened, SD-T7, the explorer's own tree,
-SD-T8, the vault built again, and SD-T9, slipbox's own folders, done.*
+*Not a phase. Drafted and agreed 2026-11-09; built, its twelve tasks done, and consolidated 2026-11-10 (design/tui.md
+§ A slow disk; what a slow disk still holds the screen for, § Known limits).*
 
-- [ ] **[A slow disk never freezes the screen](workstreams/slow-disk/README.md)** (SD): what still reads the disk on
-  the screen's thread moved off it, onto the listing threads grown into disk threads — the watcher's look and the TUI's
-  each second, a note opened or changed, the explorer's tree of the vault open, the vault built again, slipbox's own
-  folders, and the walk at the start, made once the screen is up. A key's own read waits for it and `esc` gives it up;
-  saves stay where they are.
+- [x] **[A slow disk never freezes the screen](workstreams/archive/slow-disk/README.md)** (SD): what still reads the
+  disk on the screen's thread moved off it, onto the listing threads grown into disk threads — the watcher's look and
+  the TUI's each second, a note opened or changed, the explorer's tree of the vault open, the vault built again, what
+  drawing a note reads, slipbox's own folders, and the walk at the start, made once the screen is up. A key's own read
+  waits for it and `esc` gives it up; saves stay where they are.
 
 ## Inline styles in SOURCE view (#103)
 

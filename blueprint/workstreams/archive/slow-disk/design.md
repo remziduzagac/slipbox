@@ -5,6 +5,14 @@ the choices the tasks had left open decided (SD-D11, SD-D12). None of it holds y
 consolidation (SD-T12). A link in the text points from here to the root's file; consolidation writes it relative to
 design/.
 
+**Consolidated on 2026-11-10** (SD-T12): every change below is in the root, SD-T11's text (SD-D17) with them, and
+reconciled where the tasks' being built had moved on. The seam's paragraph and design/testing.md's say what holds with
+every task built, not what held until each landed. design/tui.md § A slow disk names the requests the features added
+(`look`, `open`, `gitRead`, `own`, `draw`); a note's text and slipbox's own folders point to § Known limits, which
+gathers what the tasks left on the screen's thread from their Open and Log sections. design/roots.md's sentence on the
+explorer's listing threads names the disk threads. `AppOptions.listOffThread` keeps its name: SD-D10's rename is code,
+not made here.
+
 ## ADDED design/tui.md § A slow disk
 
 After § Asynchronous git reads.
@@ -300,7 +308,7 @@ vaults). Parsing stays here, and with it the parse cache (`parsed.db`).
 In the bullet "Off the main thread, in the TUI", the paragraph beginning "Not done:" becomes:
 
 > The rest of what the TUI reads of the vault open, and of its own state, cache and config folders, is read off the
-> main thread as well, on the disk threads ([tui.md](../../design/tui.md) § A slow disk): the watcher's looks, a
+> main thread as well, on the disk threads ([tui.md](../../../design/tui.md) § A slow disk): the watcher's looks, a
 > note's text, the vault open built again, the explorer's own tree, and the walk at the start, made once the screen is
 > up. Writes stay on the main thread.
 
@@ -423,7 +431,7 @@ on `check:boundary`'s list.
 
 In "Vaults", "the TUI makes its own walks, and lists the explorer's folders, on threads of their own (T12)" becomes "the
 TUI makes its own walks on a thread of their own (T12), and reads everything else of the vault open on the disk threads
-(§ A slow disk in [tui.md](../../design/tui.md))".
+(§ A slow disk in [tui.md](../../../design/tui.md))".
 
 Previously: "the TUI makes its own walks, and lists the explorer's folders, on threads of their own (T12)".
 

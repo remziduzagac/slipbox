@@ -504,6 +504,9 @@ A save also trims the ends of lines, and adds the last line break, where the fil
 
 slipbox saves a note before your editor, the context bundle or an export reads it.
 
+A save is written as you make it. On a slow disk, such as a network share or a drive that's asleep, the screen waits
+until it's written ([On a slow disk](how-it-works.md#on-a-slow-disk)).
+
 ## When a file changes on disk
 
 Another program can change a note you have open: an agent, git, your editor, a sync tool. slipbox notices. It looks

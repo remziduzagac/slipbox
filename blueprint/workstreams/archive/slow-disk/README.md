@@ -1,5 +1,5 @@
 ---
-status: active
+status: consolidated
 created: "2026-11-09"
 ---
 
@@ -11,20 +11,24 @@ vault open's disk, or slipbox's own folders under home, still reads it on the sc
 drive asleep or a FUSE mount that answers slowly, the screen and the keys stop for as long as each read takes, every
 two seconds while the watcher looks. This workstream moves those reads off it.
 
-**Agreed on 2026-11-09; being built.** The maintainer answered its seven questions that day, each with the
-option recommended (§ Questions answered), and agreed its other decisions as proposed; the questions its tasks had
-left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
-(§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
-decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, SD-T2, the disk threads, SD-T3, the watcher's
-look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T6, a note's text, SD-T7, the explorer's own tree, SD-T8, the
-vault built again, SD-T9, slipbox's own folders, SD-T10, the start, and SD-T11, what's drawn, are done (2026-11-10);
-the other tasks are `todo`. SD-T10's choices are SD-D15, SD-T6's SD-D16, SD-T11's SD-D17.
+**Agreed on 2026-11-09; built, and consolidated on 2026-11-10.** The maintainer answered its seven questions on
+2026-11-09, each with the option recommended (§ Questions answered), and agreed its other decisions as proposed; the
+questions its tasks had left open were decided with the recommendation, by the maintainer's instruction to take the
+recommended answer (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as
+notes under the decisions they change and as SD-D13 and SD-D14. Every task is done: SD-T1, the seam, SD-T2, the disk
+threads, SD-T3, the watcher's look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T6, a note's text, SD-T7, the
+explorer's own tree, SD-T8, the vault built again, SD-T9, slipbox's own folders, SD-T10, the start, and SD-T11, what's
+drawn, on 2026-11-10; SD-T10's choices are SD-D15, SD-T6's SD-D16, SD-T11's SD-D17. SD-T12 consolidated it the same
+day: design.md's changes and requirements.md's quality goal are in the root (design/tui.md § A slow disk; what a slow
+disk still holds the screen for, gathered from the tasks, in § Known limits), the roadmap's item ticked, and the
+folder archived. Its decisions stay here under their SD IDs; none changes a root decision. The text below is the
+workstream's as it was built: the root's design is what holds now.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
-- [design.md](design.md): its changes to the root's design.
+- [design.md](design.md): its changes to the root's design, applied at consolidation.
 - [decisions.md](decisions.md): SD-D1 to SD-D17, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T11 `done`, the rest `todo`.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, all `done`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -339,7 +343,7 @@ merges (SD-D14), its design text.
 - [SD-T10](tasks/archive/start.md): the start takes the screen first, then reads the vault. `done`
 - [SD-T11](tasks/archive/drawing.md): what drawing reads: links' targets, pictures, the scratch's places, the
   Problems'. `done`
-- [SD-T12](tasks/docs.md): the user docs, the design consolidated, the workstream closed. `todo`
+- [SD-T12](tasks/archive/docs.md): the user docs, the design consolidated, the workstream closed. `done`
 
 ## Decisions
 

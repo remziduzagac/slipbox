@@ -555,15 +555,12 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   a folder didn't answer in time; it's tried again in ten minutes`) — so is home's walk kept brought up to now for its
   graph, home walked again ten minutes later (`homeAgain(true)`), the vaults of the pass indexed meanwhile; a vault left
   for the next pass; home's index said (`home's index gave up: …; it's made again at the next pass`). The explorer's
-  listings have two threads of their own ([tui.md](tui.md) § Side panes).
+  listings are read on the two disk threads ([tui.md](tui.md) § Side panes, § A slow disk).
 
-  Not done: the rest of what reads a slow disk on the main thread still holds the TUI up while it's read — the watcher's
-  polling of the vault open (a stat per watched folder every two seconds, per note every thirty; its folders listed
-  again), the vault open built again (a reindex, the watcher's rescan, a vault gone into, a setting changed, a rename, a
-  branch's tabs in folders of home not walked), a note's text read to parse or open it, the explorer's own tree of the
-  vault open (`fromDisk`, its rows' marks) and the view's folder statted as its tree is built, slipbox's own state,
-  cache and config folders (under home by default: the machine's lists, the place the background index keeps), and the
-  walk at the start: a vault's before the screen is up, home's as it comes up, with the folders it asks for (its tabs').
+  The rest of what the TUI reads of the vault open, and of its own state, cache and config folders, is read off the
+  main thread as well, on the disk threads ([tui.md](tui.md) § A slow disk): the watcher's looks, a note's text, the
+  vault open built again, the explorer's own tree, what's drawn, and the walk at the start, made once the screen is up.
+  Writes stay on the main thread, and what a slow disk still holds it for is in [tui.md](tui.md) § Known limits.
 - **Freshness is checked, not assumed:** a build lists the folders again and keeps a file's entry only while its size
   and modification time match, since a folder's own time doesn't change when a file in it is edited; a file gone is
   dropped, or paired as a move ([links.md](links.md) § Repairs). Folders open are watched. What is covered and how

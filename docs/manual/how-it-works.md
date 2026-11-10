@@ -138,6 +138,51 @@ While you aren't working, the TUI also looks through your home folder a little a
 then the other vaults it finds there. So links from one vault to another count as backlinks everywhere.
 `index.background = false` turns that off ([Home](vaults.md#home)).
 
+## On a slow disk
+
+A network share, a drive that's asleep or a mount that answers slowly is a slow disk. The TUI reads it away from the
+screen, so the screen and your keys never stop for it. What slipbox already knew stays on the screen until the disk
+answers: links, backlinks, search, the explorer's folders and the notes you have open.
+
+What you see while it waits:
+
+- `reading <note>…` in a window, while a note you opened is read. The keys you type meanwhile act on the note once
+  it's there, and `esc` gives the read up ([Reading notes](reading.md)). A list's preview and a peek say `reading…`
+  instead, and your keys go on.
+- `listing…` under a folder in the explorer, while it's listed. Zooming into a folder waits for it as opening a note
+  does ([The zoom](files.md#the-zoom)).
+- `reading the vault…` in Background work while the TUI reads the whole vault again, and on the status line while your
+  keys wait for that: when slipbox has just started, in a vault you've just gone into, and after a rename or a folder
+  moved ([The index](#the-index)).
+- `reading notes…` on the status line, while the list of tags, a note's backlinks or a rename's preview waits for every
+  note to be read. Until then, the Problems panel's and Info's counts are of the notes read so far, marked `…`.
+- A picture's `▣` line, an embedded note's link and a link drawn as found, until their files are read. The note is
+  drawn again, where you were, when they come.
+- `⚠ disk not answering` on the [status line](screen.md#the-status-line), when the disk didn't answer within a minute
+  as slipbox looked for changes ([When a file changes on disk](editing.md#when-a-file-changes-on-disk)), read a note
+  changed outside it, or checked your config, git and the files you have open ([Reloading](configuration.md#reloading)).
+
+When the disk doesn't answer, slipbox never stops the screen to read it there instead. It gives the read up and says
+so: a note you opened, or a folder you zoomed into, after a minute, and you try again when you like; a look for changes
+after a minute, and a folder listed or the whole vault after ten, each tried again a minute later.
+
+Some things still wait for the disk, and the screen with them:
+
+- **Writing.** A save, a rename, a move, a copy, a delete, the scratch and an export are written as you make them, so
+  the screen waits until each is written. That keeps what's written in order, against another program's change and
+  against quitting. An autosave holds it the same way.
+- **Starting.** slipbox reads your config and the folder you named before the screen comes up; in your home folder,
+  whether your tabs' notes are still there too.
+- **Watching.** slipbox asks the system to watch each folder of the vault, and on a mount that has stopped answering,
+  that can wait for it.
+- **Its cache.** The search index and the cache of parsed notes are read and written as they're used. They're in the
+  cache folder, under your home folder unless you've moved it ([Cache](environment-and-storage.md#cache)).
+- **Another vault.** A peek into another vault, and a note reached in one, read that vault while you wait.
+- **A few small reads,** each when it's needed: the file a link you follow leads to; a heading link followed, or a
+  hover, on a note not read yet; whether a tab's file is still there as you go into a vault; git's checkout, for a link
+  to GitHub or GitLab; the reason the status line gives for a folder the index leaves out; which version of slipbox is
+  installed, every ten seconds.
+
 ## What reaches the network
 
 slipbox has no account and no telemetry. Built-in background or on-demand requests include:
@@ -180,6 +225,8 @@ or retitle your window.
   note at their top, which the explorer lists all the same. Home's index also leaves out hidden folders and `Downloads`,
   and holds 10,000 notes at most. `/` is never a vault: if you open it, it's listed a level at a time, never indexed
   whole.
+- **A slow disk.** The TUI reads one away from the screen, but a save, the start and a few other reads still wait for
+  it, and the screen with them ([On a slow disk](#on-a-slow-disk)).
 - **A change it can't see.** On a Windows drive under WSL, slipbox notices a Windows program's change only in the notes
   it has open ([Windows, through WSL](../guides/install.md#windows-through-wsl)).
 - **Most commands may still change before 1.0.** A stable few won't, and nor will the exit codes and the `--json`

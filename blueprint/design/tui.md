@@ -912,7 +912,8 @@ keys.
   lists them (`auto` worked out from the listed folder's own vault), hidden ones left out unless `files.hidden` is on,
   `.git` always (a busy folder is listed, VV-D8; below). Such a folder is read off the main thread (T12; `Listings` in
   `tui/workspace/explorer/listings.ts`, `core/workspace/walk/listing.ts`), so one on a disk that answers slowly never
-  freezes the keys or the screen: on one of two listing threads, apart from the walk's, its entries the explorer lists
+  freezes the keys or the screen: on one of the two disk threads (§ A slow disk), apart from the walk's, its entries the
+  explorer lists
   (a hidden name, while they aren't listed, never read) and what its rows and marks say of each (a folder or a file,
   where a link leads, a vault's key, name and branch, one you may not read, a busy folder) — a link's answer, and so its
   mark, still read here from the answers kept. Kept, at most 256 folders besides those the tree last showed (let go of
@@ -939,7 +940,8 @@ keys.
   bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when a thread takes
   it: one at a time on each thread, the others wait in one line, each going to a thread once it's free — never behind a
   folder that doesn't answer while the other thread is free. Stopped (the TUI quitting), a listing asked or waiting is
-  refused, never a thread started again for it. Until a folder's first listing answers, nothing is under it; after 150
+  refused, never a thread started again for it. Until a folder's first listing answers, nothing is under it but, in the
+  vault's own tree, the rows the walk gave; after 150
   ms a dim `listing…` row says it's being read, and one that can't be listed says why, in `l`'s words (`can't read: it
   isn't there`; `can't read: no answer in time`): rows that only say something, never opened or marked. On one, nothing
   acts on its own path (opening, zooming, copying its path, renaming, moving, deleting, copying or cutting it, a vault
@@ -974,7 +976,8 @@ keys.
   nor the scratch; the explorer's first showing, a workspace's tabs restored, and the filter's `esc` reveal the note
   only inside the view. **A folder gone:** the view and the trail go with a folder slipbox renames or moves
   (`followMove`, from `Renaming.apply`, as the folds do); one deleted, or gone outside slipbox, gives way to its nearest
-  folder still there when the tree or the breadcrumb is built again (`keepToWhatsThere`), the view's said (`~/x isn't
+  folder still there once a stat made off the main thread as the tree or the breadcrumb is built again says it's gone
+  (`keepToWhatsThere`), the view's said (`~/x isn't
   there any more: the view is on ~`). **Keys on a row:** `enter` (or a double-click) folds or unfolds a folder and the
   vault open's row, opens a note as a tab (or switches to the tab already showing it), asks to go into another vault
   (VV-D4, D270; § Going into a vault); `l` unfolds any folder or vault in place, another vault's listed a level at a
@@ -985,32 +988,33 @@ keys.
   a row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s` opens it in the split's
   other window. Moving the selection, or a click on a note, only selects; a click on a folder folds or unfolds it. New
   notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any folder you may read:** a
-  folder you may not read says why when it's opened on, unfolded or zoomed into (`can't read ~/x: you may not read it
-  (no permission)`), nothing unfolded; a file you may not write — it, or its folder, for the save's rename — opens
-  read-only (`buf.readOnly`), said at once and when typing is refused (`notes/a.md is read-only: you may not write it
-  (no permission)`). Gone with VV-D5: `..` and climbing above the vault, the other roots beside the tree (the one
-  opened, those pinned, a loose file's folder: the view holds them now), `:pin-root` (`vault.pin_root`, its `roots.json`
-  in the vault's state no longer read). Not done: Windows' drives and shares above everything (VV-D5), with native
-  Windows; the breadcrumb's top is `~` or `/`.
+  folder you may not read says why when it's opened on, unfolded or zoomed into — as its folder's listing read it, else
+  asked as a key's own read (§ A slow disk): `can't read ~/x: you may not read it (no permission)`, nothing unfolded;
+  a file you may not write — it, or its folder, for the save's rename — opens read-only (`buf.readOnly`), said at once
+  and when typing is refused (`notes/a.md is read-only: you may not write it (no permission)`). Gone with VV-D5: `..`
+  and climbing above the vault, the other roots beside the tree (the one opened, those pinned, a loose file's folder:
+  the view holds them now), `:pin-root` (`vault.pin_root`, its `roots.json` in the vault's state no longer read). Not
+  done: Windows' drives and shares above everything (VV-D5), with native Windows; the breadcrumb's top is `~` or `/`.
 - **What the walk leaves out, listed** (VV-D8; `tui/workspace/explorer/explorer-disk.ts`). In each folder of the vault's
   own tree the explorer shows — the view's, and each unfolded under it — what's on the disk that the walk didn't give is
-  read (`fromDisk`), a link aside (§ Links followed only when you say so, [roots.md](roots.md)), and a hidden name
-  unless they're listed (below). What the walk leaves out — `node_modules` and the other busy folders (D237: ignored, or
-  no note at their top; a notes `build/` is the vault's own), what `.gitignore` or `walk.exclude` leaves out, home's
-  skip list — is a row by its absolute path (`outside`, its `leftOut` the reason `exclusion` gives), listed a level at a
-  time as a folder outside the vault, never this vault's to rename, move or delete, nor to make a note in (`a folder
-  this vault doesn't index: select one it does`) — but what `walk.exclude` leaves out, your own setting, takes a new
-  note, a new folder or a paste as a typed path into it does, said `not indexed` (D246: `Files.newItemBase` gives the
-  row's folder when `Graph.notIndexed` says so of the row's path; a busy folder, a `.gitignore`'s, home's skip list or a
-  vault there is refused as before); a file of it opens from the explorer, and by `:e` the same way (D249), never
-  indexed; a note of it a link reached (`20.8`) is listed there, not under a folder of the vault's own. What it hasn't
-  reached — a folder it couldn't read, home's folders before its walk, a folder or file come since the walk — is the
-  vault's, by its path in it (`unwalked`), listed from the disk until the walk has it: so a top-level folder of home
-  unfolded before home was ever walked lists what's in it at once. `rowPath` gives a path at or under what the walk
-  leaves out its absolute path (a hidden one only in home); the view zooms out by itself to hold such a file
-  (`zoomToHold`: only a hidden folder's isn't, the hidden names not listed, `listedDown`), and the view's own folder can
-  be one (`ownView` null). The busy folders whose names start with a dot (`.venv`, `.cache`) are hidden, listed only
-  with the hidden names.
+  read off the main thread, as a folder outside the vault is (`fromDisk`, from `Listings`; the walk's verdict on each
+  entry made on the listing's thread: § A slow disk), a link aside (§ Links followed only when you say so,
+  [roots.md](roots.md)), and a hidden name unless they're listed (below). What the walk leaves out — `node_modules` and
+  the other busy folders (D237: ignored, or no note at their top; a notes `build/` is the vault's own), what
+  `.gitignore` or `walk.exclude` leaves out, home's skip list — is a row by its absolute path (`outside`, its `leftOut`
+  the reason `exclusion` gives), listed a level at a time as a folder outside the vault, never this vault's to rename,
+  move or delete, nor to make a note in (`a folder this vault doesn't index: select one it does`) — but what
+  `walk.exclude` leaves out, your own setting, takes a new note, a new folder or a paste as a typed path into it does,
+  said `not indexed` (D246: `Files.newItemBase` gives the row's folder when `Graph.notIndexed` says so of the row's
+  path; a busy folder, a `.gitignore`'s, home's skip list or a vault there is refused as before); a file of it opens
+  from the explorer, and by `:e` the same way (D249), never indexed; a note of it a link reached (`20.8`) is listed
+  there, not under a folder of the vault's own. What it hasn't reached — a folder it couldn't read, home's folders
+  before its walk, a folder or file come since the walk — is the vault's, by its path in it (`unwalked`), listed from
+  the disk until the walk has it: so a top-level folder of home unfolded before home was ever walked lists what's in it
+  at once. `rowPath` gives a path at or under what the walk leaves out its absolute path (a hidden one only in home);
+  the view zooms out by itself to hold such a file (`zoomToHold`: only a hidden folder's isn't, the hidden names not
+  listed, `listedDown`), and the view's own folder can be one (`ownView` null). The busy folders whose names start with
+  a dot (`.venv`, `.cache`) are hidden, listed only with the hidden names.
 - **Hidden names, listed unless turned off** (D250, D271; `files.hidden`, the explorer's `shift+h`). Off, nothing whose
   name starts with a dot is listed (`listsName`). On, the default since D271 — `files.hidden` in your config or a
   vault's, or a UI setting (`hidden_files`, `uiDefaults`) changed by `shift+h` (`toggle_hidden`, the command
@@ -1077,7 +1081,8 @@ keys.
   `a link followed, its disk not answering`, `a link to a folder holding the vault`,
   `a second link to a folder followed already`; a note `over walk.max_file_size`; a folder of home past its walk's cap,
   `past home's limit of 5,000 folders` (or its notes'). What the disk says of a row (`Facts`: access, a broken link, the
-  size, a vault's index and branch) is read once per row drawn, again when the tree is built again: never for the rows
+  size, a vault's index and branch) is its folder's listing's (`Marks.listedFacts`), read with it off the main thread,
+  again when the listing is: never for the rows
   out of sight, so the pane's width for its sideways scroll keeps the index's column for every folder and vault, and a
   file's mark only the disk gives may take a name's last columns. Never either for the row of a folder where another
   disk is mounted (VV-D2), nor by `rowPath` or a left-out row's check for a marker: one that stops answering would hang
@@ -1710,8 +1715,8 @@ past theirs), so the content behind never runs up to the edge.
   entry to pick opens the path as typed, `:e` saying why when it can't. A folder a link not followed leads to (VV-D6;
   `Following.blocked`, else `blockedThere` by the rule of the place holding it) isn't listed: one row says where the
   link leads, `→ ~/out  not followed`, and `enter` on it asks as the explorer does (follow it, just look, no); followed
-  or looked at, the list comes back with the folder listed. Folders are read on the listing threads the explorer
-  shares (T12; `listThreads`), each once while the list is open, and one at a time across every list of paths: a folder
+  or looked at, the list comes back with the folder listed. Folders are read on the disk threads the explorer shares
+  (T12, SD-D2; `diskThreads`), each once while the list is open, and one at a time across every list of paths: a folder
   typed while another is read waits for it (`reading ~/x… once ~/y answers`), so one that doesn't answer holds one
   thread, never both. `reading ~/x…` until it comes; why when it can't be (`~/x: it isn't there`, `no answer in
   time`). `:e` reads `~/` as home too.
@@ -2398,8 +2403,8 @@ Quitting with unsaved changes is refused (`:q!` quits anyway); a signal still qu
 
 The watcher subscribes to exactly the directories the walk includes: one non-recursive watch per
 directory, sharing the walk's `WalkFilter` (D40). Events are debounced
-(`watch.debounce_ms`) and settled by `stat` (D137). The graph follows the watcher's news, updated from each batch
-rather than rebuilt (`5.8`; D137).
+(`watch.debounce_ms`) and settled by `stat`, on a disk thread (D137; § A slow disk). The graph follows the watcher's
+news, updated from each batch rather than rebuilt (`5.8`; D137).
 
 - **Changed:** a note without unsaved changes reloads silently (plan `5.3`), as one more undo
   step. Its anchors keep your place, and the change is surfaced at once with `↻ reloaded` and a
@@ -2464,7 +2469,8 @@ Found while testing, on Linux and then on macOS. Bun's `fs.watch` drops some eve
 
 **The second look.** On macOS one FSEvents stream serves every watched folder, and Bun restarts it "since now" each
 time a watch is added or removed: at start, and whenever a folder comes or goes, nothing anywhere is reported for a
-moment. So each tick stats every watched directory (the check that each still exists took that stat already) and
+moment. So each tick stats every watched directory on a disk thread, a hundred a request (§ A slow disk; a tick whose
+answer hasn't come asks nothing new; the check that each still exists took that stat already), and
 lists one again only when its mtime moved since what it held was last known. What it holds that isn't known (a note,
 an attachment, a folder, adopted with all inside) is pending as if its event had come, and so is what's known there
 and gone; the debounce settles them with the events that did come. A folder that changed after the walk began, which
@@ -2475,7 +2481,8 @@ is older, since a coarse clock (FAT's, HFS+'s) can give the next change the same
 (`~`, `/`), the second look takes in notes only. A note rewritten in place moves no folder's mtime: the sweep finds
 that.
 
-The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes. A change counts
+The tick runs every `watch.poll_ms`, and every 15th tick sweeps all known notes, a hundred a request, each asked when
+the last answers. A change counts
 when a note's mtime or size differs, so a rewrite in the same second is still seen. Attachments (any
 non-note file but editors' temporary files) are reported too, re-laying out only when the attachment
 index actually changes, so `![x](image.png)` images change status as they come and go; a note that
@@ -3190,6 +3197,47 @@ runs the binding.
 - **A big note's first open reads for a moment** (plan `15.1`; D120): with 128 KB or more to parse, it parses on other
   threads — the window says `reading big.md — 20,000 lines…` for about a third of a second at twenty thousand
   lines, keys wait for it, a click is dropped — then the note is drawn where it was left.
+- **A save on a slow disk holds the screen for its write** (SD-D7): a note's save, a file operation, the scratch and
+  slipbox's own state are written on the main thread, where their order against the watcher and quitting is kept. So
+  are the reads that go with them: a save's check that the file is as read and git's lock looked for before an
+  autosave (`Git.indexLocked`), a file operation's guards and a rename's reads of the files it rewrites, the stamp a
+  write with none tells the watcher (the scratch's, `noteOwnWrite`), and the reads that merge slipbox's own state with
+  another slipbox's (the positions, the workspace, the machine's lists as a vault is recorded, `recordLocation`).
+- **The parse cache is read on the main thread** (SD-D12): it's in the cache folder, local by default, and goes with
+  the parse, which stays.
+- **The search index is opened on the main thread** (SD-T9): a vault gone into opens its own (`search.db`) and keeps
+  it current with SQLite's calls, which wait; it's in the cache folder, local by default. Catching up after a build, it
+  reads each new or changed note's text here in 12 ms slices (`IndexJob.step`), and a change the graph hears of is
+  indexed here at once (`tui/workspace/search/search.ts`).
+- **The upgrade check reads on the main thread** (SD-D1's note): every ten seconds, a `readlink` in slipbox's data
+  folder, where its versions are; never the vault's disk.
+- **A disk that never answers keeps a thread** (§ A slow disk, "Deadlines"): on a hard NFS mount a read can wait in the
+  kernel for good, and ending its worker can't end it. The request is given up on and a thread started afresh; the old
+  one stays until the disk answers, at most one a minute while it's gone.
+- **The rest a slow disk still holds the screen for** (§ A slow disk; gathered from SD-T1–SD-T11's tasks as the
+  workstream closed). Kept, beside the writes: what the start reads before the screen is up (SD-D9: your config, the
+  path named, `--base`, the machine's list; in home, the workspace and whether each of its tabs' notes is there,
+  `Vaults.tabFolders`); registering a folder's watch (`fs.watch`), where its events come in, which on a mount that hangs
+  can hang with it; another vault's graph, built and parsed here for a peek or the reach (`parseHere`), and a file
+  reached (`reachFile`); a theme's file looked for in your config's `themes` folder; an SVG's rasterised PNG looked for
+  in the cache folder; the CLI's every read. Not moved, each a small read a key or a draw makes as it's needed:
+  - a note not parsed yet that a key asks of alone: a heading link followed (`landingLine`), a hover's text, a note's
+    links listed, a link written in the folder's convention (`Linking`), a note typed into before it's parsed;
+  - a build's answer taken: whether each path changed meanwhile is there (`takeAgain`), git's renames
+    (`catchUpWithGit`) and the branch it reads (`branchNow`);
+  - whether a tab's file, or one a switch opens or offers a peek at, is there (`tui/workspace/vaults/vaults.ts`);
+  - a link a key follows, resolved through the seam at once: its file statted and, on macOS, the folders on its way
+    listed for its name's case (`onDisk`); a link's way checked for `t` in a peek (`peekKeep`) and for a claim through
+    a link (`claimThroughLink`); a file read for its diff from the git panel (`readForDiff`);
+  - the explorer's words for a busy folder selected (`Marks.leftOutWords` → `busyWhy`: a folder's note looked for), and
+    its breadcrumb's `isVaultRoot`, kept per folder;
+  - what drawing still asks as it's drawn, measured in SD-T11's log at about 340 reads over the demo vault's and the
+    reference set's 167 notes, from 4,120: git's checkout looked for and read, for a hosting link and a peek
+    (`core/workspace/git/git.ts`); a folder's `.gitignore`, for what the explorer leaves out (`gitignoreFor`); a vault's
+    identity and remote and the named folders, for a pointer's name (`core/workspace/vaults/folders.ts`); the status
+    line's words on a link's row (`Following.describe`); another note's text, for a block's line (`overlayText`). Git's
+    operation under way (`operationOf`), counted there too, is the TUI's look's to keep, and the machine's list
+    (`recordLocation`) is a write's, above.
 
 ## Parity with the CLI
 
@@ -3223,6 +3271,299 @@ separate policies for git mutations.
 Opening defaults (VB-D2): `render.notes`, `render.code` and `render.data` are true by default. False opens SOURCE;
 READ and its lens remain available where supported. Legacy code `"document"`/`"source"` reads as true/false, and
 `editor.edit_in = "live"` reads as `"lens"`.
+
+## A slow disk
+
+What the TUI reads of the vault open's disk, and of its own state, cache and config folders, it reads off the screen's
+thread, so a disk that answers slowly — a network share, a drive asleep, a FUSE mount — never stops the keys or the
+screen (SD-D1). T12 moved the walks it makes by itself and the listings of folders outside the vault
+([roots.md](roots.md) § The index; § Side panes); this section is the rest. Writes stay on the screen's thread
+(below), and what a slow disk still holds the screen for is in § Known limits.
+
+**The disk threads** (SD-D2; `DiskThreads` in `core/workspace/walk/walk-thread.ts`, served by `list-worker.ts`, what
+they answer in `disk-jobs.ts`): two, light — no index, no parser — each started on its first request. A request goes to
+the first thread free, in the order asked, so never behind one that doesn't answer while the other is free; a walk
+takes a thread only while the other is left for the rest, and until then waits, the requests asked after it going past
+it and a second walk waiting behind it. Once it has waited a look's deadline it's passed no more: it takes the next
+thread free, unless the other is walking; so does a key's build's walk from the start, every key waiting for it
+(SD-T8). A background request (the watcher's looks) takes a thread only while no other background request holds one,
+the rest going past it meanwhile. They answer, the same code as the thread that asks would run, through the seam
+below, with what that thread knows and they can't see for themselves (`walkContext`); a path's own error is its answer,
+and a request fails only when its thread does:
+
+- `list`: a folder listed (`listFolder`, as the explorer's listings have it); for a folder of the vault open, each
+  entry with the walk's filter's verdict on it (`exclusion`), made there;
+- `stat`: a batch of paths, each one's kind, mtime, ctime and size, or its error's code; its links followed, or a
+  link's own (`lstat`);
+- `read`: a file's text, decoded as `readText` decodes it (its BOM, line endings, invalid UTF-8), with the stamp of the
+  file it opened (`readTextStamped`), so a save renamed over it meanwhile is neither's; refused, as `readRegular`
+  refuses, when it isn't a regular file;
+- `access`: whether a folder can be listed and gone into, in `folderUnreadable`'s words;
+- `walk`: the vault open's walk for a build (`walkVault`; `listDirectory` in Elsewhere; home's walk kept brought up to
+  now, `homeWalk`), with its index's text and stamp.
+
+And, for the features below, their own: `look`, a look's jobs and its stats (`look-jobs.ts`: git's state, a way checked
+for a link not followed, a note's text, the answers kept for links); `open` and `gitRead`, a key's own read
+(`key-jobs.ts`); `own`, slipbox's own folders (`own-jobs.ts`); `draw`, what drawing asks (`draw-jobs.ts`). None of them
+loads a parser, so the threads stay light.
+
+Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
+`lstat` (its real path, whether anything is there, whether you may use it: `folderUnreadable`'s), a file's bytes. The
+CLI reads through it too, on its own thread. It keeps two listings apart (SD-T1). The walk's (`readFolder`: a walk, a
+disk thread's `list` — the explorer's own tree's too — the filter) takes the slow disk stood in for on every thread,
+the screen's too, as since T12, so a walk or a listing put back on the screen's thread is slowed there and the checks
+see it. The rest (`entries`: the watcher's listings; and every stat and read) takes it on every thread but the
+screen's, where what stays (below) and a test's App read at once; a test's hold reaches the threads it asks, the
+screen's too, so a held test of a feature whose read is put back on the screen's thread holds its key past the hold's
+deadline (`gaveUp`) and fails.
+
+**Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
+thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
+search), the explorer's rows, an open note's text. Where you'd act on what isn't read yet, it says so: a build's row
+among the background tasks (`reading the vault…`, beside `Indexing`), `listing…` under a folder not listed yet,
+`⚠ disk not answering` on the status line while the watcher's look, or the TUI's look each second, doesn't answer.
+
+**A key's own read** (SD-D4). Opening a note — as a tab, by a link, from a list, at the start — zooming into or
+unfolding a folder, `:e!` and a reload by hand (`space n r`) read on a disk thread. The key waits, and the keys after it
+wait their turn (`Input.handleKey`), as for a big note's parse (§ Known limits); the screen draws, `reading <note>…` in
+the window the note will be in. `esc` is taken at once, out of turn: it gives the read up and leaves you where you were.
+Past its deadline the read is said (`<note> didn't answer: not opened`), nothing opened. The keys typed meanwhile are
+dropped when the read is given up, fails or opens nothing. A list's preview and a peek read without holding the keys,
+`reading…` in the preview or the peek until it comes; a newer selection, or another peek, drops its answer, the read
+itself withdrawn while it waits for a thread, else left to finish, its thread not started afresh; they're read in the
+background, on one thread at most. A step back or forward in a peek stays where it is until the place is read; a place
+gone since is said and let go of. A click while a read waits is dropped, as during a big note's parse. When the
+session's tabs are brought back, the tab shown is read first — a vault gone into with a file named, the tab with it —
+the keys waiting for it alone; then the rest in order, one at a time, in the background, on one thread at most. None of
+them readable, the vault's own note opens, as when none was kept. A key that needs notes not parsed yet — a rename's or
+a move's plan, the tags, the problems, the link forms, a backlinks list — waits for their texts the same way (`reading
+notes…`), and nothing is planned from notes not read. The open's check of the way for a link not followed is made with
+its read, a preview's and a peek's with theirs (`answerOpen`, `key-jobs.ts`): a link of the vault's that keeps an open
+or a peek asks its question then, as opening it here would, and the file is read again once answered; a note open
+already has its way checked again before a key shows it, since a link followed may lead elsewhere now; a preview says it
+isn't followed. What a key does once its note is open — its line found, a new note typed into — waits for it. git's keys
+ask their stats (git's index, `HEAD`, the note's) and whether a file is there before opening it the same way; the stats
+are asked again once, in the background, when all a git read reads is in, before it's shown.
+
+**Every answer checked** (SD-D5). A request carries what it was read for, and its answer is taken only while that
+holds: the watcher's `sync`s, the graph's `builds` and the vault open, a buffer's version and stamp, the tree's
+settings, the view. Otherwise it's dropped, or asked again at once when only the settings moved. A build's answer
+taken, what changed in the graph while it was out (the watcher's, slipbox's own writes, a file reached) is applied
+again over it, as home's refresh does. A stamp is compared with what's known when it comes: an own write recorded
+meanwhile (`noteOwnWrite`) decides.
+
+**Deadlines** (SD-D6). A deadline is set by what asked, not by the request's kind: whatever a look asks (a `stat` or a
+`list`), a key's read and a folder's check have a minute; the explorer's listings ten (T12's), a walk ten;
+`SLIPBOX_SLOW_DISK`'s third part shortens them all. Each counts from when a thread is handed the request; a walk's from
+when it was asked, its wait for a thread included, so it's answered or failed, never left waiting. A request past its
+deadline is failed and its thread started afresh for the rest; it's never read on the screen's thread instead. The
+watcher's look, or the TUI's, given up on says `⚠ disk not answering` once and is asked again a minute later; a key's
+read is said; a build says `reading the vault gave up: a folder didn't answer in time` and the graph stays as it was.
+A look's batch — one `stat` of every path it stats and a `list` of each folder it lists, asked together — is answered
+once all have; once one gives up, it's failed: what of it still waits for a thread is withdrawn, never sent, and what
+of it was sent is given up, its thread started afresh. A disk thread with nothing asked of it for a minute is let go
+of, and started again on the next request: a request takes the first thread free, so while a vault is watched only
+the second is let go of.
+
+**What's read where:**
+
+- **The watcher's look** (SD-D8, SD-T3; § Bun's watcher, and what covers its gaps). The watcher keeps its state and
+  logic here, and its `fs.watch` registrations, whose events come here. Each tick asks its stats a hundred a request
+  (`SLICE`), each taken as it answers — the watched folders' stamps, each with its `.gitignore`'s, and the notes
+  followed into folders left to home's walk — and last, in a request of their own, a `list` of each polled folder, so
+  one that doesn't answer (a network mount, most often) costs only its listing, asked again at the next tick; and every
+  15th tick the sweep's stats of the known notes, a hundred a request, each asked when the last answers; a sweep still
+  under way at the next 15th tick goes on, and none other starts. A tick whose answer hasn't come asks nothing new. A
+  folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, a hundred a
+  request, each settled as it answers, and where a note that went has gone (`movedTo`); the batch goes to the feed when
+  they answer, events meanwhile waiting for the next. Each entry a listing finds is judged there with it, by the walk's
+  filter (`exclusion`) and a link's verdict (`symlinkVerdict`), as the explorer's are
+  (`core/workspace/graph/watch/judging.ts`), the filter made once on each thread and made again once the watcher's
+  moves on (`WalkFilter.epoch`: a `.gitignore` seen changed, the mount table read again). A folder registered asks its
+  stamps there — its own and its `.gitignore`'s, with the next look, a hundred a request — compared, when they come,
+  with the walk's that found it (`Graph.dirStamps`); one that came is listed there a folder at a time, nearest first,
+  each stamped as it's listed and watched as it answers. A look given up on keeps what answered before: what it settled
+  is said, what it didn't, and the folders it hadn't listed, are pending again; a tick's folder gone or `.gitignore`
+  changed stays seen, the folders not stamped yet are stamped by the next look, and the next tick starts after the
+  slice given up on and goes round to it, no slice across the end, so one that never answers keeps none behind it from
+  being looked at. The watcher's logic is written as looks (`watch/reads.ts`), each yielding the batch it needs: one
+  out at a time, a flush asked meanwhile made once it answers — or, a look in slices (a tick's, the stamps'), between
+  two of its slices — the sweep a chain of its own that asks nothing while the looks are paused; the warning cleared
+  only by an answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a
+  time, so a key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on
+  the thread that asks, with the same code.
+- **The TUI's look each second** (SD-T4; § External changes). One batch a second, never two out, asked as one request,
+  so a look holds one disk thread — a background one, as the watcher's are, with its second batch, the feed's question
+  and git's lock, so the two looks never hold both threads: git's state where the vault is, read whole there as the
+  screen's thread read it — the checkout, `HEAD` and its commit, its `index.lock`, its rebase folders and what an
+  operation under way leaves there; each open file of the vault's way checked there for a link not followed, the file
+  statted only when there's none; then a `stat` of the open files no watcher sees, of your config's and the vault's
+  `.slipbox/config.toml`, of the CLI's activity file (which the background index statted every quarter second) and of
+  Obsidian's or zk's settings — their folder by whether it's there (Obsidian rewrites what's in `.obsidian/` while it
+  runs), their settings file by its mtime. Your config and the vault's are read and parsed there when their stamps
+  moved, and Obsidian's or zk's settings with them, a second batch. What comes back is taken against what's there then
+  (SD-D5): nothing for a vault left, a file's stamp only for a buffer still open and as it was, a way only while the
+  answers to links are as they were, git's state only when no question of it asked later has been answered first — so
+  `HEAD` never moves back, and an operation a key read at once isn't drawn over. A batch the watcher brings asks git's
+  state there before it's applied (D153), one question out at a time; while git holds its lock, the lock alone is
+  asked every 100 ms, one stat out at a time. What the top bar and the git panel draw of git — the branch, the
+  operation under way — and the tool's settings the links' convention says are what this look last found (SD-D13),
+  never read as they're drawn; a key that acts on the operation reads it at once. A key that ran git (a checkout, a
+  pull, a merge, a rebase's step) asks a look and goes on once it has answered and a switch is done, as on the
+  screen's thread. Given up on, a minute on, it's said once in Messages, the status line says `⚠ disk not answering`
+  as for the watcher's until a look answers, and nothing is asked for a minute (SD-D6): no look, nor the feed's
+  question (its batches applied as git was last seen); a look wanted meanwhile is asked once the minute is over.
+  Before a look has answered, and while it's given up on, the activity file's stamp isn't known, and the background
+  index waits (20.9). A test's App looks on the screen's thread, at once, as before.
+- **A note's text** (SD-T6, SD-D16). The look jobs carry it (`notes`: a note's stat and text from one open,
+  `walk.max_file_size` at most, as the walk takes it; `texts`: a note's text), in a background request with a look's
+  minute, read by `core/workspace/walk/io/notes.ts`, which holds no parser. The watcher's batch (`VaultFeed`): its
+  changed notes and the open files it names read in one request before it's applied (`Texts`,
+  `tui/app/runtime/texts.ts`), the graph parsing each from the text given (`extractRead`); one batch's out at a time,
+  those received meanwhile applied after it, a note changed in the graph meanwhile (a save of slipbox's own) left as
+  it is, and an answer for a vault left dropped. An open file is checked against what it holds (`asRead`) and reloaded
+  from what was read, unless it was saved, read again or opened since (its stamp moved): then what was read is older.
+  Given up on, the batch is said once (`⚠ disk not answering` until one answers), held, and read again a minute later,
+  never here. An open file the look each second found changed, and the graph doesn't know, is read there before it's
+  reloaded. The background parse (`parseInSlices`) asks the next slice's texts — up to 50 notes of one folder, so a
+  slow folder holds no other's in its request — while what's given is parsed: one slice out, two slices' texts at
+  most; `Graph.parseSome` parses only the notes whose texts were given (`NoteTexts`, `core/workspace/graph/texts.ts`).
+  A big note's text is read there before and after its parse on the parse threads. A slice given up on is said and put
+  aside a minute. What's drawn (`drawApp`), a completion and the Problems and Info panels ask of the notes
+  `partially`: a note not parsed yet is its stub, every note's list is of those parsed so far, a heading link into one
+  isn't checked yet, and the Problems tab's `All (n…)`, the Info panel's backlinks and convention are marked `…` until
+  the parse is done. A key that needs every note — a rename's or a relink's preview (`Renaming.preview`), the tags'
+  lists, the backlinks list — waits for the parse to have them all (`KeyReads.notes`): the keys after it wait,
+  `reading notes…` on the status line, `esc` gives it up; a slice given up on meanwhile is said. Anything else that
+  asks of a note not parsed yet reads it here, as before (§ Known limits).
+- **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows — the view's, and each
+  unfolded under it — are listed as the folders outside it are (`Listings`: kept, read again once a second old as the
+  tree is built — one the watcher saw change, once a second old, the tree built again then for it (`Listings.changed`)
+  — and however old, the tree built again for it, once a vault one shows unmarked has its index said
+  written, its row's mark the listing's — `onIndexWritten`, said by a write on the screen's thread and where a peek's or
+  the background index's thread's is recorded; `Listings.indexed` drops a read under way then, a first one too; drawn
+  only when the listing's digest changed), with the walk's filter
+  (`list`'s `own`: its settings and its epoch, the filter made once on each thread, as the watcher's judging is): each
+  entry with the walk's verdict on it (`exclusion`: a busy folder's note looked for, the `.gitignore`s read, a nested
+  vault's marker, all there) and a note the walk didn't give over `walk.max_file_size` said (the notes it gave there
+  named to the thread, `own.walked`, never statted). Another disk mounted at an entry is never looked at: its verdict is
+  its name's, `walk.exclude`'s and the `.gitignore`s' holding it (`mountExclusion`). `fromDisk` builds what the walk
+  didn't give from those listings, nothing read on the screen's thread; under a folder whose listing hasn't come, or
+  gave no answer, its unfolded folders are listed for their rows' marks alone, since which of them is a link the walk
+  followed is that listing's to say. Every row a listing gave carries what it read (`TreeRow.listed`) — where a link
+  leads, a nested vault's own name, its branch and whether its index is in the cache folder — and its marks are the
+  listing's (`Marks.listedFacts`; home's own row above the view, no vault's by a marker, has its index and branch read
+  here, as the vault open's row always had); a row of the vault's own tree whose folder's listing hasn't come is drawn
+  as the walk gave it, by its folder's name for a nested vault, unmarked, and nothing is read for it. A folder not
+  listed yet keeps the walk's rows, `listing…` first under it after a moment; one whose thread gave no answer says so
+  there (`can't read: no answer in time`), read again a minute later. Whether a path is left out (`Paths.leftOut`: a
+  row's path, `rowPath`, and the tree's top, `leftOutAt`) is the verdict of the listing of the folder holding each
+  folder on its way; while that listing is read, by the name alone (git's and slipbox's own folders, a hidden name,
+  `walk.exclude`, a folders-only pattern only for a path the walk doesn't know as a file), else not known yet. A folder
+  kept unfolded, or a row to select, stored by its path while its verdict wasn't known is moved to its row's path once
+  the listing says (`Paths.rekey`, as the tree is built), and back if that changes. The view and the trail are statted
+  there as the tree is built — they and the folders above them, one request out at a time — and the view gives way when
+  the answer says its folder is gone, only while the view and the trail are those it asked about. A zoom (`z`, `-`, the
+  breadcrumb, `shift+h` out of a hidden folder), `l` on a folder whose listing hasn't come and the start's folder ask
+  `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers, and what the key
+  does after the zoom done only then; the start's once what it opens is in (SD-T10). A file operation of slipbox's
+  lists the folders it changed again as a key's own read too (`Explorer.afterOp`, `Listings.relist`), what it selects
+  selected once a listing of each is taken, by whichever read takes it: no key after it acts on a row listed from
+  before it. One `Listings` keeps both sides' folders, 256 at most; a folder listed on both (a nested vault's, unfolded,
+  a path in it asked) is kept once for each.
+- **The vault built again** (SD-T8; `Builds`, `tui/app/runtime/builds.ts`). A reindex, the watcher's rescan, a setting
+  of the walk changed, a vault gone into, a branch's tabs and the folders asked for in home read the walk and the index
+  on a disk thread (`walk`, a walk's ten minutes to answer); the graph stays as it was meanwhile, `reading the vault…`
+  among the background tasks, where it can be stopped. A build the TUI's graph asks of itself without a walk given —
+  the rescan's, the folders asked for, a file operation's — goes there through `Graph.rebuilder`; the CLI has none,
+  and builds as before. The index crosses as its text, parsed here as it is now, with the hashes of the new notes a
+  move could be (a vanished note's size) read beside it, so the moves are found without a read here; home's refresh
+  after its walk takes its index from the walk's thread the same way. An answer is taken only while the vault open
+  and its graph are the ones it was asked under. When something else has built that graph since (`Graph.builds`:
+  home's refresh), it's read once more, then taken whatever was built meanwhile, so a busy vault never keeps it out;
+  a graph made anew is never read again for it. What the graph took in meanwhile — the watcher's changes, slipbox's
+  own saves, a file reached — is taken in again over it, as home's refresh does (`since`). Asked again while one is
+  out, it's asked once more when that answers, every ask meanwhile as one; a setting of the walk, which makes the
+  graph anew, takes the place of the one out, and what a build of the graph as it was follows (`Watch.rebuilt`) still
+  follows when one was asked of it too. Given up on (SD-D6): `reading the vault gave up: …; it's read again in a
+  minute`, the graph as it was, and asked again a minute later, while the vault and its graph are the same, with all
+  it was asked, what waited for it too, as one build — and, for a graph never built, what's asked to follow it in that
+  minute: a vault gone into whose session answers then opens its own note once it's read. An answer that can't be taken,
+  a step of building from it failing, is said (`reading the vault failed: …; :reindex tries again`), every key let go. A
+  vault gone into has a graph never built until its first answer: the keys wait for it as for a key's build, whether a
+  note was named, the tabs brought back or neither, `reading the vault…` in the status line, `esc` not letting them go,
+  and the background tasks can't stop it — they'd act on an empty graph, a rename rewriting none of the links to what it
+  moves. Its note opens once it's built. A key's build's walk takes a disk thread at once, as a key's read does, not
+  waiting for the other to be free: the thread SD-D2 keeps free is the keys', and every key is waiting on this walk —
+  going into a vault, slipbox's own folders on a slow disk (SD-T9) would otherwise hold it, and the keys, behind them.
+  After a rename or a folder operation (SD-D11), the build is read there
+  too, but the keys after it wait their turn, as after an open, `reading the vault…` in the status line, and `esc`
+  doesn't give it up, nor can the background tasks: the write is made, and the graph must follow it. So does the
+  vault walked again for a link followed or forgotten (VV-D6), its target answering as slipbox starts among them: the
+  next key finds what's through it, or no longer does — a list of notes opened then, all of them. Measured at
+  10,000 notes (an index of 10 MiB, a local disk): the walk and the index's text crossing hold the screen's thread
+  3–6 ms, the graph built from them here 25–29 ms, 18 of it the index parsed; built here whole, as before, 54–62 ms.
+  The index sent parsed would hold it 13–18 ms as it crosses, saving no more than the parse.
+- **slipbox's own folders** (SD-T9). What's read of them at a vault gone into, as the Vaults window opens and as a
+  link's completion asks is read there (`own`), what was read last used meanwhile. Going into a vault, its session and
+  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into once its
+  graph is first built (SD-T8), and its tabs open where they were left once it answers — not over a tab opened
+  meanwhile, though the note the switch was for opens and is shown all the same, unless you opened it yourself
+  meanwhile; the recents of the moment first, a UI override set meanwhile kept; its session isn't saved until then.
+  The machine's positions are carried over from the vault left — moved along with a vault moved by hand, as the
+  file's are — and your config is what the TUI's look last read by its stamp, neither read again. The Vaults window
+  lists the vaults last read (`Vaults — reading the list…` the first time), then what the disk says, its filter and pick
+  kept; a link's completion offers this vault's notes and the other vaults' last read, then theirs as read — in the
+  background, one read out at a time, a list opened meanwhile taking its answer and then one more read, and built only
+  for a list still open. The answers kept for links followed (`links.json`) are statted by the TUI's look and read there
+  when they moved, a read older than an answer written here dropped; a write reads the file first and keeps what it
+  wrote. Measured on a home answering in 100 ms an op (SD-T9's log), a vault gone into holds the screen about 5 s less,
+  the Vaults window opened again not at all; what still holds it there is the writes with the reads that merge them
+  (below) and the search index (§ Known limits), the vault's index being read with its walk (above).
+- **The start** (SD-D9, SD-T10; SD-D15). The screen is taken first: `prepare` builds no graph, and the App asks the
+  vault's first build of `Builds` as it starts (`Vaults.ask`), its walk and index read on a disk thread as SD-T8 reads
+  a vault gone into's — home's with the folder opened and its tabs' (`homeWalk`). Your config, the path named, `--base`,
+  the machine's list recorded and the session (for the folders of home its tabs are in) are read before, as they say
+  what the screen is. What the start opens is a key's own read, made meanwhile (`openInitialWindows`): the note named,
+  the session's tabs (a restart's, its window's), or, once the graph says which, the vault's own note — none, said. A
+  note read before its graph is built waits for it: its window says `reading the vault…` (`Builds.awaited`), its place
+  kept for the layout to come, and the keys after it wait (SD-T8's first build). `q`, `ctrl+c` and `ctrl+q` quit at
+  once, out of turn, while the vault open's graph has never been built (`Builds.unbuilt`), a vault gone into's too;
+  `esc` gives up the note's read, the window left empty, the vault read all the same. The explorer's view goes to the
+  folder opened, and what's said when nothing opens is said, once what the start opens is in. While the session's tabs
+  are coming back it isn't saved over (`Session.coming`): a quit before they came keeps them for the next start.
+  Nothing acts on a graph of no notes: the search index isn't caught up with it (`Search.start`; it would let go of
+  every note it holds), and home's walk asked again, the graph's errors and the offer to relink what a move broke
+  follow the first build (`Builds.after`). A vault that doesn't answer in time: its note shown as its text if its own
+  read answered (`awaited` no longer), its links drawn as resolved, the vault asked again a minute later and the note
+  drawn again when it comes; its read given up too, both said, nothing opened. A restart is brought back the same way.
+- **What's drawn** (SD-D13, SD-D17; SD-T11). A draw never reads the disk and never waits. What a layout asks of the
+  disk — a link's path (a `/…` link's first folder, a nested vault's file, a file outside the vault), a name's case on
+  a disk that folds it, the machine's named folders for a pointer or a hosting link, an embedded note's text, a
+  picture's file and an SVG's text — the scratch's places' files and the notes the Problems panel's vault lint names
+  are answered from what's kept (`Drawn`, `tui/app/runtime/drawn.ts`): a path of the vault open from the walk, the
+  rest from what a disk thread last answered. What isn't kept is asked of a disk thread in the background, one `draw`
+  batch out at a time with a look's minute (`core/workspace/walk/draw-jobs.ts`), and the layouts are drawn again from
+  their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn as resolved — but one to a path
+  the walk didn't give in a folder it listed, drawn broken as the walk says (a note not written yet) — a pointer as
+  not found until the named folders come, a picture's or an embedded note's place is said, a scratch place is said
+  nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn two seconds after it was read is
+  asked again, drawn as it was until the new one comes; one of a file the watcher sees change, as it's next drawn.
+  Given up on, the batch is asked again a minute later (SD-D6). A link's questions go through one probe
+  (`core/workspace/links/path-probe.ts`), the seam's at once unless the drawing answers for the layout it makes and a
+  note's own problems it checks (`Drawn.during`): the CLI, a key's follow and the vault's problems read as before. The
+  host's picture takes its file's mtime from the drawing and keeps it for the picture it draws; an SVG's rasterised
+  PNG is looked for in the cache folder here. A test's App reads at once, here, unless it asks (`listOffThread`).
+
+**What stays on the screen's thread** (SD-D7). A note's save (`App.writeBuffer`: its check that the file is as read,
+its atomic write, its write through a link, D220, its stamp told to the watcher), a file operation with the checks its
+guards make before writing, the scratch, an export and slipbox's own state are written here: their order against the
+watcher's next look and against quitting is what keeps a note safe. So is what slipbox's own state reads to merge
+with another slipbox's before it's written: the positions and the session saved, the machine's lists, the background
+index's place. So does registering a folder's watch, and the CLI's every read. Another vault's graph, built for a peek
+or the reach, is built here ([ideas.md](../ideas.md) § Roots and vaults). Parsing stays here, and with it the parse
+cache (`parsed.db`). A test's App reads here, at once, unless it asks for the disk threads
+(`AppOptions.listOffThread`, the TUI's, named for the explorer's listings it first covered: SD-D10).
 
 ## Vault-switch ownership (VB-D4, VB-T3–T5)
 
