@@ -5,6 +5,7 @@ import { workerUrl } from "../src/core/foundation/workers/url.ts";
 import { grammar, parseSyntax, commentLinks } from "../src/core/documents/syntax/syntax.ts";
 import { SYNTAX_SOURCE_LIMIT, stopSyntaxThread, syntaxOnThread } from "../src/core/documents/syntax/syntax-thread.ts";
 import type { SyntaxSnapshot } from "../src/core/documents/syntax/syntax-worker.ts";
+import { fakeWorker } from "./support/fake-worker.ts";
 
 const source =
   "/** See https://example.org/docs */\nexport function greet(name: string) {\n  return `Hello ${name}`;\n}\n";
@@ -57,7 +58,6 @@ test("a source under its limit whose structure is bigger than its text: all of i
 });
 
 test("the syntax thread takes an answer of any size: its source's limit bounds it", async () => {
-  const real = globalThis.Worker;
   // A thread answering with an outline entry whose name alone is 18 MiB of UTF-16.
   class Stand {
     onmessage: ((e: MessageEvent) => void) | null = null;
@@ -72,12 +72,12 @@ test("the syntax thread takes an answer of any size: its source's limit bounds i
     terminate() {}
   }
   stopSyntaxThread();
-  (globalThis as { Worker: unknown }).Worker = Stand;
+  const restore = fakeWorker("documents/syntax/syntax-worker.ts", Stand);
   try {
     const value = await syntaxOnThread("typescript", "export function f() {}\n");
     expect(value.outline[0]!.name.length).toBe(9 * 1024 * 1024);
   } finally {
-    (globalThis as { Worker: unknown }).Worker = real;
+    restore();
     stopSyntaxThread();
   }
 });
@@ -85,7 +85,6 @@ test("the syntax thread takes an answer of any size: its source's limit bounds i
 test(
   "a pass the thread takes more than five seconds over still lands, as a big minified file's does under load",
   async () => {
-    const real = globalThis.Worker;
     // A thread answering after 5.5 s: a 3.7 MB minified bundle's pass takes 4.3 s on a fast machine, more on a busy one.
     class Slow {
       onmessage: ((e: MessageEvent) => void) | null = null;
@@ -103,12 +102,12 @@ test(
       }
     }
     stopSyntaxThread();
-    (globalThis as { Worker: unknown }).Worker = Slow;
+    const restore = fakeWorker("documents/syntax/syntax-worker.ts", Slow);
     try {
       const value = await syntaxOnThread("javascript", "function f() {}\n");
       expect(value.outline.map((e) => e.name)).toEqual(["slow"]);
     } finally {
-      (globalThis as { Worker: unknown }).Worker = real;
+      restore();
       stopSyntaxThread();
     }
   },

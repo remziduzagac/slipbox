@@ -9,6 +9,8 @@ import {
   stopParsePool,
 } from "../src/core/documents/markdown/parse-pool.ts";
 import { DEFAULT_CONFIG } from "../src/core/application/config/config.ts";
+import { fakeWorker } from "./support/fake-worker.ts";
+import { workerUrl } from "../src/core/foundation/workers/url.ts";
 
 const factory = () => new Worker(new URL("./fixtures/diagram/worker.ts", import.meta.url).href);
 
@@ -335,7 +337,6 @@ test("a note whose tree is many times its text — a long list of links — pars
 });
 
 test("one note's failure is its own: a crash fails the note the worker had, the notes behind it parse on a fresh worker", async () => {
-  const real = globalThis.Worker;
   let made = 0;
   /** Parses as the real worker does, here; the first one made crashes on its first message. */
   class Local {
@@ -354,8 +355,8 @@ test("one note's failure is its own: a crash fails the note the worker had, the 
     terminate() {}
   }
   setParseWorkers(1);
+  const restore = fakeWorker("documents/markdown/parse-worker.ts", Local);
   try {
-    (globalThis as { Worker: unknown }).Worker = Local;
     const notes = ["First", "Second", "Third"].map((t) => bigNote(t, 64 * 1024));
     notes.push(`${bigNote("Fourth", 64 * 1024)}\n\nunparsable\n`);
     const caches = notes.map(() => newParseCache());
@@ -369,6 +370,25 @@ test("one note's failure is its own: a crash fails the note the worker had, the 
     expect(caches[3]!.backgroundFailure).toMatchObject({ why: "RangeError: too deep", transient: false });
     expect(made).toBe(2); // one restart, for the crash alone
   } finally {
-    (globalThis as { Worker: unknown }).Worker = real;
+    restore();
   }
+});
+
+test("a stand-in for one worker's script leaves the others real: a worker another file's pool starts meanwhile is one", () => {
+  const RealWorker = globalThis.Worker;
+  class Stand {
+    postMessage() {}
+    terminate() {}
+  }
+  const restore = fakeWorker("documents/markdown/parse-worker.ts", Stand);
+  try {
+    expect(new Worker(workerUrl("documents/markdown/parse-worker.ts"))).toBeInstanceOf(Stand);
+    // A disk thread started again after its deadline, say, while the parser's stand-in is in place.
+    const other = new Worker(workerUrl("workspace/walk/list-worker.ts"));
+    expect(other).toBeInstanceOf(RealWorker);
+    other.terminate();
+  } finally {
+    restore();
+  }
+  expect(globalThis.Worker).toBe(RealWorker);
 });

@@ -13,6 +13,7 @@ import { stopParsePool } from "../../../../src/core/documents/markdown/parse-poo
 import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { BACKGROUND_PARSE } from "../../../../src/tui/documents/buffers/buffer.ts";
 import { harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
+import { fakeWorker, realWorker } from "../../../support/fake-worker.ts";
 
 makeSandbox();
 
@@ -23,7 +24,6 @@ const bigText = (title: string, own = randomBytes(6).toString("hex")) => {
   return { text: `# ${title}\n\n${Array.from({ length: count }, (_, i) => line(i)).join("\n")}`, links: count };
 };
 
-const real = globalThis.Worker;
 /** The threads replaced by `kind` (stand-ins made by the pool from now on), each made one kept in `made`. */
 function threads(kind: "silent" | "crash" | "error" | "none") {
   const made: { terminated: boolean; sent: number }[] = [];
@@ -50,12 +50,12 @@ function threads(kind: "silent" | "crash" | "error" | "none") {
     }
   }
   stopParsePool();
-  (globalThis as { Worker: unknown }).Worker = Stand;
+  fakeWorker("documents/markdown/parse-worker.ts", Stand);
   return made;
 }
 
 afterEach(() => {
-  (globalThis as { Worker: unknown }).Worker = real;
+  realWorker();
   stopParsePool();
 });
 
@@ -179,7 +179,7 @@ describe("a big note opened (15.1)", () => {
     h.frame();
     expect([h.app.view!.buf.parsing, sourceSaid(h).length]).toEqual([null, 1]);
     // The threads back; the note opened again: parsed on them, rendered.
-    (globalThis as { Worker: unknown }).Worker = real;
+    realWorker();
     h.app.open("index.md");
     h.app.open("big.md");
     h.frame();
@@ -199,7 +199,7 @@ describe("a big note opened (15.1)", () => {
     expect(sourceSaid(h).map((m) => m.text)).toEqual([
       "big.md is shown as its source: its parse on another thread failed (RangeError: too deep)",
     ]);
-    (globalThis as { Worker: unknown }).Worker = real;
+    realWorker();
     h.app.open("index.md");
     h.app.open("big.md");
     h.frame();
