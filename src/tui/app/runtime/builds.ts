@@ -133,6 +133,21 @@ export class Builds {
     return !!out && [...out.asked, ...out.again].some((a) => a.ask.key);
   }
 
+  /** The vault open's graph never built, its first build out — at the start, or a vault gone into: every key waits for
+   *  it (`asked`) but `q` and `ctrl+c`, which quit at once (SD-D9, `Input.handleKey`). */
+  get unbuilt(): boolean {
+    const out = this.out;
+    return !!out && out.base === this.app.graph && this.app.graph.builds === 0;
+  }
+
+  /** A note waits for that first build (SD-D9): its window says `reading the vault…` until it's built — or given up,
+   *  the note then shown as its text, its links drawn as resolved, while it's read again (SD-T10). */
+  get awaited(): boolean {
+    return this.unbuilt && !this.gaveUp.has(this.app.graph);
+  }
+  /** The graphs whose build was given up on (SD-D6): their notes shown meanwhile. */
+  private readonly gaveUp = new WeakSet<Graph>();
+
   /** `graph`, the vault open's, built through these when it's asked to build itself without its walk (`rebuilder`):
    *  the watcher's rescan, the folders of home asked for, a file operation's build. */
   adopt(graph: Graph): void {
@@ -353,6 +368,7 @@ export class Builds {
     const app = this.app;
     const why = walkFailure(err);
     if (!this.current(out) || why === "stopped") return this.retire(out, "stopped");
+    this.gaveUp.add(out.base);
     this.retire(out, "failed", undefined, why);
     app.message("warn", `reading the vault gave up: ${why}; it's read again in a minute`);
     app.host.requestRender();

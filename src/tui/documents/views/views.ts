@@ -66,9 +66,10 @@ export class Views {
   }
 
   layoutFor(view: View, paneWidth: number, gutter = 0): Layout {
-    // A note read on a disk thread for this window (SD-D4), or a big note parsing on other threads (15.1): a line
-    // saying so, and nothing of the view moved (its reading position stays for the real layout, a moment later).
-    const reading = this.app.reads.shownIn(view);
+    // A note read on a disk thread for this window (SD-D4) or waiting for its vault's first read (SD-D9), or a big note
+    // parsing on other threads (15.1): a line saying so, and nothing of the view moved (its reading position stays for
+    // the real layout, a moment later).
+    const reading = this.app.reads.shownIn(view) ?? (this.app.watch.builds.awaited ? "reading the vault…" : null);
     if (reading) return saying(reading, this.textWidth(paneWidth, gutter));
     if (!view.source && !view.live && view.buf.parseAhead())
       return this.readingLayout(view.buf, this.textWidth(paneWidth, gutter));

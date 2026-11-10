@@ -281,28 +281,32 @@ export class Session {
     };
   }
 
-  /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own: in a vault gone into, once
-   *  its graph is built (SD-T8), the keys waiting for it. Read on a disk thread, a promise of it: settled once it's read,
-   *  or once the build it waited for is dropped or given up. */
-  openDefault(): void | Promise<void> {
+  /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own: at the start or in a
+   *  vault gone into, once its graph is built (SD-T8, SD-T10), the keys waiting for it; `none` when there's none. Read
+   *  on a disk thread, a promise of it: settled once it's read, or once the build it waited for is dropped or given up. */
+  openDefault(none?: () => void): void | Promise<void> {
     const read: { opening?: void | Promise<void> } = {};
     const built = this.app.watch.builds.after(() => {
       const first = defaultNote(this.app.graph, this.app.homeFolder);
       if (first) read.opening = this.app.openInNewTab(first);
+      else none?.();
     }, true);
     return built ? built.then(() => read.opening) : read.opening;
   }
 
   /** A window's own session restored, as a restart's note keeps it (UPG-D4): never `session.json`'s, which another
-   *  window on the vault may have written meanwhile. */
-  restoreFrom(s: SessionState): boolean {
-    return this.apply(s, s);
+   *  window on the vault may have written meanwhile. Brought back as a start's are (`how`). */
+  restoreFrom(s: SessionState, how: TabsHow = {}): boolean {
+    return this.apply(s, s, how);
   }
 
   /** The tab shown being brought back on the disk threads (SD-T5), till it's read: what opens after it waits. */
   restoring: Promise<void> | null = null;
   /** The tabs after it, read in the background till the last is: the keys never wait for them. */
   behind: Promise<void> | null = null;
+  /** The tabs being brought back on the disk threads, till the last is in: the session isn't saved over meanwhile — a
+   *  quit before they came, at the start or a vault gone into (`q` while it's first read, SD-T10), would keep none. */
+  private coming: Promise<void> | null = null;
 
   private apply(s: SessionState, set: Pick<TabSet, "tabs" | "activeTab">, how: TabsHow = {}): boolean {
     const coming = this.openTabs(set.tabs, set.activeTab, how);
@@ -340,8 +344,8 @@ export class Session {
    * Tabs from the session opened, after any there are; the active one as it was. Read on the disk threads (SD-T5,
    * SD-D12), a promise of the tab shown, read first, the keys waiting for it as for any note opened; then the rest in
    * order, one at a time, in the background, each in its place as it comes, the keys free meanwhile — so a thread stays
-   * free for the watcher's look and a key's read — and `how.none` once none could be read. A test's App, and the start
-   * (SD-T10's), read here at once.
+   * free for the watcher's look and a key's read — and `how.none` once none could be read. A test's App reads here, at
+   * once.
    */
   openTabs(tabs: SessionTab[], activeTab: number, how: TabsHow = {}): void | Promise<void> {
     // In home, their folders asked for first (VV-D2): a tab in one its walk hasn't reached is a note of home's all the same.
@@ -388,7 +392,16 @@ export class Session {
     };
     const first = shown ? this.app.reads.hold(place(shown)) : Promise.resolve(false);
     // The tab shown failed (said where it's waited for, `entered`): the rest read all the same.
-    this.behind = first.then((on) => (on ? rest() : undefined), rest);
+    const behind = first.then((on) => (on ? rest() : undefined), rest);
+    this.behind = this.coming = behind;
+    // All in: the session saved as it is now, a second later, as after any change.
+    const done = () => {
+      if (this.coming !== behind) return;
+      this.coming = null;
+      this.lastState = "";
+      this.publishState();
+    };
+    behind.then(done, done);
     return first.then(() => {});
   }
 
@@ -446,11 +459,12 @@ export class Session {
   }
 
   /** The session saved: the tabs, as the last ones and as `branch`'s (by default, HEAD's as last seen). The positions
-   *  alone while the vault's own isn't read (`unread`): nothing saved over what it couldn't read yet. */
+   *  alone while the vault's own isn't read (`unread`), or its tabs aren't all back (`coming`): nothing saved over what
+   *  it couldn't read yet. */
   save(branch: string | null = this.app.git.head?.branch ?? null): void {
     const s = this.snapshot();
     this.app.positions.save();
-    if (this.unread) return;
+    if (this.unread || this.coming) return;
     const before = loadSession(this.app.loc);
     const at = new Date(this.app.now()).toISOString();
     const set = { tabs: s.tabs, activeTab: s.activeTab, at };

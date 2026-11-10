@@ -14,7 +14,7 @@ import { parseInBackground } from "../../../core/documents/markdown/parse-pool.t
 import { BACKGROUND_PARSE } from "../../documents/buffers/buffer.ts";
 import type { Level } from "../notifications/contracts.ts";
 import type { Background } from "./background.ts";
-import { takeAgain } from "./builds.ts";
+import { type Builds, takeAgain } from "./builds.ts";
 
 /** Live index inputs and the effects a completed pass delivers. */
 interface GraphRefreshContext {
@@ -26,7 +26,10 @@ interface GraphRefreshContext {
   indexing: number;
   lastInputAt: number;
   readonly background: Pick<Background, "begin">;
-  readonly watch: { readonly look: { readonly offThread: boolean; readonly activityAt: number | null } };
+  readonly watch: {
+    readonly look: { readonly offThread: boolean; readonly activityAt: number | null };
+    readonly builds: Pick<Builds, "after">;
+  };
   readonly explorer: { invalidateTree(): void };
   readonly buffers: ReadonlyMap<string, { invalidateLayouts(): void }>;
   readonly host: { requestRender(): void };
@@ -222,7 +225,10 @@ export class GraphRefresh {
   /** The background auto-index (20.9, VV-D2): a slice of it every quarter second while nobody is working. */
   startAutoIndex(): void {
     this.app.lastInputAt = this.app.now();
-    if (this.app.graph.home?.walked === null) this.walkHomeAgain();
+    // Home never walked yet (VV-D2), once its first build says so: read on a disk thread after the screen is up (SD-T10).
+    this.app.watch.builds.after(() => {
+      if (this.app.graph.home?.walked === null) this.walkHomeAgain();
+    });
     const t = setInterval(() => {
       if (this.app.quitting) return clearInterval(t);
       if (!this.nobodyWorking()) return;

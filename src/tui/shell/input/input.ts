@@ -25,6 +25,9 @@ import { editable } from "../../documents/editing/editable.ts";
 import { PROBLEM_KEYMAP } from "../../documents/diagnostics/problems/at-cursor.ts";
 import { refilter } from "../overlays/overlays.ts";
 
+/** The keys that quit while the vault is first read (SD-D9): `q`, `ctrl+c`, and `ctrl+q`, which always quits. */
+const QUITS = new Set(["q", "ctrl+c", "ctrl+q"]);
+
 /** Keys and pastes: dispatch, sequences, the which-key popup. */
 export class Input {
   constructor(readonly app: App) {}
@@ -127,7 +130,8 @@ export class Input {
   /**
    * A key from the terminal. Keys are handled one at a time, in order: a key arriving while
    * another is still being handled (a fast typist, a paste, a command that awaits) waits its turn.
-   * But `esc` while a key's read is out (SD-D4): taken at once, out of turn, it gives the read up.
+   * But `esc` while a key's read is out (SD-D4): taken at once, out of turn, it gives the read up. And `q` and `ctrl+c`
+   * while the vault's first read is out, every key waiting for it (SD-D9): taken at once, they quit.
    */
   handleKey(key: string): Promise<void> {
     // When it arrived, not when its turn comes: a dialog that opens on its own drops what arrived as it opened.
@@ -135,6 +139,7 @@ export class Input {
     this.app.lastInputAt = arrived;
     const at = ++this.keysSeen;
     if (key === "escape" && this.app.reads.giveUp()) return Promise.resolve();
+    if (QUITS.has(key) && this.app.watch.builds.unbuilt) return Promise.resolve(this.app.saving.requestQuit());
     const start = () => {
       this.keysInFlight++;
       this.keyAt = at;

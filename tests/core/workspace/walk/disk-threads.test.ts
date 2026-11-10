@@ -231,14 +231,21 @@ describe("the disk threads (SD-D2)", () => {
     const settings = new WalkFilter(root, WALK).settings;
     const index = join(root, "index.json");
     const st = statSync(index);
+    // With when each walk began: after it was asked, before it answered.
+    const asked = Date.now();
     expect(await threads.walk({ how: "vault", filter: settings, index })).toEqual({
       walk: walkVault(root, new WalkFilter(root, WALK)),
       index: { text: '{"a":1}\n', stamp: `${st.mtimeMs}:${st.size}` },
+      began: expect.any(Number),
     });
-    expect(await threads.walk({ how: "listed", filter: settings, index: join(root, "none.json") })).toEqual({
+    const listed = await threads.walk({ how: "listed", filter: settings, index: join(root, "none.json") });
+    expect(listed).toEqual({
       walk: listDirectory(root, new WalkFilter(root, WALK)),
       index: { text: null, stamp: "" },
+      began: expect.any(Number),
     });
+    expect(listed.began).toBeGreaterThanOrEqual(asked);
+    expect(listed.began).toBeLessThanOrEqual(Date.now());
   });
 
   test("home's walk on a disk thread is home's walk here: kept brought up to now, the folders asked for, handed back unkept", async () => {

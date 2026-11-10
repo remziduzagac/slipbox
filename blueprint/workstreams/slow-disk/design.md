@@ -180,8 +180,8 @@ the second is let go of.
   the answer says its folder is gone, only while the view and the trail are those it asked about. A zoom (`z`, `-`, the
   breadcrumb, `shift+h` out of a hidden folder), `l` on a folder whose listing hasn't come and the start's folder ask
   `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers, and what the key
-  does after the zoom done only then; the start's is read here until SD-T10. One `Listings` keeps both sides' folders,
-  256 at most; a folder listed on both (a nested vault's, unfolded, a path in it asked) is kept once for each.
+  does after the zoom done only then; the start's once what it opens is in (SD-T10). One `Listings` keeps both sides'
+  folders, 256 at most; a folder listed on both (a nested vault's, unfolded, a path in it asked) is kept once for each.
 - **The vault built again** (SD-T8; `Builds`, `tui/app/runtime/builds.ts`). A reindex, the watcher's rescan, a setting
   of the walk changed, a vault gone into, a branch's tabs and the folders asked for in home read the walk and the index
   on a disk thread (`walk`, a walk's ten minutes to answer); the graph stays as it was meanwhile, `reading the vault…`
@@ -232,11 +232,23 @@ the second is let go of.
   log), a vault gone into holds the screen about 5 s less, the Vaults window opened again not at all; what still holds
   it there is the writes with the reads that merge them (below), the search index (§ Known limits) and the vault's index
   (SD-T8).
-- **The start** (SD-D9, SD-T10). The screen is taken first; the vault's walk and index are read on a disk thread, the
-  note waiting for its graph (`reading the vault…`), `q` and `ctrl+c` quitting meanwhile. Your config, the path named
-  and `--base` are read before, as they say what the screen is. A vault that doesn't answer in time: its note shown as
-  its text if its own read answered, its links drawn as resolved, the vault asked again a minute later and the note
-  drawn again when it comes. A restart is brought back the same way.
+- **The start** (SD-D9, SD-T10; SD-D15). The screen is taken first: `prepare` builds no graph, and the App asks the
+  vault's first build of `Builds` as it starts (`Vaults.ask`), its walk and index read on a disk thread as SD-T8 reads
+  a vault gone into's — home's with the folder opened and its tabs' (`homeWalk`). Your config, the path named, `--base`,
+  the machine's list recorded and the session (for the folders of home its tabs are in) are read before, as they say
+  what the screen is. What the start opens is a key's own read, made meanwhile (`openInitialWindows`): the note named,
+  the session's tabs (a restart's, its window's), or, once the graph says which, the vault's own note — none, said. A
+  note read before its graph is built waits for it: its window says `reading the vault…` (`Builds.awaited`), its place
+  kept for the layout to come, and the keys after it wait (SD-T8's first build). `q`, `ctrl+c` and `ctrl+q` quit at
+  once, out of turn, while the vault open's graph has never been built (`Builds.unbuilt`), a vault gone into's too;
+  `esc` gives up the note's read, the window left empty, the vault read all the same. The explorer's view goes to the
+  folder opened, and what's said when nothing opens is said, once what the start opens is in. While the session's tabs
+  are coming back it isn't saved over (`Session.coming`): a quit before they came keeps them for the next start.
+  Nothing acts on a graph of no notes: the search index isn't caught up with it (`Search.start`; it would let go of
+  every note it holds), and home's walk asked again, the graph's errors and the offer to relink what a move broke
+  follow the first build (`Builds.after`). A vault that doesn't answer in time: its note shown as its text if its own
+  read answered (`awaited` no longer), its links drawn as resolved, the vault asked again a minute later and the note
+  drawn again when it comes; its read given up too, both said, nothing opened. A restart is brought back the same way.
 - **What's drawn** (SD-D13; SD-T11, the last code task, measured first). A draw never reads the disk and never
   waits. What a layout asks of the disk (a `/…` link's first folder, a nested vault's file, a name's case on macOS, a
   picture), and the scratch's places, are answered from what's kept, and asked of a disk thread when they aren't, drawn

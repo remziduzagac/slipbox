@@ -342,7 +342,8 @@ export class App {
     });
     // A folder of home opened by name, or a file's (VV-D2): what was asked for, its notes there at once, home walked
     // or not — and a folder's own tabs, or its own note, not home's. The tabs brought back too, their folders asked for
-    // with it (the branch's, now HEAD is known): the graph built once. Then search, on it.
+    // with it (the branch's, now HEAD is known): the graph built once, on a disk thread once the screen is up (SD-T10).
+    this.watch.builds.adopt(this.graph);
     this.vaults.ask(
       opts.folder ?? null,
       opts.open ? this.absOf(opts.open) : null,
@@ -368,10 +369,9 @@ export class App {
     this.settings.applyKeys();
     for (const w of opts.warnings ?? []) this.message("warn", w);
     for (const n of opts.notes ?? []) this.message("info", n);
-    for (const e of this.graph.errors) this.message("warn", e);
     if (carriedFrom) this.message("info", carried(this.loc, carriedFrom));
 
-    this.reads.here(() => openInitialWindows(this, opts, carriedFrom)); // the start reads here until SD-T10
+    openInitialWindows(this, opts, carriedFrom);
     this.stopFollowing = [this.viewPolicy.followLazy(), onIndexWritten((keys) => this.explorer.listings.indexed(keys))];
     this.session.publishState();
     this.settings.recordStamps();

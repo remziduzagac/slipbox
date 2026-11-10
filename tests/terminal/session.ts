@@ -233,6 +233,12 @@ export class Session {
       await this.until(() => this.term.kittyKeys, 15000, "slipbox to ask for Kitty's keys");
     // Its first frame isn't its last at start: what it reads after drawing (the index, git) redraws it.
     await this.settle();
+    // The vault read after the screen is taken: until then the keys wait and a click is dropped. A check that looks at
+    // the start while it's read waits itself (`noWait`).
+    const reading = () => this.statusLine().includes("reading the vault…");
+    if (!reading()) return;
+    await this.until(() => !reading(), 60_000, "slipbox to read the vault");
+    await this.settle();
   }
 
   /**

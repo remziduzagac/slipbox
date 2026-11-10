@@ -82,4 +82,16 @@ describe("a build given its walk and its index (SD-T8)", () => {
     const read = answerWalk({ ...ask, context: walkContext() }) as { index?: IndexRead };
     expect(read.index?.text).toBe('{"version":0}');
   });
+
+  test("walked when its walk began, not when it's taken: a note written in a folder listed before is looked for (SD-T10)", () => {
+    const loc = vault("given-began", { "a.md": "# A\n" });
+    const before = Date.now();
+    const answer = walked(loc);
+    expect(answer.began).toBeGreaterThanOrEqual(before);
+    expect(answer.began).toBeLessThanOrEqual(Date.now());
+    // Taken a minute after it began, as on a slow disk: the watcher lists again a folder changed since then.
+    const began = before - 60_000;
+    const g = new Graph(loc, DEFAULT_CONFIG).build(true, "lazy", { ...answer, began });
+    expect(g.walkedAt).toBe(began);
+  });
 });

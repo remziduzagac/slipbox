@@ -60,17 +60,6 @@ export class KeyReads {
     return work;
   }
 
-  /** `run` with every read here, at once: the start, until it reads off the screen's thread too (SD-T10). */
-  here<T>(run: () => T): T {
-    const was = this.offThread;
-    this.offThread = false;
-    try {
-      return run();
-    } finally {
-      this.offThread = was;
-    }
-  }
-
   /**
    * `read` asked of the disk threads for a key — `name` said in `view` while it's out — and its answer; null once given
    * up (`esc`) or failed, said (`<name> didn't answer: <notDone>` past its deadline), the keys typed meanwhile dropped.
@@ -126,8 +115,8 @@ export class KeyReads {
   /**
    * Whether the folder `abs` can be gone into, for a key (`folderUnreadable`'s words; null when it can), and `then` with
    * it: asked of a disk thread as a key's read, the keys waiting, nothing said in a window — a frame drawn all the same
-   * (here at once on a test's App, and at the start); not when the read gave up, `<folder> didn't answer: <notDone>`
-   * past its deadline. A zoom, a folder unfolded, slipbox opened on a folder (SD-T7).
+   * (here at once on a test's App); not when the read gave up, `<folder> didn't answer: <notDone>` past its deadline. A
+   * zoom, a folder unfolded, slipbox opened on a folder (SD-T7, SD-T10).
    */
   folder(abs: string, notDone: string, then: (why: string | null) => unknown): void | Promise<void> {
     if (!this.offThread) return void then(folderUnreadable(abs));

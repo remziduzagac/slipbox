@@ -852,7 +852,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     }
   });
 
-  test("slipbox started in a vault: its graph built once, before the screen, never again by it (#13)", async () => {
+  test("slipbox started in a vault: its graph built once, by the screen, never before it (#13, SD-D9)", async () => {
     const { Graph } = await import("../../../../src/core/workspace/graph/graph.ts");
     const { prepare } = await import("../../../../src/tui/shell/terminal/run.ts");
     const root = makeVault();
@@ -860,8 +860,9 @@ describe("the background auto-index in the TUI (20.9)", () => {
     try {
       const start = prepare([join(root, "index.md")]);
       if (typeof start === "number") throw new Error(`exit ${start}`);
-      // Built before the screen is taken: a long build never holds a blank screen.
-      expect(start.graph.notes.has("index.md")).toBe(true);
+      // Not built before the screen is taken (SD-D9): a long build never holds a blank screen; the screen builds it.
+      expect(build).toHaveBeenCalledTimes(0);
+      expect(start.graph.builds).toBe(0);
       const app = new App({ ...start, host: { requestRender() {}, osc52: () => true, quit() {} }, watch: false });
       expect(build).toHaveBeenCalledTimes(1);
       expect(app.view!.buf.rel).toBe("index.md");
