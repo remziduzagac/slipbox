@@ -2,16 +2,17 @@
 // folder's listing each wait on a slow folder there, never here — a key is handled and drawn meanwhile — and what they
 // find is taken in once they answer; a look the disk doesn't answer in time is said once, and cleared by the next. What
 // waits is told by the hold (`Hold`, here too: a read left on this thread waits until it gives up), never by a clock
-// (#75).
+// (#75). A test ticks the watcher once it has settled what it heard as it started (`watched`), and sees the tick taken
+// (`tick`): a tick asked while a look of its own is out is skipped, and the test would wait for what it never asks.
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { setReadWait } from "../../../../src/core/foundation/platform/disk.ts";
-import type { WatchBatch } from "../../../../src/core/workspace/graph/watch.ts";
+import type { VaultWatcher, WatchBatch } from "../../../../src/core/workspace/graph/watch.ts";
 import { diskThreads, setWalkWorker, WALK_DEADLINES } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { HELD_MS, Hold, heldReads } from "../../../fixtures/walk/slow.ts";
-import { watcherDirectories, watcherState } from "../../../support/watcher-access.ts";
+import { watcherBusy, watcherDirectories, watcherState } from "../../../support/watcher-access.ts";
 import { harness, makeSandbox, statusRow } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -72,8 +73,15 @@ async function until(what: string, ok: () => boolean): Promise<void> {
 /** Awaited till a disk thread waits in a `held` folder. */
 const untilHeld = (held: Hold) => until("a disk thread waits in `held`", () => held.waiting > 0);
 
+/** No read given up on, on any thread: none left on this one, where it would have held the test. */
+function noneGaveUp(held: Hold): void {
+  expect({ gaveUp: held.gaveUp, here: held.gaveUpHere }).toEqual({ gaveUp: 0, here: [] });
+}
+
 /** A vault of `files` watched as the TUI watches it, its looks on the disk threads (no tick but the test's), `a.md`
- *  open, once each folder watched is stamped. */
+ *  open, once each folder watched is stamped and what the watcher heard meanwhile is settled: on macOS, FSEvents tells
+ *  of the vault's own writes, made just before its watch, after it has started — a settle that, out when the test
+ *  ticks, has the tick skipped. */
 async function watched(files: Record<string, string>) {
   const root = tree({ ".slipbox/config.toml": "", "a.md": "# A\n", ...files });
   const h = await harness({ root, open: "a.md", listOffThread: true, config: (c) => (c.watch.poll_ms = 3_600_000) });
@@ -81,7 +89,16 @@ async function watched(files: Record<string, string>) {
   const w = h.app.watcher!;
   const state = watcherState(w);
   await until("each folder stamped", () => [...state.watchers.keys()].every((d) => state.stamps.has(d)));
+  await until("what was heard settled", () => !watcherBusy(w) && !state.timer && !state.pending.size);
   return { root, h, w, state };
+}
+
+/** The watcher's tick, asked now, and taken: never skipped for a look out. */
+function tick(w: VaultWatcher): void {
+  const state = watcherState(w);
+  const ticks = state.ticks;
+  w.pollTick();
+  expect(state.ticks).toBe(ticks + 1);
 }
 
 /** A key handled, and drawn, while a disk thread waits in `held`. */
@@ -98,7 +115,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
     const { root, h, w } = await watched({ "held/n.md": "# N\n" });
     try {
       held.again();
-      w.pollTick();
+      tick(w);
       await untilHeld(held);
       // An agent writes a note in `held`, and rewrites the note open, while the look waits.
       writeFileSync(join(root, "held", "new.md"), "# New\n");
@@ -110,7 +127,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
         return h.app.graph.notes.has("held/new.md") && h.app.view?.buf.source === "# A, rewritten\n";
       });
       // Only a disk thread waited on it: none here waited till it gave up.
-      expect(held.gaveUp).toBe(0);
+      noneGaveUp(held);
     } finally {
       w.close();
     }
@@ -137,13 +154,13 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
         return look(batch);
       });
       state.ticks = 14;
-      w.pollTick();
+      tick(w);
       await untilHeld(held);
       await keyMeanwhile(h, held);
       expect(h.app.graph.notes.get("held/n.md")?.mtimeMs).not.toBe(after);
       held.release();
       await until("the note rewritten known", () => h.app.graph.notes.get("held/n.md")?.mtimeMs === after);
-      expect(held.gaveUp).toBe(0);
+      noneGaveUp(held);
     } finally {
       w.close();
     }
@@ -160,7 +177,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       expect(h.app.graph.notes.has("held/new.md")).toBe(false);
       held.release();
       await until("the note in the graph", () => h.app.graph.notes.has("held/new.md"));
-      expect(held.gaveUp).toBe(0);
+      noneGaveUp(held);
     } finally {
       w.close();
     }
@@ -178,7 +195,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       const batches: WatchBatch[] = [];
       spyOn(h.app.watch, "receiveBatch").mockImplementation((b) => void batches.push(b));
       held.again();
-      w.pollTick();
+      tick(w);
       await untilHeld(held);
       // Come meanwhile: a busy folder, an ignored note, a nested vault, links out — and a folder and a note the walk
       // takes.
@@ -206,7 +223,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       expect(batches.some((b) => b.rescan)).toBe(true);
       const said = batches.flatMap((b) => b.changes.map((c) => c.rel));
       expect(said).toEqual(["held/p/new.md"]);
-      expect(held.gaveUp).toBe(0);
+      noneGaveUp(held);
     } finally {
       w.close();
     }
@@ -220,7 +237,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       expect(statusRow(h.frame())).toContain("● watching");
       threadsFor(held, 200);
       held.again();
-      w.pollTick();
+      tick(w);
       await until("the look given up on", () => w.notAnswering);
       expect(statusRow(h.frame())).toContain("⚠ disk not answering");
       expect(said()).toBe(1);
@@ -234,7 +251,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       const now = Date.now;
       Date.now = () => now() + 61_000;
       try {
-        w.pollTick();
+        tick(w);
       } finally {
         Date.now = now;
       }

@@ -66,6 +66,8 @@ describe("configuration: everything from config, and live reload", () => {
       expect(rootMarkers()).toEqual([".git", ".foam"]);
     } finally {
       setRootMarkers(null);
+      // The walk's settings changed start a watcher once the graph is made again: quit, it ticks no later file's test.
+      h.app.quit();
     }
   });
   test("[colors] overrides apply to the theme, the picker's preview and a live reload", async () => {
