@@ -223,6 +223,8 @@ export class Session {
       : [process.execPath, ...preload, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file];
     // What the slipbox before wrote is drawn first: its queries' answers, and its keyboard flags, are its own.
     await this.until(() => this.term.drawn, undefined, "the terminal to draw what the slipbox before wrote");
+    // The frames the slipbox before painted: this one numbers its marks from its own first.
+    this.framesBefore = this.framesPainted();
     this.term.spawn(argv, { cwd, env: this.processEnv() });
     if (this.opts.noWait) return;
     await this.until(() => /\b(READ|SOURCE|FILES|LENS|NORMAL)\b/.test(this.statusLine()), 15000, "slipbox to start");
@@ -306,6 +308,9 @@ export class Session {
     return readFileSync(this.trace, "utf8").split("\n");
   }
 
+  /** The frames painted by the slipbox before this one (the trace is the session's, a restart's too). */
+  private framesBefore = 0;
+
   /** How many frames slipbox has painted so far: none while it has nothing new to draw. */
   framesPainted(): number {
     return this.traced().filter((l) => l === "frame").length;
@@ -317,17 +322,23 @@ export class Session {
   }
 
   /**
-   * Wait until slipbox has handled `n` more keys than `before`, and painted a frame after the last of them (or WAIT
-   * has gone by, or it has exited): on a loaded machine it reads keys late and draws late, and what a check reads
-   * next must show them.
+   * Wait until slipbox has handled `n` more keys than `before`, painted a frame after the last of them, and this
+   * terminal has read that frame — slipbox's mark after it (trace.ts) — or WAIT has gone by, or it has exited. On a
+   * loaded machine slipbox reads keys late, draws late, and writes what it drew later still: a frame painted isn't
+   * on the screen yet, and what a check reads next must show the keys.
    */
   private async taken(before: number, n: number): Promise<void> {
     const shown = () => {
       let keys = 0;
-      let at = -1;
-      const lines = this.traced();
-      for (let i = 0; i < lines.length && at < 0; i++) if (lines[i] === "key" && ++keys === before + n) at = i;
-      return at >= 0 && lines.indexOf("frame", at) > at;
+      let frames = 0;
+      let after = false;
+      for (const line of this.traced()) {
+        if (line === "frame") frames++;
+        if (!after) after = line === "key" && ++keys === before + n;
+        // The frame painted after the last key, numbered as this slipbox numbers its marks.
+        else if (line === "frame") return this.term.framesShown >= frames - this.framesBefore;
+      }
+      return false;
     };
     const end = Date.now() + WAIT;
     while (!shown() && !this.exited() && Date.now() < end) await sleep(5);

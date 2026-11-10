@@ -356,10 +356,15 @@ does nothing.
 **In step with slipbox.** On a loaded machine slipbox reads a key late and draws late: a check that reads the screen
 right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's on). So
 with `SLIPBOX_TRACE` set, slipbox writes, beside each command run, a `key` line once it has handled a key or a paste and
-a `frame` line for each frame it paints (src/tui/shell/terminal/run.ts); `keys`, `type` and `paste` return once every
-key sent is handled and a frame painted after the last (a named key is one key, typed text one per code point, a paste
-one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two seconds while
-it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
+a `frame` line for each frame it paints (src/tui/shell/terminal/run.ts). A frame painted isn't on the screen yet:
+OpenTUI writes it after, and the terminal reads it later still, so a check that went on at the `frame` line could
+read the frame before. So once each frame is written, slipbox marks it in its output, after the frame's bytes: a
+private OSC, `ESC ] 7701 ; n BEL`, n the frames it has painted by then (src/tui/shell/terminal/trace.ts), which the
+tests' terminal reads in order with the rest. `keys`, `type` and `paste` return once every key sent is handled, a
+frame painted after the last (a named key is one key, typed text one per code point, a paste one), and the terminal
+has read that frame's mark, then once nothing more is written for 40 ms. A check timed against the clock (an answer
+within two seconds while it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the
+machine.
 
 A check that must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
 (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload
