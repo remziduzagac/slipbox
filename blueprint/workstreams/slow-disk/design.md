@@ -14,15 +14,18 @@ thread, so a disk that answers slowly — a network share, a drive asleep, a FUS
 screen (SD-D1). T12 moved the walks it makes by itself and the listings of folders outside the vault (design/roots.md
 § The index; § Side panes); this section is the rest. Writes stay on the screen's thread (below).
 
-**The disk threads** (SD-D2; `DiskThreads` in `core/workspace/walk/walk-thread.ts`, served by `list-worker.ts`): two,
-light — no index, no parser — each started on its first request. A request goes to a thread once one is free, in the
-order asked, so never behind one that doesn't answer while the other is free; a walk takes a thread only while the
-other is left for the rest. They answer, with what the asking thread knows and they can't see for themselves
-(`walkContext`):
+**The disk threads** (SD-D2; `DiskThreads` in `core/workspace/walk/walk-thread.ts`, served by `list-worker.ts`, what
+they answer in `disk-jobs.ts`): two, light — no index, no parser — each started on its first request. A request goes to
+the first thread free, in the order asked, so never behind one that doesn't answer while the other is free; a walk
+takes a thread only while the other is left for the rest, and until then waits, the requests asked after it going past
+it and a second walk waiting behind it. They answer, the same code as the thread that asks would run, through the seam
+below, with what that thread knows and they can't see for themselves (`walkContext`); a path's own error is its answer,
+and a request fails only when its thread does:
 
 - `list`: a folder listed (`listFolder`, as the explorer's listings have it); for a folder of the vault open, each
   entry with the walk's filter's verdict on it (`exclusion`), made there;
-- `stat`: a batch of paths, each one's kind, mtime, ctime and size, or its error's code;
+- `stat`: a batch of paths, each one's kind, mtime, ctime and size, or its error's code; its links followed, or a
+  link's own (`lstat`);
 - `read`: a file's text, decoded as `readText` decodes it (its BOM, line endings, invalid UTF-8), with its stamp;
   refused, as `readRegular` refuses, when it isn't a regular file;
 - `access`: whether a folder can be listed and gone into, in `folderUnreadable`'s words;
@@ -30,12 +33,13 @@ other is left for the rest. They answer, with what the asking thread knows and t
   now, `homeWalk`), with its index's text and stamp.
 
 Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
-`lstat` (its real path, whether anything is there), a file's bytes. The CLI reads through it too, on its own thread.
-It keeps two listings apart (SD-T1). The walk's (`readFolder`: a walk, the explorer's listing threads, the filter)
-takes the slow disk stood in for on every thread, the screen's too, as since T12, so a walk put back on the screen's
-thread is slowed there and T12's checks see it. The rest (`entries`: the watcher's listings, the explorer's tree; and
-every stat and read) takes it on every thread but the screen's, and a test's hold on the threads it asks: the screen's
-thread reads those at once until a task moves them, and that task's held test takes the hold there for them.
+`lstat` (its real path, whether anything is there, whether you may use it: `folderUnreadable`'s), a file's bytes. The
+CLI reads through it too, on its own thread. It keeps two listings apart (SD-T1). The walk's (`readFolder`: a walk, a
+disk thread's `list`, the filter) takes the slow disk stood in for on every thread, the screen's too, as since T12, so
+a walk put back on the screen's thread is slowed there and T12's checks see it. The rest (`entries`: the watcher's
+listings, the explorer's tree; and every stat and read) takes it on every thread but the screen's, and a test's hold on
+the threads it asks: the screen's thread reads those at once until a task moves them, and that task's held test takes
+the hold there for them.
 
 **Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
 thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
@@ -67,8 +71,11 @@ meanwhile (`noteOwnWrite`) decides.
 `SLIPBOX_SLOW_DISK`'s third part shortens them all. A request past its deadline is failed and its thread started afresh
 for the rest; it's never read on the screen's thread instead. The watcher's look given up on says `⚠ disk not answering`
 once and is asked again a minute later; a key's read is said; a build says `reading the vault gave up: a folder didn't
-answer in time` and the graph stays as it was. A disk thread with nothing asked of it for a minute is let go of, and
-started again on the next request.
+answer in time` and the graph stays as it was. A look's batch — one `stat` of every path it stats and a `list` of each
+folder it lists, asked together — is answered once all have; once one gives up, it's failed, and what of it still
+waits for a thread is withdrawn, never sent. A disk thread with nothing asked of it for a minute is let go of, and
+started again on the next request: a request takes the first thread free, so while a vault is watched only the second
+is let go of.
 
 **What's read where:**
 
@@ -158,11 +165,21 @@ own folder, and consolidation (SD-T12) puts this text, pointing at § A slow dis
 - In the explorer's bullet, "gives way to its nearest folder still there when the tree or the breadcrumb is built
   again (`keepToWhatsThere`)" becomes "gives way to its nearest folder still there once a stat made off the main thread
   as the tree or the breadcrumb is built again says it's gone (`keepToWhatsThere`)".
+- In the explorer's bullet, "on one of two listing threads, apart from the walk's" becomes "on one of the two disk
+  threads (§ A slow disk), apart from the walk's" (built by SD-T2).
 
 Previously: "what's on the disk that the walk didn't give is read (`fromDisk`)"; "What the disk says of a row
 (`Facts`: access, a broken link, the size, a vault's index and branch) is read once per row drawn, again when the tree
 is built again"; "gives way to its nearest folder still there when the tree or the breadcrumb is built again
-(`keepToWhatsThere`)".
+(`keepToWhatsThere`)"; "on one of two listing threads, apart from the walk's".
+
+## MODIFIED design/tui.md § Overlays
+
+In "A file by its path", "Folders are read on the listing threads the explorer shares (T12;
+`listThreads`)" becomes "Folders are read on the disk threads the explorer shares (T12, SD-D2; `diskThreads`)" (built
+by SD-T2).
+
+Previously: "Folders are read on the listing threads the explorer shares (T12; `listThreads`)".
 
 ## MODIFIED design/tui.md § External changes
 
@@ -244,10 +261,13 @@ Previously: "the TUI makes its own walks, and lists the explorer's folders, on t
 ## MODIFIED design/how-it-works.md § Module map
 
 - The row for `walk-thread.ts` says "the walk's thread and the two disk threads (`walk-worker.ts`, `list-worker.ts`):
-  asked", and cites SD-D2 beside T12.
+  asked", and cites SD-D2 beside T12 (built by SD-T2).
+- A row added after `walk-jobs.ts`'s: "`core/workspace/walk/disk-jobs.ts` | SD-D2 | what the disk threads answer: a
+  folder listed, paths statted, a file's text read, a folder's access, the vault walked, as the thread that asks would"
+  (built by SD-T2).
 - A row added after `fsutil.ts`'s: "`core/foundation/platform/disk.ts` | SD-D10 | the one seam every read of the
   disk goes through: a listing, a stat, a file's bytes; the slow disk stood in for, and a test's hold" (built by
   SD-T1).
 
 Previously: "the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked"; no row for
-`disk.ts`.
+`disk-jobs.ts` or `disk.ts`.

@@ -2,7 +2,6 @@
 // in the same directory, so a crash or a full disk never truncates a note.
 
 import {
-  accessSync,
   chmodSync,
   closeSync,
   constants,
@@ -332,12 +331,12 @@ export function carryPaths(file: string, from: string, to: string): void {
   if (changed) writeJson(file, next);
 }
 
-/** Why a folder can't be read, in a few words (VV-D5); null when it can. */
+/** Why a folder can't be read, in a few words (VV-D5), through the seam (disk.ts); null when it can. */
 export function folderUnreadable(dir: string): string | null {
   try {
-    if (!statSync(dir).isDirectory()) return "it isn't a folder";
+    if (!disk.stat(dir).isDirectory()) return "it isn't a folder";
     // Listed (read) and gone into (searched): both, as the account running slipbox may.
-    accessSync(dir, constants.R_OK | constants.X_OK);
+    disk.access(dir, constants.R_OK | constants.X_OK);
     return null;
   } catch (err) {
     return unreadableWords((err as NodeJS.ErrnoException).code ?? (err as Error).message);

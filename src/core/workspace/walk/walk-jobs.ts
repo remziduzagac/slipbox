@@ -1,24 +1,25 @@
 // What the walk's thread does (T12; walk-worker.ts starts it): each request walked as walk.ts and home.ts walk on the
 // thread that asks — the same code, so the walk takes the same files in the same order — with what that thread knows
 // and this one can't see for itself (`WalkContext`) taken first. Home's walk is kept here between its slices, as the
-// TUI steps it, so it rests while you work, as it does on the thread that asks. The explorer's listings have threads
-// of their own (list-worker.ts); a listing asked here (`list`) is answered the same, for a test's worker serving both.
+// TUI steps it, so it rests while you work, as it does on the thread that asks. The disk threads are threads of their
+// own (list-worker.ts, SD-D2); what they're asked (`list`, `stat`, `read`, `access`, `walk`) is answered here the same
+// (disk-jobs.ts), for a test's worker serving both.
 
-import type { Config } from "../../application/config/config.ts";
 import { type HomeWalk, homeWalk, vaultsPastCap } from "../vaults/home.ts";
 import { type IndexAnswer, IndexJob, type IndexOf } from "../graph/index-job.ts";
-import { type FolderListing, listFolder } from "./listing.ts";
+import { answerDisk, type DiskAnswer, type DiskRequest, isDiskRequest } from "./disk-jobs.ts";
 import { type FilterSettings, filterFrom, SlicedWalk, type WalkLimits, type WalkResult } from "./walk.ts";
 import { type IndexAsk, nestedIn, type PastCap } from "./walkers.ts";
 import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
 
-export type WalkRequest = { context: WalkContext } & (
-  | { op: "step"; walk: number; budget: number; start?: { filter: FilterSettings; limits?: WalkLimits } }
-  | { op: "index"; job: number; budget: number; start?: IndexAsk }
-  | { op: "home"; loc: { root: string; key: string }; filter: FilterSettings; asked: string[]; limits?: WalkLimits }
-  | { op: "seek"; dir: string; filter: FilterSettings }
-  | { op: "list"; dir: string; walk: Config["walk"]; hidden: boolean }
-);
+export type WalkRequest =
+  | ({ context: WalkContext } & (
+      | { op: "step"; walk: number; budget: number; start?: { filter: FilterSettings; limits?: WalkLimits } }
+      | { op: "index"; job: number; budget: number; start?: IndexAsk }
+      | { op: "home"; loc: { root: string; key: string }; filter: FilterSettings; asked: string[]; limits?: WalkLimits }
+      | { op: "seek"; dir: string; filter: FilterSettings }
+    ))
+  | DiskRequest;
 
 export type StepAnswer =
   | { done: false }
@@ -51,9 +52,8 @@ function homeWalkOf(of: IndexAsk): IndexOf {
 }
 
 /** A request answered: what it asked for, walked here. */
-export function answerWalk(
-  req: WalkRequest,
-): StepAnswer | IndexAnswer | { home: HomeWalk } | PastCap | { listing: FolderListing } {
+export function answerWalk(req: WalkRequest): StepAnswer | IndexAnswer | { home: HomeWalk } | PastCap | DiskAnswer {
+  if (isDiskRequest(req)) return answerDisk(req);
   enterContext(req.context);
   switch (req.op) {
     case "step": {
@@ -82,8 +82,6 @@ export function answerWalk(
       return { home: homeWalk(req.loc, filterFrom(req.filter), req.asked, req.limits, false) };
     case "seek":
       return vaultsPastCap(req.dir, filterFrom(req.filter));
-    case "list":
-      return { listing: listFolder(req.dir, req.walk, req.hidden) };
   }
 }
 

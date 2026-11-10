@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: [SD-T1]
 tracker: [gh:#46]
@@ -56,6 +56,46 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
 - A disk thread with no request for a minute is let go of, and started again on the next (60–70 ms, under the
   150 ms before `listing…` shows); while a vault is watched the first is asked every two seconds, so only the second
   is let go of. A test: the second let go after the minute (its clock the test's), started again by the next request.
+
+## Open
+
+What the description left open, settled here for the maintainer to confirm; design.md's sections it delivers say
+how.
+
+- What the threads answer is `core/workspace/walk/disk-jobs.ts` (`answerDisk`): `list-worker.ts` serves it alone, so
+  the disk threads load no index and no parser, and `walk-jobs.ts`'s `answerWalk` hands those requests to it, for a
+  test's worker serving both. `DiskThreads` stays in `walk-thread.ts`, as design.md has it.
+- Who asks is said with each request (`Asker`: `look`, `key`, `explorer`, `walk`), and sets its deadline
+  (`DISK_DEADLINES`): a look's and a key's a minute, the explorer's and a walk's ten, each the stand-in's third part
+  when it has one. `list` is the explorer's unless a look asks, so its callers (the explorer's listings, a list of
+  paths) change only by the pool's name. A test's deadlines given to `setWalkWorker` are each asker's the whole
+  walk's, as the stand-in's are.
+- A path's own error is its answer, by its code; a request fails only when its thread does. `stat` follows links, or
+  takes a link's own (`own`), for the ways the TUI's look and an open check for a link not followed (SD-T4, SD-T5).
+  `read`'s stamp is `stamp` after `readText`, as a note's load reads it.
+- `access` reads through the seam: `folderUnreadable` stats and checks access through `disk.stat` and a new
+  `disk.access`, so the stand-in and a test's hold reach it on a disk thread; on the screen's thread it goes at once,
+  as before, until SD-T7 asks it there. `fsutil.ts`'s `DISK_READERS` entry no longer names it.
+- A walk that can't take a thread yet waits, and those asked after it go past it: a short read never waits behind a
+  walk, running or waiting. It waits for as long as the other thread is never free; each request answered frees it.
+- A look's batch (`look`): one of it that fails gives the batch up before its thread is free for the next, so what of
+  it still waits for a thread is withdrawn, never sent. Its `list` carries what the explorer's does (`walk`, `hidden`);
+  each entry's verdict with the walk's filter and the links' rules is SD-T3's, with the watcher's look.
+- `walk` answers `walkVault`, `listDirectory` (Elsewhere) or `homeWalk` (what changed handed back unkept, as the walk's
+  thread's `home`), with the index's stamp and then its text when it's named. Nothing asks it yet (SD-T8). A hold
+  reaches a walk's listings and its `.gitignore`'s read, not its stats, and Elsewhere's `listDirectory` still lists
+  with node:fs: SD-T8's, when it moves the build.
+- Idle: a thread let go of after `IDLE_MS` with nothing asked, its timers given (`timers`), so the test's clock runs
+  the minute. A request takes the first thread free, so while a vault is watched only the second is let go of.
+- `CHECKS_FOR`: `walk-thread.ts` and `disk-jobs.ts` join the listings' entry, which adds `Elsewhere` and `marks` to
+  what `walk-thread.ts` reached since T12, though the listing threads were in it. Each later task adds its features'
+  checks as it moves its reads there; once every read goes through the disk threads, the two leave the entry and run
+  every check, as the seam does.
+- The tests that named `ListThreads` and `listThreads` (`walk-thread.test.ts`, `open-path.test.ts`) name the pool
+  anew; their names and what they assert are unchanged.
+- Measured (notes.md, 2026-11-10; on #56): the TUI on the demo vault, medians of five runs, 218.3 MB resident with no
+  disk thread, 218.6 with one, 219.6 with two, 208.1 once both were stopped. The script was `tmp`'s, as T12's
+  `stall.ts`, and not kept.
 
 ## References
 

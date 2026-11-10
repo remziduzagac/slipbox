@@ -75,3 +75,25 @@ said in design/roots.md § The index, "Not done", and in issue #46. This workstr
 - A look's deadline had two values; it's set by what asked now. The tasks' `blocked_by` follow SD-D1. The pointer
   added to design/roots.md went: the workstream writes only in its own folder, and consolidation replaces that
   paragraph.
+
+## The disk threads measured (2026-11-10)
+
+SD-T2 measured the TUI's resident memory (#56) with no disk thread started, then one, then two, then both stopped:
+slipbox on the demo vault in a 120×34 headless terminal, a preloaded script asking the threads 20 s after the start
+(the second started while a slowed stat held the first). Each figure is the median of seven readings, each after a
+full collection, taken once three in a row were within 0.3 MB; five runs, in MB:
+
+| run | none | one | two | both stopped |
+| --- | --- | --- | --- | --- |
+| 1 | 244.0 | 244.6 | 245.4 | 238.1 |
+| 2 | 240.1 | 239.2 | 240.4 | 229.4 |
+| 3 | 209.2 | 209.4 | 210.2 | 202.6 |
+| 4 | 204.0 | 203.8 | 204.6 | 197.5 |
+| 5 | 218.3 | 218.6 | 219.6 | 208.1 |
+| median | 218.3 | 218.6 | 219.6 | 208.1 |
+
+- Within a run: none to one +0.2 MB, one to two +0.8, both stopped −7.6 (medians). The process's threads: 24 with
+  none, 25 with one, 27 with two, 24 again once stopped.
+- Starting a thread grows the process by about a megabyte, most likely because its heap reuses memory the main thread
+  had freed and not yet given back; stopping both gives back 7 to 11.5 MB, their heaps and stacks with it. A thread
+  let go of after a minute idle is stopped the same way.

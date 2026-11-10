@@ -11,7 +11,7 @@ import { unreadableWords } from "../../../core/foundation/platform/fsutil.ts";
 import { tildePath, untildePath } from "../../../core/foundation/platform/paths.ts";
 import { locationAt } from "../../../core/workspace/vaults/vault.ts";
 import { type FolderListing, type ListedEntry, listFolder } from "../../../core/workspace/walk/listing.ts";
-import { listThreads } from "../../../core/workspace/walk/walk-thread.ts";
+import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import type { App } from "../../app/runtime/app.ts";
 import { noAnswer } from "../../workspace/explorer/listings.ts";
 import type { ListItem, ListOverlay } from "./list-types.ts";
@@ -75,7 +75,7 @@ function said(text: string): ListItem {
 }
 
 /**
- * The folder being read for a list of paths on a listing thread, when one is — whichever list asked it, open or since
+ * The folder being read for a list of paths on a disk thread, when one is — whichever list asked it, open or since
  * closed: never more than one at a time, so a folder that doesn't answer holds one of the two threads the explorer
  * shares, never both. Once it answers, every list waiting on it keeps it, and asks for the folder typed meanwhile.
  */
@@ -85,7 +85,7 @@ let reading: { dir: string; done: Promise<FolderListing> } | null = null;
  * The paths of one list while it's open: the folders typed into, each read once and kept, and its keys. `when` says
  * whether what's typed is a path (the switcher's is only sometimes). A folder a link not followed leads to (VV-D6) is
  * never listed unasked: one row says so, and `enter` on it asks, as the explorer does. In the TUI one folder at a time
- * is read (`reading`), on the listing threads the explorer shares: never one behind another that hasn't answered.
+ * is read (`reading`), on the disk threads the explorer shares: never one behind another that hasn't answered.
  */
 export class PathCompletion {
   private readonly kept = new Map<string, FolderListing>();
@@ -139,7 +139,7 @@ export class PathCompletion {
     return link;
   }
 
-  /** `dir` as read for this list: null while it's read on a listing thread (the TUI's; a test's App reads it here). */
+  /** `dir` as read for this list: null while it's read on a disk thread (the TUI's; a test's App reads it here). */
   private listing(dir: string): FolderListing | null {
     const a = this.app;
     const had = this.kept.get(dir);
@@ -151,7 +151,7 @@ export class PathCompletion {
     }
     // One at a time: the folder typed now is asked for once the one being read answers.
     if (!reading) {
-      const done = listThreads()
+      const done = diskThreads()
         .list(dir, a.config.walk, true)
         .then(
           (listing) => listing,

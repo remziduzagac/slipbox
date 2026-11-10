@@ -1,6 +1,6 @@
 // A folder listed for the explorer (T12, VV-D5): its entries, and what the explorer's rows and their marks say of each
 // — a folder or a file, a link and where it leads, a vault with its name and branch, one you may not read, a busy
-// folder — read in one go: in the TUI on the listing's own threads (list-worker.ts), so a folder on a disk that answers
+// folder — read in one go: in the TUI on the disk threads (list-worker.ts), so a folder on a disk that answers
 // slowly never holds up the screen. The reads the explorer made as it built its rows and drew their marks, made
 // beforehand, each entry asked as little as it takes, and nothing inside another disk mounted there; what they mean is
 // still the explorer's to decide. A vault's name and branch, and a file's permission, are told here for the explorer's
