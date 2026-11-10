@@ -1,11 +1,12 @@
 // Whole, sliced and single-directory walks over the same traversal rules.
 
-import { type Dirent, lstatSync, readdirSync, statSync } from "node:fs";
+import { type Dirent, lstatSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { WalkFilter } from "../filtering/filter.ts";
 import type { WalkCap, WalkLimits, WalkResult } from "../contracts.ts";
 import { type WalkState, finishWalk, startWalk } from "./state.ts";
 import { listDir } from "./listing.ts";
+import { folderReader } from "../io/folders.ts";
 import { RELIST, parentOf } from "../io/stamps.ts";
 
 export function walkVault(root: string, filter: WalkFilter): WalkResult {
@@ -111,7 +112,7 @@ export function listDirectory(dir: string, filter: WalkFilter): WalkResult {
   const result: WalkResult = { files: [], assets: [], dirs: [""], skipped: [], errors: [] };
   let entries: Dirent[] = [];
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = folderReader(dir);
   } catch (err) {
     result.errors.push(`${dir}: ${(err as Error).message}`);
   }

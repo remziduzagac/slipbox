@@ -10,7 +10,13 @@
 
 import type { Config } from "../../application/config/config.ts";
 import * as disk from "../../foundation/platform/disk.ts";
-import { type DecodedFile, folderUnreadable, readTextStamped, type Stamp } from "../../foundation/platform/fsutil.ts";
+import {
+  type DecodedFile,
+  folderUnreadable,
+  readText,
+  readTextStamped,
+  type Stamp,
+} from "../../foundation/platform/fsutil.ts";
 import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
 import {
   type JudgeBy,
@@ -21,6 +27,7 @@ import {
   type ListJudge,
   type PathVerdict,
 } from "../graph/watch/judging.ts";
+import { contentHash } from "../links/redirects.ts";
 import { homeWalk } from "../vaults/home.ts";
 import type { HomeWalk } from "../vaults/home/contracts.ts";
 import type { FilterSettings, WalkLimits, WalkResult } from "./contracts.ts";
@@ -46,14 +53,28 @@ export interface WalkAsk {
   filter: FilterSettings;
   home?: { key: string; asked: string[]; limits?: WalkLimits };
   index?: string;
+  /** A key's build (SD-D11): it takes a thread as a key's read does, not waiting for two free (SD-D2) — the thread kept
+   *  free is the keys', and every key is waiting for this walk. */
+  key?: boolean;
 }
 
-/** A walk answered: the walk; home's own besides it, for home; the index's text (null: none read) and its stamp, as
- *  `GraphRefresh` words it (`mtime:size`, "" for none), stamped before it's read. */
+/**
+ * The index read for a build, after its walk (SD-T8): its text (null: none read) and its stamp, as `GraphRefresh` words
+ * it (`mtime:size`, "" for none), stamped before it's read; and, by their paths, the hashes of the texts of the notes
+ * the walk found that the index hasn't, of a size one it has and the walk no longer finds has — what a move found as
+ * it's built is told by (`detectMoves`), read with the walk rather than where it's built.
+ */
+export interface IndexRead {
+  text: string | null;
+  stamp: string;
+  hashes?: Record<string, string>;
+}
+
+/** A walk answered: the walk; home's own besides it, for home; the index read after it, when asked. */
 export interface WalkAnswer {
   walk: WalkResult;
   home?: Omit<HomeWalk, "walk">;
-  index?: { text: string | null; stamp: string };
+  index?: IndexRead;
 }
 
 /** A folder of the vault open's own tree listed for the explorer (SD-T7): by its walk's filter, and the names of the
@@ -135,18 +156,44 @@ function readOf(path: string): ReadAnswer {
   }
 }
 
-/** The index's stamp, then its text: written in between, it's newer than its stamp says, and read again. */
-function indexOf(path: string): { text: string | null; stamp: string } {
-  let at = "";
+/** The index at `path` read for a build after `walk`: its stamp, then its text — written in between, it's newer than its
+ *  stamp says, and read again — and the hashes a move found as it's built is told by (`IndexRead`). */
+export function indexRead(path: string, walk: WalkResult): IndexRead {
+  let stamp = "";
   try {
     const st = disk.stat(path);
-    at = `${st.mtimeMs}:${st.size}`;
+    stamp = `${st.mtimeMs}:${st.size}`;
   } catch {}
+  let text: string;
   try {
-    return { text: disk.readFile(path).toString("utf8"), stamp: at };
+    text = disk.readFile(path).toString("utf8");
   } catch {
-    return { text: null, stamp: at };
+    return { text: null, stamp };
   }
+  const hashes = movedHashes(text, walk);
+  return { text, stamp, ...(hashes ? { hashes } : {}) };
+}
+
+/** The hashes of the texts of the notes `walk` found that the index `text` hasn't, of a size one it has that the walk
+ *  no longer finds has (`detectMoves`'s candidates, a few at most); one that can't be read has none. None: no such
+ *  note. */
+function movedHashes(text: string, walk: WalkResult): Record<string, string> | undefined {
+  let entries: Record<string, { size?: number; hash?: string }> = {};
+  try {
+    entries = (JSON.parse(text) as { entries?: typeof entries } | null)?.entries ?? {};
+  } catch {}
+  const found = new Set(walk.files.map((f) => f.rel));
+  const sizes = new Set<number>();
+  for (const [rel, e] of Object.entries(entries)) if (!found.has(rel) && e?.hash && e.size) sizes.add(e.size);
+  if (!sizes.size) return undefined;
+  const hashes: Record<string, string> = {};
+  for (const f of walk.files) {
+    if (Object.hasOwn(entries, f.rel) || !sizes.has(f.size)) continue;
+    try {
+      hashes[f.rel] = contentHash(readText(f.abs).text);
+    } catch {}
+  }
+  return Object.keys(hashes).length ? hashes : undefined;
 }
 
 /** Paths statted, each judged too when `judge` asks. */
@@ -157,16 +204,17 @@ function statsOf(ask: StatAsk): StatAnswer {
   return { stats, judged: ask.paths.map((p, i) => judgePath(p, stats[i]!, ctx)) };
 }
 
+/** The vault walked, then its index read, in the order a build on the thread that asks reads them. */
 function walkOf(ask: WalkAsk): WalkAnswer {
   const filter = filterFrom(ask.filter);
-  const index = ask.index === undefined ? {} : { index: indexOf(ask.index) };
+  const read = (walk: WalkResult) => (ask.index === undefined ? {} : { index: indexRead(ask.index, walk) });
   if (ask.how === "home") {
     const { key, asked, limits } = ask.home ?? { key: "", asked: [] };
     const { walk, ...home } = homeWalk({ root: ask.filter.root, key }, filter, asked, limits, false);
-    return { walk, home, ...index };
+    return { walk, home, ...read(walk) };
   }
   const walk = ask.how === "listed" ? listDirectory(ask.filter.root, filter) : walkVault(ask.filter.root, filter);
-  return { walk, ...index };
+  return { walk, ...read(walk) };
 }
 
 /** A request answered here: what it asked for, read as the thread that asked would. */

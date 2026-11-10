@@ -334,6 +334,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   knows in it at once, a dimmed `listing…` first under it until the disk answers, then the rest and their marks.
   Zooming into a folder, and unfolding one with `l` before it's listed, wait for the disk as opening a note does, and
   `esc` gives the wait up.
+- On a slow disk, such as a network share or a drive that's asleep, the screen no longer freezes while slipbox reads
+  the vault again: `space v r`, going into another vault, `[walk]` changed, or a change that has it look through every
+  folder. It reads in the background, `reading the vault…` in Background work, links and backlinks as they were until
+  it's read. After a rename, or a folder moved, copied or restored, and in a vault you've just gone into until it's
+  read, the keys you type wait for it, and the status line says `reading the vault…`. A vault that doesn't answer
+  within ten minutes is said, kept as it was, and read again a minute later.
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
   still leads to the same place. Before, the move was refused as `… resolves outside the vault`.

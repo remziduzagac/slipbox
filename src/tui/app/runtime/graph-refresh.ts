@@ -1,13 +1,11 @@
 // Background parsing and home refresh; watcher delivery stays in Watch.
-import * as disk from "../../../core/foundation/platform/disk.ts";
-import { basename, join } from "node:path";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import { readText } from "../../../core/foundation/platform/fsutil.ts";
 import { activityFile, AutoIndex, autoIndexFile } from "../../../core/workspace/graph/autoindex.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
 import { describeCap, type HomeWalk, inFolders, keepHomeWalk, walksInto } from "../../../core/workspace/vaults/home.ts";
 import { homeFolder, type VaultLocation } from "../../../core/workspace/vaults/vault.ts";
-import { applyToGraph } from "../../../core/workspace/vaults/vault-feed.ts";
+import type { IndexRead } from "../../../core/workspace/walk/disk-jobs.ts";
 import type { WalkCap } from "../../../core/workspace/walk/walk.ts";
 import { walkFailure, walkThread } from "../../../core/workspace/walk/walk-thread.ts";
 import { mtimeOf } from "../../../core/workspace/walk/look-jobs.ts";
@@ -16,6 +14,7 @@ import { parseInBackground } from "../../../core/documents/markdown/parse-pool.t
 import { BACKGROUND_PARSE } from "../../documents/buffers/buffer.ts";
 import type { Level } from "../notifications/contracts.ts";
 import type { Background } from "./background.ts";
+import { takeAgain } from "./builds.ts";
 
 /** Live index inputs and the effects a completed pass delivers. */
 interface GraphRefreshContext {
@@ -257,9 +256,10 @@ export class GraphRefresh {
       if (c.kind === "moved") since.add(c.from).add(c.to);
       else since.add(c.path);
     });
-    let home: HomeWalk;
+    let home: HomeWalk & { index?: IndexRead };
     try {
-      home = await walkThread().homeWalk(loc, graph.filter.settings, asked);
+      // Its index read there after it (SD-T8): home's graph built from both, nothing of them read here.
+      home = await walkThread().homeWalk(loc, graph.filter.settings, asked, undefined, true);
     } catch (err) {
       // Given up on: said as the walk's, and home walked again ten minutes later, its graph built again at its end.
       if (at === this.homeRefresh && this.app.loc === loc) {
@@ -295,30 +295,12 @@ export class GraphRefresh {
   /** Home's graph built again from its walk, made on the walk's thread (`homeIndexed`); the files that changed in the
    *  graph while it was made (`since`) taken in again over it, as the watcher takes a change in — one reached (20.8)
    *  reached again. */
-  private homeBuilt(walk: HomeWalk, capped: WalkCap | null, since: string[]): void {
+  private homeBuilt(walk: HomeWalk & { index?: IndexRead }, capped: WalkCap | null, since: string[]): void {
     const keep = this.delivery.rememberSelections();
     const graph = this.app.graph;
     const reached = new Set(graph.reached);
     graph.build(true, "lazy", walk);
-    // A file the walk leaves out, reached by a link or by being opened, that the build didn't keep: reached as it was,
-    // never taken in as one of home's own. Whether each is there, asked of the disk once.
-    const there = new Map(since.map((rel) => [rel, disk.exists(join(graph.root, rel))]));
-    const changed = since.filter(
-      (rel) => !(reached.has(rel) && !graph.known(rel) && there.get(rel) && graph.reachFile(rel)),
-    );
-    if (changed.length)
-      applyToGraph(
-        graph,
-        {
-          changes: changed.map((rel) => ({
-            rel,
-            kind: there.get(rel) ? "changed" : "deleted",
-            isNote: graph.filter.isNoteName(basename(rel)),
-          })),
-          rescan: false,
-        },
-        this.app.config.walk.max_file_size,
-      );
+    takeAgain(graph, since, reached, this.app.config.walk.max_file_size);
     keep();
     this.delivery.rebuilt();
     const home = this.app.graph.home;

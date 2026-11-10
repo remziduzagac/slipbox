@@ -19,7 +19,7 @@ import { tildePath } from "../vaults/names.ts";
 import { stateDir } from "../../foundation/platform/paths.ts";
 import { Redirects } from "../links/redirects.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";
-import type { AskedWhole, HomeWalk } from "../vaults/home.ts";
+import type { AskedWhole } from "../vaults/home.ts";
 import { findVaultRoot, isListed, type VaultLocation } from "../vaults/vault.ts";
 import { type NoteFile, type Skipped, type Stamp, type WalkCap, WalkFilter } from "../walk/walk.ts";
 import type {
@@ -36,7 +36,7 @@ import type {
 import { tagKey, tagName } from "../../documents/markdown/tags.ts";
 import type { GraphStats } from "./graph-types.ts";
 import { LinkResolver } from "./graph-resolve.ts";
-import { GraphRefresh } from "./refresh.ts";
+import { type BuildGiven, GraphRefresh } from "./refresh.ts";
 import { GraphFeed } from "./feed.ts";
 import { GraphMoves } from "./moves/reconcile.ts";
 import { applyOverlay, overlayText, type EditorOverlay } from "./overlays/editor.ts";
@@ -136,7 +136,7 @@ export class Graph {
         invalidate: () => this.invalidate(),
         emit: (change) => this.feed.emit(change),
         built: () => this.feed.built(),
-        detectMoves: (vanished, fresh) => this.moves.detectMoves(vanished, fresh),
+        detectMoves: (vanished, fresh, hashes) => this.moves.detectMoves(vanished, fresh, hashes),
       },
       asked,
     );
@@ -170,8 +170,12 @@ export class Graph {
     return this.loc.root;
   }
 
-  build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): this {
-    this.refresh.build(useCache, parse, given);
+  /** The TUI's graph built again off the screen's thread (SD-T8): a lazy build not given its walk is handed to it, and
+   *  is when it says so (true), its walk and index read on a disk thread; the CLI's, and a test's App's, build here. */
+  rebuilder: ((useCache: boolean) => boolean) | null = null;
+
+  build(useCache = true, parse: "all" | "lazy" = "all", given?: BuildGiven): this {
+    if (given || parse !== "lazy" || !this.rebuilder?.(useCache)) this.refresh.build(useCache, parse, given);
     return this;
   }
 
@@ -548,17 +552,8 @@ export class Graph {
 
   /** Whether a vault-relative path is a note or a file of the vault (by the index: no disk). */
   known(rel: string): boolean {
-    if (this.notes.has(rel)) return true;
-    return (
-      this.assets
-        .get(
-          rel
-            .slice(rel.lastIndexOf("/") + 1)
-            .normalize("NFC")
-            .toLowerCase(),
-        )
-        ?.includes(rel) ?? false
-    );
+    const name = rel.slice(rel.lastIndexOf("/") + 1).normalize("NFC");
+    return this.notes.has(rel) || (this.assets.get(name.toLowerCase())?.includes(rel) ?? false);
   }
 
   /**

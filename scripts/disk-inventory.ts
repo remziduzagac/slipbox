@@ -113,6 +113,7 @@ export const SEAM_READERS = [
   "src/core/workspace/graph/feed.ts",
   "src/core/workspace/graph/graph.ts",
   "src/core/workspace/graph/moves/reconcile.ts",
+  "src/core/workspace/graph/refresh.ts",
   "src/core/workspace/graph/watch.ts",
   "src/core/workspace/graph/watch/contracts.ts",
   "src/core/workspace/graph/watch/directories.ts",
@@ -123,6 +124,7 @@ export const SEAM_READERS = [
   "src/core/workspace/graph/watch/state.ts",
   "src/core/workspace/graph/watch/ticks.ts",
   "src/core/workspace/links/convention.ts",
+  "src/core/workspace/vaults/home/cache.ts",
   "src/core/workspace/vaults/vault-feed.ts",
   "src/core/workspace/walk/filtering/filter.ts",
   "src/core/workspace/walk/key-jobs.ts",
@@ -133,6 +135,7 @@ export const SEAM_READERS = [
   "src/tui/actions/documents/actions-edit.ts",
   "src/tui/actions/documents/actions-links.ts",
   "src/tui/actions/workspace/actions-files.ts",
+  "src/tui/app/runtime/builds.ts",
   "src/tui/app/runtime/graph-refresh.ts",
   "src/tui/app/runtime/key-reads.ts",
   "src/tui/app/runtime/look.ts",
@@ -181,8 +184,6 @@ export const DISK_READERS: Record<string, string> = {
     "a write's own reads and its guards' (`landsInside`, `entryAt`): kept (SD-D7); `readJson` reads through the seam",
   "src/core/workspace/graph/graph-lookup.ts": "a link into a nested vault, as it's drawn (SD-T11)",
   "src/core/workspace/graph/graph-resolve.ts": "a `/…` link's first folder, as it's drawn (SD-T11)",
-  "src/core/workspace/graph/refresh.ts":
-    "a build's walk and index read on a disk thread (SD-T8); a file reached (SD-T6)",
   "src/core/workspace/links/links.ts": "a name's case on a disk that folds it (`onDisk`), as it's drawn (SD-T11)",
   "src/core/workspace/mutations/files.ts": "a file operation's guards before it writes: kept (SD-D7)",
   "src/core/workspace/mutations/rename/rename-apply.ts": "a rename's guards before it writes: kept (SD-D7)",
@@ -190,7 +191,6 @@ export const DISK_READERS: Record<string, string> = {
     "a root's positions of before 21.8, looked for at the start: kept (SD-D9); at a vault gone into, a disk thread's (SD-T9)",
   "src/core/workspace/vaults/folders.ts":
     "a named folder's copies, read with a write or as a key names one: kept (SD-D7); the Vaults window's, a disk thread's (SD-T9)",
-  "src/core/workspace/vaults/home/cache.ts": "home's walk kept, brought up to now by a disk thread's `walk` (SD-T8)",
   "src/core/workspace/vaults/registry.ts":
     "the machine's list moved once and recorded, with its write: kept (SD-D7); the Vaults window's, a disk thread's (SD-T9)",
   "src/core/workspace/vaults/symlinks.ts":
@@ -203,7 +203,8 @@ export const DISK_READERS: Record<string, string> = {
   "src/tui/shell/terminal/run.ts": "what's read before the screen is taken: kept (SD-D9)",
   "src/tui/workspace/git/git.ts": "git's lock looked for (`indexLocked`), with the TUI's look (SD-T4)",
   "src/tui/workspace/git/views/panel/gitview.ts": "a file read for its diff (`readForDiff`), a key's own: kept",
-  "src/tui/workspace/vaults/vaults.ts": "a vault gone into and a branch's tabs, from a disk thread's `walk` (SD-T8)",
+  "src/tui/workspace/vaults/vaults.ts":
+    "whether a tab's file, or one a switch opens or offers a peek at, is there: not moved yet (SD-T8's Open)",
 };
 
 /** Whether `check:boundary` holds a tree to the inventory: always, but for a test's small tree that asks not to be. */

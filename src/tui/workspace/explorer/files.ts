@@ -439,7 +439,8 @@ export class Files {
   private restoreItem(id: string): void {
     let item: TrashItem;
     try {
-      item = restorePath(this.app.graph, this.app.loc, id);
+      // A folder's build read on a disk thread, a key's (SD-D11): the keys after it wait for it.
+      item = this.app.watch.builds.forKey(() => restorePath(this.app.graph, this.app.loc, id));
     } catch (err) {
       return this.app.message("warn", (err as Error).message);
     }
@@ -524,8 +525,8 @@ export class Files {
     }
     let r: ReturnType<typeof copyPath>;
     try {
-      // Into its own folder: beside it, as name-copy.
-      r = copyPath(this.app.graph, clip.rel, into === from ? undefined : to);
+      // Into its own folder: beside it, as name-copy. A folder's build is a key's, as a restore's.
+      r = this.app.watch.builds.forKey(() => copyPath(this.app.graph, clip.rel, into === from ? undefined : to));
     } catch (err) {
       return this.app.message("warn", (err as Error).message);
     }

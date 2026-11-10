@@ -16,14 +16,14 @@ option recommended (§ Questions answered), and agreed its other decisions as pr
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
 decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, SD-T2, the disk threads, SD-T3, the watcher's
-look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T7, the explorer's own tree, and SD-T9, slipbox's own folders,
-are done (2026-11-10); the other tasks are `todo`.
+look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T7, the explorer's own tree, SD-T8, the vault built again, and
+SD-T9, slipbox's own folders, are done (2026-11-10); the other tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5, SD-T7 and SD-T9 `done`, the rest `todo`.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5 and SD-T7 to SD-T9 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -153,6 +153,10 @@ but still reads the index and its stamp here.
   `ensureAll` (`refresh.ts:369`) every one when the tags, the problems, the link forms or a note's backlinks are asked
   of the graph here (`src/core/workspace/graph/graph.ts:469`, `:483`, `:492`, `:515`); `reachFile` (`refresh.ts:278`)
   reads a folder to find a name's case (`onDisk`) and stats the file.
+- **The search index caught up** **(not in #46)**: after a build, `IndexJob.step`
+  (`src/core/workspace/search/indexing/files.ts:95`) reads each new or changed note's text in 12 ms slices, and a
+  change the graph hears of is indexed at once (`src/tui/workspace/search/search.ts:66`). Found by SD-T8's held tests
+  (2026-11-10); no task names it yet.
 
 ### 5. The explorer's own tree of the vault open
 
@@ -326,7 +330,8 @@ merges (SD-D14), its design text.
 - [SD-T6](tasks/note-text.md): a changed note's text, and the background parse's, read on the disk threads. `todo`
 - [SD-T7](tasks/archive/explorer-tree.md): the explorer's own tree of the vault open listed and marked off the
   thread. `done`
-- [SD-T8](tasks/rebuilds.md): the vault open built again from a walk and an index read on a disk thread. `todo`
+- [SD-T8](tasks/archive/rebuilds.md): the vault open built again from a walk and an index read on a disk thread.
+  `done`
 - [SD-T9](tasks/archive/own-folders.md): slipbox's own state, cache and config folders read off the thread.
   `done`
 - [SD-T10](tasks/start.md): the start takes the screen first, then reads the vault. `todo`
@@ -414,7 +419,8 @@ From the review, on 2026-11-10, by the maintainer's instruction to take the reco
 - **What crosses between threads.** A vault's walk and its index, sent across whole, cost the screen's thread to take
   in: T12 measured a 50 ms gap when home's walk of 10,000 notes crossed twice, and kept it on the walk's thread. A
   build's walk must cross once (the graph is here); SD-T8 measures it, and sends the index as its text if that's
-  cheaper.
+  cheaper. Measured at 10,000 notes: the walk and the index's text cross in 3–6 ms, the graph built from them in
+  25–29 ms against 54–62 built here whole; the index sent parsed would cross in 13–18 ms, saving no more than its parse.
 - **A thread a disk never lets go.** On a hard NFS mount a read can wait in the kernel for good; ending the worker
   can't end that read. `WorkerRequests` lets go of it and starts another (*memory*: the old thread stays until the
   disk answers). A disk that never answers is asked again only a minute later, so threads leak at most one a minute

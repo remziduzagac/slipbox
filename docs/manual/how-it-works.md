@@ -112,6 +112,16 @@ The TUI builds the index in the background when it opens a vault. Then it keeps 
 changes them. A command brings it up to date before a search. Until it's built, search reads the files themselves. It
 finds the same notes, more slowly ([The index](finding.md#the-index)).
 
+When the TUI reads the whole vault again, it reads it in the background: `space v r` reindexing it, going into
+another vault, `[walk]` changed, or a change outside slipbox that has it look through every folder again. Until it's
+read, [Background work](screen.md#the-top-bar) (`space b`) lists `reading the vault…`, and links, backlinks and search
+answer from the vault as it was, your keys going on. After a rename, or a folder moved, copied or restored, the keys
+you type wait for it instead, so the next one acts on the vault as the change left it. They wait too when you've just
+gone into another vault, until it's first read: there's no vault as it was to act on yet. Either way the
+[status line](screen.md#the-status-line) says `reading the vault…`, and `esc` doesn't stop it. A vault on a slow disk,
+such as a network share or a drive that's asleep, that doesn't answer within ten minutes stays as it was: a message
+says `reading the vault gave up: …`, and slipbox reads it again a minute later.
+
 The index is a copy, never the truth. Deleting the cache is always safe, and slipbox makes it again.
 
 While you aren't working, the TUI also looks through your home folder a little at a time. It indexes home's own notes,

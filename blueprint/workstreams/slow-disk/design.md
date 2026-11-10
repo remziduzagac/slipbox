@@ -19,8 +19,9 @@ they answer in `disk-jobs.ts`): two, light — no index, no parser — each star
 the first thread free, in the order asked, so never behind one that doesn't answer while the other is free; a walk
 takes a thread only while the other is left for the rest, and until then waits, the requests asked after it going past
 it and a second walk waiting behind it. Once it has waited a look's deadline it's passed no more: it takes the next
-thread free, unless the other is walking. A background request (the watcher's looks) takes a thread only while no other
-background request holds one, the rest going past it meanwhile. They answer, the same code as the thread that asks
+thread free, unless the other is walking; so does a key's build's walk from the start, every key waiting for it
+(SD-T8). A background request (the watcher's looks) takes a thread only while no other background request holds one,
+the rest going past it meanwhile. They answer, the same code as the thread that asks
 would run, through the seam
 below, with what that thread knows and they can't see for themselves (`walkContext`); a path's own error is its answer,
 and a request fails only when its thread does:
@@ -181,14 +182,41 @@ the second is let go of.
   `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers, and what the key
   does after the zoom done only then; the start's is read here until SD-T10. One `Listings` keeps both sides' folders,
   256 at most; a folder listed on both (a nested vault's, unfolded, a path in it asked) is kept once for each.
-- **The vault built again** (SD-T8). A reindex, the watcher's rescan, a setting of the walk changed, a vault gone into,
-  a branch's tabs and the folders asked for in home read the walk and the index on a disk thread (`walk`); the graph
-  stays as it was meanwhile, `reading the vault…` among the background tasks. The index crosses as its text, parsed
-  here as it is now. After a rename or a folder operation (SD-D11), the build is read there too, but the keys after it
-  wait their turn, as after an open, and `esc` doesn't give it up: the write is made, and the graph must follow it.
+- **The vault built again** (SD-T8; `Builds`, `tui/app/runtime/builds.ts`). A reindex, the watcher's rescan, a setting
+  of the walk changed, a vault gone into, a branch's tabs and the folders asked for in home read the walk and the index
+  on a disk thread (`walk`, a walk's ten minutes to answer); the graph stays as it was meanwhile, `reading the vault…`
+  among the background tasks, where it can be stopped. A build the TUI's graph asks of itself without a walk given —
+  the rescan's, the folders asked for, a file operation's — goes there through `Graph.rebuilder`; the CLI has none,
+  and builds as before. The index crosses as its text, parsed here as it is now, with the hashes of the new notes a
+  move could be (a vanished note's size) read beside it, so the moves are found without a read here; home's refresh
+  after its walk takes its index from the walk's thread the same way. An answer is taken only while the vault open
+  and its graph are the ones it was asked under. When something else has built that graph since (`Graph.builds`:
+  home's refresh), it's read once more, then taken whatever was built meanwhile, so a busy vault never keeps it out;
+  a graph made anew is never read again for it. What the graph took in meanwhile — the watcher's changes, slipbox's
+  own saves, a file reached — is taken in again over it, as home's refresh does (`since`). Asked again while one is
+  out, it's asked once more when that answers, every ask meanwhile as one; a setting of the walk, which makes the
+  graph anew, takes the place of the one out, and what a build of the graph as it was follows (`Watch.rebuilt`) still
+  follows when one was asked of it too. Given up on (SD-D6): `reading the vault gave up: …; it's read again in a
+  minute`, the graph as it was, and asked again a minute later, while the vault and its graph are the same, with all
+  it was asked, what waited for it too, as one build — and, for a graph never built, what's asked to follow it in that
+  minute: a vault gone into whose session answers then opens its own note once it's read. An answer that can't be taken,
+  a step of building from it failing, is said (`reading the vault failed: …; :reindex tries again`), every key let go. A
+  vault gone into has a graph never built until its first answer: the keys wait for it as for a key's build, whether a
+  note was named, the tabs brought back or neither, `reading the vault…` in the status line, `esc` not letting them go,
+  and the background tasks can't stop it — they'd act on an empty graph, a rename rewriting none of the links to what it
+  moves. Its note opens once it's built. A key's build's walk takes a disk thread at once, as a key's read does, not
+  waiting for the other to be free: the thread SD-D2 keeps free is the keys', and every key is waiting on this walk —
+  going into a vault, slipbox's own folders on a slow disk (SD-T9) would otherwise hold it, and the keys, behind them.
+  After a rename or a folder operation (SD-D11), the build is read there
+  too, but the keys after it wait their turn, as after an open, `reading the vault…` in the status line, and `esc`
+  doesn't give it up, nor can the background tasks: the write is made, and the graph must follow it. Measured at
+  10,000 notes (an index of 10 MiB, a local disk): the walk and the index's text crossing hold the screen's thread
+  3–6 ms, the graph built from them here 25–29 ms, 18 of it the index parsed; built here whole, as before, 54–62 ms.
+  The index sent parsed would hold it 13–18 ms as it crosses, saving no more than the parse.
 - **slipbox's own folders** (SD-T9). What's read of them at a vault gone into, as the Vaults window opens and as a
   link's completion asks is read there (`own`), what was read last used meanwhile. Going into a vault, its session and
-  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into, and its
+  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into once its
+  graph is first built (SD-T8), and its
   tabs open where they were left once it answers — not over a tab opened meanwhile, though the note the switch was for
   opens and is shown all the same, unless you opened it yourself meanwhile; the recents of the moment first, a UI
   override set meanwhile kept; its session isn't saved until then. The machine's positions are carried over from the
@@ -363,6 +391,9 @@ Previously: "the TUI makes its own walks, and lists the explorer's folders, on t
 - A row added after `fsutil.ts`'s: "`core/foundation/platform/disk.ts` | SD-D10 | the one seam every read of the
   disk goes through: a listing, a stat, a file's bytes; the slow disk stood in for, and a test's hold" (built by
   SD-T1).
+- In the paragraph on `app/runtime/watch.ts`, after its `GraphRefresh` sentence: "Its `Builds` collaborator in
+  `builds.ts` builds the vault open again from a walk and an index read on a disk thread: what's asked, the answer
+  checked and taken, a key's build holding the keys after it (SD-D5, SD-D11)" (built by SD-T8).
 
 Previously: "the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked"; no row for
-`disk-jobs.ts` or `disk.ts`.
+`disk-jobs.ts` or `disk.ts`; no sentence on `Builds`.
