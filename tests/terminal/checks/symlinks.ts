@@ -2,7 +2,7 @@
 
 import { chmodSync, existsSync, lstatSync, mkdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Check, explorerOpen, explorerRow, inSwitcher, leader, opened } from "../check.ts";
+import { type Check, explorerOpen, explorerRow, inSwitcher, leader, mode, opened } from "../check.ts";
 import { Skipped, sleep } from "../session.ts";
 import { lastMessage, toLink } from "../support/links.ts";
 import { asked, markOf, rowEnd, shelf, symlinkOnce, WIDE } from "../support/vaults.ts";
@@ -565,6 +565,9 @@ export const LINKED: Check[] = [
       // A folder's: its row says where it leads, never "not followed"; opened, the folder it names.
       await explorerOpen(s);
       await s.keys("escape");
+      // The note has the keys again, seen before the explorer is focused again: `explorerOpen` presses nothing on a
+      // frame that still shows FILES, and the keys after it would go to the note.
+      await s.until(() => mode(s) === "READ", undefined, "escape to give the note the keys");
       await s.until(
         () => rowEnd(s, "again")?.describe === "→ ~/notes/projects",
         3000,
