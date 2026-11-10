@@ -59,7 +59,17 @@ terminal checks too, by check file, three parts on each Linux runner (D275, `scr
 check a run takes is in exactly one part, so a part's log holds only its share: a failure is in the part that ran it.
 `ci` fails when any part failed or was cancelled; re-running a failed part alone re-runs only its share. To run a part
 here: `SCOPE_SHARD=2/3 bun run test:changed`, or `bun run test:terminal --shard 2/3 [filters…]`. macOS runs each
-whole. A test file found slow (eight seconds or more on a runner) belongs in `SLOW_TESTS`, so the parts stay even.
+whole.
+
+Each `test` job, every part and macOS's, says its tests' times (D276): the slowest files and tests in its step summary
+and at the end of its log, and the report itself in the run's artifacts (`test-times-Linux-0` to `-2`,
+`test-times-macOS-0`). A test file over its budget fails a Linux job, `test times` naming it, its time and the budget:
+30 seconds, or the file's own in `BUDGETS` (`scripts/test-times.ts`). Make it faster or split it; a file slow for a
+reason gets a budget of its own there, with why, twice its longest on Linux, up to the next five seconds. On macOS,
+where a file's time moves far more, each budget is four times Linux's, and a file over it is a warning in the step
+summary, not a failure: look at it if Linux's time grew too. To weigh the parts by the latest times, after a run of
+every test (the full run, or any run of a workflow change): `bun scripts/test-times.ts slow <run id>…` rewrites
+`SLOW_TESTS` in `scripts/ci-shard.ts` from those runs' Linux reports; commit it in a pull request.
 
 macOS runs after Linux (D273): each macOS job, `test (macos-15)` and `terminal (macos-15)`, waits for its Linux job and
 runs only once it passed. A pull request runs `test (macos-15)` only when it changes what differs on macOS (`MACOS` in

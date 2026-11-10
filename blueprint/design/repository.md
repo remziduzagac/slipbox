@@ -126,7 +126,8 @@ runs only once it passed, whatever the event (D273). Jobs call package.json scri
   D275): the typecheck, boundary, supply chain's gates and the part's share of the reached unit tests (`bun run
   test:changed`; of every one in the full run). **`test-macos`**, `test (macos-15)` (arm64), the same steps, whole,
   once every part passed, when `changes` says `macos` (D273). On macOS SQLite is Apple's; its FTS5 and ranking run when
-  a change reaches them and in the full run (`tests/core/`, `tests/cli/`; `14.13`).
+  a change reaches them and in the full run (`tests/core/`, `tests/cli/`; `14.13`). Each, then, its tests' times
+  (below).
 - **`terminal`**, skipped entirely for pull requests. Pushes, merge groups and full runs keep `ubuntu-24.04` and
   `ubuntu-24.04-arm` in it, each in three parts (D275), and `macos-15` in **`terminal-macos`**, `terminal
   (macos-15)`, whole, once every part passed on both (D273): the terminal checks a change's files reach (`bun run
@@ -141,7 +142,17 @@ runs only once it passed, whatever the event (D273). Jobs call package.json scri
   weight in their paths' order: the same files make the same parts. A test file weighs its seconds on a runner if a run
   measured it slow (`SLOW_TESTS`, eight seconds or more; a test holds each name to a file there is), else one; a check
   file, its checks, one run alone counting a runner's four cores. A part with nothing to run passes at once. Tests
-  hold every file and every check, of the whole suite and of a change's scope, to exactly one part.
+  hold every file and every check, of the whole suite and of a change's scope, to exactly one part. `SLOW_TESTS` is
+  rewritten from runs' reports (below) by `bun scripts/test-times.ts slow <run>…`, by hand and committed, so a tree's
+  parts are the same in every run of it (D276).
+- **The tests' times** (D276, `scripts/test-times.ts`), in each `test` job, Linux's parts and macOS's: `SCOPE_REPORT`
+  (the runner's temporary folder) has `ci:scope` hand `bun test` its JUnit reporter, or write an empty report for a
+  part with nothing to run. Once the tests ran, passed or failed, `bun run test:times` reads it: the ten slowest files
+  and tests, in the log and the step summary; a test file over its budget fails a Linux job and is a warning on macOS,
+  in the step summary too (design/testing.md § Timeout policy); a report missing fails either. The report is uploaded
+  as `test-times-<system>-<part>` (`Linux-0` to `-2`, `macOS-0`), kept 30 days, a job run again replacing its own
+  (`overwrite`: upload-artifact refuses a second under a name the run has); the upload needs no permission of the
+  job's token. A test holds both jobs to these steps.
 - **`site`**, on `ubuntu-24.04` for every event: the docs' site built (`bun run site`), every link within it landing
   (DS). Lint separately checks Markdown, spelling and links between files on every PR.
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless

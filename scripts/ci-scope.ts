@@ -14,12 +14,14 @@
 // the jobs after it read as `SCOPE_RANGE`), and says it either way. `bun run test:changed` and `bun run
 // test:terminal:changed [runner's flags…]` run what a change reaches: a pull request's merge commit against its base in
 // CI, a push's range; here, your branch, committed or not, against where it left `origin/dev` (or `--base <ref>`). With
-// `SCOPE_SHARD` (`i/n`, a Linux job's part in CI), only that part of it (D275, `scripts/ci-shard.ts`).
+// `SCOPE_SHARD` (`i/n`, a Linux job's part in CI), only that part of it (D275, `scripts/ci-shard.ts`); with
+// `SCOPE_REPORT`, the tests' JUnit report written there, an empty one when none runs (D276, `scripts/test-times.ts`).
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { commit, githubApi, pushRange } from "./ci-range.ts";
 import { allTests, parseShard, type Shard, shardTests } from "./ci-shard.ts";
+import { reportFlags } from "./test-times.ts";
 
 const ROOT = join(import.meta.dir, "..");
 
@@ -564,13 +566,12 @@ if (import.meta.main) {
     const shard = parseShard(process.env.SCOPE_SHARD);
     const cmd = scriptFor(what, s, shard, here);
     const of = shard ? ` in part ${shard.index}/${shard.count}` : "";
+    const report = what === "test" ? reportFlags(process.env.SCOPE_REPORT, !cmd) : [];
     if (!cmd) console.log(`no ${what === "test" ? "test" : "terminal check"} reaches this change${of}`);
     else {
       if (shard && what === "test") console.log(`part ${shard.index}/${shard.count}: ${cmd.length - 1} test files`);
-      process.exit(
-        Bun.spawnSync([process.execPath, "run", ...cmd, ...rest], { stdio: ["inherit", "inherit", "inherit"] })
-          .exitCode,
-      );
+      const args = [process.execPath, "run", ...cmd, ...report, ...rest];
+      process.exit(Bun.spawnSync(args, { stdio: ["inherit", "inherit", "inherit"] }).exitCode);
     }
   } else {
     const code = !docsOnly && !nothing;

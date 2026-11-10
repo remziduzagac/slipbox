@@ -18,6 +18,7 @@
     "test:terminal": "bun tests/terminal/run.ts",
     "test:changed": "bun scripts/ci-scope.ts test",
     "test:terminal:changed": "bun scripts/ci-scope.ts terminal",
+    "test:times": "bun scripts/test-times.ts",
     "test:herdr": "bun tests/terminal/herdr/run.ts",
     "shots": "bun tests/terminal/shots.ts",
     "share-card": "bun scripts/share-card.ts",
