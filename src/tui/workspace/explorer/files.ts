@@ -175,8 +175,9 @@ export class Files {
     const name = posix.basename(rel).replace(/\.[^.]+$/, "");
     const content = kind.group === "note" ? `# ${name}\n\n` : "";
     let stamp: { mtimeMs: number; size: number };
+    let made: string | undefined;
     try {
-      mkdirSync(dirname(abs), { recursive: true });
+      made = mkdirSync(dirname(abs), { recursive: true });
       stamp = writeNote(this.app.loc.root, abs, content, this.through(abs));
     } catch (err) {
       this.app.message("error", `can't create ${rel}: ${(err as Error).message}`);
@@ -194,7 +195,8 @@ export class Files {
       this.app.explorer.invalidateTree();
       this.app.relayoutAll(); // links to it resolve now
     }
-    this.app.explorer.afterOp([rel]);
+    // The folder it came in listed again: the first folder made's, when it made some (a kept one: `a/` for `a/b/c.md`).
+    this.app.explorer.afterOp([made ? relative(this.app.loc.root, made) : rel]);
     this.app.message("info", `created ${rel}${this.notIndexed(abs)}`);
     return { rel, created: true, open };
   }
@@ -571,8 +573,9 @@ export class Files {
       this.app.message("warn", `${rel} exists`);
       return null;
     }
+    let made: string | undefined;
     try {
-      mkdirSync(abs, { recursive: true });
+      made = mkdirSync(abs, { recursive: true });
     } catch (err) {
       this.app.message("error", `can't create ${rel}: ${(err as Error).message}`);
       return null;
@@ -584,7 +587,8 @@ export class Files {
     this.app.explorer.invalidateTree();
     this.app.panels.switchLeftView("explorer");
     this.app.panels.showSidebar(true);
-    this.app.explorer.afterOp([rel], rel);
+    // Listed again where the first folder made came: `drafts/` for `drafts/2026/q4`, never `drafts/2026`, just made.
+    this.app.explorer.afterOp([made ? relative(this.app.loc.root, made) : rel], rel);
     this.app.region = "sidebar";
     this.app.message("info", `created ${rel}/${this.notIndexed(abs, true)}`);
     return rel;

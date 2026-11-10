@@ -734,6 +734,19 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
 });
 
 describe("a file operation's folders listed again before the keys after it act (SD-T7)", () => {
+  // The clock stopped once the folders are listed: none grows old meanwhile, read again by its age.
+  let clock: { mockRestore: () => void } | null = null;
+  afterEach(() => clock?.mockRestore());
+
+  /** The explorer shown, the folders listed (`listed`), the clock stopped. */
+  async function shown(h: Harness): Promise<void> {
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    await listed(h);
+    clock = spyOn(Date, "now").mockReturnValue(Date.now());
+  }
+
   /** A folder of notes and a file, the explorer shown and unfolded on it, `handbook/people.md` selected. */
   async function onPeople(): Promise<Harness> {
     const h = await vaultWith({
@@ -742,11 +755,8 @@ describe("a file operation's folders listed again before the keys after it act (
       "handbook/safety.adoc": "= Safety\n",
       "handbook/writing.md": "# Writing\n",
     });
-    h.app.panels.showSidebar(true);
-    h.app.leftView = "explorer";
-    h.app.region = "sidebar";
     h.app.explorer.select("handbook/people.md");
-    await listed(h);
+    await shown(h);
     h.app.explorer.select("handbook/people.md");
     return h;
   }
@@ -796,4 +806,76 @@ describe("a file operation's folders listed again before the keys after it act (
       late.restore();
     }
   });
+
+  test("deleted, the walk's filter moved while its folder is read again (a `.gitignore` changed): the key after it waits for the read asked under the filter now, never on the deleted note's row", async () => {
+    const h = await onPeople();
+    const late = answerHeld(join(h.root, "handbook"));
+    try {
+      await h.keys("d", "y");
+      await late.read;
+      // Its answer, read under the filter before, is read again under the one now: no listing taken by it.
+      h.app.graph.filter.invalidate("");
+      const y = press(h, "y");
+      late.release();
+      await y;
+      expect(names(h)).not.toContain("  people.md");
+      expect(h.app.files.clip?.rel).toBe("handbook/safety.adoc");
+    } finally {
+      late.restore();
+    }
+  });
+
+  test("deleted, a vault in its folder indexed while it's read again: the key after it waits for the read asked since, never on the deleted note's row", async () => {
+    const h = await vaultWith({
+      "nest/.slipbox/config.toml": "",
+      "nest/n.md": "# N\n",
+      "ops.md": "# Ops\n",
+      "people.md": "# People\n",
+      "safety.adoc": "= Safety\n",
+    });
+    await shown(h);
+    h.app.explorer.select("people.md");
+    const late = answerHeld(h.root);
+    try {
+      await h.keys("d", "y");
+      await late.read;
+      // The folder's listing shows the vault not indexed: its answer, read before, dropped (`indexed`).
+      writtenElsewhere(join(h.root, "nest"));
+      indexWritten([vaultKey(join(h.root, "nest"))]);
+      const y = press(h, "y");
+      late.release();
+      await y;
+      expect(names(h)).not.toContain("people.md");
+      expect(h.app.files.clip?.rel).toBe("safety.adoc");
+    } finally {
+      late.restore();
+    }
+  });
+
+  for (const [what, make] of [
+    ["a folder", (h: Harness) => h.app.files.createFolder("2026/q4", "archive")],
+    ["a note", (h: Harness) => h.app.files.createNote("2026/q4", "archive")],
+  ] as const)
+    test(`${what} made two deep in a folder the walk leaves out: the folder its first folder was made in listed again before the keys after it, that folder's row there`, async () => {
+      const h = await vaultWith(
+        { "archive/old.md": "# Old\n" },
+        { config: (c) => void (c.walk.exclude = ["archive"]) },
+      );
+      const archive = join(h.root, "archive");
+      h.app.explorer.expanded.add(archive);
+      await shown(h);
+      expect(names(h)).toContain("  old.md");
+      const late = answerHeld(archive);
+      try {
+        make(h);
+        expect(h.app.reads.busy).toBe(true);
+        await late.read;
+        expect(names(h)).not.toContain("  2026");
+        late.release();
+        await h.app.reads.settled();
+        expect(names(h)).toContain("  2026");
+      } finally {
+        late.restore();
+      }
+    });
 });

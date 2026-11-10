@@ -926,11 +926,12 @@ keys.
   settings changed since (another vault gone into) is read again at once. So is one showing a vault not indexed yet,
   however lately it was read, once that vault's index is written (`onIndexWritten`), which its row says: a read of it
   under way, a first one too, is dropped. The folders an operation of slipbox's changed (what it deleted, restored,
-  copied, renamed, moved or made: where it went and where it came) are read at once, a key's own read
-  (`Explorer.afterOp`): the keys after it wait for them, `esc` gives up waiting, and what it selects is selected once
-  they've answered. A key never acts on a row a listing from before the operation shows: a file gone, or a neighbour
-  where a file came back that the walk let go of meanwhile (the watcher's word of a delete, late). Each entry is asked
-  one access check, a folder
+  copied, renamed, moved or made: where it went and where it came; for a path made two deep, the folder its first new
+  folder came in) are read at once, a key's own read (`Explorer.afterOp`): the keys after it wait until a listing of
+  each is taken, `esc` gives up waiting, and what it selects is selected then. An answer dropped meanwhile (the walk's
+  filter moved, an index written) leaves them waiting for the read asked in its place. A key never acts on a row a
+  listing from before the operation shows: a file gone, or a neighbour where a file came back that the walk let go of
+  meanwhile (the watcher's word of a delete, late). Each entry is asked one access check, a folder
   its markers and, a busy name, whether it holds a note; another disk mounted there (the mount table, read at most every
   five seconds) is listed by its name alone, never looked at — a folder or a file as its folder's entry says (a file
   bind-mounted, a container's `/etc/hosts`). A listing has a whole walk's ten minutes, counted from when a thread takes
