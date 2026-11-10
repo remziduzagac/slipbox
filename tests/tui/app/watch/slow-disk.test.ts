@@ -79,12 +79,17 @@ function noneGaveUp(held: Hold): void {
 }
 
 /** A vault of `files` watched as the TUI watches it, its looks on the disk threads (no tick but the test's), `a.md`
- *  open, once each folder watched is stamped and what the watcher heard meanwhile is settled: on macOS, FSEvents tells
- *  of the vault's own writes, made just before its watch, after it has started — a settle that, out when the test
- *  ticks, has the tick skipped. `before` runs as the App is made, before it watches. */
+ *  open — the start in first (SD-T10: its session, its build and the note read on the disk threads) — once each folder
+ *  watched is stamped and what the watcher heard meanwhile is settled: on macOS, FSEvents tells of the vault's own
+ *  writes, made just before its watch, after it has started — a settle that, out when the test ticks, has the tick
+ *  skipped. `before` runs as the App is made, before it watches. */
 async function watched(files: Record<string, string>, before?: (h: Harness) => void) {
   const root = tree({ ".slipbox/config.toml": "", "a.md": "# A\n", ...files });
   const h = await harness({ root, open: "a.md", listOffThread: true, config: (c) => (c.watch.poll_ms = 3_600_000) });
+  await h.app.session.entering;
+  await h.app.watch.builds.idle();
+  await h.app.reads.settled();
+  expect(h.app.view?.buf.rel).toBe("a.md");
   before?.(h);
   h.app.watch.startWatcher();
   const w = h.app.watcher!;
