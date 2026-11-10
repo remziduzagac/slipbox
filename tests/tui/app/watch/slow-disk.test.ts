@@ -13,7 +13,7 @@ import type { VaultWatcher, WatchBatch } from "../../../../src/core/workspace/gr
 import { diskThreads, setWalkWorker, WALK_DEADLINES } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { HELD_MS, Hold, heldReads } from "../../../fixtures/walk/slow.ts";
 import { watcherBusy, watcherDirectories, watcherState } from "../../../support/watcher-access.ts";
-import { harness, makeSandbox, statusRow } from "../../../tui-harness.ts";
+import { type Harness, harness, makeSandbox, statusRow } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
 
@@ -81,10 +81,11 @@ function noneGaveUp(held: Hold): void {
 /** A vault of `files` watched as the TUI watches it, its looks on the disk threads (no tick but the test's), `a.md`
  *  open, once each folder watched is stamped and what the watcher heard meanwhile is settled: on macOS, FSEvents tells
  *  of the vault's own writes, made just before its watch, after it has started — a settle that, out when the test
- *  ticks, has the tick skipped. */
-async function watched(files: Record<string, string>) {
+ *  ticks, has the tick skipped. `before` runs as the App is made, before it watches. */
+async function watched(files: Record<string, string>, before?: (h: Harness) => void) {
   const root = tree({ ".slipbox/config.toml": "", "a.md": "# A\n", ...files });
   const h = await harness({ root, open: "a.md", listOffThread: true, config: (c) => (c.watch.poll_ms = 3_600_000) });
+  before?.(h);
   h.app.watch.startWatcher();
   const w = h.app.watcher!;
   const state = watcherState(w);
@@ -186,14 +187,18 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
   test("a polled folder listed there, a key handled meanwhile; let go, what came is judged as the walk judges it", async () => {
     const outside = tree({ "far/f.md": "# F\n", "far.md": "# Far\n" });
     const held = holding();
-    const { root, h, w, state } = await watched({ ".gitignore": "secret.md\n", "held/p/n.md": "# N\n" });
+    // What the watcher says is the test's from the start, never the App's: on macOS, FSEvents tells of the
+    // `.gitignore` written before the watch once it has started, and the vault built again for it would drop the tick.
+    const batches: WatchBatch[] = [];
+    const take = (h: Harness) => spyOn(h.app.watch, "receiveBatch").mockImplementation((b) => void batches.push(b));
+    const files = { ".gitignore": "secret.md\n", "held/p/n.md": "# N\n" };
+    const { root, h, w, state } = await watched(files, take);
     try {
       // `held/p` polled, as a folder whose watch failed is.
       state.watchers.get("held/p")?.close();
       state.watchers.delete("held/p");
       watcherDirectories(w).pollDir("held/p", "a test's");
-      const batches: WatchBatch[] = [];
-      spyOn(h.app.watch, "receiveBatch").mockImplementation((b) => void batches.push(b));
+      batches.length = 0;
       held.again();
       tick(w);
       await untilHeld(held);
