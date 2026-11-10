@@ -42,6 +42,21 @@ describe("branches (26.5)", () => {
       await Bun.sleep(20);
     return h.app.messages.at(-1)?.text ?? "";
   };
+  /**
+   * The first message from the `from`th on matching `text`, once one has come: one said since, whatever came after it
+   * (a switch's own word can come after git has switched, so after what the next step said).
+   */
+  const saidSince = async (h: Harness, from: number, text: RegExp) => {
+    const found = () => h.app.messages.slice(from).find((m) => text.test(m.text))?.text;
+    for (const t = Date.now(); found() === undefined && Date.now() - t < 10_000; ) await Bun.sleep(20);
+    return found() ?? "";
+  };
+  /** A switch done as the app sees it: git on `name`, and the switch said. */
+  const switched = async (h: Harness, root: string, name: string, from: number) => {
+    const now = await on(root, name);
+    await saidSince(h, from, new RegExp(`^switched to branch ${name}\\b`));
+    return now;
+  };
 
   test("the branches, this one marked; one checked out; a new one made from here; a name git won't take, said", async () => {
     const root = repo();
@@ -90,21 +105,26 @@ describe("branches (26.5)", () => {
     await h.keys("down", "down", "enter");
     expect(branch(root)).toBe("main");
     // Kept: switched, the note as typed.
+    let from = h.app.messages.length;
     await h.app.run("git.branches");
     await h.keys("up", "enter", "down", "enter");
-    expect(await on(root, "feat")).toBe("feat");
+    expect(await switched(h, root, "feat", from)).toBe("feat");
     expect([a.dirty, a.source]).toEqual([true, "edited a\n"]);
     // Saved, then switched: the change goes along (git keeps it, b.md not touched).
+    from = h.app.messages.length;
     await h.app.run("git.branches");
     await h.keys("down", "enter", "enter");
-    expect(await on(root, "main")).toBe("main");
+    expect(await switched(h, root, "main", from)).toBe("main");
     expect(a.dirty).toBe(false);
     expect(readFileSync(join(root, "a.md"), "utf8")).toBe("edited a\n");
     // b.md changed here, and different on feat: git won't switch, and says why.
     writeFileSync(join(root, "b.md"), "mine\n");
+    from = h.app.messages.length;
     await h.app.run("git.branches");
     await h.keys("up", "enter");
-    expect(await said(h, /^git: /)).toMatch(/^git: Your local changes to the following files would be overwritten/);
+    expect(await saidSince(h, from, /^git: /)).toMatch(
+      /^git: Your local changes to the following files would be overwritten/,
+    );
     expect(branch(root)).toBe("main");
   });
 });
