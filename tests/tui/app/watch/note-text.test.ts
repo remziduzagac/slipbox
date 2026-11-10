@@ -28,10 +28,17 @@ function tree(files: Record<string, string>): string {
   return dir;
 }
 
-/** slipbox in a vault of `files`, `open` open: its reads on the disk threads, as the TUI's are. */
+/** slipbox in a vault of `files`, `open` open: its reads on the disk threads, as the TUI's are — started, its graph
+ *  built, its note read and its notes parsed (SD-T10), then drawn, before anything's held: the open note's own problems
+ *  are read here as the graph changes, which isn't this task's read. */
 async function vaultWith(files: Record<string, string>, open = "index.md"): Promise<Harness> {
   const root = tree({ ".slipbox/config.toml": "", "index.md": "# Index\n", ...files });
-  return harness({ root, open, listOffThread: true, config: (c) => void (c.render.notes = false) });
+  const h = await harness({ root, open, listOffThread: true, config: (c) => void (c.render.notes = false) });
+  await h.app.reads.settled();
+  const g = () => h.app.graph;
+  await until(() => g().builds > 0 && !!h.app.view && !h.app.indexing && !g().unparsedOver(0).length, "the start");
+  h.frame();
+  return h;
 }
 
 /** Its notes left to parse, as a first build without an index leaves them: stubs, for the background parse. */
