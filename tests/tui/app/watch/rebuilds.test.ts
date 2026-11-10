@@ -14,6 +14,7 @@ import type { SessionTab } from "../../../../src/core/workspace/session/position
 import { homeAt, rootAt } from "../../../../src/core/workspace/vaults/vault.ts";
 import { setFolderReader } from "../../../../src/core/workspace/walk/walk.ts";
 import { diskThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
+import { Listings } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { HELD_MS, type Hold, slowFolders } from "../../../fixtures/walk/slow.ts";
 import { makeHeldKeys } from "../../../support/tui/held-keys.ts";
 import { type Harness, harness, makeSandbox, makeVault, statusRow } from "../../../tui-harness.ts";
@@ -32,13 +33,15 @@ function write(root: string, files: Record<string, string>): string {
   return root;
 }
 
-/** slipbox in a vault with `files` besides its own, `open` open in source mode: its builds and its keys' reads on the
- *  disk threads. */
+/** slipbox in a vault with `files` besides its own, `open` open in source mode: its builds, its keys' reads and its
+ *  explorer's listings on the disk threads, as the TUI's are (a test's App lists the explorer's folders here, and
+ *  lists `held` among the vault's own since SD-T7). */
 async function vaultWith(files: Record<string, string>, open = "index.md"): Promise<Harness> {
   const root = write(makeVault(), files);
   const h = await harness({ root, open, config: (c) => void (c.render.notes = false) });
   h.app.watch.builds.offThread = true;
   h.app.reads.offThread = true;
+  h.app.explorer.listings = new Listings(h.app, true);
   // The search index caught up first: its slices read the notes on this thread, and a hold taken meanwhile would hold
   // them too.
   await h.app.search.whenIndexed();
