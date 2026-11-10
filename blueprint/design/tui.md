@@ -917,7 +917,9 @@ keys.
   where a link leads, a vault's key, name and branch, one you may not read, a busy folder) — a link's answer, and so its
   mark, still read here from the answers kept. Kept, at most 256 folders besides those the tree last showed (let go of
   once a tree is built, never while it's being built), a listing is read again in the background as the tree is built
-  again once it's a second old, or under other settings (`[walk]`, `files.hidden`), its rows replaced only when it says
+  again once it's a second old, or under other settings (`[walk]`, `files.hidden`). A folder the watcher saw change
+  is read again once its listing is a second old, the tree built again then for it (`Listings.changed`): nothing
+  else may build it: a file gone would stay listed, one come unlisted. Its rows are replaced only when it says
   something new (compared by a digest the thread makes of all they're built from: its entries, whether its vault is a
   notes vault, its links' scope), the selection kept on the row it was on — and a row the explorer meant to select in a
   folder not listed yet (`-`'s folder it came from, a note revealed: `Explorer.wanted`) selected when it comes, unless

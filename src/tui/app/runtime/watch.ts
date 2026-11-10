@@ -2,6 +2,7 @@
 // can't see polled, the background auto-index (20.9), and a note changed on disk reloaded — the TUI's texts read on a
 // disk thread first (SD-T6: `Texts`).
 
+import { dirname, join } from "node:path";
 import * as disk from "../../../core/foundation/platform/disk.ts";
 import { type DecodedFile, readText, type Stamp, stamp } from "../../../core/foundation/platform/fsutil.ts";
 import { offsetOf } from "../../documents/editing/editing.ts";
@@ -350,6 +351,13 @@ export class Watch {
       stop();
       keep();
     }
+    // The folders it changed: the explorer's listings of them read again, once their second has passed (SD-T7).
+    const R = this.app.loc.root;
+    const at = (rel: string) => [dirname(join(R, rel)), join(R, rel)];
+    this.app.explorer.listings.changed(
+      batch.rescan ? [R] : [...new Set(batch.changes.flatMap((c) => at(c.rel)))],
+      batch.rescan,
+    );
     if (moves.length) this.offerRelink(moves);
   }
 

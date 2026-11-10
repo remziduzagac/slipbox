@@ -167,7 +167,8 @@ the second is let go of.
   asks of a note not parsed yet reads it here, as before (the task's Open says which).
 - **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows — the view's, and each
   unfolded under it — are listed as the folders outside it are (`Listings`: kept, read again once a second old as the
-  tree is built, and however old, the tree built again for it, once a vault one shows unmarked has its index said
+  tree is built — one the watcher saw change, once a second old, the tree built again then for it (`Listings.changed`)
+  — and however old, the tree built again for it, once a vault one shows unmarked has its index said
   written, its row's mark the listing's — `onIndexWritten`, said by a write on the screen's thread and where a peek's or
   the background index's thread's is recorded; `Listings.indexed` drops a read under way then, a first one too; drawn
   only when the listing's digest changed), with the walk's filter

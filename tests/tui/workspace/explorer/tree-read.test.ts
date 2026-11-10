@@ -25,7 +25,7 @@ import { DiskThreads, walkThread } from "../../../../src/core/workspace/walk/wal
 import { setFolderReader } from "../../../../src/core/workspace/walk/walk.ts";
 import { caughtUp } from "../../../../src/tui/documents/navigation/peek/synchronization.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
-import { Listings } from "../../../../src/tui/workspace/explorer/listings.ts";
+import { Listings, REREAD_MS } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { HELD_MS, type Hold, slowFolders } from "../../../fixtures/walk/slow.ts";
 import { makeHeldKeys } from "../../../support/tui/held-keys.ts";
 import { type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
@@ -910,6 +910,43 @@ describe("a row meant to be selected once its folder is listed (T12)", () => {
       expect(ex.rows()[h.app.sidebar.selected]?.path).toBe("notes/a.md");
     } finally {
       late.restore();
+      clock.mockRestore();
+    }
+  });
+});
+
+describe("a folder the watcher saw change, listed again once its second has passed (SD-T7)", () => {
+  test("a note deleted elsewhere within a second of its folder's listing, then nothing else: its row goes once the second has passed — never read again before", async () => {
+    const h = await vaultWith({ "notes/a.md": "# A\n", "notes/b.md": "# B\n" });
+    const ex = h.app.explorer;
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    ex.expanded.add("notes");
+    await listed(h);
+    // The clock stopped; the build asked for later fired by hand, its wait kept.
+    const start = Date.now();
+    const clock = spyOn(Date, "now").mockReturnValue(start);
+    const later: { ms: number; fire: () => void }[] = [];
+    ex.listings.after = (ms, fire) => void later.push({ ms, fire });
+    try {
+      // Listed just now: within the second.
+      ex.listings.again(join(h.root, "notes"));
+      await listed(h);
+      rmSync(join(h.root, "notes/b.md"));
+      h.app.watch.applyChanges({ changes: [{ rel: "notes/b.md", kind: "deleted", isNote: true }], rescan: false });
+      // Built again for the change, the listing within its second: not read again yet, the row as it had it.
+      expect(names(h)).toContain("  b.md");
+      expect(ex.listings.reading).toBe(false);
+      expect(later.map((l) => l.ms)).toEqual([REREAD_MS + 1]);
+      // The second passed: the tree built again by that alone, as a frame is drawn — the listing read, the row gone.
+      clock.mockReturnValue(start + REREAD_MS + 1);
+      later[0]!.fire();
+      h.frame();
+      expect(ex.listings.reading).toBe(true);
+      while (ex.listings.reading) await Bun.sleep(5);
+      expect(names(h)).not.toContain("  b.md");
+      expect(names(h)).toContain("  a.md");
+    } finally {
       clock.mockRestore();
     }
   });
