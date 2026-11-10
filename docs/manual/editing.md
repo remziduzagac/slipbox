@@ -493,7 +493,10 @@ slipbox saves a note before your editor, the context bundle or an export reads i
 
 ## When a file changes on disk
 
-Another program can change a note you have open: an agent, git, your editor, a sync tool. slipbox notices.
+Another program can change a note you have open: an agent, git, your editor, a sync tool. slipbox notices. It looks
+for changes in the background, so on a slow disk, such as a network share or a drive that's asleep, the screen never
+waits for it: a change shows once the disk has answered. A disk that doesn't answer within a minute shows
+`⚠ disk not answering` on the [status line](screen.md#the-status-line).
 
 - **A note without unsaved changes** reloads, keeping your place. The status line says `↻ reloaded`. The reload is an
   undo step, so `u` brings back what you had before.

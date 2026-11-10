@@ -1,25 +1,38 @@
-// Directory registration/admission and attachment tracking through live watcher capabilities.
-import { type Dirent, watch } from "node:fs";
+// Directory registration/admission and attachment tracking through live watcher capabilities. A folder registered is
+// stamped from what was read of it with the look that found it, or now, here; on the disk threads, by the next look.
+import { watch } from "node:fs";
 import * as disk from "../../../foundation/platform/disk.ts";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 import { under } from "../../vaults/home/paths.ts";
-import { parentOf, settled } from "../../walk/io/stamps.ts";
-import { symlinkVerdict } from "../../walk/traversal/symlinks.ts";
+import { type PathStat, parentOf, settled, statOf } from "../../walk/io/stamps.ts";
 import type { DirectoryOptions, DirectoryState, DirectoryHost } from "./contracts.ts";
-import { every, dirMtime } from "./io.ts";
+import { every } from "./io.ts";
+import type { JudgeContext, JudgedFolder, LinkKept, ListJudge } from "./judging.ts";
+import { type Look, runHere } from "./reads.ts";
+
+/** A folder's stamps as read: its own stat and its `.gitignore`'s. */
+export interface FolderStamps {
+  dir: PathStat;
+  gitignore: PathStat;
+}
+
 export class WatchDirectories {
   constructor(
     private readonly opts: DirectoryOptions,
     private readonly state: DirectoryState,
-    private readonly realRoot: string,
+    /** The root's real path, or how to find it, the first time a look here asks it. */
+    private realRoot: string | (() => string),
     private readonly host: DirectoryHost,
   ) {}
+
+  /** What a listing here is judged by: the watcher's own filter, its root. */
+  judging(): JudgeContext {
+    if (typeof this.realRoot !== "string") this.realRoot = this.realRoot();
+    return { filter: this.opts.filter, root: this.opts.root, realRoot: this.realRoot };
+  }
+
   gitignoreStamp(dirRel: string): number {
-    try {
-      return disk.stat(join(this.opts.root, dirRel, ".gitignore")).mtimeMs;
-    } catch {
-      return -1;
-    }
+    return gitignoreOf(statOf(join(this.opts.root, dirRel, ".gitignore")));
   }
 
   unwatchTree(dirRel: string): void {
@@ -35,43 +48,43 @@ export class WatchDirectories {
   }
 
   /** Watch a directory that appeared (created, or moved in with its contents) and everything
-   *  below it; return the files already inside — notes and attachments — which are new to us. */
+   *  below it; return the files already inside — notes and attachments — which are new to us. Read here, at once. */
   adoptTree(dirRel: string): string[] {
-    const files: string[] = [];
+    return runHere(this.adopting(dirRel), this.judging());
+  }
+
+  /** `adoptTree` as a look: the tree listed, and judged, where it's read (judging.ts) — each folder watched here as the
+   *  answer comes, from its stamps read just before it was listed, within home's cap. */
+  *adopting(dirRel: string): Look<string[]> {
     const max = this.opts.maxDirs ?? Number.POSITIVE_INFINITY;
-    const visit = (d: string) => {
-      // Past home's cap (VV-D2): left to its walk, never listed here.
-      if (this.state.watchers.size + this.state.polled.size >= max) return;
-      this.watchDir(d);
-      let entries: Dirent[] = [];
-      try {
-        entries = disk.entries(join(this.opts.root, d));
-      } catch {
-        return;
-      }
-      for (const e of entries) {
-        const rel = `${d}/${e.name}`;
-        if (e.isDirectory()) {
-          if (this.opts.filter.exclusion(rel, true) === null) visit(rel);
-        } else if (e.isSymbolicLink() && !this.symlinkKept(rel)) continue;
-        else if (this.opts.filter.exclusion(rel, false) === null) files.push(rel);
-      }
-    };
-    visit(dirRel);
-    return files;
+    // Past home's cap (VV-D2): left to its walk, never listed here.
+    const room = max - this.state.watchers.size - this.state.polled.size;
+    if (room <= 0) return [];
+    const judge = { filter: this.opts.filter.settings, how: { adopt: { room } } };
+    const { listings } = yield { list: [{ dir: join(this.opts.root, dirRel), judge }] };
+    const tree = listings[0];
+    if (tree?.how !== "adopt") return [];
+    const taken = new Set<string>();
+    for (const f of tree.folders) {
+      if (this.state.watchers.size + this.state.polled.size >= max) break;
+      this.watchDir(f.rel, f.at, { dir: f.stat, gitignore: f.gitignore });
+      taken.add(f.rel);
+    }
+    return tree.files
+      .filter((f) => taken.has(parentOf(f.rel)) && (!f.link || this.symlinkKept(f.rel, f.link)))
+      .map((f) => f.rel);
   }
 
   /**
-   * Whether the symlink at `rel` is one the walk keeps (0.11, VV-D6), and as what: a file inside the root that isn't a
-   * note already known by its own path, or one outside you follow (`"file"`); a folder outside you follow (`"dir"`),
-   * watched as the walk walks it; else null — a folder within the root (a second name), a link not followed.
+   * Whether the symlink at `rel` is one the walk keeps (0.11, VV-D6), and as what, from its verdict where it was read
+   * (`link`): a file inside the root that isn't a note already known by its own path, or one outside you follow
+   * (`"file"`); a folder outside you follow (`"dir"`), watched as the walk walks it; else null — a folder within the
+   * root (a second name), a link not followed.
    */
-  symlinkKept(rel: string): "file" | "dir" | null {
-    const v = symlinkVerdict(join(this.opts.root, rel), this.realRoot);
-    if (!v.kept) return null;
-    if (v.dir) return "dir";
-    const target = relative(this.realRoot, v.target).split(sep).join("/");
-    return target === rel || !this.opts.known.has(target) ? "file" : null;
+  symlinkKept(rel: string, link: LinkKept): "file" | "dir" | null {
+    if (!link.kept) return null;
+    if (link.dir) return "dir";
+    return link.target === rel || !this.opts.known.has(link.target) ? "file" : null;
   }
 
   /**
@@ -121,8 +134,11 @@ export class WatchDirectories {
     }
   }
 
-  /** Watch a directory whose contents were read at `readAt` (the walk's, or a listing about to be). */
-  watchDir(dirRel: string, readAt = Date.now()): void {
+  /**
+   * Watch a directory whose contents were read at `readAt` (the walk's, or a listing about to be), stamped from
+   * `stamps` (read as it was listed) — else now, here, or by the next look on the disk threads (`stampLater`).
+   */
+  watchDir(dirRel: string, readAt = Date.now(), stamps?: FolderStamps): void {
     if (this.state.watchers.has(dirRel) || this.host.degraded) return;
     try {
       const w = watch(join(this.opts.root, dirRel), { persistent: false }, (_event, name) => {
@@ -142,8 +158,11 @@ export class WatchDirectories {
         if (disk.exists(join(this.opts.root, dirRel))) this.pollDir(dirRel, (err as Error).message);
       });
       this.state.watchers.set(dirRel, w);
-      this.state.gitignores.set(dirRel, this.gitignoreStamp(dirRel));
-      this.state.stamps.set(dirRel, this.startStamp(dirRel, readAt));
+      if (stamps) this.stamp(dirRel, readAt, stamps);
+      else if (!this.host.stampLater?.(dirRel, readAt)) {
+        const abs = join(this.opts.root, dirRel);
+        this.stamp(dirRel, readAt, { gitignore: statOf(join(abs, ".gitignore")), dir: statOf(abs) });
+      }
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code === "ENOSPC" || code === "EMFILE" || code === "ENFILE")
@@ -154,20 +173,71 @@ export class WatchDirectories {
     }
   }
 
+  /** A folder watched, stamped from what was read of it (`stamps`), its contents read at `readAt`. */
+  stamp(dirRel: string, readAt: number, stamps: FolderStamps): void {
+    this.state.gitignores.set(dirRel, gitignoreOf(stamps.gitignore));
+    this.state.stamps.set(dirRel, this.startStamp(dirRel, readAt, stamps.dir));
+  }
+
   /**
-   * The stamp a folder is watched from, its contents read at `readAt`: its mtime, or -1 to list it again at the next
-   * tick. The walk's stamp of it (`dirStamps`), its times still those: as the walk listed it, whenever the walk began.
+   * The stamp a folder is watched from, its contents read at `readAt`, from its stat `st`: its mtime, or -1 to list it
+   * again at the next tick. The walk's stamp of it (`dirStamps`), its times still those: as the walk listed it,
+   * whenever the walk began.
    */
-  private startStamp(dirRel: string, readAt: number): number {
-    const abs = join(this.opts.root, dirRel);
+  private startStamp(dirRel: string, readAt: number, st: PathStat): number {
     const seen = this.opts.dirStamps?.().get(dirRel);
-    if (!seen) return settled(dirMtime(abs), readAt);
-    try {
-      const st = disk.stat(abs);
-      return st.mtimeMs === seen[0] && st.ctimeMs === seen[1] ? st.mtimeMs : -1;
-    } catch {
-      return -1;
+    if ("error" in st) return -1;
+    if (!seen) return settled(st.mtimeMs, readAt);
+    return st.mtimeMs === seen[0] && st.ctimeMs === seen[1] ? st.mtimeMs : -1;
+  }
+
+  /** A listing's judging (`ListJudge`): by the walk's filter, as `how` says. */
+  judged(how: ListJudge["how"]): ListJudge {
+    return { filter: this.opts.filter.settings, how };
+  }
+
+  /** The names of the folders in `dirRel` watched or polled (or left to the walk, `left`): a listing judges none. */
+  childNames(dirRel: string, left = false): string[] {
+    const names: string[] = [];
+    const add = (d: string) => {
+      if (d && parentOf(d) === dirRel) names.push(d.slice(d.lastIndexOf("/") + 1));
+    };
+    for (const d of this.state.watchers.keys()) add(d);
+    for (const d of this.state.polled) add(d);
+    if (left) for (const d of this.state.left.keys()) add(d);
+    return names;
+  }
+
+  /** A polled folder as a tick's listing found it: a folder taken in or left, each note changed or gone pending. */
+  polledSeen(dirRel: string, listing: JudgedFolder, tick: number): void {
+    const { filter, known } = this.opts;
+    const { state } = this;
+    if (!state.polled.has(dirRel)) return;
+    if (listing.error !== null) {
+      state.polled.delete(dirRel);
+      return;
     }
+    const seen = new Set<string>();
+    for (const e of listing.entries) {
+      const rel = dirRel ? `${dirRel}/${e.name}` : e.name;
+      if (e.kind === "dir") {
+        if (!state.watchers.has(rel) && !state.polled.has(rel) && e.excluded === null) {
+          const to = this.found(rel);
+          if (to === "adopt") {
+            this.watchDir(rel);
+            state.rescan = true;
+          } else {
+            this.leave(rel, to);
+            state.leftSeen.set(rel, tick); // where a note that went may be, for a tick
+          }
+        }
+        continue;
+      }
+      if (!filter.isNoteName(e.name) || e.excluded !== null) continue;
+      seen.add(rel);
+      if (typeof e.mtimeMs === "number" && e.mtimeMs !== known.get(rel)) state.pending.add(rel);
+    }
+    for (const rel of known.keys()) if (parentOf(rel) === dirRel && !seen.has(rel)) state.pending.add(rel);
   }
 
   pollDir(dirRel: string, reason: string): void {
@@ -189,3 +259,6 @@ export class WatchDirectories {
     } else if (inDir?.delete(rel) && !inDir.size) this.state.attachments.delete(dir);
   }
 }
+
+/** A `.gitignore`'s stamp from its stat: its mtime, or -1 when it isn't there. */
+const gitignoreOf = (st: PathStat): number => ("error" in st ? -1 : st.mtimeMs);

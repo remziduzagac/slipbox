@@ -1,6 +1,6 @@
 // Walk filter caches, ignore rules, mounts and note admission.
 
-import { realpathSync, statSync } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import { readRegular, SMALL_FILE } from "../../../foundation/platform/fsutil.ts";
 import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
@@ -82,7 +82,7 @@ export class WalkFilter {
     if (!this.home) return;
     let real = this.root;
     try {
-      real = realpathSync(this.root);
+      real = disk.realpath(this.root);
     } catch {}
     this.mounts = mountsIn(this.root, real);
   }
@@ -220,7 +220,7 @@ export class WalkFilter {
     const abs = join(this.root, rel);
     let mtimeMs: number;
     try {
-      mtimeMs = statSync(abs).mtimeMs;
+      mtimeMs = disk.stat(abs).mtimeMs;
     } catch {
       return false; // not there: no note in it
     }

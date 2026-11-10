@@ -2,23 +2,30 @@
 // `answerWalk` too, for a test's worker serving both): a folder listed, a batch of paths statted, a file's text read, a
 // folder's access, the vault open walked. Each is read as the thread that asks would read it — the same code, through
 // the seam (SD-D10) — with what that thread knows and this one can't see for itself (`walkContext`) taken first. A
-// path's own error is its answer, by its code; the request fails only when its thread does (a deadline, a crash).
+// path's own error is its answer, by its code; the request fails only when its thread does (a deadline, a crash). The
+// watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts).
 
 import type { Config } from "../../application/config/config.ts";
 import * as disk from "../../foundation/platform/disk.ts";
 import { type DecodedFile, folderUnreadable, readTextStamped, type Stamp } from "../../foundation/platform/fsutil.ts";
 import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
+import {
+  type JudgedListing,
+  judgeContext,
+  judgeListing,
+  judgePath,
+  type ListJudge,
+  type PathVerdict,
+} from "../graph/watch/judging.ts";
 import { homeWalk } from "../vaults/home.ts";
 import type { HomeWalk } from "../vaults/home/contracts.ts";
 import type { FilterSettings, WalkLimits, WalkResult } from "./contracts.ts";
 import { filterFrom } from "./filtering/filter.ts";
+import { codeOf, type PathStat, statOf } from "./io/stamps.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
 import { listDirectory, walkVault } from "./traversal/walk.ts";
 
-/** A path statted: what it is, its mtime, ctime and size; or its error's code (`ENOENT`, `EACCES`, …). */
-export type PathStat =
-  | { kind: "file" | "dir" | "link" | "other"; mtimeMs: number; ctimeMs: number; size: number }
-  | { error: string };
+export type { PathStat };
 
 /** A file read: its text decoded as `readText` decodes it, and the stamp of the file that text was read from (one
  *  open); or its error's code — `ENOTREG` for a FIFO, a device or a folder, refused as `readRegular` refuses them. */
@@ -42,17 +49,27 @@ export interface WalkAnswer {
   index?: { text: string | null; stamp: string };
 }
 
+/** A folder listed: for the explorer (`walk`, `hidden`), or for the watcher, judged (`judge`: SD-T3). */
+export type ListAsk = { dir: string; walk: Config["walk"]; hidden: boolean } | { dir: string; judge: ListJudge };
+
+/** Paths statted: links followed, or their own (`own`); for the watcher's settle, each judged too (`judge`). */
+export interface StatAsk {
+  paths: string[];
+  own?: boolean;
+  judge?: { filter: FilterSettings };
+}
+
 export type DiskRequest = { context: WalkContext } & (
-  | { op: "list"; dir: string; walk: Config["walk"]; hidden: boolean }
-  | { op: "stat"; paths: string[]; own?: boolean }
+  | ({ op: "list" } & ListAsk)
+  | ({ op: "stat" } & StatAsk)
   | { op: "read"; path: string }
   | { op: "access"; dir: string }
   | { op: "walk"; ask: WalkAsk }
 );
 
 export type DiskAnswer =
-  | { listing: FolderListing }
-  | { stats: PathStat[] }
+  | { listing: FolderListing | JudgedListing }
+  | { stats: PathStat[]; judged?: PathVerdict[] }
   | { read: ReadAnswer }
   | { access: string | null }
   | { walked: WalkAnswer };
@@ -61,19 +78,6 @@ const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access",
 
 /** Whether `req` is one the disk threads answer. */
 export const isDiskRequest = (req: { op: string }): req is DiskRequest => DISK_OPS.has(req.op);
-
-const codeOf = (err: unknown): string => (err as NodeJS.ErrnoException).code ?? (err as Error).message ?? String(err);
-
-/** `path` statted through the seam: its links followed, or its own (`own`, `lstat`). */
-function statOf(path: string, own: boolean): PathStat {
-  try {
-    const st = own ? disk.lstat(path) : disk.stat(path);
-    const kind = st.isFile() ? "file" : st.isDirectory() ? "dir" : st.isSymbolicLink() ? "link" : "other";
-    return { kind, mtimeMs: st.mtimeMs, ctimeMs: st.ctimeMs, size: st.size };
-  } catch (err) {
-    return { error: codeOf(err) };
-  }
-}
 
 /** A file's text and its stamp, both of the one file opened: a save renamed over it meanwhile is neither's. */
 function readOf(path: string): ReadAnswer {
@@ -115,9 +119,14 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
   enterContext(req.context);
   switch (req.op) {
     case "list":
+      if ("judge" in req) return { listing: judgeListing(req.dir, req.judge.how, judgeContext(req.judge.filter)) };
       return { listing: listFolder(req.dir, req.walk, req.hidden) };
-    case "stat":
-      return { stats: req.paths.map((p) => statOf(p, req.own === true)) };
+    case "stat": {
+      const stats = req.paths.map((p) => statOf(p, req.own === true));
+      if (!req.judge) return { stats };
+      const ctx = judgeContext(req.judge.filter);
+      return { stats, judged: req.paths.map((p, i) => judgePath(p, stats[i]!, ctx)) };
+    }
     case "read":
       return { read: readOf(req.path) };
     case "access":

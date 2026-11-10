@@ -92,8 +92,12 @@ go of.
   folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, and where a
   note that went has gone (`movedTo`); the batch goes to the feed when they answer, events meanwhile waiting for the
   next. Each entry a listing finds is judged there with it, by the walk's filter (`exclusion`) and a link's verdict
-  (`symlinkVerdict`), as the explorer's are. A folder registered takes its stamps from the walk that found it
-  (`Graph.dirStamps`), or asks them there; one that came is listed there with all it holds.
+  (`symlinkVerdict`), as the explorer's are (`core/workspace/graph/watch/judging.ts`). A folder registered asks its
+  stamps there — its own and its `.gitignore`'s, with the next look — compared, when they come, with the walk's that
+  found it (`Graph.dirStamps`); one that came is listed there with all it holds, each folder stamped as it's listed.
+  The watcher's logic is written as looks (`watch/reads.ts`), each yielding the batch it needs: one out at a time, a
+  flush asked meanwhile made once it answers, the sweep a chain of its own; a test's watcher answers each at once, on
+  the thread that asks, with the same code.
 - **The TUI's look each second** (SD-T4; § External changes). One request a second: the open files no watcher sees,
   your config's and the vault's `.slipbox/config.toml`'s stamps, git's `HEAD`, its branch's ref, its `index.lock` and
   its rebase folders and what an operation under way leaves there, and the CLI's activity file, which the background

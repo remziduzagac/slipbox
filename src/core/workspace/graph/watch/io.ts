@@ -1,6 +1,6 @@
 // The watcher's observations of the disk, read through the seam (disk.ts, SD-D10), and platform watch-entry rules.
 import * as disk from "../../../foundation/platform/disk.ts";
-import { parentOf } from "../../walk/io/stamps.ts";
+import { type PathStat, parentOf } from "../../walk/io/stamps.ts";
 import type { WalkFilter } from "../../walk/filtering/filter.ts";
 
 export function isSymlink(path: string): boolean {
@@ -25,14 +25,10 @@ export function changedAt(path: string): number | null {
   }
 }
 
-/** A directory's mtime, or null when it isn't there. */
-export function dirMtime(path: string): number | null {
-  try {
-    return disk.stat(path).mtimeMs;
-  } catch {
-    return null;
-  }
-}
+/** A note's stamp from its stat as a look read it: its mtime and size when it's a file (its links followed), else null
+ *  (`statOrNull`'s). */
+export const noteStamp = (st: PathStat | undefined): { mtimeMs: number; size: number } | null =>
+  st && !("error" in st) && st.kind === "file" ? { mtimeMs: st.mtimeMs, size: st.size } : null;
 
 /**
  * Whether a watch of `watched` folders (and `polled` ones, whose notes alone are looked at) takes a change to the file

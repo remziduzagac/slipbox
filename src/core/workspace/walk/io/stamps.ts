@@ -1,7 +1,28 @@
-// Directory stamps, settling and vanished-path admission.
+// Directory stamps, settling and vanished-path admission; a path statted, as a disk thread answers it.
 
 import { statSync } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import type { Stamp } from "../contracts.ts";
+
+/** A path statted: what it is, its mtime, ctime and size; or its error's code (`ENOENT`, `EACCES`, …). */
+export type PathStat =
+  | { kind: "file" | "dir" | "link" | "other"; mtimeMs: number; ctimeMs: number; size: number }
+  | { error: string };
+
+/** An error's code, or its words when it has none. */
+export const codeOf = (err: unknown): string =>
+  (err as NodeJS.ErrnoException).code ?? (err as Error).message ?? String(err);
+
+/** `path` statted through the seam (disk.ts) on whichever thread asks: its links followed, or its own (`own`). */
+export function statOf(path: string, own = false): PathStat {
+  try {
+    const st = own ? disk.lstat(path) : disk.stat(path);
+    const kind = st.isFile() ? "file" : st.isDirectory() ? "dir" : st.isSymbolicLink() ? "link" : "other";
+    return { kind, mtimeMs: st.mtimeMs, ctimeMs: st.ctimeMs, size: st.size };
+  } catch (err) {
+    return { error: codeOf(err) };
+  }
+}
 
 /**
  * How long after a directory changes its mtime can't tell a later change apart: a coarse clock (FAT's

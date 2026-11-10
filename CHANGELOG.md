@@ -297,6 +297,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   says `can't read: no answer in time` if it hasn't within ten minutes; home's walk, given up on after five minutes,
   says
   so and tries again ten minutes later.
+- With the vault open on a slow disk, the screen no longer stops every two seconds while slipbox looks for changes made
+  outside it. Those looks read the disk in the background now, and a note an agent writes still shows up once the disk
+  has answered. A disk that doesn't answer within a minute shows `⚠ disk not answering` on the status line, said once
+  in Messages; slipbox looks again a minute later, and the status line clears once the disk answers.
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
   still leads to the same place. Before, the move was refused as `… resolves outside the vault`.

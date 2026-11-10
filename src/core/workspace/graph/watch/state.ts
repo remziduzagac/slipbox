@@ -72,4 +72,15 @@ export class WatchState {
   readonly attachments = new Map<string, Set<string>>();
 
   ticks = 0;
+
+  /** How many times the watcher was synced to a build (`sync`): a look's answer from before one is dropped (SD-D5). */
+  syncs = 0;
+
+  /** Our own writes told so far, and the count at each path's last (`noteOwnWrite`): a look's stat of a path written
+   *  since it was asked is older than the write, and settled again rather than taken for a change (SD-D5). */
+  writes = 0;
+  readonly writtenAt = new Map<string, number>();
+
+  /** Folders registered whose stamps are still to be read (on the disk threads), by when their contents were read. */
+  readonly unstamped = new Map<string, number>();
 }

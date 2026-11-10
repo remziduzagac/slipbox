@@ -72,6 +72,9 @@ export interface Opts {
   now?: () => number;
   /** Started by a restart (UPG): the session its note kept, and what's said. */
   restarted?: import("../src/tui/app/runtime/app.ts").AppOptions["restarted"];
+  /** The disk read off the main thread, as the TUI reads it (`AppOptions.listOffThread`): the explorer's listings, the
+   *  watcher's looks. */
+  listOffThread?: boolean;
 }
 
 export async function harness(opts: Opts = {}): Promise<Harness> {
@@ -115,6 +118,7 @@ export async function harness(opts: Opts = {}): Promise<Harness> {
     folder: opts.folder,
     now: opts.now,
     restarted: opts.restarted,
+    listOffThread: opts.listOffThread,
   });
   // Never the machine's own nvims.
   app.handoff.nvimDiscovery = () => [];

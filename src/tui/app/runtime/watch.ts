@@ -130,6 +130,14 @@ export class Watch {
         this.app.host.requestRender();
       },
       pollTargets: () => [...this.app.buffers.values()].filter((b) => b.rel).map((b) => b.rel!),
+      // Its looks asked of the disk threads, as the explorer's listings are (SD-D8, `listOffThread`): a slow disk never
+      // stops a key; a test's App asks at once.
+      offThread: this.app.explorer.listings.offThread,
+      onNotAnswering: (notAnswering) => {
+        if (notAnswering)
+          this.app.message("warn", "disk not answering: the watcher's look gave up; it looks again in a minute");
+        this.app.host.requestRender();
+      },
     });
   }
   get autoIndex(): AutoIndex | null {

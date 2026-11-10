@@ -159,6 +159,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/workspace/graph/problems.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/graph/reached-index.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/graph/tags.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/workspace/graph/watch-threads.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/graph/watch.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/links/conventions.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/links/cross-vault.test.ts", "UNIT_TIMEOUT_MS"],

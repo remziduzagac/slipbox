@@ -97,3 +97,17 @@ full collection, taken once three in a row were within 0.3 MB; five runs, in MB:
 - Starting a thread grows the process by about a megabyte, most likely because its heap reuses memory the main thread
   had freed and not yet given back; stopping both gives back 7 to 11.5 MB, their heaps and stacks with it. A thread
   let go of after a minute idle is stopped the same way.
+
+## The watcher's look built (2026-11-10)
+
+- SD-T3 kept the watcher's tests as they were by writing its logic once, as looks that yield what they read (a
+  generator per look): the TUI's watcher asks each batch of the disk threads, a test's answers it at once with the
+  same code. The other way, a second watcher for the threads beside the one tests drive, would have kept two copies of
+  the settle's rules.
+- What the watcher read for each entry ran the walk's filter and the link rules on the screen's thread; a disk thread
+  can't share the watcher's filter, so it makes one from the walk's settings (`filterFrom`), with the `.gitignore`s
+  read afresh, as the walk's thread does.
+- Measured by the terminal check, its slow folder three seconds a stat: with the looks on the disk threads, every key
+  answered within a second and the agent's note showed once its stat answered; with them back on the screen's thread,
+  the note showed after 577 ms, the stand-in not slowing the screen's thread's stats (SD-T1), which is how the check
+  tells the two apart.

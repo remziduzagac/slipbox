@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: [SD-T1, SD-T2]
 tracker: [gh:#46]
@@ -67,6 +67,46 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
   stats fit the minute's deadline at T12's slow mount's 0.3 s a stat; a fast disk sweeps as quickly as now.
 - Polled folders (`state.polled`): listed every tick, in its batch, as now; a tick whose answer hasn't come asks
   nothing new, so a slow disk slows the looks by itself.
+
+## Open
+
+What the description left open, settled here for the maintainer to confirm; design.md's sections it delivers say
+how.
+
+- The watcher's logic is written as looks (`core/workspace/graph/watch/reads.ts`): each a generator that yields the
+  batch it needs and goes on with the answer. The TUI's watcher asks each batch of the disk threads; a test's watcher,
+  and a test's App's, answers it at once on the thread that asks, with the same code, so the watcher's tests run as
+  they did. One look is out at a time — a tick, a flush, a folder listed again, the stamps of folders registered — and
+  a flush asked meanwhile runs once it has answered; the sweep is a chain of its own.
+- What a disk thread judges is `core/workspace/graph/watch/judging.ts`: a settled path's verdict (a link's, and the
+  filter's on it as a folder or a file), a listing's entries (the filter's, a link's, a note's time), a tree taken in
+  (`adoptTree`'s, each folder stamped just before it's listed, up to home's room under its cap), and where notes that
+  went are (`movedTo`'s). It judges with a filter made from the walk's settings (`filterFrom`) and the root's real
+  path, read there. A settle's batch of stats stops at a `.gitignore` among its paths, as the rules change after it.
+  `disk-jobs.ts` hands `list` and `stat` with a `judge` to it; `PathStat`, `statOf` and `codeOf` moved to
+  `walk/io/stamps.ts`, which the watcher reads too, so neither imports the other.
+- Every answer is checked when it comes (SD-D5). Synced since, or closed, a look is dropped: a flush's paths go back
+  to pending, settled against what the build knows. Given up on, a flush says what it settled and puts the rest back.
+  A path our own write was told for (`noteOwnWrite`) after its stat was asked is settled again (`writtenAt`, by a
+  count of writes), so the stat from before the write is never taken for a change.
+- `watchDir`'s two stats are asked on a disk thread, with the next look or with one of their own once none is out,
+  and compared with the walk's stamps (`Graph.dirStamps`) when they come, as `startStamp` compares them; they're never
+  taken from the walk's alone, which has no `.gitignore`'s stamp. A folder taken in with all it holds is stamped from
+  the listing that found it.
+- Given up on (SD-D6): `onNotAnswering(true)` once, until a look answers (`false`). The TUI says `disk not answering:
+  the watcher's look gave up; it looks again in a minute` in Messages; the status line says `⚠ disk not answering`
+  after `⚠ not watching`. The looks wait a minute after each given up (the watcher's clock, `now`).
+- The root's real path is read when a look here first asks it: the TUI's watcher never reads it on the screen's
+  thread. `filter.ts` and `traversal/symlinks.ts` read through the seam, out of `DISK_READERS`. `noteOwnWrite`
+  without a stamp (the scratch's) still stats on the screen's thread: SD-T11's, with the scratch.
+- `AppOptions.listOffThread` keeps its name: SD-D10's note renames it for what it covers, but the TUI's look (SD-T4),
+  built beside this task, keeps it too, so the two don't meet in a rename. The watcher takes the explorer's listings'
+  flag (`Listings.offThread`); the name is the consolidation's (SD-T12).
+- `CHECKS_FOR`: `watching` and `home-watching` join the disk threads' entry. The watcher's own files keep none: every
+  check reads the watcher.
+- The terminal check's slow folder takes three seconds a stat (the stand-in's fourth part): every key is answered
+  within a second, and the agent's note shows two seconds or more after it was written, once its stat answered. With
+  the looks read on the screen's thread again it showed after 577 ms, and the check failed.
 
 ## References
 

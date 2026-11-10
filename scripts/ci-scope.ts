@@ -103,12 +103,12 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   ],
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
   // marks read; and the disk threads that list them (SD-D2: `DiskThreads` in walk-thread.ts, what they answer in
-  // disk-jobs.ts). The TUI asks those threads for its listings alone until SD-T3 to SD-T11 move its other reads there:
-  // each adds its features' checks here as it does, and once every read goes through them, the two leave this entry
-  // to run every check, as the seam does.
+  // disk-jobs.ts). The TUI asks those threads for its listings and the watcher's looks (SD-T3) until SD-T4 to SD-T11
+  // move its other reads there: each adds its features' checks here as it does, and once every read goes through them,
+  // the two leave this entry to run every check, as the seam does.
   [
     /^src\/core\/workspace\/walk\/(listing|list-worker|walk-thread|disk-jobs)\.ts$/,
-    ["slow disk", "home", "view", "Elsewhere", "marks"],
+    ["slow disk", "home", "view", "Elsewhere", "marks", "watching", "home-watching"],
   ],
   [/^src\/tui\/workspace\/explorer\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).

@@ -11,7 +11,8 @@
 import type { Config } from "../../application/config/config.ts";
 import type { HomeWalk } from "../vaults/home.ts";
 import type { IndexAnswer, Opened } from "../graph/index-job.ts";
-import type { DiskRequest, PathStat, ReadAnswer, WalkAnswer, WalkAsk } from "./disk-jobs.ts";
+import type { JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
+import type { DiskRequest, ListAsk, PathStat, ReadAnswer, StatAsk, WalkAnswer, WalkAsk } from "./disk-jobs.ts";
 import type { FolderListing } from "./listing.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
@@ -256,16 +257,18 @@ export const DISK_DEADLINES: Readonly<Record<Asker, number>> = {
 export const IDLE_MS = 60_000;
 
 /** A look's batch (SD-D8, its note of 2026-11-10): every path it stats (links followed, or their own: `own`), and each
- *  folder it lists. */
+ *  folder it lists; the watcher's judged with the walk's filter as they're read (`judge`, SD-T3). */
 export interface LookAsk {
-  stat?: { paths: string[]; own?: boolean };
-  list?: { dir: string; walk: Config["walk"]; hidden: boolean }[];
+  stat?: StatAsk;
+  list?: ListAsk[];
 }
 
-/** A look's batch answered: its stats in the order asked, and a listing for each folder. */
+/** A look's batch answered: its stats in the order asked (each judged, when asked: `judged`), and a listing for each
+ *  folder. */
 export interface LookAnswer {
   stats: PathStat[];
-  listings: FolderListing[];
+  judged?: PathVerdict[];
+  listings: (FolderListing | JudgedListing)[];
 }
 
 type Timers = Pick<typeof globalThis, "setTimeout" | "clearTimeout">;
@@ -365,15 +368,20 @@ export class DiskThreads {
    */
   async look(batch: LookAsk): Promise<LookAnswer> {
     const giveUp = new AbortController();
-    const { paths = [], own = false } = batch.stat ?? {};
+    const { paths = [], own = false, judge } = batch.stat ?? {};
     const stats = paths.length
-      ? this.ask<{ stats: PathStat[] }>({ op: "stat", paths, ...(own ? { own } : {}) }, "look", giveUp)
+      ? this.ask<{ stats: PathStat[]; judged?: PathVerdict[] }>(
+          { op: "stat", paths, ...(own ? { own } : {}), ...(judge ? { judge } : {}) },
+          "look",
+          giveUp,
+        )
       : Promise.resolve({ stats: [] });
     const lists = (batch.list ?? []).map((l) =>
-      this.ask<{ listing: FolderListing }>({ op: "list", ...l }, "look", giveUp),
+      this.ask<{ listing: FolderListing | JudgedListing }>({ op: "list", ...l }, "look", giveUp),
     );
     const [answered, ...listed] = await Promise.all([stats, ...lists] as const);
-    return { stats: answered.stats, listings: listed.map((l) => l.listing) };
+    const judged = "judged" in answered && answered.judged ? { judged: answered.judged } : {};
+    return { stats: answered.stats, ...judged, listings: listed.map((l) => l.listing) };
   }
 
   /** A request on a thread that's free, once one is, with what this thread knows (`walkContext`) as it's sent; its
