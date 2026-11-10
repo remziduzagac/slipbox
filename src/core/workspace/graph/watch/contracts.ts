@@ -3,7 +3,7 @@
 import type { WalkFilter } from "../../walk/filtering/filter.ts";
 import type { Stamp } from "../../walk/contracts.ts";
 import type { WatchState } from "./state.ts";
-import type { JudgeContext, LinkKept } from "./judging.ts";
+import type { JudgeBy, JudgeContext, LinkKept, ListJudge } from "./judging.ts";
 import type { Look } from "./reads.ts";
 export interface WatchChange {
   rel: string;
@@ -99,6 +99,8 @@ export interface ReconciliationDirectories {
   forget(dirRel: string): void;
   found(dirRel: string): "adopt" | "ask" | "leave";
   judging(): JudgeContext;
+  judgeBy(): JudgeBy;
+  judged(how: ListJudge["how"]): ListJudge;
   symlinkKept(rel: string, link: LinkKept): "file" | "dir" | null;
   unwatchTree(dirRel: string): void;
 }

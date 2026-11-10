@@ -19,7 +19,9 @@ they answer in `disk-jobs.ts`): two, light — no index, no parser — each star
 the first thread free, in the order asked, so never behind one that doesn't answer while the other is free; a walk
 takes a thread only while the other is left for the rest, and until then waits, the requests asked after it going past
 it and a second walk waiting behind it. Once it has waited a look's deadline it's passed no more: it takes the next
-thread free, unless the other is walking. They answer, the same code as the thread that asks would run, through the seam
+thread free, unless the other is walking. A background request (the watcher's looks) takes a thread only while no other
+background request holds one, the rest going past it meanwhile. They answer, the same code as the thread that asks
+would run, through the seam
 below, with what that thread knows and they can't see for themselves (`walkContext`); a path's own error is its answer,
 and a request fails only when its thread does:
 
@@ -89,15 +91,21 @@ go of.
   their `.gitignore`s', the notes followed into folders left to home's walk, the polled folders' listings; and every
   15th tick the sweep's stats of the known notes, a hundred a request, each asked when the last answers; a sweep still
   under way at the next 15th tick goes on, and none other starts. A tick whose answer hasn't come asks nothing new. A
-  folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, and where a
-  note that went has gone (`movedTo`); the batch goes to the feed when they answer, events meanwhile waiting for the
-  next. Each entry a listing finds is judged there with it, by the walk's filter (`exclusion`) and a link's verdict
-  (`symlinkVerdict`), as the explorer's are (`core/workspace/graph/watch/judging.ts`). A folder registered asks its
+  folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, a hundred a
+  request, each settled as it answers, and where a note that went has gone (`movedTo`); the batch goes to the feed when
+  they answer, events meanwhile waiting for the next. Each entry a listing finds is judged there with it, by the walk's
+  filter (`exclusion`) and a link's verdict (`symlinkVerdict`), as the explorer's are
+  (`core/workspace/graph/watch/judging.ts`), the filter made once on each thread and made again once the watcher's
+  moves on (`WalkFilter.epoch`: a `.gitignore` seen changed, the mount table read again). A folder registered asks its
   stamps there — its own and its `.gitignore`'s, with the next look — compared, when they come, with the walk's that
-  found it (`Graph.dirStamps`); one that came is listed there with all it holds, each folder stamped as it's listed.
-  The watcher's logic is written as looks (`watch/reads.ts`), each yielding the batch it needs: one out at a time, a
-  flush asked meanwhile made once it answers, the sweep a chain of its own; a test's watcher answers each at once, on
-  the thread that asks, with the same code.
+  found it (`Graph.dirStamps`); one that came is listed there a folder at a time, nearest first, each stamped as it's
+  listed and watched as it answers. A look given up on keeps what answered before: what it settled is said, what it
+  didn't, and the folders it hadn't listed, are pending again. The watcher's logic is written as looks
+  (`watch/reads.ts`), each yielding the batch it needs: one out at a time, a flush asked meanwhile made once it
+  answers, the sweep a chain of its own that asks nothing while the looks are paused; the warning cleared only by an
+  answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a time, so a
+  key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on the thread
+  that asks, with the same code.
 - **The TUI's look each second** (SD-T4; § External changes). One request a second: the open files no watcher sees,
   your config's and the vault's `.slipbox/config.toml`'s stamps, git's `HEAD`, its branch's ref, its `index.lock` and
   its rebase folders and what an operation under way leaves there, and the CLI's activity file, which the background

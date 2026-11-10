@@ -10,8 +10,9 @@ import * as disk from "../../foundation/platform/disk.ts";
 import { type DecodedFile, folderUnreadable, readTextStamped, type Stamp } from "../../foundation/platform/fsutil.ts";
 import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
 import {
+  type JudgeBy,
   type JudgedListing,
-  judgeContext,
+  judgeContextFor,
   judgeListing,
   judgePath,
   type ListJudge,
@@ -56,7 +57,7 @@ export type ListAsk = { dir: string; walk: Config["walk"]; hidden: boolean } | {
 export interface StatAsk {
   paths: string[];
   own?: boolean;
-  judge?: { filter: FilterSettings };
+  judge?: JudgeBy;
 }
 
 export type DiskRequest = { context: WalkContext } & (
@@ -119,12 +120,12 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
   enterContext(req.context);
   switch (req.op) {
     case "list":
-      if ("judge" in req) return { listing: judgeListing(req.dir, req.judge.how, judgeContext(req.judge.filter)) };
+      if ("judge" in req) return { listing: judgeListing(req.dir, req.judge.how, judgeContextFor(req.judge)) };
       return { listing: listFolder(req.dir, req.walk, req.hidden) };
     case "stat": {
       const stats = req.paths.map((p) => statOf(p, req.own === true));
       if (!req.judge) return { stats };
-      const ctx = judgeContext(req.judge.filter);
+      const ctx = judgeContextFor(req.judge);
       return { stats, judged: req.paths.map((p, i) => judgePath(p, stats[i]!, ctx)) };
     }
     case "read":

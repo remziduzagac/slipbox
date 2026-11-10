@@ -6,7 +6,7 @@ import { under } from "../../vaults/home/paths.ts";
 import { type PathStat, parentOf } from "../../walk/io/stamps.ts";
 import type { Settling, ReconciliationOptions, ReconciliationState, ReconciliationDirectories } from "./contracts.ts";
 import type { PathVerdict } from "./judging.ts";
-import { type Look, runHere } from "./reads.ts";
+import { type Look, runHere, SLICE } from "./reads.ts";
 import type { Went } from "./state.ts";
 import { noteStamp } from "./io.ts";
 
@@ -33,14 +33,14 @@ export class WatchReconciliation {
     went: readonly Went[],
     gone: readonly { dir: string; files: string[] }[],
   ): Look<string[]> {
-    const { filter, root } = this.opts;
+    const { root } = this.opts;
     const dirs = [...new Set(into)];
     const pollMs = this.opts.pollMs ?? 2000;
     const list = dirs.map((d) => {
       const attachments: string[] = [];
       for (const [dir, inDir] of this.state.attachments) if (under(dir, d)) attachments.push(...inDir);
       const moved = { fresh: fresh.has(d), went: [...went], gone: gone.map((g) => ({ ...g })), attachments, pollMs };
-      return { dir: join(root, d), judge: { filter: filter.settings, how: { moved } } };
+      return { dir: join(root, d), judge: this.directories.judged({ moved }) };
     });
     const { listings } = yield { list };
     const there = new Set<string>();
@@ -50,26 +50,31 @@ export class WatchReconciliation {
 
   /**
    * Each path of `list` — which grows, as folders are taken in and gone ones say what they held — settled by stat: the
-   * paths not settled yet asked in one batch, judged where they're read, up to a `.gitignore` among them (which changes
-   * how the rest are judged); one our own write was told for since it was asked, left pending for the next batch.
+   * paths not settled yet asked a slice at a time (`SLICE`), each slice judged where it's read and settled as it
+   * answers, up to a `.gitignore` among them (which changes how the rest are judged); one our own write was told for
+   * since it was asked, left pending for the next batch. The list is gone through once (`next`: where the next slice
+   * starts), however long.
    */
   *settle(batch: Settling, list: string[]): Look {
     const { filter, known, root } = this.opts;
     const read = new Map<string, { st: PathStat; v: PathVerdict; asked: number }>();
+    let next = 0;
     for (let i = 0; i < list.length; i++) {
       const rel = list[i]!;
       if (batch.seen.has(rel)) continue;
       const name = rel.slice(rel.lastIndexOf("/") + 1);
       if (name !== ".gitignore" && !read.has(rel)) {
-        const asking: string[] = [];
-        for (const r of list.slice(i)) {
+        const asking = new Set([rel]);
+        for (next = Math.max(next, i + 1); next < list.length && asking.size < SLICE; next++) {
+          const r = list[next]!;
           if (basename(r) === ".gitignore") break;
-          if (!batch.seen.has(r) && !read.has(r) && !asking.includes(r)) asking.push(r);
+          if (!batch.seen.has(r) && !read.has(r)) asking.add(r);
         }
         const asked = this.state.writes;
-        const paths = asking.map((r) => join(root, r));
-        const { stats, judged = [] } = yield { stat: { paths, judge: { filter: filter.settings } } };
-        asking.forEach((r, k) => read.set(r, { st: stats[k]!, v: judged[k] ?? {}, asked }));
+        const slice = [...asking];
+        const paths = slice.map((r) => join(root, r));
+        const { stats, judged = [] } = yield { stat: { paths, judge: this.directories.judgeBy() } };
+        slice.forEach((r, k) => read.set(r, { st: stats[k]!, v: judged[k] ?? {}, asked }));
       }
       batch.seen.add(rel);
       if (name === ".gitignore") {
@@ -172,10 +177,10 @@ export class WatchReconciliation {
    * A batch's last look (`flush`), before moves are followed: a rename reports only the new name, so notes that
    * vanished from the directories heard from, or moved away under the same name, are found here — gone, and kept as
    * gone lately (`went`), so where they went is followed — and a burst of writes in a folder reported as one event is
-   * said for the rest of it. Their stats asked in one batch, compared when it answers with what's known then.
+   * said for the rest of it. Their stats asked a slice at a time, each compared when it answers with what's known then.
    */
   *vanishing(batch: Settling): Look {
-    const { known, root } = this.opts;
+    const { known } = this.opts;
     const dirs = new Set(batch.paths.map((p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "")));
     const createdNames = new Set(
       batch.changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)),
@@ -185,7 +190,12 @@ export class WatchReconciliation {
       const dir = slash >= 0 ? rel.slice(0, slash) : "";
       return (dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) && !batch.seen.has(rel);
     });
-    if (!asking.length) return;
+    for (let i = 0; i < asking.length; i += SLICE) yield* this.vanishedIn(batch, asking.slice(i, i + SLICE), dirs);
+  }
+
+  /** One slice of `vanishing`'s notes (`asking`), statted, and compared when it answers with what's known then. */
+  private *vanishedIn(batch: Settling, asking: string[], dirs: ReadonlySet<string>): Look {
+    const { known, root } = this.opts;
     const asked = this.state.writes;
     const { stats } = yield { stat: { paths: asking.map((rel) => join(root, rel)) } };
     asking.forEach((rel, k) => {

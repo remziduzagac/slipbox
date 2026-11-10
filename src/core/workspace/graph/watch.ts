@@ -36,15 +36,13 @@ import {
   type LookEnd,
   readsHere,
   readsOnThreads,
+  SLICE,
   type WatchAnswer,
   type WatchReads,
 } from "./watch/reads.ts";
 
 /** How long the looks wait after one is given up on (SD-D6): the disk's minute. */
 const PAUSE_MS = 60_000;
-
-/** The sweep's slice: so many known notes' stats a request, each asked when the last answers. */
-const SWEEP_SLICE = 100;
 
 export class VaultWatcher {
   private readonly state = new WatchState();
@@ -209,7 +207,8 @@ export class VaultWatcher {
     this.out = true;
     const syncs = this.state.syncs;
     drive(look, this.reads, () => !this.state.closed && this.state.syncs === syncs, {
-      answered: () => this.answered(),
+      now: () => this.now(),
+      answered: (at) => this.answered(at),
       ending: (how) => {
         this.ending = how;
       },
@@ -230,9 +229,10 @@ export class VaultWatcher {
     this.opts.onNotAnswering?.(true);
   }
 
-  /** A look answered: the disk answers again. */
-  private answered(): void {
-    if (!this.notAnswering || this.state.closed) return;
+  /** A look answered, asked at `askedAt`: the disk answers again — once a look asked after the pause answers, never
+   *  one asked before it was given up on. */
+  private answered(askedAt: number): void {
+    if (!this.notAnswering || this.state.closed || askedAt < this.pausedUntil) return;
     this.notAnswering = false;
     this.pausedUntil = 0;
     this.opts.onNotAnswering?.(false);
@@ -385,13 +385,16 @@ export class VaultWatcher {
     if (moved.length) yield* this.lookingAgain(moved, statAt);
   }
 
-  /** The sweep on the disk threads, unless one is under way: its slices asked one after another, ticks going on. */
+  /** The sweep on the disk threads, unless one is under way or the looks are paused: its slices asked one after
+   *  another, ticks going on — dropped once they pause (SD-D6), asking nothing more meanwhile. */
   private startSweep(): void {
-    if (this.sweeping) return;
+    if (this.sweeping || this.now() < this.pausedUntil) return;
     this.sweeping = true;
     const syncs = this.state.syncs;
-    drive(this.sweep(true), this.reads, () => !this.state.closed && this.state.syncs === syncs, {
-      answered: () => this.answered(),
+    const current = () => !this.state.closed && this.state.syncs === syncs && this.now() >= this.pausedUntil;
+    drive(this.sweep(true), this.reads, current, {
+      now: () => this.now(),
+      answered: (at) => this.answered(at),
       ending: () => {},
       end: (e) => {
         this.sweeping = false;
@@ -404,8 +407,8 @@ export class VaultWatcher {
   private *sweep(alone: boolean): Look {
     const { known, root } = this.opts;
     const notes = [...known.keys()];
-    for (let i = 0; i < notes.length; i += SWEEP_SLICE) {
-      const slice = notes.slice(i, i + SWEEP_SLICE);
+    for (let i = 0; i < notes.length; i += SLICE) {
+      const slice = notes.slice(i, i + SLICE);
       const asked = this.state.writes;
       const { stats } = yield { stat: { paths: slice.map((rel) => join(root, rel)) } };
       const before = this.state.pending.size;

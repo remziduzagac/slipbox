@@ -7,7 +7,7 @@ import { under } from "../../vaults/home/paths.ts";
 import { type PathStat, parentOf, settled, statOf } from "../../walk/io/stamps.ts";
 import type { DirectoryOptions, DirectoryState, DirectoryHost } from "./contracts.ts";
 import { every } from "./io.ts";
-import type { JudgeContext, JudgedFolder, LinkKept, ListJudge } from "./judging.ts";
+import type { JudgeBy, JudgeContext, JudgedFolder, LinkKept, ListJudge } from "./judging.ts";
 import { type Look, runHere } from "./reads.ts";
 
 /** A folder's stamps as read: its own stat and its `.gitignore`'s. */
@@ -53,26 +53,34 @@ export class WatchDirectories {
     return runHere(this.adopting(dirRel), this.judging());
   }
 
-  /** `adoptTree` as a look: the tree listed, and judged, where it's read (judging.ts) — each folder watched here as the
-   *  answer comes, from its stamps read just before it was listed, within home's cap. */
+  /**
+   * `adoptTree` as a look: the tree listed a folder at a time, nearest first, each judged where it's read (judging.ts)
+   * and watched here as its answer comes, from its stamps read just before it was listed, within home's cap — so a big
+   * tree moved in is no one request a slow disk can't answer in time. Ended early (given up on, dropped), the folders
+   * not listed yet and the files found so far are pending again: the next batch takes them in, what's watched kept.
+   */
   *adopting(dirRel: string): Look<string[]> {
     const max = this.opts.maxDirs ?? Number.POSITIVE_INFINITY;
-    // Past home's cap (VV-D2): left to its walk, never listed here.
-    const room = max - this.state.watchers.size - this.state.polled.size;
-    if (room <= 0) return [];
-    const judge = { filter: this.opts.filter.settings, how: { adopt: { room } } };
-    const { listings } = yield { list: [{ dir: join(this.opts.root, dirRel), judge }] };
-    const tree = listings[0];
-    if (tree?.how !== "adopt") return [];
-    const taken = new Set<string>();
-    for (const f of tree.folders) {
-      if (this.state.watchers.size + this.state.polled.size >= max) break;
-      this.watchDir(f.rel, f.at, { dir: f.stat, gitignore: f.gitignore });
-      taken.add(f.rel);
+    const queue = [dirRel];
+    const files: string[] = [];
+    let next = 0;
+    let done = false;
+    try {
+      // Past home's cap (VV-D2): left to its walk, never listed here.
+      for (; next < queue.length && this.state.watchers.size + this.state.polled.size < max; next++) {
+        const d = queue[next]!;
+        const { listings } = yield { list: [{ dir: join(this.opts.root, d), judge: this.judged({ adopt: true }) }] };
+        const folder = listings[0];
+        if (folder?.how !== "adopt") continue;
+        this.watchDir(d, folder.at, { dir: folder.stat, gitignore: folder.gitignore });
+        queue.push(...folder.dirs);
+        for (const f of folder.files) if (!f.link || this.symlinkKept(f.rel, f.link)) files.push(f.rel);
+      }
+      done = true;
+    } finally {
+      if (!done) for (const rel of [...queue.slice(next), ...files]) this.state.pending.add(rel);
     }
-    return tree.files
-      .filter((f) => taken.has(parentOf(f.rel)) && (!f.link || this.symlinkKept(f.rel, f.link)))
-      .map((f) => f.rel);
+    return files;
   }
 
   /**
@@ -191,9 +199,14 @@ export class WatchDirectories {
     return st.mtimeMs === seen[0] && st.ctimeMs === seen[1] ? st.mtimeMs : -1;
   }
 
+  /** What a disk thread judges the watcher's reads by: the walk's filter, as it is now (`JudgeBy`). */
+  judgeBy(): JudgeBy {
+    return { filter: this.opts.filter.settings, epoch: this.opts.filter.epoch };
+  }
+
   /** A listing's judging (`ListJudge`): by the walk's filter, as `how` says. */
   judged(how: ListJudge["how"]): ListJudge {
-    return { filter: this.opts.filter.settings, how };
+    return { ...this.judgeBy(), how };
   }
 
   /** The names of the folders in `dirRel` watched or polled (or left to the walk, `left`): a listing judges none. */

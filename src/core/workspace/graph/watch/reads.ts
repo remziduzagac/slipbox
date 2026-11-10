@@ -30,6 +30,10 @@ export interface WatchAnswer {
   listings: JudgedListing[];
 }
 
+/** The most paths a look stats in one batch (the sweep's slices, the settle's): each a request a slow disk answers
+ *  within its deadline, what was answered kept when a later one isn't. */
+export const SLICE = 100;
+
 /** A look's logic: what it asks, yielded batch by batch, and what it comes to. */
 export type Look<R = void> = Generator<WatchAsk, R, WatchAnswer>;
 
@@ -55,13 +59,18 @@ export function readsHere(ctx: () => JudgeContext): WatchReads {
   return { here: true, ask: (batch) => answerHere(batch, ctx()) };
 }
 
-/** Reads made on the disk threads (`diskThreads`, the TUI's): each batch a look's, with a look's deadline (SD-D6). */
+/** Reads made on the disk threads (`diskThreads`, the TUI's): each batch a look's, with a look's deadline (SD-D6), in
+ *  the background — one request at a time, a thread always left for what a key asks (SD-D2's note of 2026-11-10). */
 export function readsOnThreads(threads: () => DiskThreads = diskThreads): WatchReads {
   return {
     here: false,
     ask: async (batch) => {
       const { list, ...rest } = batch;
-      const asked: { stat?: StatAsk; list?: ListAsk[] } = { ...rest, ...(list ? { list } : {}) };
+      const asked: { stat?: StatAsk; list?: ListAsk[]; background: true } = {
+        ...rest,
+        ...(list ? { list } : {}),
+        background: true,
+      };
       return (await threads().look(asked)) as WatchAnswer;
     },
   };
@@ -81,7 +90,8 @@ export type LookEnd = { how: "done" } | { how: "dropped" } | { how: "failed"; er
 /**
  * A look driven to its end: each batch asked of `reads` — answered at once here, or awaited from a thread — and the
  * look going on with each answer, while `current` says the world it was asked in still is (else it's dropped). A batch
- * that asks nothing is answered at once. `answered` is told of each answer a thread gives; `end` of how it ended, once.
+ * that asks nothing is answered at once. `answered` is told of each answer a thread gives, with when it was asked (on
+ * the `now` clock); `end` of how it ended, once.
  * Ended early, the look is returned from, so its `finally` blocks see it go (`ending` says why while they run). A look
  * that throws (a fault of its own, not the disk's) ends, dropped, and the fault is thrown on.
  */
@@ -89,7 +99,12 @@ export function drive(
   look: Look,
   reads: WatchReads,
   current: () => boolean,
-  hooks: { answered: () => void; ending: (how: LookEnd["how"] | null) => void; end: (e: LookEnd) => void },
+  hooks: {
+    now: () => number;
+    answered: (askedAt: number) => void;
+    ending: (how: LookEnd["how"] | null) => void;
+    end: (e: LookEnd) => void;
+  },
 ): void {
   let over = false;
   const end = (e: LookEnd) => {
@@ -116,6 +131,7 @@ export function drive(
           r = look.next({ stats: [], listings: [] });
           continue;
         }
+        const at = hooks.now();
         const asked = reads.ask(batch);
         if (!(asked instanceof Promise)) {
           r = look.next(asked);
@@ -123,7 +139,7 @@ export function drive(
         }
         asked.then(
           (a) => {
-            hooks.answered();
+            hooks.answered(at);
             if (!current()) return stop({ how: "dropped" });
             go(a);
           },

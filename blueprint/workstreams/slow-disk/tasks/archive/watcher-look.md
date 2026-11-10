@@ -79,23 +79,30 @@ how.
   they did. One look is out at a time — a tick, a flush, a folder listed again, the stamps of folders registered — and
   a flush asked meanwhile runs once it has answered; the sweep is a chain of its own.
 - What a disk thread judges is `core/workspace/graph/watch/judging.ts`: a settled path's verdict (a link's, and the
-  filter's on it as a folder or a file), a listing's entries (the filter's, a link's, a note's time), a tree taken in
-  (`adoptTree`'s, each folder stamped just before it's listed, up to home's room under its cap), and where notes that
-  went are (`movedTo`'s). It judges with a filter made from the walk's settings (`filterFrom`) and the root's real
-  path, read there. A settle's batch of stats stops at a `.gitignore` among its paths, as the rules change after it.
+  filter's on it as a folder or a file), a listing's entries (the filter's, a link's, a note's time), a folder taken in
+  (`adopting`'s, a folder a request, nearest first, each stamped just before it's listed and watched as it answers, up
+  to home's room under its cap), and where notes that went are (`movedTo`'s). It judges with a filter made from the
+  walk's settings (`filterFrom`) and the root's real path, read there, made once on each thread and kept while the
+  settings and the watcher's filter's epoch (`WalkFilter.epoch`: a `.gitignore` dropped, the mount table read again)
+  stay. A settle's stats go a hundred a request (`SLICE`, the sweep's), each slice settled as it answers, and stop at
+  a `.gitignore` among its paths, as the rules change after it; the list is gone through once, however long.
   `disk-jobs.ts` hands `list` and `stat` with a `judge` to it; `PathStat`, `statOf` and `codeOf` moved to
   `walk/io/stamps.ts`, which the watcher reads too, so neither imports the other.
 - Every answer is checked when it comes (SD-D5). Synced since, or closed, a look is dropped: a flush's paths go back
-  to pending, settled against what the build knows. Given up on, a flush says what it settled and puts the rest back.
-  A path our own write was told for (`noteOwnWrite`) after its stat was asked is settled again (`writtenAt`, by a
-  count of writes), so the stat from before the write is never taken for a change.
+  to pending, settled against what the build knows. Given up on, a flush says what it settled and puts the rest back,
+  with the folders of a tree it hadn't listed yet and the files found in those it had. A path our own write was told
+  for (`noteOwnWrite`) after its stat was asked is settled again (`writtenAt`, by a count of writes), so the stat from
+  before the write is never taken for a change.
 - `watchDir`'s two stats are asked on a disk thread, with the next look or with one of their own once none is out,
   and compared with the walk's stamps (`Graph.dirStamps`) when they come, as `startStamp` compares them; they're never
   taken from the walk's alone, which has no `.gitignore`'s stamp. A folder taken in with all it holds is stamped from
   the listing that found it.
 - Given up on (SD-D6): `onNotAnswering(true)` once, until a look answers (`false`). The TUI says `disk not answering:
   the watcher's look gave up; it looks again in a minute` in Messages; the status line says `⚠ disk not answering`
-  after `⚠ not watching`. The looks wait a minute after each given up (the watcher's clock, `now`).
+  after `⚠ not watching`. The looks wait a minute after each given up (the watcher's clock, `now`): the sweep too,
+  dropped at its next answer and asking nothing more; only an answer to a look asked after the minute clears it.
+- The watcher's requests are the disk threads' background ones (SD-D2's note of 2026-11-10): one at a time, so its
+  tick and its sweep never hold both threads, and a key's read finds the other.
 - The root's real path is read when a look here first asks it: the TUI's watcher never reads it on the screen's
   thread. `filter.ts` and `traversal/symlinks.ts` read through the seam, out of `DISK_READERS`. `noteOwnWrite`
   without a stamp (the scratch's) still stats on the screen's thread: SD-T11's, with the scratch.

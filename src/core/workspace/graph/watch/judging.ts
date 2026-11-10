@@ -1,8 +1,8 @@
 // What a disk thread judges with the watcher's reads (SD-D8, SD-T3): each path the settle stats and each entry a
 // listing finds, as the walk judges it — its filter (`exclusion`: a nested vault's marker, a busy folder's note at its
-// top, a `.gitignore`) and a link's verdict (`symlinkVerdict`) — a folder taken in with all it holds (`adoptTree`'s),
+// top, a `.gitignore`) and a link's verdict (`symlinkVerdict`) — a folder taken in (`adopting`'s, a folder at a time),
 // and where notes that went have gone (`movedTo`'s): read and decided where they're read, so none of it waits on the
-// screen's thread. What the watcher knows — its stamps, its notes, its own writes — stays there (SD-D8): this decides
+// screen's thread. The filter it judges by is made once on each thread and kept (`judgeContextFor`). What the watcher knows — its stamps, its notes, its own writes — stays there (SD-D8): this decides
 // only what the disk says, and the watcher, when the answer comes, what it means now. The same code answers a test's
 // watcher at once, on the thread that asks (`watch/reads.ts`).
 
@@ -31,6 +31,25 @@ export function judgeContext(settings: FilterSettings): JudgeContext {
     realRoot = disk.realpath(settings.root);
   } catch {}
   return { filter: filterFrom(settings), root: settings.root, realRoot };
+}
+
+/** What a watcher's reads are judged by, as a disk thread is asked it: the walk's filter's settings, and its epoch
+ *  (`WalkFilter.epoch`: what it read of the disk dropped or read again). */
+export interface JudgeBy {
+  filter: FilterSettings;
+  epoch: number;
+}
+
+/** The context last made on this thread, and what it was made of. */
+let kept: { key: string; ctx: JudgeContext } | null = null;
+
+/** The context `by` makes, kept on this thread while the same is asked — never one made per request, which would read
+ *  the mount table (macOS: `/sbin/mount`) and each `.gitignore` again — and made again once the settings or the epoch
+ *  change: a `.gitignore` the watcher saw change, the mount table read again. */
+export function judgeContextFor(by: JudgeBy): JudgeContext {
+  const key = JSON.stringify([by.filter, by.epoch]);
+  if (kept?.key !== key) kept = { key, ctx: judgeContext(by.filter) };
+  return kept.ctx;
 }
 
 /** A link's verdict (`symlinkVerdict`), as the watcher keeps it: not kept; or kept, a folder or a file — a file with
@@ -74,13 +93,12 @@ export interface MovedHow {
   pollMs: number;
 }
 
-/** What a watcher's listing is for: its entries judged, its tree taken in (`room`: so many folders at most), or where
- *  notes that went have gone in it. */
-export type ListHow = { entries: EntriesHow } | { adopt: { room: number } } | { moved: MovedHow };
+/** What a watcher's listing is for: its entries judged, the folder taken in (`adopt`), or where notes that went have
+ *  gone in it. */
+export type ListHow = { entries: EntriesHow } | { adopt: true } | { moved: MovedHow };
 
-/** A watcher's listing, as the disk threads are asked it: the folder, and how it's judged by the walk's filter. */
-export interface ListJudge {
-  filter: FilterSettings;
+/** A watcher's listing, as the disk threads are asked it: how it's judged by the walk's filter. */
+export interface ListJudge extends JudgeBy {
   how: ListHow;
 }
 
@@ -92,11 +110,14 @@ export interface JudgedFolder {
   entries: JudgedEntry[];
 }
 
-/** A folder taken in, with all it holds: the folders in the order gone into, each stamped just before it was listed
- *  (its stat, its `.gitignore`'s), and the files the walk takes in them, a link with its verdict. */
-export interface AdoptedTree {
+/** A folder taken in: stamped just before it was listed (`at`; its stat, its `.gitignore`'s), the files the walk takes
+ *  in it (a link with its verdict), and the folders in it the walk goes into, each taken in by a listing of its own. */
+export interface AdoptedFolder {
   how: "adopt";
-  folders: { rel: string; at: number; stat: PathStat; gitignore: PathStat }[];
+  at: number;
+  stat: PathStat;
+  gitignore: PathStat;
+  dirs: string[];
   files: { rel: string; link?: LinkKept }[];
 }
 
@@ -106,7 +127,7 @@ export interface MovedInto {
   there: string[];
 }
 
-export type JudgedListing = JudgedFolder | AdoptedTree | MovedInto;
+export type JudgedListing = JudgedFolder | AdoptedFolder | MovedInto;
 
 /** `abs` as the root's path for it, `/`-separated (`""`: the root). */
 const relIn = (root: string, abs: string): string => relative(root, abs).split(sep).join("/");
@@ -131,7 +152,7 @@ export function judgePath(abs: string, st: PathStat, ctx: JudgeContext): PathVer
 
 /** The folder `dir` listed, judged as `how` says. */
 export function judgeListing(dir: string, how: ListHow, ctx: JudgeContext): JudgedListing {
-  if ("adopt" in how) return adopted(relIn(ctx.root, dir), how.adopt.room, ctx);
+  if ("adopt" in how) return adopted(relIn(ctx.root, dir), ctx);
   if ("moved" in how) return { how: "moved", there: movedInto(relIn(ctx.root, dir), how.moved, ctx) };
   return entriesOf(dir, how.entries, ctx);
 }
@@ -170,33 +191,30 @@ function entriesOf(dir: string, how: EntriesHow, ctx: JudgeContext): JudgedFolde
   return { how: "entries", at, error: null, entries };
 }
 
-/** The folder `dirRel` taken in with all it holds, as the walk would walk it — `room` folders at most, the nearest
- *  first in the order gone into — each stamped before it's listed. */
-function adopted(dirRel: string, room: number, ctx: JudgeContext): AdoptedTree {
+/** The folder `dirRel` taken in as the walk would walk it, stamped before it's listed: its files, and the folders in it
+ *  the walk goes into — each the next listing's, so a tree moved in comes a folder at a time, never in one request. */
+function adopted(dirRel: string, ctx: JudgeContext): AdoptedFolder {
   const { filter, root } = ctx;
-  const out: AdoptedTree = { how: "adopt", folders: [], files: [] };
-  const visit = (d: string) => {
-    if (out.folders.length >= room) return;
-    const abs = join(root, d);
-    const at = Date.now();
-    out.folders.push({ rel: d, at, stat: statOf(abs), gitignore: statOf(join(abs, ".gitignore")) });
-    let entries: Dirent[];
-    try {
-      entries = disk.entries(abs);
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      const rel = `${d}/${e.name}`;
-      if (e.isDirectory()) {
-        if (filter.exclusion(rel, true) === null) visit(rel);
-      } else if (e.isSymbolicLink()) {
-        const link = linkKept(join(root, rel), ctx);
-        if (link.kept && filter.exclusion(rel, false) === null) out.files.push({ rel, link });
-      } else if (filter.exclusion(rel, false) === null) out.files.push({ rel });
-    }
-  };
-  visit(dirRel);
+  const abs = join(root, dirRel);
+  const at = Date.now();
+  const stat = statOf(abs);
+  const gitignore = statOf(join(abs, ".gitignore"));
+  const out: AdoptedFolder = { how: "adopt", at, stat, gitignore, dirs: [], files: [] };
+  let entries: Dirent[];
+  try {
+    entries = disk.entries(abs);
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    const rel = `${dirRel}/${e.name}`;
+    if (e.isDirectory()) {
+      if (filter.exclusion(rel, true) === null) out.dirs.push(rel);
+    } else if (e.isSymbolicLink()) {
+      const link = linkKept(join(root, rel), ctx);
+      if (link.kept && filter.exclusion(rel, false) === null) out.files.push({ rel, link });
+    } else if (filter.exclusion(rel, false) === null) out.files.push({ rel });
+  }
   return out;
 }
 
