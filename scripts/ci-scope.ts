@@ -110,15 +110,23 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   ],
   // Every folder listed a level at a time (Elsewhere's among them), and the vault and permission facts every row's
   // marks read; and the thread that lists them (SD-D2). The disk threads themselves left this entry once every note
-  // opened was read on them (SD-T5): a change to them runs every check, as the seam's does.
+  // opened was read on them (SD-T5): a change to them runs every check, as the seam's does. The vault open's own folders
+  // are listed there too, each entry judged by the walk's filter (SD-T7): what it leaves out and why, the nested vaults'
+  // names, the links in it.
   [
     /^src\/core\/workspace\/walk\/(listing|list-worker)\.ts$/,
-    ["slow disk", "home", "view", "Elsewhere", "marks", "home-watching"],
+    ["slow disk", "home", "view", "Elsewhere", "marks", "home-watching", "explorer-marks", "roots", "symlinks"],
   ],
   // The TUI's look each second (SD-T4), asked of those threads: the open files no watcher sees and their ways, the
   // config, git's state and what's drawn of it, the root's tool's settings for the links' convention.
   [/^src\/(?:core\/workspace\/walk\/look-jobs|tui\/app\/runtime\/look)\.ts$/, ["slow disk", ...LOOK_CHECKS]],
-  [/^src\/tui\/workspace\/explorer\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
+  // The explorer's listings, of the folders outside the vault open and of its own (SD-T7), and the rows the walk didn't
+  // give built from them: what the walk leaves out (busy, ignored, hidden, `walk.exclude`), a file made since, home's
+  // folders before its walk, a link's folder, a nested vault's name.
+  [
+    /^src\/tui\/workspace\/explorer\/(?:listings|explorer-disk)\.ts$/,
+    ["slow disk", "view", "Elsewhere", "marks", "explorer-marks", "roots", "symlinks", "home", "files", "new-file"],
+  ],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, [...VAULT_CHECKS, "roots", "named folders"]],

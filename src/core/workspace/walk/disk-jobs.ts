@@ -3,7 +3,8 @@
 // folder's access, the vault open walked. Each is read as the thread that asks would read it — the same code, through
 // the seam (SD-D10) — with what that thread knows and this one can't see for itself (`walkContext`) taken first. A
 // path's own error is its answer, by its code; the request fails only when its thread does (a deadline, a crash). The
-// watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts). The
+// watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts), and
+// so are the entries of the explorer's folders of the vault open's own tree (`own`, SD-T7), by the same filter. The
 // TUI's look's own jobs (a way, git's state, the config, a tool's settings) are look-jobs.ts's, asked with its stats as
 // one request (`look`).
 
@@ -54,8 +55,11 @@ export interface WalkAnswer {
   index?: { text: string | null; stamp: string };
 }
 
-/** A folder listed: for the explorer (`walk`, `hidden`), or for the watcher, judged (`judge`: SD-T3). */
-export type ListAsk = { dir: string; walk: Config["walk"]; hidden: boolean } | { dir: string; judge: ListJudge };
+/** A folder listed: for the explorer (`walk`, `hidden`; a folder of the vault open's own tree with its walk's filter,
+ *  `own`: SD-T7), or for the watcher, judged (`judge`: SD-T3). */
+export type ListAsk =
+  | { dir: string; walk: Config["walk"]; hidden: boolean; own?: JudgeBy }
+  | { dir: string; judge: ListJudge };
 
 /** Paths statted: links followed, or their own (`own`); for the watcher's settle, each judged too (`judge`). */
 export interface StatAsk {
@@ -154,7 +158,8 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
   switch (req.op) {
     case "list":
       if ("judge" in req) return { listing: judgeListing(req.dir, req.judge.how, judgeContextFor(req.judge)) };
-      return { listing: listFolder(req.dir, req.walk, req.hidden) };
+      // The vault's own folder: judged by the filter the watcher's reads are, made once on this thread and kept.
+      return { listing: listFolder(req.dir, req.walk, req.hidden, req.own && judgeContextFor(req.own).filter) };
     case "stat":
       return statsOf(req);
     case "read":

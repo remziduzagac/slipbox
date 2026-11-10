@@ -130,6 +130,13 @@ minutes. It's read again a minute later, not before; a folder `l` refuses is rea
 next `l` once you may read it. Another disk mounted in a folder, such as a network share, is listed by its name alone:
 nothing of it is read until you unfold it.
 
+The vault you are in is read in the background too. A folder of it you unfold shows the notes and folders slipbox
+already knows in it at once; while the rest is read, a dimmed `listing…` comes first under it, and what the index leaves
+out, the files it doesn't know yet and the rows' marks come when it answers. Zooming into a folder, and unfolding one
+with `l` before it's listed, wait for the disk as opening a note does: the keys you type meanwhile wait their turn, and
+`esc` gives the wait up, leaving the explorer as it was. A folder that doesn't answer within a minute says so:
+`~/notes/far didn't answer: not zoomed into`.
+
 [Working across folders and vaults](../guides/vaults.md) shows the zoom at work, with examples.
 
 ### A row's marks

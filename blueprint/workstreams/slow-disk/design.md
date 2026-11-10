@@ -39,11 +39,11 @@ and a request fails only when its thread does:
 Every read goes through one seam (`core/foundation/platform/disk.ts`): a folder's listing, a path's `stat` and
 `lstat` (its real path, whether anything is there, whether you may use it: `folderUnreadable`'s), a file's bytes. The
 CLI reads through it too, on its own thread. It keeps two listings apart (SD-T1). The walk's (`readFolder`: a walk, a
-disk thread's `list`, the filter) takes the slow disk stood in for on every thread, the screen's too, as since T12, so
-a walk put back on the screen's thread is slowed there and T12's checks see it. The rest (`entries`: the watcher's
-listings, the explorer's tree; and every stat and read) takes it on every thread but the screen's, and a test's hold on
-the threads it asks: the screen's thread reads those at once until a task moves them, and that task's held test takes
-the hold there for them.
+disk thread's `list` — the explorer's own tree's too — the filter) takes the slow disk stood in for on every thread,
+the screen's too, as since T12, so a walk or a listing put back on the screen's thread is slowed there and the checks
+see it. The rest (`entries`: the watcher's listings; and every stat and read) takes it on every thread but the
+screen's, and a test's hold on the threads it asks: the screen's thread reads those at once until a task moves them,
+and that task's held test takes the hold there for them.
 
 **Nobody asked, nothing waits** (SD-D3). A read on a timer or in the background never holds a key: what the screen's
 thread last knew stays, and is shown, until the answer comes — the watcher's stamps, the graph (links, backlinks,
@@ -150,11 +150,26 @@ the second is let go of.
   checked against what it holds (`asRead`) with its text read there. What's drawn of every note — the Problems tab's
   count, the Info panel's backlinks and convention — counts what's parsed so far, marked as partial while notes are
   unread, and is drawn again when the parse is done (SD-D12).
-- **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows are listed as the folders
-  outside it are (`Listings`), each entry with the walk's verdict on it; its rows' marks are their listing's
-  (`Marks.listedFacts`); the view and the trail are statted there as the tree is built, and the view gives way when
-  the answer says its folder is gone. A nested vault's name, and whether a row is left out (`Paths.leftOut`), come with
-  the listing. One `Listings` keeps both sides' folders, 256 at most.
+- **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows — the view's, and each
+  unfolded under it — are listed as the folders outside it are (`Listings`: kept, read again once a second old, drawn
+  only when the listing's digest changed), with the walk's filter (`list`'s `own`: its settings and its epoch, the
+  filter made once on each thread, as the watcher's judging is): each entry with the walk's verdict on it
+  (`exclusion`: a busy folder's note looked for, the `.gitignore`s read, a nested vault's marker, all there) and a note
+  over `walk.max_file_size` said. `fromDisk` builds what the walk didn't give from those listings, nothing read on the
+  screen's thread. Every row a listing gave carries what it read (`TreeRow.listed`) — where a link leads, a nested
+  vault's own name, its branch and whether its index is in the cache folder — and its marks are the listing's
+  (`Marks.listedFacts`); a row of the vault's own tree whose folder's listing hasn't come is drawn as the walk gave it,
+  by its folder's name for a nested vault, unmarked, and nothing is read for it. A folder not listed yet keeps the
+  walk's rows, `listing…` first under it after a moment; one whose thread gave no answer says so there (`can't read: no
+  answer in time`), read again a minute later. Whether a path is left out (`Paths.leftOut`: a row's path, `rowPath`,
+  and the tree's top, `leftOutAt`) is the verdict of the listing of the folder holding each folder on its way; while
+  that listing is read, by the name alone (git's and slipbox's own folders, a hidden name, `walk.exclude`). The view and
+  the trail are statted there as the tree is built — they and the folders above them, one request out at a time — and
+  the view gives way when the answer says its folder is gone, only while the view and the trail are those it asked
+  about. A zoom (`z`, `-`, the breadcrumb), `l` on a folder whose listing hasn't come and the start's folder ask
+  `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers; the start's is
+  read here until SD-T10. One `Listings` keeps both sides' folders, 256 at most; a folder listed on both (a nested
+  vault's, unfolded, a path in it asked) is kept once for each.
 - **The vault built again** (SD-T8). A reindex, the watcher's rescan, a setting of the walk changed, a vault gone into,
   a branch's tabs and the folders asked for in home read the walk and the index on a disk thread (`walk`); the graph
   stays as it was meanwhile, `reading the vault…` among the background tasks. The index crosses as its text, parsed
@@ -213,11 +228,17 @@ own folder, and consolidation (SD-T12) puts this text, pointing at § A slow dis
   as the tree or the breadcrumb is built again says it's gone (`keepToWhatsThere`)".
 - In the explorer's bullet, "on one of two listing threads, apart from the walk's" becomes "on one of the two disk
   threads (§ A slow disk), apart from the walk's" (built by SD-T2).
+- In the explorer's bullet, "Until a folder's first listing answers, nothing is under it" becomes "Until a folder's
+  first listing answers, nothing is under it but, in the vault's own tree, the rows the walk gave" (built by SD-T7).
+- In the explorer's bullet, "a folder you may not read says why when it's opened on, unfolded or zoomed into" becomes
+  "a folder you may not read says why when it's opened on, unfolded or zoomed into — as its folder's listing read it,
+  else asked as a key's own read (§ A slow disk)" (built by SD-T7).
 
 Previously: "what's on the disk that the walk didn't give is read (`fromDisk`)"; "What the disk says of a row
 (`Facts`: access, a broken link, the size, a vault's index and branch) is read once per row drawn, again when the tree
 is built again"; "gives way to its nearest folder still there when the tree or the breadcrumb is built again
-(`keepToWhatsThere`)"; "on one of two listing threads, apart from the walk's".
+(`keepToWhatsThere`)"; "on one of two listing threads, apart from the walk's"; "Until a folder's first listing answers,
+nothing is under it"; "a folder you may not read says why when it's opened on, unfolded or zoomed into".
 
 ## MODIFIED design/tui.md § Overlays
 

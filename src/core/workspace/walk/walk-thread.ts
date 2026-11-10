@@ -11,7 +11,7 @@
 import type { Config } from "../../application/config/config.ts";
 import type { HomeWalk } from "../vaults/home.ts";
 import type { IndexAnswer, Opened } from "../graph/index-job.ts";
-import type { JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
+import type { JudgeBy, JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
 import type {
   DiskRequest,
   ListAsk,
@@ -366,9 +366,10 @@ export class DiskThreads {
   }
 
   /** The folder `dir` listed (`listFolder`), `walk` the settings a busy folder is decided by, `hidden` `files.hidden`;
-   *  the explorer's, unless a look asks. */
-  async list(dir: string, walk: Config["walk"], hidden: boolean, by: Asker = "explorer"): Promise<FolderListing> {
-    return (await this.ask<{ listing: FolderListing }>({ op: "list", dir, walk, hidden }, by)).listing;
+   *  the explorer's, unless a look asks; a folder of the vault open's own tree with its walk's verdicts (`own`). */
+  async list(dir: string, walk: Config["walk"], hidden: boolean, by: Asker = "explorer", own?: JudgeBy) {
+    const ask = { op: "list" as const, dir, walk, hidden, ...(own ? { own } : {}) };
+    return (await this.ask<{ listing: FolderListing }>(ask, by)).listing;
   }
 
   /** Each of `paths` statted, its links followed (or its own, `own`), in the order asked; each its error's code if it
@@ -395,9 +396,10 @@ export class DiskThreads {
     return (await this.ask<{ gitRead: GitAnswer }>({ op: "gitRead", ask }, "key", giveUp, background)).gitRead;
   }
 
-  /** Why the folder `dir` can't be listed and gone into, in `folderUnreadable`'s words; null when it can. */
-  async access(dir: string, by: Asker): Promise<string | null> {
-    return (await this.ask<{ access: string | null }>({ op: "access", dir }, by)).access;
+  /** Why the folder `dir` can't be listed and gone into, in `folderUnreadable`'s words; null when it can. `giveUp` as
+   *  `stat`'s: a key's (a folder zoomed into or unfolded, SD-T7). */
+  async access(dir: string, by: Asker, giveUp?: AbortController): Promise<string | null> {
+    return (await this.ask<{ access: string | null }>({ op: "access", dir }, by, giveUp)).access;
   }
 
   /** The vault open walked for a build (`WalkAsk`), with a walk's deadline. */

@@ -1,23 +1,36 @@
-// Map explorer row paths and exclusions without changing the vault walk or link policy.
-import { statSync } from "node:fs";
-import { isAbsolute, join, relative, sep } from "node:path";
+// Map explorer row paths and exclusions without changing the vault walk or link policy. Whether a path of the vault
+// open is left out is asked of the listings its tree is built of (SD-T7): each folder on its way as the listing of the
+// folder holding it judged it, on a disk thread; by its name alone while that listing is read.
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { MARKER } from "../../../../core/workspace/vaults/registry.ts";
 import { isInside, isListed } from "../../../../core/workspace/vaults/vault.ts";
-import { vaultName } from "../../../../core/workspace/walk/listing.ts";
+import type { FolderListing, ListedEntry } from "../../../../core/workspace/walk/listing.ts";
+import { ALWAYS_SKIPPED } from "../../../../core/workspace/walk/filtering/policy.ts";
 import { ANOTHER_DISK } from "../../../../core/workspace/walk/walk.ts";
 import { listsName } from "../explorer-disk.ts";
-import type { ExplorerReadContext, TreeRow, LeftOut } from "../contracts.ts";
+import type { ExplorerReadContext, ExplorerRowState, TreeRow, LeftOut } from "../contracts.ts";
+
+/** A listing's entries by name, made once for each listing. */
+const byName = new WeakMap<FolderListing, Map<string, ListedEntry>>();
 
 export class ExplorerPaths {
-  constructor(private readonly app: Pick<ExplorerReadContext, "graph" | "loc" | "ui">) {}
+  constructor(
+    private readonly app: Pick<ExplorerReadContext, "graph" | "loc" | "ui">,
+    /** The explorer's listings, as they are now (a test puts others in). */
+    private readonly listings: () => ExplorerRowState["listings"],
+  ) {}
 
-  /** A vault's name beside its folder's, when it has another one (17.13); none for a worktree, every one of which has
-   *  its repository's: its branch tells them apart (17.19), among the row's marks (VV-D9, `marks.ts`). */
-  rootName(abs: string): string | undefined {
-    return vaultName(abs);
+  /** What the listing of the folder holding `abs`, a folder of the vault open's own tree, read of it: none while it's
+   *  read, or when it lists none such. */
+  listedAt(abs: string): ListedEntry | undefined {
+    const listing = this.listings().get(dirname(abs), true);
+    if (!listing) return undefined;
+    let names = byName.get(listing);
+    if (!names) byName.set(listing, (names = new Map(listing.entries.map((e) => [e.name, e]))));
+    return names.get(basename(abs));
   }
 
-  /** The folders of vaults nested in this one, by their path in it (cheaper than `rootRows`: no names read). */
+  /** The folders of vaults nested in this one, by their path in it. */
   nestedRels(): string[] {
     if (isListed(this.app.loc)) return [];
     return this.app.graph.skipped.filter((s) => s.reason === "nested vault").map((s) => s.rel);
@@ -50,7 +63,7 @@ export class ExplorerPaths {
    * A path of the vault open (its path in it, and absolute) that its walk leaves out: at, or under, what it excludes
    * (VV-D8) — a hidden name in home, and in a vault while the explorer lists them (`files.hidden`), each then a row by
    * its path; else, in a vault, a hidden note reached by a link is in its tree (20.8), as a hidden file reached always
-   * is. Why, and the folder (or file) it says it of; or null.
+   * is. Why, and the folder (or file) it says it of; or null. Each on its way as its folder's listing judged it.
    */
   leftOut(rel: string, abs: string): LeftOut | null {
     const filter = this.app.graph.filter;
@@ -63,17 +76,25 @@ export class ExplorerPaths {
       return { why: ANOTHER_DISK, at: at < 0 ? abs : join(R, ...parts.slice(0, at + 1)) };
     }
     for (let i = 1; i <= parts.length; i++) {
-      let dir = true;
-      if (i === parts.length)
-        try {
-          dir = statSync(abs).isDirectory();
-        } catch {}
-      const why = filter.exclusion(parts.slice(0, i).join("/"), dir);
+      const prefix = parts.slice(0, i).join("/");
+      const listed = this.listedAt(join(R, prefix));
+      // A folder on the way; the path itself as its listing found it (a folder when it isn't there).
+      const dir = i < parts.length || (listed?.dir ?? true);
+      const why = listed?.excluded !== undefined ? listed.excluded : this.byName(prefix, dir);
       if (why === null || why === "nested vault") continue;
       if (why === "hidden" && !filter.home && (!shown || (i === parts.length && this.app.graph.known(rel)))) continue;
       return { why, at: join(R, ...parts.slice(0, i)) };
     }
     return null;
+  }
+
+  /** Why the walk leaves out `rel` by its name alone, while its folder's listing is read: slipbox's and git's own
+   *  folders, a hidden name, one `walk.exclude` names — what it holds, or `.gitignore`, said once that listing comes. */
+  private byName(rel: string, dir: boolean): string | null {
+    const name = rel.slice(rel.lastIndexOf("/") + 1);
+    if (ALWAYS_SKIPPED.has(name)) return "always skipped";
+    if (name.startsWith(".")) return "hidden";
+    return this.app.graph.filter.excludes(rel, dir) ? "walk.exclude" : null;
   }
 
   /** Why the vault open's walk leaves out `abs` (VV-D8), when it's in its own tree: the view's folder, or a file Info

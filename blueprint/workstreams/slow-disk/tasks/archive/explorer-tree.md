@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 assignee: ""
 blocked_by: [SD-T3, SD-T4, SD-T5]
 tracker: [gh:#46]
@@ -60,6 +60,50 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
 
 - The vault's own folders kept in the same `Listings` as those outside it, 256 at most between them, the folder shown
   longest ago let go of first, whichever side it's on: one cache, one limit.
+
+## Open
+
+What the description left open, settled here for the maintainer to confirm; design.md's section it delivers says how.
+
+- One cache, kept once for each side: a folder listed on both (a nested vault's, unfolded in the vault open, and a path
+  in it asked, which lists it as outside) is kept under two keys. Judged by the walk's filter on one side and not on
+  the other, a single entry would have its settings differ at each ask and be read again every frame. The 256 count
+  both.
+- A folder of the vault open is listed with the walk's filter as the watcher judges a path (`list`'s `own`: the
+  filter's settings and its epoch, the filter made once an epoch on each thread). Its settings changed — `files.hidden`,
+  the walk's, `.gitignore`s after the watcher's batch — the answer's settings differ and it's read again, as an outside
+  listing is when `files.hidden` changes.
+- A folder not listed yet keeps the rows the walk gave (its notes and folders, which the graph has), not nothing as an
+  outside folder does; `listing…` comes first under it, as the task says. A folder whose thread gave no answer keeps
+  them too, `can't read: no answer in time` under it, read again a minute later.
+- A row of the vault's own tree whose folder's listing hasn't come is unmarked until it comes: nothing read here for
+  it, its marks drawn once the tree is built again from the listing. A nested vault's row is drawn by its folder's
+  name meanwhile, as the acceptance criteria ask.
+- A folder a link the walk followed leads to is listed for its rows' marks alone: what the walk gave there stays what's
+  shown (VV-D6), nothing found in it by the listing.
+- Whether a path is left out, while its folder's listing is read, is judged by its name alone (git's and slipbox's
+  own folders, a hidden name, `walk.exclude`): a busy or ignored folder is taken as the vault's own until its listing
+  answers, which places its row (the acceptance criteria's "placed once its listing answers").
+- The view's and the trail's stat: of them and of every folder above them, in one request, one out at a time; an
+  answer of a view or trail moved since, or after quitting, is dropped and the next build asks again. No answer (its
+  deadline): the view stays, asked again at the next build.
+- `l` on a folder whose listing has come takes its listing's word (`unreadable`), no read; on a note, none. Otherwise
+  it asks `access` as a key's own read, as a zoom does. `shift+h` hiding the view's hidden folder waits for its zoom.
+- The start asks its folder through the same read (`KeyReads.folder`), here at once until SD-T10 moves the start off
+  the screen's thread (`reads.here`). The zoom it then makes doesn't ask again (`zoomTo`'s `checked`).
+- Elsewhere's top: it was listed by `Listings` already (`outsideRows`); the branch of `rootTree` that read it here
+  (`readdirSync`) was never reached and is gone. The vault open's own row above the view, outside it, takes its
+  listed entry and its name from that listing.
+- Left on the screen's thread, not in the description: the status line's words for a busy folder selected
+  (`Marks.leftOutWords` → `filter.busyWhy`, a folder's note looked for), the same words for a row outside the vault
+  inside a busy folder, and the breadcrumb's `isVaultRoot`, remembered per folder. The filter's rows (`/`) carry no
+  listing, so a row there isn't marked until SD-T11's look at what's drawn. A test's App reads them here, as before.
+- `marks.ts`'s vault index check reads `indexKept` (`listing.ts`), the listing's own: one place says where an index
+  is kept.
+- `walk-thread.test.ts`'s equality test builds the tree with its folders listed on the disk threads and here, and
+  compares the rows and their marks; on the here side, each row's marks from its listing equal those `factsOf` reads
+  from the disk for the same row with no listing. Off the thread, a row with no listing reads nothing, so that half is
+  asked here alone.
 
 ## References
 

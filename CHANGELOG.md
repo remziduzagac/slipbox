@@ -315,6 +315,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   scratch, no longer stops the screen every second. slipbox checks them in the background now, and the top bar shows
   the branch as it last read it. When the disk doesn't answer within a minute, the status line shows
   `⚠ disk not answering`, as for the watcher's look, and a message says so; slipbox checks again a minute later.
+- With the vault open on a slow disk, the explorer no longer stops the screen while it shows the vault's own folders.
+  They're listed in the background, as the folders outside it are: a folder unfolded shows the notes slipbox already
+  knows in it at once, a dimmed `listing…` first under it until the disk answers, then the rest and their marks.
+  Zooming into a folder, and unfolding one with `l` before it's listed, wait for the disk as opening a note does, and
+  `esc` gives the wait up.
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
   still leads to the same place. Before, the move was refused as `… resolves outside the vault`.

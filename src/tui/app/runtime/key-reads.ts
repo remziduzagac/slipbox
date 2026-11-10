@@ -1,12 +1,15 @@
 // A key's own reads (SD-D4, SD-T5): what a key asks of the disk and acts on — a note opened, `:e!` and a reload by
-// hand, `:e`'s file looked for, a file looked for before git opens it, git's stats before its read — asked of a disk
-// thread. The key waits for it, and the keys after it wait their turn (`Input.processKey`), as for a big note's parse;
-// a click meanwhile is dropped (`Mouse.handle`). The screen draws: `reading <note>…` in the window the note will be in
-// (`Views.layoutFor`). `esc` gives it up at once, out of turn (`Input.handleKey`), the window as it was; past its
-// deadline (SD-D6: a key's minute) it's said. Either way the keys typed meanwhile, meant for what it opened, are
-// dropped. A test's App reads on the screen's thread, at once, unless asked (SD-D10: `AppOptions.listOffThread`).
+// hand, `:e`'s file looked for, a file looked for before git opens it, git's stats before its read, a folder zoomed
+// into or unfolded (SD-T7) — asked of a disk thread. The key waits for it, and the keys after it wait their turn
+// (`Input.processKey`), as for a big note's parse; a click meanwhile is dropped (`Mouse.handle`). The screen draws:
+// `reading <note>…` in the window the note will be in (`Views.layoutFor`). `esc` gives it up at once, out of turn
+// (`Input.handleKey`), the window as it was; past its deadline (SD-D6: a key's minute) it's said. Either way the keys
+// typed meanwhile, meant for what it opened, are dropped. A test's App reads on the screen's thread, at once, unless
+// asked (SD-D10: `AppOptions.listOffThread`).
 
+import { folderUnreadable } from "../../../core/foundation/platform/fsutil.ts";
 import { WorkerRequestError } from "../../../core/foundation/workers/worker-requests.ts";
+import { tildePath } from "../../../core/workspace/vaults/names.ts";
 import { type PathStat, statOf } from "../../../core/workspace/walk/io/stamps.ts";
 import { type DiskThreads, diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
@@ -116,6 +119,22 @@ export class KeyReads {
         ? await this.ask(name, view, async (t, stop) => (await t.stat([abs], "key", false, stop))[0]!)
         : statOf(abs);
       if (st !== null) await then(st);
+    };
+    return this.hold(looked());
+  }
+
+  /**
+   * Whether the folder `abs` can be gone into, for a key (`folderUnreadable`'s words; null when it can), and `then` with
+   * it: asked of a disk thread as a key's read, the keys waiting, nothing said in a window — a frame drawn all the same
+   * (here at once on a test's App, and at the start); not when the read gave up, `<folder> didn't answer: <notDone>`
+   * past its deadline. A zoom, a folder unfolded, slipbox opened on a folder (SD-T7).
+   */
+  folder(abs: string, notDone: string, then: (why: string | null) => unknown): void | Promise<void> {
+    if (!this.offThread) return void then(folderUnreadable(abs));
+    const looked = async (): Promise<void> => {
+      const read = (t: DiskThreads, stop: AbortController) => t.access(abs, "key", stop);
+      const answer = await this.ask(tildePath(abs), null, async (t, stop) => ({ why: await read(t, stop) }), notDone);
+      if (answer !== null) await then(answer.why);
     };
     return this.hold(looked());
   }

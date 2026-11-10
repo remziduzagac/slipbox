@@ -3,12 +3,12 @@
 // screen's, the walk's, a listing's — and the CLI's, which calls these directly. What it adds is for the tests alone: a
 // terminal test's slow disk (`SLIPBOX_SLOW_DISK`, `slowDisk`) and a unit test's hold (tests/fixtures/walk/slow.ts).
 //
-// Two listings, apart (SD-T1). The walk's (`readFolder`: a walk, the explorer's listing threads, the filter) takes the
-// stand-in on every thread, the screen's too, as since T12, so a walk put back on the screen's thread is slowed there
-// and T12's checks see it; a test holds it with `setFolderReader`. The rest (`entries`: the watcher's listings, the
-// explorer's tree; and every stat and read here) takes the stand-in on every thread but the screen's, and a test's hold
-// on the thread that asks (`setReadWait`): on the screen's thread those go at once, as they did, until the task that
-// moves each off it.
+// Two listings, apart (SD-T1). The walk's (`readFolder`: a walk, the explorer's listing threads — its own tree's too,
+// SD-T7 — the filter) takes the stand-in on every thread, the screen's too, as since T12, so a walk or a listing put
+// back on the screen's thread is slowed there and the checks see it; a test holds it with `setFolderReader`. The rest
+// (`entries`: the watcher's listings; and every stat and read here) takes the stand-in on every thread but the screen's,
+// and a test's hold on the thread that asks (`setReadWait`): on the screen's thread those go at once, as they did, until
+// the task that moves each off it.
 
 import {
   accessSync,
@@ -118,9 +118,9 @@ export function setReadWait(wait: ((path: string) => void) | null): void {
 }
 
 /**
- * A folder's entries, typed, read for what isn't a walk — the watcher's listings, the explorer's tree (SD-T1 moved them
- * here): a test's hold on this thread (`setReadWait`), else a terminal test's slow disk on a thread that took it; on
- * the screen's thread at once, as before, until the tasks that move them (SD-T3, SD-T7).
+ * A folder's entries, typed, read for what isn't a walk — the watcher's listings (SD-T1 moved them here, SD-T3 onto a
+ * disk thread; the explorer's tree is listed as the walk lists, SD-T7): a test's hold on this thread (`setReadWait`),
+ * else a terminal test's slow disk on a thread that took it; on the screen's thread at once, as before.
  */
 export function entries(abs: string): Dirent[] {
   if (held) held(abs);

@@ -1,6 +1,6 @@
 // A slow disk (T12, #9): what reads one off the main thread — home's walk and the background index's, the explorer's
-// listings, the watcher's looks (SD-T3), the TUI's look each second (SD-T4) — never holds up the keys or the screen, and
-// still does what it did. The disk a check can't mount is slipbox's own stand-in
+// listings, the vault open's own folders' too (SD-T7), the watcher's looks (SD-T3), the TUI's look each second (SD-T4)
+// — never holds up the keys or the screen, and still does what it did. The disk a check can't mount is slipbox's own stand-in
 // (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a folder of that name takes so long to list, on
 // whichever thread lists it — and, given a fourth part, each stat and read of what's in it so long on a disk thread.
 // Each check builds a small home of its own.
@@ -9,6 +9,7 @@ import { chmodSync, existsSync } from "node:fs";
 import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open, switcherListed } from "../check.ts";
 import type { Session } from "../session.ts";
 import { crumbs, git, lastMessage, listed } from "../support/links.ts";
+import { markOf } from "../support/vaults.ts";
 
 /** The folder name every check's slow disk has. */
 const SLOW = "slowdisk";
@@ -192,6 +193,34 @@ export const SLOW_DISK: Check[] = [
       s.expect((await answered(s)) < 1000, "a key answered while the folder is listed");
       await s.until(() => listed(s, /\sfar\.md$/), 10_000, "the folder's rows");
       s.expect(!s.text().includes("listing…"), "listing… gone once its rows came");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: a folder of the vault open listed slowly — listing… under it, every key answered meanwhile, then its rows and their marks",
+    covers: { cases: ["explorer"], commands: [] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:2500` },
+      setup: (s) =>
+        smallHome(s, {
+          [`~/notes/${SLOW}/near.md`]: "# Near\n",
+          [`~/notes/${SLOW}/node_modules/pkg/index.js`]: "x\n",
+        }),
+    },
+    run: async (s) => {
+      await explorerOpen(s);
+      await explorerRow(s, SLOW);
+      await s.keys("l");
+      await s.see("listing…", 2000);
+      // The walk's rows meanwhile, its note among them; what it leaves out comes with the folder's listing.
+      s.expect(listed(s, /\snear\.md$/), "the walk's note shown while the folder is listed");
+      s.expect(!listed(s, /\snode_modules$/), "the busy folder not there before its listing");
+      s.expect((await answered(s)) < 1000, "a key answered while the folder is listed");
+      await s.until(() => markOf(s, "node_modules") === "⊘", 10_000, "node_modules listed, left out: ⊘");
+      s.expect(!s.text().includes("listing…"), "listing… gone once its rows came");
+      s.expect(listed(s, /\snear\.md$/), "the walk's note still there");
     },
   },
   {

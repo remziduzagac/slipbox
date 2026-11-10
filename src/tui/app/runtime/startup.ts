@@ -1,6 +1,5 @@
 import { loadSession, recentCommands } from "../../../core/workspace/session/position.ts";
 import type { Config } from "../../../core/application/config/config.ts";
-import { folderUnreadable } from "../../../core/foundation/platform/fsutil.ts";
 import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
 import { ELSEWHERE, tildePath } from "../../../core/workspace/vaults/names.ts";
 import { isInside, type VaultLocation } from "../../../core/workspace/vaults/vault.ts";
@@ -11,6 +10,7 @@ import type { Session } from "../../workspace/session/session.ts";
 import type { Settings } from "../settings/settings.ts";
 import type { Files } from "../../workspace/explorer/files.ts";
 import type { Explorer } from "../../workspace/explorer/explorer.ts";
+import type { KeyReads } from "./key-reads.ts";
 import type { Vaults } from "../../workspace/vaults/vaults.ts";
 import type { Level } from "../notifications/contracts.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
@@ -30,6 +30,7 @@ export interface InitialWindowsContext {
   readonly settings: Pick<Settings, "applyTheme" | "glyphSet">;
   readonly files: Pick<Files, "openNew">;
   readonly explorer: Pick<Explorer, "zoomTo">;
+  readonly reads: Pick<KeyReads, "folder">;
   readonly vaults: Pick<Vaults, "noNotes" | "offerMovedRelink" | "askDefaultCopy">;
   readonly tabs: Tab[];
   readonly overlay: Overlay | null;
@@ -65,18 +66,22 @@ export function openInitialWindows(
   }
   // The view starts at the folder opened (VV-D5): `x/y` shows y, in vault x — set once its notes are open, so
   // the one shown, outside it, leaves it be. A folder that can't be read says why.
+  // Asked as a key's own read (SD-T7), here at once until the start reads off the screen's thread (SD-T10).
   const opened = options.folder ?? (options.open ? null : context.loc.root);
-  const unreadable = opened ? folderUnreadable(opened) : null;
-  if (unreadable) context.message("warn", `can't read ${tildePath(opened!)}: ${unreadable}`);
-  else if (options.folder && options.folder !== context.loc.root && isInside(context.loc.root, options.folder))
-    context.explorer.zoomTo(options.folder);
-  if (!context.tabs.length && !unreadable)
-    context.message(
-      "info",
-      context.loc.mode === "folder"
-        ? `${ELSEWHERE} — ${tildePath(context.loc.root)}: open a file from the explorer`
-        : context.vaults.noNotes(),
-    );
+  const start = (unreadable: string | null) => {
+    if (unreadable) context.message("warn", `can't read ${tildePath(opened!)}: ${unreadable}`);
+    else if (options.folder && options.folder !== context.loc.root && isInside(context.loc.root, options.folder))
+      context.explorer.zoomTo(options.folder, true);
+    if (!context.tabs.length && !unreadable)
+      context.message(
+        "info",
+        context.loc.mode === "folder"
+          ? `${ELSEWHERE} — ${tildePath(context.loc.root)}: open a file from the explorer`
+          : context.vaults.noNotes(),
+      );
+  };
+  if (opened) context.reads.folder(opened, "not opened", start);
+  else start(null);
   // Moved here by hand, its state along (21.8): the links the move broke, their fix previewed (20.17).
   if (carriedFrom) context.vaults.offerMovedRelink();
   // A second copy of this folder (21.6): which one links open, asked once.

@@ -92,6 +92,10 @@ export interface ExplorerUiContext {
   };
   readonly ui: { hidden_files: boolean; zen: boolean };
   readonly view: { buf: Pick<NoteBuffer, "rel" | "abs" | "virtual"> } | null;
+  /** A key's own reads (SD-D4): whether a folder can be gone into, asked of a disk thread (SD-T7). */
+  readonly reads: {
+    folder(abs: string, notDone: string, then: (why: string | null) => unknown): void | Promise<void>;
+  };
   message(level: "info" | "warn" | "error", text: string): void;
 }
 
@@ -102,6 +106,8 @@ export interface ExplorerNavigationContext extends ExplorerUiContext {
   };
   readonly settings: { setUi(name: "hidden_files", value: boolean): void };
   readonly scratch: { location(): { path: string } };
+  readonly host: { requestRender(): void };
+  readonly quitting: boolean;
   readonly vaults: {
     switchVault(
       target: VaultLocation,
@@ -181,7 +187,7 @@ export interface ExplorerPosition {
 
 export interface ExplorerNavigationHost extends ExplorerPosition {
   readonly app: ExplorerNavigationContext;
-  readonly listings: { forget(dir: string): void; stale(dir: string): void };
+  readonly listings: { forget(dir: string): void; stale(dir: string): void; readonly offThread: boolean };
 }
 
 export interface ExplorerActionHost extends ExplorerPosition {
@@ -192,15 +198,16 @@ export interface ExplorerActionHost extends ExplorerPosition {
   filesShown(): "notes" | "renderable" | "all";
   explorerShows(): "notes" | "renderable" | "all";
   reveal(rel?: string | null, open?: boolean, zoom?: boolean): void;
-  zoomIn(): void;
-  zoomOut(): void;
+  zoomIn(): void | Promise<void>;
+  zoomOut(): void | Promise<void>;
 }
 
 export interface ExplorerRowState {
   readonly expanded: Set<string>;
   readonly listings: {
-    get(dir: string): FolderListing | null;
-    pending(dir: string): boolean;
+    /** `own`: a folder of the vault open's own tree, each entry with its walk's verdict (SD-T7). */
+    get(dir: string, own?: boolean): FolderListing | null;
+    pending(dir: string, own?: boolean): boolean;
   };
 }
 
