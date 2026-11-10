@@ -236,13 +236,17 @@ describe("the summary: the slowest files and tests, in the log and the step summ
       });
       return { code: p.exitCode, stdout: p.stdout.toString(), stderr: p.stderr.toString() };
     };
+    // The command judges the system it runs on: 30 s here, 120 on macOS.
+    const budget = budgetOf("tests/a.test.ts", factorFor(process.platform));
     const fine = run({ "tests/a.test.ts": 2 });
     expect([fine.code, fine.stderr]).toEqual([0, ""]);
-    expect(fine.stdout).toContain("| tests/a.test.ts | 1 | 2.0 | 30 |");
+    expect(fine.stdout).toContain(`| tests/a.test.ts | 1 | 2.0 | ${budget} |`);
     expect(readFileSync(out, "utf8")).toStartWith("before\n### Test times\n");
-    const slow = run({ "tests/a.test.ts": 99 });
+    const slow = run({ "tests/a.test.ts": budget + 9 });
     expect(slow.code).toBe(1);
-    expect(slow.stderr).toStartWith("::error::test-times: tests/a.test.ts took 99.0 s, over its budget of 30 s");
+    expect(slow.stderr).toStartWith(
+      `::error::test-times: tests/a.test.ts took ${budget + 9}.0 s, over its budget of ${budget} s`,
+    );
     expect(readFileSync(out, "utf8").match(/### Test times/g)).toHaveLength(2);
     const none = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "test-times.ts"), join(sandbox, "no.xml")]);
     expect(none.exitCode).toBe(1);
