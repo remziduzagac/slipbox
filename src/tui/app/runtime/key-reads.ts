@@ -56,7 +56,11 @@ export class KeyReads {
   /** `work`, a key's: the keys after it wait for it (`settled`). */
   hold<T>(work: Promise<T>): Promise<T> {
     this.held.add(work);
-    const done = () => this.held.delete(work);
+    const done = () => {
+      this.held.delete(work);
+      // What it opened told to the session as a key's change is (an agent's `history`), though no key comes after it.
+      this.app.session.publishState();
+    };
     work.then(done, done);
     return work;
   }
