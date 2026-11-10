@@ -135,7 +135,6 @@ export function readPeek(
   const reading = f.peek;
   const newest = new AbortController();
   peekReads.set(app, newest);
-  const { label: _, unread: __, ...p } = reading;
   // In the background, no key waiting: a key's read finds a thread free.
   void diskThreads()
     .open(ask, undefined, true, newest.signal)
@@ -145,6 +144,8 @@ export function readPeek(
       // Another peek's read since, or the peek moved on or closed: dropped.
       if (peekReads.get(app) !== newest || g?.kind !== "peek" || g.peek !== reading) return;
       peekReads.delete(app);
+      // The peek as it is now, not as it was when its read was asked: `z` pressed meanwhile keeps the screen filled.
+      const { label: _, unread: __, ...p } = reading;
       const s = answered(a);
       if (!how.stay) show(app, s.unread ? { ...p, unread: true } : p, s.no ? failed(s.no) : s.text, anchor, cursor);
       else if (s.no) failed(s.no);
