@@ -6,6 +6,7 @@
 // each file calls `makeSandbox()` at its top: a folder of its own, the environment pointed into it, removed when that
 // file ends. The files run one after another, so a vault goes in the sandbox of the file running.
 
+import { onTestFinished } from "bun:test";
 import { box, makeSandbox } from "./support/tui/sandbox.ts";
 import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -120,6 +121,10 @@ export async function harness(opts: Opts = {}): Promise<Harness> {
     restarted: opts.restarted,
     listOffThread: opts.listOffThread,
   });
+  // Watching, it ticks on until it's quit — its watcher, its polls, the background index's look each quarter second at
+  // whether anyone's working — into later tests, reading what isn't its own: the activity file in the state folder
+  // their environment names, on their thread (a held one holds it: `look.test.ts`). Quit as its test ends.
+  if (opts.watch) onTestFinished(() => app.quit());
   // Never the machine's own nvims.
   app.handoff.nvimDiscovery = () => [];
   app.handoff.nvimProbe = () => null;

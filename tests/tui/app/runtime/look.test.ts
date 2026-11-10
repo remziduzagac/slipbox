@@ -188,14 +188,13 @@ function openScratch(h: Harness): string {
 }
 
 /** Awaited till `cond` holds — what another thread, git or the feed does, told by what it leaves — however long that
- *  takes. Never: the test's timeout ends it, and says `what` it waited for; the rest of the test never runs. */
+ *  takes. Never: the test's timeout ends it, and says `what` it waited for; the rest of the test never runs, even once
+ *  what it let go of answers, so nothing of it throws into the next test. */
 async function until(cond: () => boolean, what: string): Promise<void> {
   const w = { what, over: false };
   awaiting = w;
-  while (!cond()) {
-    if (w.over) return new Promise<void>(() => {});
-    await Bun.sleep(5);
-  }
+  while (!w.over && !cond()) await Bun.sleep(5);
+  if (w.over) return new Promise<void>(() => {});
   if (awaiting === w) awaiting = null;
 }
 
