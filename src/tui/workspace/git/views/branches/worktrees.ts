@@ -339,7 +339,7 @@ export function openWorktrees(app: App): void {
           if (note && !there) app.message("info", `${note} isn't on that branch: its vault opened instead`);
         };
         const anchor = there && v ? { ...v.topAnchor } : undefined;
-        if (app.vaults.switchVault(rootAt(vault), there, anchor, { after: missing })) missing();
+        app.vaults.switchVault(rootAt(vault), there, anchor, { after: missing });
       };
       if (!note) return go(null);
       const at = join(vault, note);

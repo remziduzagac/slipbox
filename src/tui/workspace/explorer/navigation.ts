@@ -352,7 +352,7 @@ export class ExplorerNavigation {
       // folder; shown there once gone into, the switch asked first (D270).
       const abs = path;
       const shown = () => this.revealFolder(relative(this.app.loc.root, abs) || ".");
-      if (this.app.vaults.switchVault(locationAt(abs), null, undefined, { folder: abs, after: shown })) shown();
+      this.app.vaults.switchVault(locationAt(abs), null, undefined, { folder: abs, after: shown });
       return;
     }
     this.app.panels.switchLeftView("explorer");

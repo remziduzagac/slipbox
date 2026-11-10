@@ -25,6 +25,7 @@ import { match } from "../../shell/overlays/match.ts";
 import type { App, ListItem, PromptOverlay } from "../../app/runtime/app.ts";
 import { andThen } from "../../app/runtime/key-reads.ts";
 import { editable } from "../../documents/editing/editable.ts";
+import { peekOf } from "../../documents/navigation/peek/state.ts";
 import type { ExplorerItem } from "./explorer.ts";
 
 /** File operations: new, rename, move, copy, delete, the trash. */
@@ -233,7 +234,8 @@ export class Files {
         const v = this.app.view;
         // Typing on the line after the title's blank one (as `o` there would): a source view has no
         // row past the file's last line break, so the insert begins with one.
-        if (!r.created || v?.buf.abs !== abs) return;
+        // Peeked at instead of gone into (D270), it's read there, read-only: nothing typed.
+        if (!r.created || v?.buf.abs !== abs || peekOf(this.app, v)) return;
         // Typed into at once, in the lens or source mode (`edit_in`): making the note was the editing key's first press.
         if (!editable(v)) this.app.lens.setViewMode(v, this.app.lens.editMode(v));
         startInsert(this.app, v, (w) => w.buf.source.length);

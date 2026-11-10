@@ -505,7 +505,13 @@ message box is emptied: a message typed in one vault is never committed in anoth
 peek, Peek at it (`vault.switch_peek`, `p`): read there, read-only, nothing switched. Staying keeps the trail, and from
 a peek its `o` asked, the peek. A vault made (`Give it .slipbox/`, `:init`) or made part of the one holding it is gone
 into unasked (`how.made`): that was what was asked. What waits on the switch, a folder link's folder revealed, git's
-word that the note isn't on the branch or a new note made in a nested vault typed into, runs once it went (`how.after`).
+word that the note isn't on the branch, a new note made in a nested vault typed into or a data file's section gone to by
+a link's `ctrl+click`, runs once it went and what it opens is in (`how.after`): the note it opens once that's shown —
+read on a disk thread, the keys waiting for both — never when its read is given up (`esc`) or fails (said); with none
+asked for, once the tab shown or the vault's own note is, read or not, so the folder revealed keeps the explorer. Past
+the tab shown, behind the tabs no key waits for, it's dropped once a key was taken since the switch: it would take the
+keys from what you're typing. Never in a vault left since, nor while quitting. Peeked at instead, it runs once the peek
+has the file: the section gone to there; a new note isn't typed into a peek, which is read-only.
 Leaving saves the one before as quitting does. Unsaved notes ask Save all and go, Discard and go, or Stay (VB-D4), the
 one question then; all saves must succeed before leaving. Release the outgoing buffers, parses, index and pending work;
 keep return history only as paths and positions, restoring from disk. The properties editor closes first, writing its

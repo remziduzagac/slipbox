@@ -55,9 +55,11 @@ export function ownPath(app: App, path: string): string {
 
 /**
  * Go where a file is (VV-D4): into its vault — Elsewhere among them (VV-D3) — the tabs becoming its own, as a switch
- * does (`ctrl+o` back). A switch refused (a note unsaved, said) leaves the peek as it was.
+ * does (`ctrl+o` back); `after` once it's open there (`SwitchHow`). A switch refused (a note unsaved, said) leaves the
+ * peek as it was.
  */
-export function goThere(app: App, abs: string, loc: VaultLocation, anchor?: Anchor): void {
+export function goThere(app: App, abs: string, loc: VaultLocation, anchor?: Anchor, after?: () => void): void {
   const f = app.floating;
-  if (!app.vaults.switchVault(loc, abs, anchor) && f?.kind === "peek" && !app.floating) app.floating = f;
+  if (!app.vaults.switchVault(loc, abs, anchor, after ? { after } : {}) && f?.kind === "peek" && !app.floating)
+    app.floating = f;
 }

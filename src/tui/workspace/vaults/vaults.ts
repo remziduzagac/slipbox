@@ -36,7 +36,9 @@ import { uiDefaults } from "../../app/runtime/app.ts";
 import { type ExplorerItem, listedDown, type TreeRow } from "../explorer/explorer.ts";
 
 /** How a switch goes: `back` along the trail, into home's `folder` by name, `asked` already (a question answered),
- *  `made` (a vault made or made part of another: no question), and `after` runs once it went. */
+ *  `made` (a vault made or made part of another: no question), and `after` runs once it went and what it opens is in:
+ *  the note it opens once that's shown — read on a disk thread first, the keys waiting — never when it isn't (its read
+ *  given up or failed); without one, once the tab shown or the vault's own note is (`Session.enter`). */
 export type SwitchHow = { back?: boolean; folder?: string; asked?: boolean; made?: boolean; after?: () => void };
 
 /** Vaults: switching, making and unmaking, named folders. */
@@ -68,8 +70,10 @@ export class Vaults {
     const pending = this.pendingSwitch;
     this.pendingSwitch = null;
     if (!pending || choice === "stay") return;
+    // Peeked at instead, what was to follow it follows once the peek has it: a data file's section gone to (a link's
+    // ctrl+click, `goThere`); a note made there isn't typed into in a peek, read-only (`promptNewNote`).
     if (choice === "peek") {
-      if (pending.open) peekAt(this.app, pending.open, pending.target, pending.anchor);
+      if (pending.open) peekAt(this.app, pending.open, pending.target, pending.anchor, pending.how.after);
       return;
     }
     if (choice === "save") {
@@ -77,7 +81,6 @@ export class Vaults {
     }
     if (!this.switchVault(pending.target, pending.open, pending.anchor, { ...pending.how, asked: true })) return;
     if (pending.how.back) this.trail.pop();
-    pending.how.after?.();
   }
 
   /**
@@ -157,7 +160,7 @@ export class Vaults {
    * Become another root's TUI, as if started there (17.10): its config, index, watcher, reading
    * positions and session — with `open` open (an absolute path), or the session's tabs. Leaving
    * saves this one's as quitting does. It asks first (D270): to go, peek at `open` instead or stay — or, with unsaved
-   * notes, to save all, discard or stay. False while it asks; `how.after` runs once it went.
+   * notes, to save all, discard or stay. False while it asks; `how.after` runs once it went (`SwitchHow`).
    * `folder`: a folder of home gone into by name (VV-D2: a folder revealed), as `slipbox ~/notes` opens it.
    */
   switchVault(target: VaultLocation, open: string | null, anchor?: Anchor, how: SwitchHow = {}): boolean {
@@ -338,8 +341,12 @@ export class Vaults {
     this.app.ui = uiDefaults(this.app.config);
     if (process.env.NO_COLOR) this.app.ui.theme = "mono";
     this.app.settings.uiOverrides = {};
-    // Its session read on a disk thread (SD-T9): its tabs, recents and settings changed here come once it is.
-    this.app.session.enter(open, anchor);
+    // Its session read on a disk thread (SD-T9): its tabs, recents and settings changed here come once it is, and
+    // `how.after` once what it opens is in — read here at once (a test's App), after the rest of the switch.
+    let entering = true;
+    let entered = false;
+    this.app.session.enter(open, anchor, how.after && (() => (entering ? (entered = true) : how.after?.())));
+    entering = false;
     if (from && !how.back) this.trail.push(from);
     this.app.region = "content";
     if (carriedFrom) {
@@ -369,6 +376,7 @@ export class Vaults {
           : target.root,
     );
     this.app.host.requestRender();
+    if (entered) how.after?.();
     return true;
   }
 
@@ -387,8 +395,8 @@ export class Vaults {
   /**
    * An absolute path that belongs to another vault or repository, or to Elsewhere (VV-D3), opened by choice (`:e`,
    * the explorer, a peek's `o`; a link, a backlink or a search hit only peeks, VV-D7): switch there and open it
-   * (17.10, VV-D4); true when it was (or the switch was refused). In Elsewhere, a file of Elsewhere opens there: it's
-   * one place, wherever its files are.
+   * (17.10, VV-D4); true when it was (or the switch was refused), `after` once it's open (`SwitchHow`). In Elsewhere, a
+   * file of Elsewhere opens there: it's one place, wherever its files are.
    */
   intoOther(path: string, anchor?: Anchor, after?: () => void): boolean {
     // slipbox's own files (the scratch, in its state folder under ~) are no vault's to go into, home's neither (VV-D2).
@@ -400,7 +408,7 @@ export class Vaults {
       return false;
     }
     if (target.mode === "folder" ? this.app.loc.mode === "folder" : target.root === this.app.loc.root) return false;
-    if (this.switchVault(target, path, anchor, after ? { after } : {})) after?.();
+    this.switchVault(target, path, anchor, after ? { after } : {});
     return true;
   }
 
