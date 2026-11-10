@@ -193,7 +193,7 @@ export class MouseRouting {
       // A folder of the breadcrumb over the explorer (VV-D5): the view zoomed to it, out or back in.
       case "xcrumb":
         this.app.region = "sidebar";
-        return this.app.explorer.zoomTo(arg);
+        return void this.app.explorer.zoomTo(arg);
       case "fn":
         return this.app.footnotes.add();
       // A code cell's button (24.13): `action:line`.

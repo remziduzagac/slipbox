@@ -15,7 +15,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, sep } from "node:path";
-import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
+import { type Config, DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
+import { cacheDir, vaultKey } from "../../../../src/core/foundation/platform/paths.ts";
 import {
   type HomeWalk,
   homeFilter,
@@ -951,7 +952,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
 
   /** A vault, and beside it in their folder `slow` (listed slowly; or `held`, as `slow` names it) and `quick`: the
    *  explorer's view on that folder, its listings read off the main thread, as the TUI reads them. */
-  async function besideSlow(files: Record<string, string> = {}, slow = "slow") {
+  async function besideSlow(files: Record<string, string> = {}, slow = "slow", config?: (c: Config) => void) {
     const top = tree({
       "vault/.slipbox/config.toml": "",
       "vault/index.md": "# Index\n",
@@ -962,7 +963,13 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
       ...files,
     });
     // Without hidden names (on by default, D271): the rows counted are the folders listed.
-    const h = await harness({ root: join(top, "vault"), config: (c) => (c.files.hidden = false) });
+    const h = await harness({
+      root: join(top, "vault"),
+      config: (c) => {
+        c.files.hidden = false;
+        config?.(c);
+      },
+    });
     h.app.explorer.listings = new Listings(h.app, true);
     h.app.explorer.zoomTo(top);
     await listed(h);
@@ -1374,22 +1381,40 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     expect(names(h).slice(0, 3)).toEqual(["quick", "slow", "stuck"]);
   });
 
-  test("the rows and their marks are the ones the listing here gives: vaults and their names, links, busy and hidden folders, files by kind", async () => {
+  test("the rows and their marks are the ones the listing here gives: vaults and their names, links, busy and hidden folders, files by kind; the vault's own tree's too (SD-T7)", async () => {
     const outside = tree({ "far.md": "# Far\n" });
-    const { top, h } = await besideSlow({
-      "other/.slipbox/config.toml": '[vault]\nname = "elsewhere-notes"\n',
-      "other/o.md": "# O\n",
-      "repo/.git/HEAD": "ref: refs/heads/main\n",
-      "repo/r.md": "# R\n",
-      "mixed/node_modules/pkg/index.js": "x\n",
-      "mixed/build/plan.md": "# Plan\n",
-      "mixed/.hidden/h.md": "# H\n",
-      "mixed/.env": "A=1\n",
-      "mixed/data.json": "{}\n",
-      "mixed/pic.png": "png",
-      "mixed/note.md": "# Note\n",
-      "mixed/locked/l.md": "# L\n",
-    });
+    const { top, h } = await besideSlow(
+      {
+        "other/.slipbox/config.toml": '[vault]\nname = "elsewhere-notes"\n',
+        "other/o.md": "# O\n",
+        "repo/.git/HEAD": "ref: refs/heads/main\n",
+        "repo/r.md": "# R\n",
+        "mixed/node_modules/pkg/index.js": "x\n",
+        "mixed/build/plan.md": "# Plan\n",
+        "mixed/.hidden/h.md": "# H\n",
+        "mixed/.env": "A=1\n",
+        "mixed/data.json": "{}\n",
+        "mixed/pic.png": "png",
+        "mixed/note.md": "# Note\n",
+        "mixed/locked/l.md": "# L\n",
+        // The vault's own (SD-T7): a busy folder without a note and one with a note at its top, a file `.gitignore`
+        // leaves out, a folder `walk.exclude` does, a note too big, a nested vault with its index and its branch.
+        "vault/node_modules/pkg/index.js": "x\n",
+        "vault/build/plan.md": "# Plan\n",
+        "vault/.gitignore": "ignored.json\n",
+        "vault/ignored.json": "{}\n",
+        "vault/drafts/d.md": "# D\n",
+        "vault/big.md": `# Big\n\n${"x".repeat(2000)}\n`,
+        "vault/inner/.slipbox/config.toml": '[vault]\nname = "inner-notes"\n',
+        "vault/inner/.git/HEAD": "ref: refs/heads/topic\n",
+        "vault/inner/i.md": "# I\n",
+      },
+      "slow",
+      (c) => void (c.walk.max_file_size = 1000),
+    );
+    const inner = join(top, "vault", "inner");
+    mkdirSync(cacheDir({ key: vaultKey(inner) }), { recursive: true });
+    writeFileSync(join(cacheDir({ key: vaultKey(inner) }), "index.json"), "{}\n");
     symlinkSync(outside, join(top, "mixed", "followed"));
     symlinkSync(join(top, "quick"), join(top, "mixed", "near"));
     symlinkSync(join(top, "gone"), join(top, "mixed", "broken.md"));
@@ -1398,7 +1423,9 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     try {
       setLinkAnswer(join(top, "mixed", "followed"), "follow");
       const ex = h.app.explorer;
-      for (const d of ["other", "repo", "mixed", "mixed/node_modules", "mixed/followed"]) ex.expanded.add(join(top, d));
+      for (const d of ["other", "repo", "mixed", "mixed/node_modules", "mixed/followed", "vault/node_modules"])
+        ex.expanded.add(join(top, d));
+      for (const d of ["build", "inner"]) ex.expanded.add(d);
       const seen = async (hidden: boolean) => {
         h.app.ui.hidden_files = hidden;
         ex.invalidateTree();
@@ -1409,18 +1436,35 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
         };
         return ex.treeRows().map((r) => {
           const { listed: _, ...row } = r;
-          // Its marks from what its listing read, as the marks read the disk themselves for a row with none.
-          expect([r.name, marks(r)]).toEqual([r.name, marks(row)]);
+          // Its marks from what its listing read, as the marks read the disk themselves for a row with none — here,
+          // where a row of the vault's own tree with none reads the disk; off it, it reads nothing (SD-T7).
+          if (!ex.listings.offThread) expect([r.name, marks(r)]).toEqual([r.name, marks(row)]);
           return { row, ...marks(r) };
         });
       };
       for (const hidden of [false, true]) {
+        ex.listings = new Listings(h.app, true);
         const there = await seen(hidden);
         ex.listings = new Listings(h.app, false);
         const here = await seen(hidden);
-        ex.listings = new Listings(h.app, true);
         expect(there).toEqual(here);
         expect(there.length).toBeGreaterThan(10);
+        // The vault's own, as its walk leaves them out and as their marks say.
+        const at = (path: string) => there.find((r) => r.row.path === path);
+        const v = (rel: string) => join(top, "vault", rel);
+        expect(at(v("node_modules"))).toMatchObject({ row: { leftOut: "busy folder" }, index: "not-indexed" });
+        expect(at(v("node_modules/pkg"))).toMatchObject({ row: { leftOut: "busy folder", outside: true } });
+        expect(at("build")).toMatchObject({ row: { kind: "dir" }, index: "indexed" });
+        expect(at("build/plan.md")).toBeDefined();
+        expect(at(v("ignored.json"))).toMatchObject({ row: { leftOut: ".gitignore" }, index: "not-indexed" });
+        expect(at(v("drafts"))).toMatchObject({ row: { leftOut: "walk.exclude" }, index: "not-indexed" });
+        expect(at("big.md")).toMatchObject({ row: { kind: "note", unwalked: true }, index: "not-indexed" });
+        expect(at("inner")).toMatchObject({
+          row: { kind: "root", root: { name: "inner-notes" } },
+          describe: "topic",
+          index: "indexed",
+        });
+        expect(at(join(inner, "i.md"))).toBeDefined();
       }
     } finally {
       if (locked) chmodSync(join(top, "mixed", "locked"), 0o755);

@@ -2,6 +2,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { join, relative } from "node:path";
+import { folderUnreadable } from "../../../../../src/core/foundation/platform/fsutil.ts";
 import { vaultAt } from "../../../../../src/core/workspace/vaults/vault.ts";
 import type {
   ExplorerActionContext,
@@ -47,6 +48,9 @@ function fixture() {
       },
     },
     scratch: { location: () => ({ path: join(root, "scratch.md") }) },
+    reads: { folder: (abs, _notDone, then) => void then(folderUnreadable(abs)) },
+    host: { requestRender: () => {} },
+    quitting: false,
     vaults: {
       switchVault: () => {
         calls.push("switch");
@@ -99,6 +103,7 @@ function fixture() {
       again: (dir) => void calls.push(`again:${dir}`),
       forget: (dir) => void calls.push(`forget:${dir}`),
       stale: (dir) => void calls.push(`stale:${dir}`),
+      offThread: false,
     },
     rows: () => rows,
     treeRows: () => rows,

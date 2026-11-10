@@ -8,10 +8,16 @@
 
 import { constants as fsConstants } from "node:fs";
 import * as disk from "../../../core/foundation/platform/disk.ts";
-import { basename, join, relative, sep } from "node:path";
+import { basename, relative, sep } from "node:path";
 import type { Glyphs } from "../../../core/rendering/theme/glyphs.ts";
-import { denied, type ListedEntry, type VaultHead, vaultHead } from "../../../core/workspace/walk/listing.ts";
-import { cacheDir, vaultKey } from "../../../core/foundation/platform/paths.ts";
+import {
+  denied,
+  indexKept,
+  type ListedEntry,
+  type VaultHead,
+  vaultHead,
+} from "../../../core/workspace/walk/listing.ts";
+import { vaultKey } from "../../../core/foundation/platform/paths.ts";
 import type { Role } from "../../../core/rendering/theme/theme.ts";
 import { isInside } from "../../../core/workspace/vaults/vault.ts";
 import {
@@ -300,13 +306,19 @@ export class Marks {
       this.facts.set(row, f);
       return f;
     }
-    // Listed off the main thread (T12): what its listing read, nothing read here but the index's own folder.
+    // Listed off the main thread (T12, SD-T7): what its listing read, nothing read here.
     if (row.listed) {
       f = this.listedFacts(row, row.listed);
       this.facts.set(row, f);
       return f;
     }
     f = { unreadable: false, broken: false, big: false };
+    // A row of the vault's own tree whose folder's listing hasn't come (SD-T7): nothing said of it yet, nothing read
+    // here — its marks come with that listing, the tree built again.
+    if (this.app.explorer.listings.offThread && !row.outside && !row.root?.here) {
+      this.facts.set(row, f);
+      return f;
+    }
     if (row.kind === "note") {
       try {
         if (disk.lstat(abs).isSymbolicLink() && !disk.exists(abs)) f.broken = true;
@@ -326,19 +338,26 @@ export class Marks {
   /** `factsOf` a row listed a level at a time, from what its listing read (`ListedEntry`), as `factsOf` reads them. */
   private listedFacts(row: TreeRow, l: ListedEntry): Facts {
     const broken = !!l.link && !l.link.target;
-    const f: Facts = { unreadable: !broken && l.denied, broken: row.kind === "note" && broken, big: false };
-    if (row.kind === "root" && row.root && l.vault) f.vault = this.vaultMarks(l.vault.key, l.vault.head);
-    else if (row.kind !== "note" && row.outside && !row.leftOut) f.busy = l.busy ?? null;
+    const unreadable = !broken && l.denied;
+    const f: Facts = { unreadable, broken: row.kind === "note" && broken, big: false };
+    // A note of the vault's own tree the walk didn't read: too big, by the size its listing read (SD-T7).
+    if (row.kind === "note" && !broken && !unreadable && !row.outside && !this.app.graph.notes.has(row.path))
+      f.big = !!l.big;
+    if (row.kind === "root" && row.root) {
+      if (l.vault) f.vault = this.vaultMarks(l.vault.indexed, l.vault.head);
+      // The vault open's own row above the view, home's: no vault's by a marker (VV-D2), so its listing reads neither
+      // its index nor its branch — read here, as for the vault open's row they always were.
+      else if (row.root.here) f.vault = this.vaultFacts(row.root.abs);
+    } else if (row.kind !== "note" && row.outside && !row.leftOut) f.busy = l.busy ?? null;
     return f;
   }
 
   private vaultFacts(abs: string): NonNullable<Facts["vault"]> {
-    return this.vaultMarks(vaultKey(abs), vaultHead(abs));
+    return this.vaultMarks(indexKept(vaultKey(abs)), vaultHead(abs));
   }
 
   /** A vault's row's facts: whether its index is on the disk, and its branch, a worktree's said with its glyph. */
-  private vaultMarks(key: string, h: VaultHead | null): NonNullable<Facts["vault"]> {
-    const indexed = disk.exists(join(cacheDir({ key }), "index.json"));
+  private vaultMarks(indexed: boolean, h: VaultHead | null): NonNullable<Facts["vault"]> {
     return { indexed, branch: h ? (h.worktree ? `${this.app.glyphs.branch} ${h.name}` : h.name) : null };
   }
 }

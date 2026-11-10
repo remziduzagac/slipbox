@@ -11,7 +11,7 @@ import { userFolders } from "../../../foundation/platform/paths.ts";
 import { isVaultRoot, rootMarkers } from "../../vaults/vault.ts";
 import { readFolder } from "../io/folders.ts";
 import type { BusyWhy, FilterSettings } from "../contracts.ts";
-import { ALWAYS_SKIPPED, ANOTHER_DISK, GIT_IGNORECASE, busyWhy, homeSkip, isBusyFolder } from "./policy.ts";
+import { ALWAYS_SKIPPED, ANOTHER_DISK, GIT_IGNORECASE, busyWhy, homeSkip, isBusyFolder, isBusyName } from "./policy.ts";
 
 /** Whether the folder `abs` holds a note directly in it: a file named as a note, not hidden. One listing; none there, no. */
 export function holdsNotes(abs: string, isNoteName: (name: string) => boolean): boolean {
@@ -190,6 +190,25 @@ export class WalkFilter {
     // inside: a root of its own (20.3).
     if (isDir && isVaultRoot(join(this.root, rel))) return "nested vault";
     return null;
+  }
+
+  /**
+   * `exclusion` of another disk mounted at `rel` (a folder, with `isDir`), never looked into — one that stops answering
+   * would hang the look (VV-D2): by its name, the settings and the `.gitignore`s of the folders holding it alone. A busy
+   * name one of those leaves out is busy whatever it holds; a marker in it is never looked for. Home's is another disk.
+   */
+  mountExclusion(rel: string, isDir: boolean): string | null {
+    const name = rel.slice(rel.lastIndexOf("/") + 1);
+    if (ALWAYS_SKIPPED.has(name)) return "always skipped";
+    if (name.startsWith(".")) return "hidden";
+    if (this.excludes(rel, isDir)) return "walk.exclude";
+    if (this.home) {
+      if (!isDir) return this.exclusion(rel, false);
+      return homeSkip(rel, { platform: this.opts.platform, downloads: this.downloads ?? undefined }) ?? ANOTHER_DISK;
+    }
+    const ignored = this.ignoredByGit(rel, isDir);
+    if (isDir && ignored && isBusyName(name)) return "busy folder";
+    return ignored ? ".gitignore" : null;
   }
 
   /**

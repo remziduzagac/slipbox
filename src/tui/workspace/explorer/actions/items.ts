@@ -1,6 +1,5 @@
 // Explorer item menus and dispatch preserve feature-owned file, vault and navigation policy.
 import { dirname, posix, relative, sep } from "node:path";
-import { folderUnreadable } from "../../../../core/foundation/platform/fsutil.ts";
 import { tildePath } from "../../../../core/workspace/vaults/names.ts";
 import { isInside, locationAt } from "../../../../core/workspace/vaults/vault.ts";
 import { linkScope } from "../../../../core/workspace/vaults/symlinks.ts";
@@ -265,31 +264,32 @@ export class ExplorerActions {
     if (row?.link?.dir && ["open", "expand", "open_tab", "zoom_in"].includes(action) && this.linkFirst(row, action))
       return;
     // A folder, or the vault open's row in a view above it: unfolded (or folded, `toggle`) in place.
-    const unfold = (toggle = false) => {
+    const unfold = (toggle = false): void | Promise<void> => {
       if (!row || row.placeholder) return;
-      if (toggle && this.host.expanded.has(row.path)) this.host.expanded.delete(row.path);
-      else if (!this.host.expanded.has(row.path)) {
-        // One you may not read, wherever it is: one the vault's walk couldn't read is listed too (VV-D9) — one listed
-        // off the main thread as its listing read it (T12).
-        const why =
-          row.kind === "note"
-            ? null
-            : row.listed
-              ? (row.listed.unreadable ?? null)
-              : folderUnreadable(this.host.rowAbs(row));
+      if (this.host.expanded.has(row.path)) {
+        if (toggle) this.host.expanded.delete(row.path);
+        return this.host.invalidateTree();
+      }
+      const abs = this.host.rowAbs(row);
+      const unfolded = (why: string | null) => {
         if (why) {
           // As its folder's listing read it: that listing read again, and its own, so one you may read now (a chmod
           // since) unfolds next time, its rows there — nothing else in its folder read again.
           if (row.listed) {
-            this.host.listings.again(dirname(this.host.rowAbs(row)));
-            this.host.listings.again(this.host.rowAbs(row));
+            this.host.listings.again(dirname(abs));
+            this.host.listings.again(abs);
             this.host.invalidateTree();
           }
-          return this.app.message("warn", `can't read ${tildePath(this.host.rowAbs(row))}: ${why}`);
+          return this.app.message("warn", `can't read ${tildePath(abs)}: ${why}`);
         }
         this.host.expanded.add(row.path);
-      }
-      this.host.invalidateTree();
+        this.host.invalidateTree();
+      };
+      // One you may not read, wherever it is: one the vault's walk couldn't read is listed too (VV-D9) — as its
+      // folder's listing read it (T12, SD-T7); one whose listing hasn't come, asked as a key's own read (SD-D4).
+      if (row.kind === "note") return unfolded(null);
+      if (row.listed) return unfolded(row.listed.unreadable ?? null);
+      return this.app.reads.folder(abs, "not unfolded", unfolded);
     };
     const openNote = (where: "here" | "tab" | "split") => {
       if (!row || row.placeholder) return;

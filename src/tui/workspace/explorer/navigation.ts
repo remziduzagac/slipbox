@@ -1,11 +1,29 @@
 // Explorer zoom, reveal and selection transitions keep their live state in the owning controller.
-import * as disk from "../../../core/foundation/platform/disk.ts";
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
-import { folderUnreadable } from "../../../core/foundation/platform/fsutil.ts";
 import { tildePath } from "../../../core/workspace/vaults/names.ts";
 import { homeFolder, isInside, isVaultRoot, locationAt } from "../../../core/workspace/vaults/vault.ts";
+import { type PathStat, statOf } from "../../../core/workspace/walk/io/stamps.ts";
+import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import type { ExplorerNavigationHost, ExplorerCrumb } from "./contracts.ts";
 import { listedDown } from "./rows/paths.ts";
+
+/** Whether a folder is there by its stat: gone — not there, or a file now — when not; one that can't be asked (no
+ *  permission on its way) is left as it is, and so is one not asked. */
+function there(st: PathStat | undefined): boolean {
+  if (!st) return true;
+  if ("error" in st) return st.error !== "ENOENT" && st.error !== "ENOTDIR";
+  return st.kind === "dir";
+}
+
+/** `dir` and every folder above it, up to `/`; none for no folder. */
+function upFrom(dir: string): string[] {
+  const out: string[] = [];
+  for (let d = dir; d; d = dirname(d)) {
+    out.push(d);
+    if (dirname(d) === d) break;
+  }
+  return out;
+}
 
 export class ExplorerNavigation {
   constructor(
@@ -80,13 +98,33 @@ export class ExplorerNavigation {
   /**
    * The view at `dir` (VV-D5), on purpose — `z`, the breadcrumb, `-`, the folder opened. Zoomed out,
    * the folders down to the one it showed are unfolded and that one selected; the breadcrumb keeps
-   * the folders past the view it can zoom back into while the view is on their way.
+   * the folders past the view it can zoom back into while the view is on their way. Whether the folder can be read is
+   * asked first, a key's own read (SD-D4, SD-T7): the key waits for it, `esc` gives it up, the view as it was; `checked`,
+   * asked already (slipbox opened on it).
    */
-  zoomTo(dir: string): void {
+  zoomTo(dir: string, checked = false): void | Promise<void> {
+    return this.zoomThen(dir, checked);
+  }
+
+  /** `zoomTo`, and `then` once its read has said the folder can be read, in the key's own turn: never when it was given
+   *  up (`esc`), got no answer in time or said it can't — what's said then stays said. */
+  private zoomThen(dir: string, checked: boolean, then?: () => void): void | Promise<void> {
     const from = this.host.top;
-    if (dir === from) return;
-    const why = folderUnreadable(dir);
-    if (why) return this.app.message("warn", `can't read ${tildePath(dir)}: ${why}`);
+    if (dir === from) return then?.();
+    if (checked) {
+      this.zoomed(dir, from);
+      return then?.();
+    }
+    return this.app.reads.folder(dir, "not zoomed into", (why) => {
+      if (why) return this.app.message("warn", `can't read ${tildePath(dir)}: ${why}`);
+      // The view moved meanwhile (its folder gone, given way): this zoom was from another.
+      if (this.host.top === from) this.zoomed(dir, from);
+      then?.();
+    });
+  }
+
+  /** The view at `dir`, zoomed to from `from`, its folder readable. */
+  private zoomed(dir: string, from: string): void {
     this.host.top = dir;
     if (!isInside(dir, this.host.trail)) this.host.trail = dir;
     const out = isInside(dir, from);
@@ -103,20 +141,20 @@ export class ExplorerNavigation {
   }
 
   /** `-`: the view a folder up (VV-D5), the folder it showed unfolded in it and selected. */
-  zoomOut(): void {
+  zoomOut(): void | Promise<void> {
     const up = dirname(this.host.top);
     if (up === this.host.top) return this.app.message("info", "the explorer is zoomed out fully: nothing is above /");
-    this.zoomTo(up);
+    return this.zoomTo(up);
   }
 
   /** `z`: the view zoomed in on the selected folder or vault — a file's, its folder (VV-D5). */
-  zoomIn(): void {
+  zoomIn(): void | Promise<void> {
     const row = this.host.rows()[this.app.sidebar.selected];
     if (!row || this.app.sidebar.filter) return this.app.message("info", "zoom in: select a folder");
     const abs = this.host.rowAbs(row);
     const dir = row.kind === "note" ? dirname(abs) : abs;
     if (dir === this.host.top) return this.app.message("info", "zoom in: select a folder in the view");
-    this.zoomTo(dir);
+    return this.zoomTo(dir);
   }
 
   /**
@@ -174,25 +212,29 @@ export class ExplorerNavigation {
    * as the UI settings change one, kept for the vault until its config value changes — said; the selection stays on
    * its row. Hidden again, a view in a hidden folder goes out to the folder holding it.
    */
-  toggleHidden(): void {
+  toggleHidden(): void | Promise<void> {
     const shown = !this.app.ui.hidden_files;
     const mine = this.app.leftView === "explorer" && !this.app.sidebar.filter;
     const at = mine ? this.host.rows()[this.app.sidebar.selected]?.path : undefined;
     this.app.settings.setUi("hidden_files", shown);
-    if (!shown) {
+    let out: string | null = null;
+    if (!shown)
       // The highest hidden folder on the view's way that isn't the vault open's own way (a vault in ~/.dotfiles).
-      let out: string | null = null;
       for (let d = this.host.top; dirname(d) !== d; d = dirname(d))
         if (basename(d).startsWith(".") && !isInside(d, this.app.loc.root)) out = dirname(d);
-      if (out) this.zoomTo(out);
-    }
-    if (mine) {
-      const rows = this.host.rows();
-      const again = rows.findIndex((r) => r.path === at);
-      this.app.sidebar.selected =
-        again >= 0 ? again : Math.min(this.app.sidebar.selected, Math.max(0, rows.length - 1));
-    }
-    this.app.message("info", shown ? "explorer: hidden files shown" : "explorer: hidden files not shown");
+    const after = () => {
+      if (mine) {
+        const rows = this.host.rows();
+        const again = rows.findIndex((r) => r.path === at);
+        this.app.sidebar.selected =
+          again >= 0 ? again : Math.min(this.app.sidebar.selected, Math.max(0, rows.length - 1));
+      }
+      this.app.message("info", shown ? "explorer: hidden files shown" : "explorer: hidden files not shown");
+    };
+    // Once the view's gone out, when it does: its folder's read a key's own, and this the rest of the key's turn — not
+    // when that read was given up, got no answer or found the folder can't be read: what's said then stays said.
+    if (out) return this.zoomThen(out, false, after);
+    after();
   }
 
   /** A folder moved (18.3, 18.7): the view and the trail in it go with it, as its folds do. */
@@ -207,27 +249,54 @@ export class ExplorerNavigation {
     this.host.invalidateTree();
   }
 
+  /** The view's and the trail's stat out on a disk thread (SD-T7): one at a time. */
+  private looking = false;
+
   /**
    * The view and the trail on folders that are there (VV-D5), asked as the tree is built again: one deleted, or renamed
-   * or moved outside slipbox, gives way to its nearest folder still there — the view's said.
+   * or moved outside slipbox, gives way to its nearest folder still there — the view's said. Asked of a disk thread
+   * (SD-T7), one stat out at a time, of the view and the trail and the folders above them: the view stays until it
+   * answers, then gives way, only while it's the view asked about; here, at once, on a test's App.
    */
   keepToWhatsThere(): void {
-    // Gone: not there, or a file now. One that can't be asked (no permission on its way) is left as it is.
-    const there = (dir: string) => {
-      try {
-        return disk.stat(dir).isDirectory();
-      } catch (err) {
-        const code = (err as NodeJS.ErrnoException).code;
-        return code !== "ENOENT" && code !== "ENOTDIR";
-      }
-    };
+    if (!this.host.listings.offThread) return void this.giveWay((dir) => there(statOf(dir)));
+    if (this.looking) return;
+    const { top, trail } = this.host;
+    const asked = [...new Set([...upFrom(trail), ...upFrom(top)])];
+    if (!asked.length) return;
+    this.looking = true;
+    diskThreads()
+      .stat(asked, "explorer")
+      .then(
+        (stats) => {
+          this.looking = false;
+          // Moved meanwhile, or quit: of a view no longer shown — the next build asks of this one.
+          if (this.app.quitting || this.host.top !== top || this.host.trail !== trail) return;
+          const by = new Map(asked.map((p, i) => [p, stats[i]!]));
+          if (!this.giveWay((dir) => there(by.get(dir)))) return;
+          this.host.invalidateTree();
+          this.app.host.requestRender();
+        },
+        () => {
+          // No answer (its deadline, its thread stopped): the view stays, asked again at the next build.
+          this.looking = false;
+        },
+      );
+  }
+
+  /** The view and the trail on the folders that are there, by `isThere`: whether either gave way. */
+  private giveWay(isThere: (dir: string) => boolean): boolean {
     const nearest = (dir: string) => {
       let d = dir;
-      while (!there(d) && dirname(d) !== d) d = dirname(d);
+      while (!isThere(d) && dirname(d) !== d) d = dirname(d);
       return d;
     };
-    if (this.host.trail && !there(this.host.trail)) this.host.trail = nearest(this.host.trail);
-    if (!this.host.top || there(this.host.top)) return;
+    let moved = false;
+    if (this.host.trail && !isThere(this.host.trail)) {
+      this.host.trail = nearest(this.host.trail);
+      moved = true;
+    }
+    if (!this.host.top || isThere(this.host.top)) return moved;
     const gone = this.host.top;
     this.host.top = nearest(gone);
     if (!isInside(this.host.top, this.host.trail)) this.host.trail = this.host.top;
@@ -237,6 +306,7 @@ export class ExplorerNavigation {
       this.app.sidebar.selected = 0;
     } else this.hold(null);
     this.app.message("info", `${tildePath(gone)} isn't there any more: the view is on ${tildePath(this.host.top)}`);
+    return true;
   }
 
   /**

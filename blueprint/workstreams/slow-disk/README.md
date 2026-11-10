@@ -16,13 +16,14 @@ option recommended (§ Questions answered), and agreed its other decisions as pr
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
 decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, SD-T2, the disk threads, SD-T3, the watcher's
-look, SD-T4, the TUI's look, and SD-T5, a note opened, are done (2026-11-10); the other tasks are `todo`.
+look, SD-T4, the TUI's look, SD-T5, a note opened, and SD-T7, the explorer's own tree, are done (2026-11-10); the
+other tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5 `done`, the rest `todo`.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5 and SD-T7 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -322,7 +323,8 @@ merges (SD-D14), its design text.
 - [SD-T5](tasks/archive/opening-a-note.md): a note opened reads on a disk thread; the key waits, `esc` gives it up.
   `done`
 - [SD-T6](tasks/note-text.md): a changed note's text, and the background parse's, read on the disk threads. `todo`
-- [SD-T7](tasks/explorer-tree.md): the explorer's own tree of the vault open listed and marked off the thread. `todo`
+- [SD-T7](tasks/archive/explorer-tree.md): the explorer's own tree of the vault open listed and marked off the
+  thread. `done`
 - [SD-T8](tasks/rebuilds.md): the vault open built again from a walk and an index read on a disk thread. `todo`
 - [SD-T9](tasks/own-folders.md): slipbox's own state, cache and config folders read off the thread. `todo`
 - [SD-T10](tasks/start.md): the start takes the screen first, then reads the vault. `todo`

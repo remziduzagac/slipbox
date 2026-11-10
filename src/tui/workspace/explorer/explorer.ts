@@ -1,6 +1,6 @@
 // The explorer (VV-D5): one tree, the vault's files and the folders around it, and the view — the part of it shown,
-// zoomed into and out of along its breadcrumb; its rows, its keys, its item menu. What the walk didn't give is read
-// from the disk (`explorer-disk.ts`, VV-D8); a row's marks are `marks.ts`' (VV-D9).
+// zoomed into and out of along its breadcrumb; its rows, its keys, its item menu. What the walk didn't give comes from
+// the listings of the folders shown (`explorer-disk.ts`, VV-D8, SD-T7); a row's marks are `marks.ts`' (VV-D9).
 
 import { classify, type FileGroup } from "../../../core/documents/model/filetypes.ts";
 import { dirname } from "node:path";
@@ -64,7 +64,7 @@ export class Explorer {
   constructor(readonly app: App) {
     this.listings = new Listings(app);
     this.fileRows = new ExplorerFileRows(app);
-    this.paths = new ExplorerPaths(app);
+    this.paths = new ExplorerPaths(app, () => this.listings);
     this.treeBuilder = new ExplorerTree(app, this, this.paths, this.fileRows);
     this.navigation = new ExplorerNavigation(this, () => !!this.tree);
     this.commands = new ExplorerActions(this);
@@ -93,17 +93,17 @@ export class Explorer {
    * the folders down to the one it showed are unfolded and that one selected; the breadcrumb keeps
    * the folders past the view it can zoom back into while the view is on their way.
    */
-  zoomTo(dir: string): void {
-    return this.navigation.zoomTo(dir);
+  zoomTo(dir: string, checked = false): void | Promise<void> {
+    return this.navigation.zoomTo(dir, checked);
   }
 
   /** `-`: the view a folder up (VV-D5), the folder it showed unfolded in it and selected. */
-  zoomOut(): void {
+  zoomOut(): void | Promise<void> {
     return this.navigation.zoomOut();
   }
 
   /** `z`: the view zoomed in on the selected folder or vault — a file's, its folder (VV-D5). */
-  zoomIn(): void {
+  zoomIn(): void | Promise<void> {
     return this.navigation.zoomIn();
   }
 
@@ -128,7 +128,7 @@ export class Explorer {
    * as the UI settings change one, kept for the vault until its config value changes — said; the selection stays on
    * its row. Hidden again, a view in a hidden folder goes out to the folder holding it.
    */
-  toggleHidden(): void {
+  toggleHidden(): void | Promise<void> {
     return this.navigation.toggleHidden();
   }
 
@@ -249,6 +249,9 @@ export class Explorer {
 
   treeRows(): TreeRow[] {
     if (this.tree) return this.tree;
+    // What was stored by a path's row while its listing was read, by the row it has now (SD-T7). Here, on a test's
+    // App, every listing is there when it's stored.
+    if (this.listings.offThread) this.paths.rekey(this.expanded, this.wanted);
     this.listings.newTree();
     this.navigation.keepToWhatsThere();
     const rows = this.treeBuilder.build(this.top);

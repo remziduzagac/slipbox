@@ -31,6 +31,13 @@ function context(files: Record<string, string>): ExplorerReadContext {
   } satisfies ExplorerReadContext;
 }
 
+/** Listings read here, at once, as a test's App reads them: a folder of the vault's own tree with its walk's filter. */
+function here(app: ExplorerReadContext) {
+  const get = (dir: string, own = false) =>
+    listFolder(dir, app.config.walk, app.ui.hidden_files, own ? app.graph.filter : undefined);
+  return () => ({ get, peek: get, pending: () => false });
+}
+
 test("file-row visibility reads live mode, include and exclude rules; notes precede those rules", () => {
   const app = context({ "a.md": "# A\n", "data.json": "{}", "main.ts": "export {};", "pic.png": "picture" });
   const files = new ExplorerFileRows(app);
@@ -60,7 +67,7 @@ test("file-row visibility reads live mode, include and exclude rules; notes prec
 
 test("row paths distinguish the vault, nested vault contents, outside folders and hidden names", () => {
   const app = context({ "a.md": "# A\n", "nested/.slipbox/config.toml": "", "nested/b.md": "# B\n" });
-  const paths = new ExplorerPaths(app);
+  const paths = new ExplorerPaths(app, here(app));
   expect(paths.rowPath(app.loc.root)).toBe(app.loc.root);
   expect(paths.rowPath(join(app.loc.root, "a.md"))).toBe("a.md");
   expect(paths.rowPath(join(app.loc.root, "nested"))).toBe("nested");
@@ -77,8 +84,8 @@ test("row paths distinguish the vault, nested vault contents, outside folders an
 
 test("tree rows keep directory-first order and reuse the live expanded set", () => {
   const app = context({ "z.md": "# Z\n", "a.md": "# A\n", "sub/b.md": "# B\n" });
-  const state = { expanded: new Set<string>(), listings: { get: () => null, pending: () => false } };
-  const tree = new ExplorerTree(app, state, new ExplorerPaths(app), new ExplorerFileRows(app));
+  const state = { expanded: new Set<string>(), listings: { get: () => null, peek: () => null, pending: () => false } };
+  const tree = new ExplorerTree(app, state, new ExplorerPaths(app, () => state.listings), new ExplorerFileRows(app));
   expect(tree.build(app.loc.root).map((row) => row.path)).toEqual(["sub", "a.md", "z.md"]);
   state.expanded.add("sub");
   expect(tree.build(app.loc.root).map((row) => [row.path, row.depth])).toEqual([
@@ -97,9 +104,13 @@ test("outside rows preserve pending and unreadable placeholders before their lis
   writeFileSync(join(outside, "b.md"), "# B\n");
   const state = {
     expanded: new Set<string>(),
-    listings: { get: (_dir: string): ReturnType<typeof listFolder> | null => null, pending: () => true },
+    listings: {
+      get: (_dir: string): ReturnType<typeof listFolder> | null => null,
+      peek: () => null,
+      pending: () => true,
+    },
   };
-  const tree = new ExplorerTree(app, state, new ExplorerPaths(app), new ExplorerFileRows(app));
+  const tree = new ExplorerTree(app, state, new ExplorerPaths(app, () => state.listings), new ExplorerFileRows(app));
   expect(tree.build(outside)).toEqual([
     { kind: "note", path: `${outside}/\0listing…`, name: "listing…", depth: 0, outside: true, placeholder: true },
   ]);

@@ -1,16 +1,25 @@
-// Build the vault tree and one-level outside rows; listing lifecycle and cached ownership stay in Explorer.
+// Build the vault tree and one-level outside rows; listing lifecycle and cached ownership stay in Explorer. Every folder
+// shown is listed through the explorer's listings (T12, SD-T7), the vault open's own tree too: what its rows say of a
+// link, a nested vault's name and their marks comes with the listing of the folder holding them, read off the screen's
+// thread; nothing is read here.
 import { classify } from "../../../../core/documents/model/filetypes.ts";
-import { type Dirent, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { unreadableWords } from "../../../../core/foundation/platform/fsutil.ts";
-import { isListed, isVaultRoot } from "../../../../core/workspace/vaults/vault.ts";
-import { isLink, linkStateAt, linkTarget } from "../../../../core/workspace/vaults/symlinks.ts";
+import { isListed } from "../../../../core/workspace/vaults/vault.ts";
+import { linkStateAt } from "../../../../core/workspace/vaults/symlinks.ts";
 import type { FolderListing, ListedEntry } from "../../../../core/workspace/walk/listing.ts";
-import { ANOTHER_DISK, busyFolderAt, LINK_REASON } from "../../../../core/workspace/walk/walk.ts";
-import { type DiskEntry, fromDisk, listsName } from "../explorer-disk.ts";
+import { ANOTHER_DISK, LINK_REASON } from "../../../../core/workspace/walk/walk.ts";
+import { type DiskEntry, type FromDisk, fromDisk, listsName } from "../explorer-disk.ts";
 import type { ExplorerReadContext, ExplorerRowState, TreeRow, LeftOut } from "../contracts.ts";
 import { type ExplorerPaths, hiddenOut } from "./paths.ts";
 import type { ExplorerFileRows } from "./files.ts";
+
+/** What a folder's listing says while it isn't one: still read, after a moment, or why it couldn't be — a code
+ *  (`EACCES`) in `folderUnreadable`'s words, a thread's own already in words; null for nothing to say yet. */
+function sayOf(error: string | null | undefined, pending: boolean): string | null {
+  if (error) return `can't read: ${error.includes(" ") ? error : unreadableWords(error)}`;
+  return pending ? "listing…" : null;
+}
 
 export class ExplorerTree {
   constructor(
@@ -30,34 +39,6 @@ export class ExplorerTree {
   }
 
   /**
-   * The tree's folders that are roots of their own (17.13): vaults and repositories nested in this
-   * one; in a loose folder, every folder in it — each a root, or a loose folder to go into.
-   */
-  private rootRows(): Map<string, NonNullable<TreeRow["root"]>> {
-    const out = new Map<string, NonNullable<TreeRow["root"]>>();
-    const named = (abs: string) => this.paths.rootName(abs);
-    if (!isListed(this.app.loc)) {
-      for (const s of this.app.graph.skipped) {
-        if (s.reason !== "nested vault") continue;
-        const abs = join(this.app.loc.root, s.rel);
-        out.set(s.rel, { kind: "vault", abs, name: named(abs) });
-      }
-      return out;
-    }
-    let entries: Dirent[] = [];
-    try {
-      entries = readdirSync(this.app.loc.root, { withFileTypes: true });
-    } catch {}
-    for (const e of entries) {
-      if (!e.isDirectory() || e.name.startsWith(".")) continue;
-      const abs = join(this.app.loc.root, e.name);
-      if (busyFolderAt(abs, this.app.config.walk)) continue;
-      out.set(e.name, isVaultRoot(abs) ? { kind: "vault", abs, name: named(abs) } : { kind: "folder", abs });
-    }
-    return out;
-  }
-
-  /**
    * A folder outside the vault open's own tree — above it, beside it, in another vault, one its walk leaves out —
    * listed a level at a time (never walked): its folders — the vault open marked and highlighted, its tree under it
    * while unfolded; other vaults by their icon and name — then its files, as `files.show` would list them in their
@@ -68,13 +49,7 @@ export class ExplorerTree {
   private outsideRows(dir: string, depth: number, out: TreeRow[], leftOut: LeftOut | null = null): void {
     const listing = this.state.listings.get(dir);
     if (!listing || listing.error !== null) {
-      // Why it couldn't be: a code (`EACCES`) in `folderUnreadable`'s words; a thread's own already in words.
-      const error = listing?.error;
-      const said = error
-        ? `can't read: ${error.includes(" ") ? error : unreadableWords(error)}`
-        : this.state.listings.pending(dir)
-          ? "listing…"
-          : null;
+      const said = sayOf(listing?.error, this.state.listings.pending(dir));
       if (said)
         out.push({ kind: "note", path: `${dir}/\0${said}`, name: said, depth, outside: true, placeholder: true });
       return;
@@ -87,6 +62,7 @@ export class ExplorerTree {
       const abs = join(dir, e.name);
       const why = leftOut ?? hiddenOut(e.name, abs);
       if (abs === R && !isListed(this.app.loc)) {
+        const name = e.vault?.name;
         out.push({
           kind: "root",
           path: R,
@@ -95,9 +71,10 @@ export class ExplorerTree {
           root: {
             kind: this.app.loc.mode === "folder" ? "folder" : "vault",
             abs: R,
-            name: this.paths.rootName(R),
+            ...(name ? { name } : {}),
             here: true,
           },
+          listed: e,
         });
         if (this.state.expanded.has(R)) for (const r of this.rootTree()) out.push({ ...r, depth: r.depth + depth + 1 });
         continue;
@@ -166,29 +143,48 @@ export class ExplorerTree {
   }
 
   /** The vault's own tree, from `sub` ("" its top): its folders, notes and files, and the vaults in it (17.13) —
-   *  one unfolded listed a level at a time under its row — and what the walk didn't give, from the disk (VV-D8). */
+   *  one unfolded listed a level at a time under its row — and what the walk didn't give, from the listings of the
+   *  folders shown (VV-D8, SD-T7), each row with what its folder's listing read of it once that's come. */
   private rootTree(sub = ""): TreeRow[] {
     const rows: TreeRow[] = [];
     const graph = this.app.graph;
+    const R = this.app.loc.root;
     const groups = new Map(this.files.shownFiles().map((f) => [f.path, f.group]));
     // The walk's folders too, so one with nothing listed in it (just made, or holding only files
     // the explorer leaves out) is still there to open and to create in.
     const folders = new Set(graph.dirs.filter((d) => d));
-    const roots = this.rootRows();
+    const nested = new Set(this.paths.nestedRels());
     // What the walk didn't give, in the folders shown (VV-D8): what it leaves out — a row by its path, listed a level
     // at a time — and what it hasn't reached — the vault's, as if walked (home's folders before its walk).
-    const disk = isListed(this.app.loc)
-      ? new Map<string, DiskEntry>()
-      : fromDisk(
-          this.app,
-          sub,
-          this.state.expanded,
-          { dirs: folders, vaults: roots, file: (p) => graph.notes.has(p) || groups.has(p) },
-          this.files.listsFiles(),
-        );
+    const disk = fromDisk(
+      this.app,
+      this.state.listings,
+      sub,
+      this.state.expanded,
+      { dirs: folders, vaults: nested, file: (p) => graph.notes.has(p) || groups.has(p) },
+      this.files.listsFiles(),
+    );
+    const listed = disk.listed;
+    const ofListing = (p: string): Pick<TreeRow, "listed"> => {
+      const l = listed.get(p);
+      return l ? { listed: l } : {};
+    };
+    // A folder or file a link leads to — within the vault, or out and followed (VV-D6): saying where.
+    const linkAt = (p: string, dir: boolean): Pick<TreeRow, "link"> => {
+      const l = listed.get(p)?.link;
+      return l ? { link: { target: l.target, dir } } : {};
+    };
+    // The vaults nested in it (17.13), each a row of its own: by its folder's name until its folder's listing says
+    // the vault's own.
+    const roots = new Map(
+      [...nested].map((rel) => {
+        const name = listed.get(rel)?.vault?.name;
+        return [rel, { kind: "vault" as const, abs: join(R, rel), ...(name ? { name } : {}) }];
+      }),
+    );
     const leftOut = new Map<string, DiskEntry>();
     const unwalked = new Set<string>();
-    for (const [p, d] of disk)
+    for (const [p, d] of disk.found)
       if (d.leftOut !== null) leftOut.set(p, d);
       else {
         unwalked.add(p);
@@ -240,10 +236,15 @@ export class ExplorerTree {
           seen.add(dir);
           const fresh = unwalked.has(dir) ? { unwalked: true } : {};
           // A folder you follow a link into (VV-D6): walked as the vault's, its row saying where it leads.
-          const link = isLink(join(this.app.loc.root, dir))
-            ? { link: { target: linkTarget(join(this.app.loc.root, dir)), dir: true } }
-            : {};
-          rows.push({ kind: "dir", path: dir, name: parts[i]!, depth: i - d0, ...fresh, ...link });
+          rows.push({
+            kind: "dir",
+            path: dir,
+            name: parts[i]!,
+            depth: i - d0,
+            ...fresh,
+            ...linkAt(dir, true),
+            ...ofListing(dir),
+          });
         }
         if (!this.state.expanded.has(dir)) {
           visible = false;
@@ -258,24 +259,24 @@ export class ExplorerTree {
         rows.push(this.leftOutRow(out, name, depth));
         // Unfolded in place: listed a level at a time, as a folder outside the vault's own tree. Another disk (VV-D2)
         // carries its reason down, never looked into for a marker: never home's, whatever it holds.
-        const abs = join(this.app.loc.root, p);
+        const abs = join(R, p);
         if (out.dir && this.state.expanded.has(abs))
           this.outsideRows(
             abs,
             depth + 1,
             rows,
-            out.leftOut === ANOTHER_DISK || !isVaultRoot(abs) ? { why: out.leftOut!, at: abs } : null,
+            out.leftOut === ANOTHER_DISK || !out.listed.vault ? { why: out.leftOut!, at: abs } : null,
           );
       } else if (roots.has(p)) {
         const root = roots.get(p)!;
-        rows.push({ kind: "root", path: p, name, depth, root });
+        rows.push({ kind: "root", path: p, name, depth, root, ...ofListing(p) });
         // Unfolded in place (VV-D5): its folder listed a level at a time, its rows another vault's.
         if (this.state.expanded.has(p)) this.outsideRows(root.abs, parts.length - d0, rows);
       } else if (links.has(p)) {
         // A link the walk didn't go through (VV-D6); unfolded — looked at — listed a level at a time, never walked.
         const link = links.get(p)!;
         rows.push({ kind: link.dir ? "dir" : "note", path: p, name, depth, link });
-        if (link.dir && this.state.expanded.has(p)) this.outsideRows(join(this.app.loc.root, p), depth + 1, rows);
+        if (link.dir && this.state.expanded.has(p)) this.outsideRows(join(R, p), depth + 1, rows);
       } else if (!folders.has(p))
         rows.push({
           kind: "note",
@@ -284,28 +285,48 @@ export class ExplorerTree {
           depth,
           ...(groups.has(p) ? { group: groups.get(p) } : {}),
           ...(unwalked.has(p) ? { unwalked: true } : {}),
-          // A file a link leads to — within the vault, or out and followed (VV-D6): saying where.
-          ...(isLink(join(this.app.loc.root, p))
-            ? { link: { target: linkTarget(join(this.app.loc.root, p)), dir: false } }
-            : {}),
+          ...linkAt(p, false),
+          ...ofListing(p),
         });
     }
-    return rows;
+    return this.saying(rows, disk, sub);
+  }
+
+  /** The rows with one under each folder of the vault's own tree whose listing hasn't come — still read, after a
+   *  moment (`listing…`), or its thread gave no answer — first in it (`sub`'s, the tree's first). Never opened: a new
+   *  note there goes into that folder, `h` folds it. */
+  private saying(rows: TreeRow[], disk: FromDisk, sub: string): TreeRow[] {
+    const said = new Map<string, string>();
+    for (const p of disk.pending) said.set(p, sayOf(null, true)!);
+    for (const [p, error] of disk.failed) said.set(p, sayOf(error, false)!);
+    if (!said.size) return rows;
+    const out: TreeRow[] = [];
+    const put = (p: string, depth: number) => {
+      const s = said.get(p);
+      if (s) out.push({ kind: "note", path: `${p ? `${p}/` : ""}\0${s}`, name: s, depth, placeholder: true });
+    };
+    put(sub, 0);
+    for (const r of rows) {
+      out.push(r);
+      if (r.kind === "dir" && !r.outside && !isAbsolute(r.path)) put(r.path, r.depth + 1);
+    }
+    return out;
   }
 
   /** A folder or file the vault's walk leaves out (VV-D8): a row by its path, not this vault's to change; a vault in
-   *  it (a busy folder holding `.git`), a vault's row. */
+   *  it (a busy folder holding `.git`), a vault's row. As its folder's listing read it. */
   private leftOutRow(d: DiskEntry, name: string, depth: number): TreeRow {
     const abs = join(this.app.loc.root, d.rel);
-    const why = { outside: true, leftOut: d.leftOut!, leftOutAt: abs } as const;
+    const why = { outside: true, leftOut: d.leftOut!, leftOutAt: abs, listed: d.listed } as const;
+    const vault = d.listed.vault;
     // Another disk (VV-D2): never looked into for a marker — what it is shows once you unfold it.
-    if (d.dir && d.leftOut !== ANOTHER_DISK && isVaultRoot(abs))
+    if (d.dir && d.leftOut !== ANOTHER_DISK && vault)
       return {
         kind: "root",
         path: abs,
         name,
         depth,
-        root: { kind: "vault", abs, name: this.paths.rootName(abs) },
+        root: { kind: "vault", abs, ...(vault.name ? { name: vault.name } : {}) },
         ...why,
       };
     if (d.dir) return { kind: "dir", path: abs, name, depth, ...why };
