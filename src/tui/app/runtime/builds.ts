@@ -3,11 +3,12 @@
 // folders asked for — and the graph built here from them once it answers (`Graph.build`'s `given`). Meanwhile the graph
 // stays as it was, `reading the vault…` among the background tasks. A key's build — a rename's, a folder operation's —
 // holds the keys after it as an open does, said in the status line too, and `esc` doesn't give it up: the write is
-// made, and the next key must find the graph that follows it. An answer is taken only while the vault and its graph
-// are the ones it was asked under, built by nothing since; what the graph took in meanwhile (the watcher's changes,
-// slipbox's own writes, a file reached) is taken in again over it. Asked again while one is out, it's asked again
-// once, when that answers. Given up on (SD-D6): said, the graph as it was, and read again a minute later. A test's App
-// builds here, at once, unless it asks (`offThread`).
+// made, and the next key must find the graph that follows it. So is the first build of a graph never built (a vault
+// gone into): the keys would act on an empty graph. An answer is taken only while the vault and its graph are the
+// ones it was asked under; built since by something else, it's read once more, then taken; what the graph took in
+// meanwhile (the watcher's changes, slipbox's own writes, a file reached) is taken in again over it. Asked again
+// while one is out, it's asked again once, when that answers. Given up on (SD-D6): said, the graph as it was, and
+// read again a minute later with all it was asked. A test's App builds here, at once, unless it asks (`offThread`).
 
 import * as disk from "../../../core/foundation/platform/disk.ts";
 import { basename, join } from "node:path";
@@ -64,6 +65,8 @@ interface Out {
   finish: WorkFinish;
   /** Done with (`retire`): what it was asked, settled or handed on, is no longer its own. */
   retired: boolean;
+  /** Read once more already, the graph built since by something else: taken now, never read again. */
+  readAgain: boolean;
 }
 
 /** The files `since` that changed in `graph` while its walk was read elsewhere, taken in again over what that read —
@@ -125,7 +128,7 @@ export class Builds {
   adopt(graph: Graph): void {
     graph.rebuilder = (useCache) => {
       if (!this.offThread || graph !== this.app.graph) return false;
-      this.ask({ useCache, key: this.keyDepth > 0 });
+      this.ask({ useCache });
       return true;
     };
   }
@@ -143,21 +146,29 @@ export class Builds {
   /** The vault open built again: asked of a disk thread, or here at once (a test's App). */
   ask(ask: BuildAsk = {}): void {
     if (!this.offThread) return this.here(ask);
-    const asked = this.asked(ask);
+    this.askAll([this.asked(ask)]);
+  }
+
+  /** `asked`, asked together: of the build out for the vault open and its graph, or of one started for them. */
+  private askAll(asked: Asked[]): void {
     const out = this.out;
     if (out && out.loc === this.app.loc && out.base === this.app.graph) {
-      // A graph made anew answers what the one out was asked too; any other ask waits for it, then asks once more.
-      if (!ask.fresh) return void out.again.push(asked);
+      // A graph made anew answers what the one out was asked too; any other ask waits for it, then asks once more —
+      // but what only follows a build (`after`), which the one out answers.
+      if (!asked.some((a) => a.ask.fresh)) {
+        for (const a of asked) (a.only ? out.asked : out.again).push(a);
+        return;
+      }
       this.retire(out, "stopped", [...out.asked, ...out.again]);
-      return this.start([...out.asked, ...out.again, asked]);
+      return this.start([...out.asked, ...out.again, ...asked]);
     }
     if (out) this.retire(out, "stopped");
-    this.start([asked]);
+    this.start(asked);
   }
 
   /** `run` once the build out for the vault open is taken — a vault gone into: its note, what its walk said — or at once
-   *  when none is (null); dropped if it's given up. `hold`: the keys wait for it too. A promise settled once it's run or
-   *  dropped. */
+   *  when none is (null); given up, once it's read again. `hold`: the keys wait for it too. A promise settled once it's
+   *  run or dropped, or the build given up. */
   after(run: () => void, hold = false): Promise<void> | null {
     const out = this.out;
     if (!out || out.loc !== this.app.loc || out.base !== this.app.graph) {
@@ -176,8 +187,12 @@ export class Builds {
     return settled;
   }
 
-  /** An ask, the keys waiting for it when it's a key's. */
-  private asked(ask: BuildAsk): Asked {
+  /** An ask, the keys waiting for it when it's a key's (asked as one, or inside `forKey`) — and whatever asks it while
+   *  the graph open has never been built (a vault gone into): a key would act on an empty graph, a rename rewriting
+   *  none of the links to what it moves. Like a key's, it can't be stopped from the background tasks either: the vault
+   *  would stay empty. */
+  private asked(given: BuildAsk): Asked {
+    const ask = this.keyDepth > 0 || this.app.graph.builds === 0 ? { ...given, key: true } : given;
     const asked: Asked = { ask, settle: () => {} };
     const settled = new Promise<void>((resolve) => {
       asked.settle = resolve;
@@ -201,8 +216,8 @@ export class Builds {
   }
 
   /** `asked`'s walk and index asked of a disk thread, with a walk's deadline (SD-D6): one thread, while the other is
-   *  free (SD-D2). */
-  private start(asked: Asked[]): void {
+   *  free (SD-D2). `readAgain`: read once more already, the graph built since by something else. */
+  private start(asked: Asked[], readAgain = false): void {
     const app = this.app;
     const { loc, graph: base } = app;
     const target = asked.some((a) => a.ask.fresh) ? new Graph(loc, app.config, base.askedFolders) : base;
@@ -224,6 +239,7 @@ export class Builds {
       since,
       stopFeed,
       retired: false,
+      readAgain,
       // Stopped from the background tasks: the graph stays as it was. A key's isn't stopped (SD-D11).
       finish: app.background.begin("reading the vault…", () => this.retire(out, "stopped"), {
         canStop: () => !key(),
@@ -241,7 +257,8 @@ export class Builds {
       .then(
         (answer) => this.answered(out, answer),
         (err: Error) => this.failed(out, err),
-      );
+      )
+      .catch((err: Error) => this.broke(out, err));
     app.host.requestRender();
   }
 
@@ -255,37 +272,65 @@ export class Builds {
    *  follows a build followed; then what was asked meanwhile, once. */
   private answered(out: Out, answer: WalkAnswer): void {
     if (!this.current(out)) return this.retire(out, "stopped");
-    const asked = [...out.asked, ...out.again];
-    // Built since by something else (home's walk, from the background index, T12): what this read is older.
-    if (out.base.builds !== out.builds) {
+    // Built since by something else (home's refresh, from the background index, T12): what this read may be older, so
+    // it's read once more (SD-D5) — then taken whatever's built meanwhile, what changed taken in again over it, so a
+    // busy vault never keeps it, and the keys a key's build holds, waiting. A graph made anew is none the older for it.
+    if (out.base.builds !== out.builds && out.target === out.base && !out.readAgain) {
+      const asked = [...out.asked, ...out.again];
       this.retire(out, "stopped", asked);
-      return this.start(asked);
+      return this.start(asked, true);
     }
-    this.retire(out, "done", asked);
+    // Taken: no longer the one out, nothing more taken in meanwhile.
+    this.out = null;
+    out.stopFeed();
+    const error = this.take(out, answer);
+    if (error !== null) this.app.message("error", `reading the vault failed: ${error}; :reindex tries again`);
+    // Every ask settled, whatever happened — but those asked meanwhile, asked once more.
+    this.retire(out, error === null ? "done" : "failed", error === null ? out.again : undefined, error ?? undefined);
+    if (error === null && out.again.length) this.start(out.again);
+    this.app.host.requestRender();
+  }
+
+  /** `out`'s answer taken: the graph built from it, what changed meanwhile taken in again over it, what follows each
+   *  ask followed — a build's own (`Watch.rebuilt`) too when a graph made anew answers asks of the graph as it was. The
+   *  error a step of it threw, or null; one of what follows an ask said, the rest followed all the same. */
+  private take(out: Out, answer: WalkAnswer): string | null {
     const app = this.app;
-    const keep = this.delivery.rememberSelections();
-    const reached = new Set(out.base.reached);
-    const unkept = answer.home?.unkept;
-    if (unkept) keepHomeWalk(out.loc, unkept.walk, unkept.capped, unkept.walked, out.target.filter);
-    out.target.build(out.useCache, "lazy", answer);
-    takeAgain(out.target, [...out.since], reached, app.config.walk.max_file_size);
-    if (out.target !== out.base) {
-      app.graph = out.target;
-      app.graph.reach = app.reach;
-    }
-    keep();
-    if (out.target === out.base) this.delivery.rebuilt();
     try {
-      for (const a of out.asked) a.ask.andThen?.();
-    } finally {
-      for (const a of out.asked) a.settle();
-      if (out.again.length) this.start(out.again);
-      app.host.requestRender();
+      const keep = this.delivery.rememberSelections();
+      const reached = new Set(out.base.reached);
+      const unkept = answer.home?.unkept;
+      if (unkept) keepHomeWalk(out.loc, unkept.walk, unkept.capped, unkept.walked, out.target.filter);
+      out.target.build(out.useCache, "lazy", answer);
+      takeAgain(out.target, [...out.since], reached, app.config.walk.max_file_size);
+      if (out.target !== out.base) {
+        app.graph = out.target;
+        app.graph.reach = app.reach;
+      }
+      keep();
+      if (out.target === out.base) this.delivery.rebuilt();
+    } catch (err) {
+      return (err as Error).message;
+    }
+    for (const a of out.asked) this.follow(() => a.ask.andThen?.());
+    // A reindex, a rescan, the folders asked for, answered by a graph made anew (whose asker follows it first).
+    if (out.target !== out.base && out.asked.some((a) => !a.only && !a.ask.fresh))
+      this.follow(() => this.delivery.rebuilt());
+    return null;
+  }
+
+  /** `run`, what follows a build: an error it throws said, as a key's is. */
+  private follow(run: () => void): void {
+    try {
+      run();
+    } catch (err) {
+      this.app.message("error", (err as Error).message);
     }
   }
 
-  /** `out` given up on (SD-D6): said, the graph as it was, and asked again a minute later — nobody waiting on it — while
-   *  the vault and its graph are the same and nothing else is being read. */
+  /** `out` given up on (SD-D6): said, the graph as it was, and asked again a minute later with all it was asked — no
+   *  longer a key's but for a graph never built — while the vault and its graph are the same: one build, joining the
+   *  one out then, if any. */
   private failed(out: Out, err: Error): void {
     const app = this.app;
     const why = walkFailure(err);
@@ -293,12 +338,20 @@ export class Builds {
     this.retire(out, "failed", undefined, why);
     app.message("warn", `reading the vault gave up: ${why}; it's read again in a minute`);
     app.host.requestRender();
-    const again = [...out.asked, ...out.again].filter((a) => !a.only).map((a) => ({ ...a.ask, key: false }));
+    const again = [...out.asked, ...out.again];
     const timer = setTimeout(() => {
-      if (app.quitting || app.loc !== out.loc || app.graph !== out.base || this.out) return;
-      for (const a of again) this.ask(a);
+      if (app.quitting || app.loc !== out.loc || app.graph !== out.base) return;
+      this.askAll(again.map((a) => ({ ...this.asked({ ...a.ask, key: false }), ...(a.only ? { only: true } : {}) })));
     }, this.againMs);
     (timer as { unref?: () => void }).unref?.();
+  }
+
+  /** What `out`'s answer threw past `answered` and `failed`: said, and every ask settled, so no key waits on it. */
+  private broke(out: Out, err: Error): void {
+    if (this.out === out) this.out = null;
+    for (const a of [...out.asked, ...out.again]) a.settle();
+    this.retire(out, "failed", undefined, err.message);
+    this.app.message("error", `reading the vault failed: ${err.message}; :reindex tries again`);
   }
 
   /** `out` done with: no longer the one out, its feed and its background task ended, its asks settled — all but `keep`,

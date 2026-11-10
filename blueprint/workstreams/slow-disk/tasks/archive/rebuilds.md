@@ -87,24 +87,45 @@ What the description left open, settled here for the maintainer to confirm; desi
 - The walk is asked as `DiskThreads.walk`, not as a background request. SD-D2 already leaves the other thread free
   while a walk holds one; in the background line it would hold the watcher's looks, asked behind it, past their
   minute.
-- A key's build: the builds asked inside `Builds.forKey` are a key's. That covers a rename's `apply`, a folder
-  restored from the trash and one pasted (`files.ts`), and the vault's own config renamed (a graph made anew). The
-  keys after it wait (`reads.hold`); `reading the vault…` takes the watcher's place in the status line, or stands
-  alone when no note is open. It can't be stopped from the background tasks either.
-- A build not a key's can be stopped from the background tasks (`space b`): the graph stays as it was.
+- A key's build: every build asked inside `Builds.forKey` is a key's, whether through the rebuilder or asked
+  outright. That covers a rename's `apply`, a folder restored from the trash and one pasted (`files.ts`), and the
+  vault's own config renamed (a graph made anew). The keys after it wait (`reads.hold`); `reading the vault…` takes
+  the watcher's place in the status line, or stands alone when no note is open. It can't be stopped from the
+  background tasks either.
+- A graph never built (`builds === 0`: a vault gone into, until its first answer) has every build asked of it a
+  key's, whatever asks it: a note named, the tabs brought back, or neither. Before, only its default note held the
+  keys, so with a note named or the tabs brought back a rename planned from the empty graph and rewrote none of the
+  links to what it moved. Every key waits, not only those that need the graph: which keys read it is no smaller a
+  list than all of them. `esc` gives up a key's read, as before, but not the build, so the keys after it still wait;
+  `q` and `ctrl+c` wait too, up to the walk's deadline on a disk that doesn't answer.
+- A build not a key's can be stopped from the background tasks (`space b`): the graph stays as it was. A graph
+  never built can't have its build stopped, as it's a key's: it would stay empty, nothing reading it again. Chosen
+  over stopping it and asking again a minute later, which would leave the keys acting on an empty vault for that
+  minute.
 - A setting of the walk changed, and the vault's own config renamed, make a graph anew (`fresh`), the old one kept
   until it's built. A fresh ask takes the place of the one out, carrying what that one was asked; any other ask
   meanwhile waits for it and is asked once more, all of them as one build.
 - Given up on: `reading the vault gave up: <why>; it's read again in a minute`, and asked again a minute later
-  (`BUILD_AGAIN_MS`), no longer a key's, while the vault and its graph are the same and nothing else is out. What
-  only waited for the build (`after`) isn't asked again: the keys have moved on.
-- An answer is taken while the vault open and its graph are the ones it was asked under (`current`). A build of
-  that graph since (`Graph.builds` moved: home's walk, from the background index) asks it again, with what it was
-  asked. `takeAgain` is shared with home's refresh (`homeBuilt`): what changed meanwhile is applied again over the
-  new build, a file reached (20.8) reached again.
+  (`BUILD_AGAIN_MS`) while the vault and its graph are the same: everything it was asked, what only waited for it
+  (`after`: the graph's errors, the offer to relink what moved, home's walk asked again, the default note) too, as one
+  build — joining the one out then, if there is one. No longer a key's, but for a graph never built.
+- An answer is taken while the vault open and its graph are the ones it was asked under (`current`). When something
+  else built that graph meanwhile (`Graph.builds` moved: home's refresh from the background index's walk), it's read
+  once more, with what it was asked, then taken whatever was built meanwhile (`readAgain`): SD-D5's ask again,
+  bounded, so a busy home never keeps a key's build, and the keys, waiting. A graph made anew is never read again for
+  it: the graph built meanwhile is the one it replaces. `takeAgain` is shared with home's refresh (`homeBuilt`): what
+  changed meanwhile is applied again over the new build, a file reached (20.8) reached again. Chosen over taking the
+  first answer at once, which could drop folders home's refresh had just walked.
+- An answer that can't be taken — `keepHomeWalk`, the build, `takeAgain` or what follows a build throwing — is said,
+  `reading the vault failed: <error>; :reindex tries again`, every ask settled and the keys let go; it isn't asked again
+  by itself, as the same answer would fail the same way. What follows an ask (`andThen`) that throws is said as a
+  key's error is, the rest followed all the same. A rejection past both is caught (`broke`), said the same way.
+- A graph made anew answering asks of the graph as it was (a reindex, a rescan, the folders asked for, merged into
+  it) follows a build's own follow-up too (`Watch.rebuilt`: the watcher synced, search started again), after its
+  asker's (`followGraph`).
 - A vault gone into: its new graph is empty until built. Its default note, the graph's errors, the offer to relink
-  what moved, and home's walk asked again wait for the build (`Builds.after`); the note with the keys waiting for it,
-  so `reading the vault…` is in the status line with no note open.
+  what moved, and home's walk asked again wait for the build (`Builds.after`); the keys wait with them (above), so
+  `reading the vault…` is in the status line, with a note open or none.
 - The moves: the thread that walks reads, with the index, the text of each new note whose size is a vanished
   indexed note's, and sends its hash (`movedHashes`, sent only when there are some). `detectMoves` takes them and
   reads nothing here; a note not hashed there isn't a move.

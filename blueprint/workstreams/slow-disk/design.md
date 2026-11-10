@@ -189,13 +189,20 @@ the second is let go of.
   and builds as before. The index crosses as its text, parsed here as it is now, with the hashes of the new notes a
   move could be (a vanished note's size) read beside it, so the moves are found without a read here; home's refresh
   after its walk takes its index from the walk's thread the same way. An answer is taken only while the vault open
-  and its graph are the ones it was asked under and nothing has built that graph since (`Graph.builds`; else it's
-  asked again); what the graph took in meanwhile — the watcher's changes, slipbox's own saves, a file reached — is
-  taken in again over it, as home's refresh does (`since`). Asked again while one is out, it's asked once more when
-  that answers, every ask meanwhile as one; a setting of the walk, which makes the graph anew, takes the place of the
-  one out. Given up on (SD-D6): `reading the vault gave up: …; it's read again in a minute`, the graph as it was, and
-  asked again a minute later while the vault and its graph are the same. A vault gone into opens its note once its
-  graph is built, the keys waiting for it. After a rename or a folder operation (SD-D11), the build is read there
+  and its graph are the ones it was asked under. When something else has built that graph since (`Graph.builds`:
+  home's refresh), it's read once more, then taken whatever was built meanwhile, so a busy vault never keeps it out;
+  a graph made anew is never read again for it. What the graph took in meanwhile — the watcher's changes, slipbox's
+  own saves, a file reached — is taken in again over it, as home's refresh does (`since`). Asked again while one is
+  out, it's asked once more when that answers, every ask meanwhile as one; a setting of the walk, which makes the
+  graph anew, takes the place of the one out, and what a build of the graph as it was follows (`Watch.rebuilt`) still
+  follows when one was asked of it too. Given up on (SD-D6): `reading the vault gave up: …; it's read again in a
+  minute`, the graph as it was, and asked again a minute later, while the vault and its graph are the same, with all
+  it was asked, what waited for it too, as one build. An answer that can't be taken, a step of building from it
+  failing, is said (`reading the vault failed: …; :reindex tries again`), every key let go. A vault gone into has a
+  graph never built until its first answer: the keys wait for it as for a key's build, whether a note was named, the
+  tabs brought back or neither, `reading the vault…` in the status line, `esc` not letting them go, and the
+  background tasks can't stop it — they'd act on an empty graph, a rename rewriting none of the links to what it
+  moves. Its note opens once it's built. After a rename or a folder operation (SD-D11), the build is read there
   too, but the keys after it wait their turn, as after an open, `reading the vault…` in the status line, and `esc`
   doesn't give it up, nor can the background tasks: the write is made, and the graph must follow it. Measured at
   10,000 notes (an index of 10 MiB, a local disk): the walk and the index's text crossing hold the screen's thread

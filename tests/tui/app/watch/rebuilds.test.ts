@@ -382,3 +382,165 @@ describe("the folders of home asked for (SD-T8)", () => {
     }
   });
 });
+
+/** The walks asked of the disk threads, each answer finding the graph open built since by something else, as home's
+ *  refresh builds it from the background index's walk. */
+function builtMeanwhile(h: Harness) {
+  const pool = diskThreads();
+  const walk = pool.walk.bind(pool);
+  return spyOn(pool, "walk").mockImplementation(async (ask) => {
+    const answer = await walk(ask);
+    h.app.graph.builds++;
+    return answer;
+  });
+}
+
+describe("a vault's first build (SD-T8)", () => {
+  test("held: a vault gone into with a note named — its graph never built, the keys wait for it, `esc` too, said; let go, they act on the vault read", async () => {
+    const other = write(makeVault(), { "a.md": "# A\n\none\ntwo\n", "held/x.md": "# X\n\n[[a]]\n" });
+    const h = await vaultWith({});
+    const held = holdWalks();
+    h.app.vaults.switchVault(rootAt(other), join(other, "a.md"), undefined, { asked: true });
+    await untilHeld(held);
+    await until(() => h.app.view?.buf.abs === join(other, "a.md"), "the note named, open");
+    expect(h.app.graph.builds).toBe(0);
+    expect(h.app.watch.builds.holding).toBe(true);
+    expect(statusRow(h.frame())).toContain("reading the vault…");
+    const row = h.app.view!.cur.row;
+    const esc = press(h, "escape");
+    const j = press(h, "j");
+    expect(h.app.view!.cur.row).toBe(row);
+    held.release();
+    await Promise.all([esc, j]);
+    expect(h.app.graph.builds).toBe(1);
+    expect(backlinks(h, "a.md")).toEqual(["held/x.md"]);
+    expect(h.app.view!.cur.row).toBe(row + 1);
+    expect(held.gaveUp).toBe(0);
+    await quit(h);
+  });
+
+  test("held: a vault's first build can't be stopped from the background work — the vault would stay empty", async () => {
+    const other = write(makeVault(), { "a.md": "# A\n", "held/x.md": "# X\n" });
+    const h = await vaultWith({});
+    const held = holdWalks();
+    h.app.vaults.switchVault(rootAt(other), join(other, "a.md"), undefined, { asked: true });
+    await untilHeld(held);
+    const [id, task] = [...h.app.background.tasks.entries()].find(([, t]) => t.label === "reading the vault…")!;
+    expect(task.canStop?.()).toBe(false);
+    h.app.background.cancel(id);
+    expect(tasks(h)).toContain("reading the vault…");
+    held.release();
+    await h.app.watch.builds.idle();
+    await h.app.reads.settled();
+    expect(h.app.graph.notes.has("held/x.md")).toBe(true);
+    await quit(h);
+  });
+});
+
+describe("a build that goes wrong (SD-T8)", () => {
+  test("held: a vault's first build given up — all it was asked, what waits on it too, read again as one build: its note opened then, the reindex asked meanwhile said", async () => {
+    const other = write(makeVault(), { "held/x.md": "# X\n" });
+    const h = await vaultWith({});
+    h.app.watch.builds.againMs = 0;
+    const starts = spyOn(h.app.watch.builds as unknown as { start: () => void }, "start");
+    const held = holdWalks(300);
+    h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true });
+    await untilHeld(held);
+    await h.app.run("vault.reindex");
+    await h.app.watch.builds.built;
+    expect(said(h)).toContain("reading the vault gave up: a folder didn't answer in time; it's read again in a minute");
+    expect(h.app.tabs.length).toBe(0);
+    // The disk answering again, the vault's read again — nobody asked.
+    held.release();
+    setWalkWorker(null);
+    await until(() => h.app.graph.builds > 0, "the build asked again");
+    await h.app.watch.builds.idle();
+    await h.app.reads.settled();
+    expect(h.app.graph.notes.has("held/x.md")).toBe(true);
+    expect(h.app.tabs.length).toBe(1);
+    expect(said(h).some((t) => t.startsWith("reindexed "))).toBe(true);
+    expect(starts).toHaveBeenCalledTimes(2);
+    await quit(h);
+  });
+
+  test("held: a key's build whose answer throws as it's taken — said, every ask settled, the keys let go", async () => {
+    const h = await vaultWith({ "held/a.md": "# A\n" });
+    const g = h.app.graph;
+    const build = g.build.bind(g);
+    const broke = spyOn(g, "build").mockImplementation((useCache, parse, given) => {
+      if (given) throw new Error("a build that broke");
+      return build(useCache, parse, given);
+    });
+    const held = holdWalks();
+    h.app.watch.builds.forKey(() => h.app.watch.builds.ask());
+    await untilHeld(held);
+    const row = h.app.view!.cur.row;
+    const j = press(h, "j");
+    expect(h.app.view!.cur.row).toBe(row);
+    held.release();
+    await until(() => !h.app.reads.busy, "the keys let go");
+    await j;
+    await h.app.watch.builds.built;
+    expect(said(h)).toContain("reading the vault failed: a build that broke; :reindex tries again");
+    expect(h.app.view!.cur.row).toBe(row + 1);
+    expect(tasks(h)).not.toContain("reading the vault…");
+    broke.mockRestore();
+    await quit(h);
+  });
+
+  test("held: a setting of the walk changed while a reindex is out — the graph made anew answers both, and what follows a reindex's build follows it", async () => {
+    const h = await vaultWith({ "skip/s.md": "# S\n", "held/a.md": "# A\n" });
+    const held = holdWalks();
+    const rebuilt = spyOn(h.app.watch, "rebuilt");
+    await h.app.run("vault.reindex");
+    await untilHeld(held);
+    const cfg = join(h.root, ".slipbox", "config.toml");
+    writeFileSync(cfg, readFileSync(cfg, "utf8").replace('exclude = ["drafts/"]', 'exclude = ["drafts/", "skip/"]'));
+    h.app.settings.reload();
+    held.release();
+    await h.app.watch.builds.idle();
+    expect(h.app.graph.notes.has("skip/s.md")).toBe(false);
+    expect(said(h).some((t) => t.startsWith("reindexed "))).toBe(true);
+    expect(rebuilt).toHaveBeenCalledTimes(1);
+    rebuilt.mockRestore();
+    await quit(h);
+  });
+
+  test("held: a key's build whose graph is built by something else each time it answers — read once more, then taken: the keys let go, a note added meanwhile there", async () => {
+    const h = await vaultWith({ "held/a.md": "# A\n" });
+    const held = holdWalks();
+    const walks = builtMeanwhile(h);
+    try {
+      h.app.watch.builds.forKey(() => h.app.watch.builds.ask());
+      await untilHeld(held);
+      writeFileSync(join(h.root, "held/b.md"), "# B\n");
+      held.release();
+      await until(() => !h.app.reads.busy, "the keys let go");
+      await h.app.watch.builds.idle();
+      expect(walks).toHaveBeenCalledTimes(2);
+      expect(h.app.graph.notes.has("held/b.md")).toBe(true);
+    } finally {
+      walks.mockRestore();
+      await quit(h);
+    }
+  });
+
+  test("held: a graph made anew isn't read again for the graph as it was being built meanwhile", async () => {
+    const h = await vaultWith({ "skip/s.md": "# S\n", "held/a.md": "# A\n" });
+    const held = holdWalks();
+    const walks = builtMeanwhile(h);
+    try {
+      const cfg = join(h.root, ".slipbox", "config.toml");
+      writeFileSync(cfg, readFileSync(cfg, "utf8").replace('exclude = ["drafts/"]', 'exclude = ["drafts/", "skip/"]'));
+      h.app.settings.reload();
+      await untilHeld(held);
+      held.release();
+      await h.app.watch.builds.idle();
+      expect(walks).toHaveBeenCalledTimes(1);
+      expect(h.app.graph.notes.has("skip/s.md")).toBe(false);
+    } finally {
+      walks.mockRestore();
+      await quit(h);
+    }
+  });
+});
