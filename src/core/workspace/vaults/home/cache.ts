@@ -1,6 +1,6 @@
 // Home-walk persistence, validation and reuse with the original stamps and admission rules.
 
-import { realpathSync, statSync } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import { join } from "node:path";
 import type { Config } from "../../../application/config/config.ts";
 import { ensureDir, readJson, writeJson } from "../../../foundation/platform/fsutil.ts";
@@ -129,7 +129,7 @@ export function keptWalk(
     let mtime: number;
     let ctime: number;
     try {
-      const st = statSync(abs);
+      const st = disk.stat(abs);
       if (!st.isDirectory()) throw new Error("not a folder");
       mtime = st.mtimeMs;
       ctime = st.ctimeMs;
@@ -173,7 +173,7 @@ export function keptWalk(
   // A link the walk didn't go through, followed now and answering (VV-D6): its folder listed again, so it's walked.
   let realRoot = root;
   try {
-    realRoot = realpathSync(root);
+    realRoot = disk.realpath(root);
   } catch {}
   for (const k of Array.isArray(kept.skipped) ? kept.skipped : []) {
     if (!k?.link || (k.reason !== LINK_REASON.out && k.reason !== LINK_REASON.waiting)) continue;
@@ -213,7 +213,7 @@ export function keptWalk(
     if (!keep(rel) || !linkKept(rel)) continue;
     const abs = join(root, rel);
     try {
-      const st = statSync(abs);
+      const st = disk.stat(abs);
       if (!st.isFile()) continue;
       if (st.size > filter.maxFileSize) skipped.push({ rel, reason: `${TOO_LARGE} (${st.size} bytes)` });
       else files.push({ rel, abs, size: st.size, mtimeMs: st.mtimeMs });
@@ -228,7 +228,7 @@ export function keptWalk(
   const back: string[] = [];
   for (const s of former) {
     try {
-      if (statSync(join(root, s.rel)).isDirectory()) back.push(s.rel);
+      if (disk.stat(join(root, s.rel)).isDirectory()) back.push(s.rel);
     } catch (err) {
       // There, but not to be looked at — or a link whose target is gone for now (a disk taken away): tried again.
       if (lost(err) || isLink(join(root, s.rel))) unread.push(s.rel);

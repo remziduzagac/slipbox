@@ -4,7 +4,6 @@
 import { canonKey, canonSeq, Keymap, unknownModifiers } from "../../../core/application/commands/registry.ts";
 import { type Config, loadConfig } from "../../../core/application/config/config.ts";
 import { glyphsFor, type Glyphs } from "../../../core/rendering/theme/glyphs.ts";
-import { Graph } from "../../../core/workspace/graph/graph.ts";
 import { lintCommand } from "../../../core/documents/diagnostics/lint.ts";
 import type { UiOverride } from "../../../core/workspace/session/position.ts";
 import { applyColorOverrides, loadTheme, type Theme } from "../../../core/rendering/theme/index.ts";
@@ -277,19 +276,23 @@ export class Settings {
       this.app.relayoutAll();
     }
     if (changed.includes("walk")) {
-      // The folders of home asked for by name keep their notes (VV-D2).
-      this.app.graph = new Graph(this.app.loc, this.app.config, this.app.graph.askedFolders).build(true, "lazy");
-      this.app.graph.reach = this.app.reach;
-      // Home's walk kept under the settings before is none now (VV-D2): made again while nobody is working.
-      if (this.app.live && this.app.graph.home?.walked === null) this.app.watch.walkHomeAgain();
-      this.app.watch.followGraph();
-      this.app.watch.indexInBackground();
-      this.app.explorer.invalidateTree();
-      for (const b of this.app.buffers.values()) b.invalidateLayouts();
-      this.app.relayoutAll();
-      this.app.watcher?.close();
-      this.app.watcher = null;
-      if (next.watch.enabled) this.app.watch.startWatcher();
+      // A graph made anew, the folders of home asked for by name keeping their notes (VV-D2): its walk and index read
+      // on a disk thread (SD-T8), the graph as it was meanwhile; in its place once it's built.
+      this.app.watch.builds.ask({
+        fresh: true,
+        andThen: () => {
+          // Home's walk kept under the settings before is none now (VV-D2): made again while nobody is working.
+          if (this.app.live && this.app.graph.home?.walked === null) this.app.watch.walkHomeAgain();
+          this.app.watch.followGraph();
+          this.app.watch.indexInBackground();
+          this.app.explorer.invalidateTree();
+          for (const b of this.app.buffers.values()) b.invalidateLayouts();
+          this.app.relayoutAll();
+          this.app.watcher?.close();
+          this.app.watcher = null;
+          if (this.app.config.watch.enabled) this.app.watch.startWatcher();
+        },
+      });
     } else if (changed.includes("watch")) {
       this.app.watcher?.close();
       this.app.watcher = null;

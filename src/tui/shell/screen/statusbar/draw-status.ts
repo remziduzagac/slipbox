@@ -87,10 +87,14 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const why = app.explorer.marks.selectedWhy();
   const whyText = why ? `${app.glyphs.markNotIndexed} not indexed: ${sanitize(why)}  ` : "";
   const dim = { ...roleStyle(theme, "status_dim", st.bg), bg: st.bg };
+  const info = { ...roleStyle(theme, "info", st.bg), bg: st.bg };
   if (!view) {
-    // Without a note, only the selected explorer row's explanation follows the chip; location stays on the top bar.
+    // Without a note, only the selected explorer row's explanation follows the chip; location stays on the top bar. A
+    // key's build out (a vault gone into, its note waiting for it: SD-T8) is said instead.
     x += 1;
-    if (whyText) drawText(c, x, y, truncate(whyText.trimEnd(), Math.max(0, c.width - x - 1)), dim);
+    const reading = app.watch.builds.holding ? "reading the vault…" : "";
+    if (reading || whyText)
+      drawText(c, x, y, truncate(reading || whyText.trimEnd(), Math.max(0, c.width - x - 1)), reading ? info : dim);
     return;
   }
   const buf = view.buf;
@@ -231,12 +235,15 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
     ? { text: "⚠ not watching", role: "warn" as Role }
     : app.watch.notAnswering
       ? { text: "⚠ disk not answering", role: "warn" as Role }
-      : w
-        ? {
-            text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`,
-            role: "check_done" as Role,
-          }
-        : { text: "○ not watching", role: "status_dim" as Role };
+      : // A key's build read on a disk thread (SD-D11): the keys after it wait for it.
+        app.watch.builds.holding
+        ? { text: "reading the vault…", role: "info" as Role }
+        : w
+          ? {
+              text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`,
+              role: "check_done" as Role,
+            }
+          : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
   // None here: the Problems panel's button, dim — clicked, the root's (1.7).
   if (!problems.length && rx - x - 3 - stringWidth(watch.text) > 8) {

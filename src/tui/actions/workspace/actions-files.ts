@@ -81,10 +81,12 @@ export function fileActions(): Record<string, Run> {
     "file.info": (a) => a.panels.openRightView("info", "cycle"),
     "note.properties": (a) => a.properties.open(),
     "vault.reindex": (a) => {
-      a.graph.build(true, "lazy");
-      // What follows a build: the watcher, the background parse, search, the explorer and the layouts.
-      a.watch.rebuilt();
-      a.message("info", `reindexed ${a.graph.notes.size} notes in ${a.graph.stats.ms.toFixed(0)} ms`);
+      // Its walk and index read on a disk thread (SD-T8), the graph as it was meanwhile; what follows a build — the
+      // watcher, the background parse, search, the explorer and the layouts — once it's built. Timed from here.
+      const t0 = a.now();
+      a.watch.builds.ask({
+        andThen: () => a.message("info", `reindexed ${a.graph.notes.size} notes in ${(a.now() - t0).toFixed(0)} ms`),
+      });
     },
     "file.delete": (a) => {
       const t = a.explorer.fileTarget();

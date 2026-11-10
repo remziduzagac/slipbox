@@ -7,7 +7,15 @@
 
 import { type HomeWalk, homeWalk, vaultsPastCap } from "../vaults/home.ts";
 import { type IndexAnswer, IndexJob, type IndexOf } from "../graph/index-job.ts";
-import { answerDisk, type DiskAnswer, type DiskRequest, isDiskRequest } from "./disk-jobs.ts";
+import { indexFile } from "../graph/refresh.ts";
+import {
+  answerDisk,
+  type DiskAnswer,
+  type DiskRequest,
+  type IndexRead,
+  indexRead,
+  isDiskRequest,
+} from "./disk-jobs.ts";
 import { type FilterSettings, filterFrom, SlicedWalk, type WalkLimits, type WalkResult } from "./walk.ts";
 import { type IndexAsk, nestedIn, type PastCap } from "./walkers.ts";
 import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
@@ -16,7 +24,15 @@ export type WalkRequest =
   | ({ context: WalkContext } & (
       | { op: "step"; walk: number; budget: number; start?: { filter: FilterSettings; limits?: WalkLimits } }
       | { op: "index"; job: number; budget: number; start?: IndexAsk }
-      | { op: "home"; loc: { root: string; key: string }; filter: FilterSettings; asked: string[]; limits?: WalkLimits }
+      | {
+          op: "home";
+          loc: { root: string; key: string };
+          filter: FilterSettings;
+          asked: string[];
+          limits?: WalkLimits;
+          /** Its index read after it too (SD-T8): the vault's, where its cache folder keeps it (`indexFile`). */
+          index?: boolean;
+        }
       | { op: "seek"; dir: string; filter: FilterSettings }
     ))
   | DiskRequest;
@@ -52,7 +68,9 @@ function homeWalkOf(of: IndexAsk): IndexOf {
 }
 
 /** A request answered: what it asked for, walked here. */
-export function answerWalk(req: WalkRequest): StepAnswer | IndexAnswer | { home: HomeWalk } | PastCap | DiskAnswer {
+export function answerWalk(
+  req: WalkRequest,
+): StepAnswer | IndexAnswer | { home: HomeWalk; index?: IndexRead } | PastCap | DiskAnswer {
   if (isDiskRequest(req)) return answerDisk(req);
   enterContext(req.context);
   switch (req.op) {
@@ -78,8 +96,11 @@ export function answerWalk(req: WalkRequest): StepAnswer | IndexAnswer | { home:
       if (!answer.vault || answer.done) indexes.delete(req.job);
       return answer;
     }
-    case "home":
-      return { home: homeWalk(req.loc, filterFrom(req.filter), req.asked, req.limits, false) };
+    case "home": {
+      // Its index read after it, as a build reads them (SD-T8): home's graph built again from both.
+      const home = homeWalk(req.loc, filterFrom(req.filter), req.asked, req.limits, false);
+      return { home, ...(req.index ? { index: indexRead(indexFile(req.loc), home.walk) } : {}) };
+    }
     case "seek":
       return vaultsPastCap(req.dir, filterFrom(req.filter));
   }

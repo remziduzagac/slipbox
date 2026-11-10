@@ -605,4 +605,47 @@ export const SLOW_DISK: Check[] = [
       await s.see("Line 80.", 30_000);
     },
   },
+  {
+    area: "links-and-files",
+    name: "slow disk: the vault open reindexed on a slow disk — its links and backlinks stay while it's read, every key answered; a note added meanwhile there once read",
+    covers: { cases: ["vault", "index"], commands: ["vault.reindex", "background.open", "backlinks.open"] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      // The watcher off: the note added meanwhile comes with the reindex's walk alone.
+      config: "[watch]\nenabled = false\n",
+      // The vault's own `slowdisk` takes five seconds to list, on whichever thread lists it: the start's build too.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:5000` },
+      setup: (s) => smallHome(s, { [`~/notes/${SLOW}/near.md`]: "# Near\n\nBack to [the index](../index.md).\n" }),
+    },
+    run: async (s) => {
+      await s.where(/^~\/notes(?: │|$)/, /index\.md/, 30_000);
+      await backlinkFrom(s, /near\.md/);
+      await leader(s, "v", "r");
+      const asked = performance.now();
+      // Written while its folder is being listed, on a disk thread.
+      s.write(`~/notes/${SLOW}/added.md`, "# Added\n\nBack to [the index](../index.md) too.\n");
+      // Among the background work while it's read; the backlinks as they were meanwhile.
+      await leader(s, "b");
+      await s.see("reading the vault…", 2500);
+      await s.keys("escape");
+      await s.notSee("Background work");
+      await leader(s, "l", "b");
+      await s.see(/Linking to/);
+      s.expect(s.rowOf(/near\.md/) >= 0 && s.rowOf(/added\.md/) < 0, "the backlinks as they were while it's read");
+      await s.keys("escape");
+      // Every key answered meanwhile, until it's read.
+      const waits: number[] = [];
+      while (s.rowOf(/reindexed \d+ notes/) < 0) {
+        s.expect(performance.now() - asked < 60_000, "the vault read again within a minute");
+        waits.push(await answered(s));
+        await Bun.sleep(300);
+      }
+      const took = Math.round(performance.now() - asked);
+      s.expect(waits.length > 0, "keys pressed while it was read");
+      s.expect(Math.max(...waits) < 1000, `every key answered within a second meanwhile: ${waits.join(", ")} ms`);
+      s.expect(took >= 3000, `read on a disk thread for its folder's five seconds, not before: ${took} ms`);
+      await backlinkFrom(s, /added\.md/);
+    },
+  },
 ];

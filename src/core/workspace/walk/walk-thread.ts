@@ -14,6 +14,7 @@ import type { IndexAnswer, Opened } from "../graph/index-job.ts";
 import type { JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
 import type {
   DiskRequest,
+  IndexRead,
   ListAsk,
   OwnList,
   LookRequestAnswer,
@@ -108,21 +109,25 @@ export class WalkThread implements Walker {
     return new ThreadedIndex(this, ++this.serial, of);
   }
 
-  /** Home's walk kept, brought up to now, with the folders asked for (`homeWalk`): what changed handed back, unkept. */
+  /** Home's walk kept, brought up to now, with the folders asked for (`homeWalk`): what changed handed back, unkept; and
+   *  its index read after it when `index` asks (SD-T8), for home's graph built from both. */
   async homeWalk(
     loc: { root: string; key: string },
     settings: FilterSettings,
     asked: readonly string[],
     limits?: WalkLimits,
-  ): Promise<HomeWalk> {
+    index = false,
+  ): Promise<HomeWalk & { index?: IndexRead }> {
     const request = {
       op: "home" as const,
       loc: { root: loc.root, key: loc.key },
       filter: settings,
       asked: [...asked],
       ...(limits ? { limits } : {}),
+      ...(index ? { index } : {}),
     };
-    return (await this.ask<{ home: HomeWalk }>(request, this.deadlines.whole)).home;
+    const a = await this.ask<{ home: HomeWalk; index?: IndexRead }>(request, this.deadlines.whole);
+    return a.index ? { ...a.home, index: a.index } : a.home;
   }
 
   seek(dir: string, settings: FilterSettings): Pending<PastCap> {
@@ -410,7 +415,9 @@ export class DiskThreads {
     return (await this.ask<{ access: string | null }>({ op: "access", dir }, by, giveUp)).access;
   }
 
-  /** The vault open walked for a build (`WalkAsk`), with a walk's deadline. */
+  /** The vault open walked for a build (`WalkAsk`), with a walk's deadline. Never a background request, though no key
+   *  may wait for it: a walk holds one thread only while the other is free already (SD-D2), and as a background one it
+   *  would hold the watcher's looks back for as long as it's read, each given up on past its minute. */
   async walk(ask: WalkAsk): Promise<WalkAnswer> {
     return (await this.ask<{ walked: WalkAnswer }>({ op: "walk", ask }, "walk")).walked;
   }

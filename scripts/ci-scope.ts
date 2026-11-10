@@ -160,6 +160,24 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // list, other vaults' notes for a link's completion.
   [/^src\/core\/workspace\/walk\/own-jobs\.ts$/, ["slow disk", ...VAULT_CHECKS, "roots", "where", "links"]],
   [/^src\/tui\/documents\/editing\/completion\/items\.ts$/, ["slow disk", "links"]],
+  // The vault open built again on a disk thread (SD-T8): a reindex, a setting of the walk, a vault or a folder of home
+  // gone into, a branch's tabs, a rename's and a folder operation's build. Its walk and index read through the disk
+  // threads, which run every check: this entry for a change to it alone.
+  [
+    /^src\/tui\/app\/runtime\/builds\.ts$/,
+    [
+      "slow disk",
+      "reindex",
+      "space v r",
+      "vaults",
+      "rename",
+      "files",
+      "Elsewhere",
+      "home",
+      "settings: a [walk]",
+      "git: a branch",
+    ],
+  ],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
   [

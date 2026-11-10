@@ -66,3 +66,15 @@ test("pairing, cancellation by return, nested pause cleanup and the one-minute b
     Date.now = realNow;
   }
 });
+
+test("build move evidence given the new notes' hashes, read with the walk elsewhere (SD-T8): none read here", () => {
+  const { context, moves } = fixture("given-hashes");
+  const text = "same text";
+  // Not on disk here: its hash is the one given, or it has none.
+  const fresh = { rel: "new.md", abs: join(context.root, "new.md"), size: text.length, mtimeMs: 0 };
+  const old = { ...stub({ ...fresh, rel: "old.md" }), hash: contentHash(text), flags: [] };
+  moves.detectMoves([old], [fresh], {});
+  expect(context.redirects.follow("old.md")).toBeNull();
+  moves.detectMoves([old], [fresh], { "new.md": contentHash(text) });
+  expect(context.redirects.follow("old.md")).toBe("new.md");
+});

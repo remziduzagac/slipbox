@@ -2,7 +2,6 @@
 // first, applied as one change, undone as one.
 
 import { dirname, join, relative, sep } from "node:path";
-import { Graph } from "../../../core/workspace/graph/graph.ts";
 import { reachedAgain, tuiReach } from "../../documents/navigation/peek.ts";
 import { planConvert } from "../../../core/workspace/links/convert.ts";
 import {
@@ -139,8 +138,13 @@ export class Renaming {
     );
   }
 
-  /** Carry out a previewed rename; open notes follow it (the moved one under its new path). */
+  /** Carry out a previewed rename; open notes follow it (the moved one under its new path). A build it makes is read on
+   *  a disk thread, a key's (SD-D11): written here at once, the keys after it wait for the graph that follows it. */
   apply(plan: RenamePlan): void {
+    this.app.watch.builds.forKey(() => this.applied(plan));
+  }
+
+  private applied(plan: RenamePlan): void {
     if ((plan.kind === "relink" || plan.kind === "convert" || plan.kind === "replace") && !plan.files.length) return;
     let applied: Applied;
     try {
@@ -217,11 +221,16 @@ export class Renaming {
       this.app.loc = rootAt(this.app.loc.root);
       recordLocation(this.app.loc);
       this.app.reach = tuiReach(this.app, this.app.loc);
-      this.app.graph = new Graph(this.app.loc, this.app.config, this.app.graph.askedFolders).build(true, "lazy");
-      this.app.graph.reach = this.app.reach;
-      reachedAgain(this.app);
-      this.app.watch.followGraph();
-      if (this.app.live) this.app.watch.indexInBackground();
+      // A graph made anew for it, in the old one's place once it's built (SD-D11).
+      this.app.watch.builds.ask({
+        fresh: true,
+        key: true,
+        andThen: () => {
+          reachedAgain(this.app);
+          this.app.watch.followGraph();
+          if (this.app.live) this.app.watch.indexInBackground();
+        },
+      });
     }
     this.app.files.afterFileOp();
     if (plan.move) this.app.explorer.select(relative(this.app.loc.root, plan.move.to));

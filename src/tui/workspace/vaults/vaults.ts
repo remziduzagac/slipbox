@@ -277,11 +277,15 @@ export class Vaults {
     this.app.graph = new Graph(target, this.app.config);
     this.app.graph.reach = this.app.reach;
     // Built as what's asked for is (VV-D2): a folder of home gone into, by name or a file's, and the tabs brought back,
-    // their notes there at once, as when slipbox starts there.
+    // their notes there at once, as when slipbox starts there — its walk and index read on a disk thread (SD-T8), what
+    // needs the graph once it's built (`after`).
+    this.app.watch.builds.adopt(this.app.graph);
     // Off the screen's thread, the tabs' folders are asked for as they come (`openTabs`): the session isn't read yet.
     this.ask(how.folder ?? null, open, this.app.config.ui.restore_session && !this.app.reads.offThread);
     if (this.app.live) this.app.loadCodeGrammars();
-    for (const e of this.app.graph.errors) this.app.message("warn", e);
+    this.app.watch.builds.after(() => {
+      for (const e of this.app.graph.errors) this.app.message("warn", e);
+    });
     // The machine's positions, as the vault left just saved them: none read (SD-T9).
     this.app.positions = new PositionStore(target, this.app.positions);
     // Moved by hand: the positions kept here follow it, as `recordLocation` moved the file's.
@@ -351,7 +355,7 @@ export class Vaults {
     this.app.region = "content";
     if (carriedFrom) {
       this.app.message("info", carried(target, carriedFrom));
-      this.offerMovedRelink();
+      this.app.watch.builds.after(() => this.offerMovedRelink());
     }
     this.askDefaultCopy();
     this.app.relayoutAll();
@@ -363,7 +367,9 @@ export class Vaults {
       this.app.watch.indexInBackground();
       this.app.git.refresh();
       // Home never walked yet (VV-D2): its top alone, the rest while nobody is working.
-      if (this.app.graph.home?.walked === null) this.app.watch.walkHomeAgain();
+      this.app.watch.builds.after(() => {
+        if (this.app.graph.home?.walked === null) this.app.watch.walkHomeAgain();
+      });
       // Its followed links' targets asked whether they answer (VV-D6), walked once they do.
       this.app.following.probe();
     }

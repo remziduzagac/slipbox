@@ -281,11 +281,16 @@ export class Session {
     };
   }
 
-  /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own; read on a disk thread, a
-   *  promise of it. */
+  /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own: in a vault gone into, once
+   *  its graph is built (SD-T8), the keys waiting for it. Read on a disk thread, a promise of it: settled once it's read,
+   *  or once the build it waited for is dropped or given up. */
   openDefault(): void | Promise<void> {
-    const first = defaultNote(this.app.graph, this.app.homeFolder);
-    if (first) return this.app.openInNewTab(first);
+    const read: { opening?: void | Promise<void> } = {};
+    const built = this.app.watch.builds.after(() => {
+      const first = defaultNote(this.app.graph, this.app.homeFolder);
+      if (first) read.opening = this.app.openInNewTab(first);
+    }, true);
+    return built ? built.then(() => read.opening) : read.opening;
   }
 
   /** A window's own session restored, as a restart's note keeps it (UPG-D4): never `session.json`'s, which another

@@ -12,6 +12,7 @@ import { applyToGraph } from "../../../core/workspace/vaults/vault-feed.ts";
 import { VaultWatcher, type WatchBatch, type WatchChange, watchTakes } from "../../../core/workspace/graph/watch.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App } from "./app.ts";
+import { Builds } from "./builds.ts";
 import { GraphRefresh } from "./graph-refresh.ts";
 import { Look } from "./look.ts";
 export { parseInSlices } from "./graph-refresh.ts";
@@ -27,13 +28,14 @@ export class Watch {
   readonly refresh: GraphRefresh;
   /** The look each second at what no watcher sees (SD-T4). */
   readonly look: Look;
+  /** The vault open built again, its walk and index read on a disk thread (SD-T8). */
+  readonly builds: Builds;
 
   constructor(readonly app: App) {
-    this.refresh = new GraphRefresh(app, {
-      rememberSelections: () => this.rememberSelections(),
-      rebuilt: () => this.rebuilt(),
-    });
+    const delivery = { rememberSelections: () => this.rememberSelections(), rebuilt: () => this.rebuilt() };
+    this.refresh = new GraphRefresh(app, delivery);
     this.look = new Look(app);
+    this.builds = new Builds(app, delivery);
   }
 
   /** The disk not answering (SD-D6): the watcher's look given up on, or the look each second's — one warning on the
@@ -56,6 +58,7 @@ export class Watch {
   followGraph(): void {
     this.stopAdoptFeed?.();
     const g = this.app.graph;
+    this.builds.adopt(g);
     const stopBuild = g.onBuild(() => this.app.claimKnown());
     // A change to one file: its buffer alone, if one is open.
     const stopChange = g.onChange((c) => {

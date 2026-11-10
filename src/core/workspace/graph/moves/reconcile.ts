@@ -26,19 +26,19 @@ export class GraphMoves {
   /** While a branch switch lands (5.9): files only one branch has come and go, but nothing moved. */
   private movesPaused = 0;
 
-  detectMoves(vanished: NoteEntry[], fresh: NoteFile[]): void {
+  /** `hashes`: the new notes' texts' hashes, read with the walk on a disk thread (SD-T8): one it hasn't wasn't read. */
+  detectMoves(vanished: NoteEntry[], fresh: NoteFile[], hashes?: Readonly<Record<string, string>>): void {
     const hashed = vanished.filter((e) => e.hash && e.size > 0);
     if (!hashed.length || !fresh.length) return;
     const sizes = new Set(hashed.map((e) => e.size));
     const freshHash = new Map<string, string[]>();
     for (const f of fresh) {
       if (!sizes.has(f.size)) continue;
-      let h: string;
+      let h: string | undefined;
       try {
-        h = contentHash(readText(f.abs).text);
-      } catch {
-        continue;
-      }
+        h = hashes ? hashes[f.rel] : contentHash(readText(f.abs).text);
+      } catch {}
+      if (h === undefined) continue;
       freshHash.set(h, [...(freshHash.get(h) ?? []), f.rel]);
     }
     const moves: [string, string][] = [];

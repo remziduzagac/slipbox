@@ -713,23 +713,24 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
     });
 
     test("an entry left for a file that reads nothing fails it, and so does one for a file not there", () => {
-      const refresh = "src/core/workspace/graph/refresh.ts";
+      // A file DISK_READERS keeps for good (SD-D7): a later task never moves it.
+      const kept = "src/core/workspace/mutations/files.ts";
       const stale = check(
         {
           ...inventory(),
-          [refresh]: 'import { type Stats, writeFileSync } from "node:fs";\nexport const w = writeFileSync;\n',
+          [kept]: 'import { type Stats, writeFileSync } from "node:fs";\nexport const w = writeFileSync;\n',
         },
         true,
       );
       expect(stale.code).toBe(1);
       expect(said(stale.err)).toEqual([
-        `${refresh}: reads nothing of the disk itself, but DISK_READERS lists it (${DISK_READERS[refresh]}): take its entry out`,
+        `${kept}: reads nothing of the disk itself, but DISK_READERS lists it (${DISK_READERS[kept]}): take its entry out`,
       ]);
-      const { [refresh]: _, ...gone } = inventory();
+      const { [kept]: _, ...gone } = inventory();
       const moved = check(gone, true);
       expect(moved.code).toBe(1);
       expect(said(moved.err)).toEqual([
-        `${refresh}: in the slow-disk inventory, but not there (moved or renamed: its entry follows it)`,
+        `${kept}: in the slow-disk inventory, but not there (moved or renamed: its entry follows it)`,
       ]);
     });
 

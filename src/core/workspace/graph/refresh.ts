@@ -2,10 +2,10 @@
 import type { Config } from "../../application/config/config.ts";
 import { grammar, grammarFor, type Grammar } from "../../documents/syntax/syntax.ts";
 import { classify, extensionOf } from "../../documents/model/filetypes.ts";
-import { statSync } from "node:fs";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
+import * as disk from "../../foundation/platform/disk.ts";
 import { climbsOut, readJson } from "../../foundation/platform/fsutil.ts";
-import { cacheDir } from "../../foundation/platform/paths.ts";
+import { cacheDir, type Keyed } from "../../foundation/platform/paths.ts";
 import type { ParseCache as ChunkCache } from "../../documents/markdown/parse.ts";
 import { sharedParseCache } from "../../documents/markdown/parsecache.ts";
 import { LinkIndex, onDisk } from "../links/links.ts";
@@ -17,7 +17,9 @@ import {
   type Skipped,
   type Stamp,
   type WalkFilter,
+  type WalkResult,
 } from "../walk/walk.ts";
+import type { IndexRead, WalkAnswer } from "../walk/disk-jobs.ts";
 import { homeWalk, inFolders, walksInto, type HomeWalk } from "../vaults/home.ts";
 import { isListed, type VaultLocation } from "../vaults/vault.ts";
 import { extractNote, INDEX_VERSION } from "./graph-extract.ts";
@@ -51,7 +53,7 @@ interface RefreshGraph {
   writtenAt: number | null;
   reached: Set<string>;
   addAsset(rel: string): boolean;
-  build(useCache?: boolean, parse?: "all" | "lazy", given?: HomeWalk): unknown;
+  build(useCache?: boolean, parse?: "all" | "lazy", given?: BuildGiven): unknown;
   branchNow(): string | null;
   catchUpWithGit(): [string, string][];
   overlay(rel: string, text: string | null): void;
@@ -62,15 +64,29 @@ interface RefreshGraph {
   reachFile(rel: string, opts?: { keep?: boolean }): boolean;
 }
 type HomeWalkState = { walked: number | null; capped: HomeWalk["capped"]; asked?: HomeWalk["asked"] } | null;
+
+/**
+ * What a build is given, read already elsewhere (SD-T8): the TUI's walk and index, read on a disk thread or the walk's
+ * (`WalkAnswer`; home's walk with its index, `HomeWalk` and `index`); or home's walk alone, made a slice at a time by
+ * the background index. What isn't given is read here.
+ */
+export type BuildGiven = WalkAnswer | (HomeWalk & { index?: IndexRead });
+
+/** Where a vault's index is kept (its cache folder's `index.json`): what a build reads, here or on a disk thread. */
+export function indexFile(loc: Keyed): string {
+  return join(cacheDir(loc), "index.json");
+}
+
 interface RefreshHooks {
   invalidate(): void;
   emit(change: VaultChange): void;
   built(): void;
   /**
    * A note is moved when its text is gone from one path and turns up at exactly one new path, and
-   * no other vanished note had the same text (an empty template made twice is no move).
+   * no other vanished note had the same text (an empty template made twice is no move). `hashes`: the new notes'
+   * hashes, read with the walk elsewhere (SD-T8); else their texts are read here.
    */
-  detectMoves(vanished: NoteEntry[], fresh: NoteFile[]): void;
+  detectMoves(vanished: NoteEntry[], fresh: NoteFile[], hashes?: Readonly<Record<string, string>>): void;
 }
 
 export class GraphRefresh {
@@ -100,7 +116,8 @@ export class GraphRefresh {
    * Folders of home asked for by name (VV-D2: `slipbox ~/notes`, a file in it, the tabs a session brings back, each
    * one's), by their whole paths: their notes known now. Those home's walk doesn't cover yet — never made, or its cap
    * reached short of them — have the graph built again once for them all, as it is at each build after until the walk
-   * covers them (`homeWalk`); a graph not built yet is built now, whatever is asked. True when it was built.
+   * covers them (`homeWalk`); a graph not built yet is built now, whatever is asked. True when it was built here: the
+   * TUI's build, asked of a disk thread (SD-T8), follows itself when it's made.
    */
   askFolders(abs: readonly string[]): boolean {
     const g = this.graph;
@@ -116,9 +133,11 @@ export class GraphRefresh {
         ((g.home?.walked != null && !g.home.capped) || inFolders(rel, g.home?.asked?.folders ?? []));
       if (!covered && walksInto(g.root, g.filter, rel)) walk = true;
     }
-    // Never built: with the index kept, as `openGraph` builds.
+    // Never built: with the index kept, as `openGraph` builds. Built here, or asked of a disk thread (the TUI's, SD-T8),
+    // which follows the build itself once it's made: true only for one made here.
+    const builds = g.builds;
     if (walk) g.build(g.builds > 0 ? this.useCache : true, "lazy");
-    return walk;
+    return g.builds !== builds;
   }
 
   /** Home's path for a folder of home, by its whole path; null in a vault, for home's top, or outside it. */
@@ -160,19 +179,25 @@ export class GraphRefresh {
    *
    * Home (VV-D2) is never walked here: its walk is the one kept (`homeWalk`), the folders asked for that it doesn't
    * cover walked with it (`askFolders`), or `given` — one just made, a slice at a time, by the background index or the
-   * TUI.
+   * TUI. The TUI's walk and index are `given` too, read on a disk thread (SD-T8): nothing of them is read here.
    */
-  build(useCache = true, parse: "all" | "lazy" = "all", given?: HomeWalk): void {
+  build(useCache = true, parse: "all" | "lazy" = "all", given?: BuildGiven): void {
     const g = this.graph;
     const t0 = performance.now();
     g.builds++;
     g.walkedAt = Date.now();
+    const read = given && "walked" in given ? { walk: given.walk, home: given, index: given.index } : given;
     const home =
-      g.loc.mode === "home" ? (given ?? homeWalk(g.loc, g.filter, this.asked, HOME_LIMITS, g.keepsWalk)) : null;
+      g.loc.mode !== "home"
+        ? null
+        : read
+          ? { walked: null, capped: null, ...read.home, walk: read.walk }
+          : homeWalk(g.loc, g.filter, this.asked, HOME_LIMITS, g.keepsWalk);
     // What changed after home's walk began may be missing from it: the watcher looks at those folders again.
     if (home?.walked) g.walkedAt = home.walked;
     g.home = home ? { walked: home.walked, capped: home.capped, ...(home.asked ? { asked: home.asked } : {}) } : null;
-    const walk = home ? home.walk : isListed(g.loc) ? listDirectory(g.root, g.filter) : walkVault(g.root, g.filter);
+    const walk: WalkResult =
+      home?.walk ?? read?.walk ?? (isListed(g.loc) ? listDirectory(g.root, g.filter) : walkVault(g.root, g.filter));
     g.dirs = walk.dirs;
     g.dirStamps = walk.times ?? new Map();
     g.assets.clear();
@@ -182,8 +207,14 @@ export class GraphRefresh {
     // `$HOME` or `/` opened as a plain folder is listed, never indexed: nothing to keep (20.22).
     this.useCache = useCache && !isListed(g.loc);
     // What it reads, by its stamp: written since by anyone (its thread, the background index, the CLI), it's newer.
-    this.indexStamp = this.useCache ? stampOf(this.cachePath) : "";
-    const cached = this.useCache ? readJson<IndexFile | null>(this.cachePath, null) : null;
+    // Read with the walk when that's given, as text: parsed here as the file would be read (SD-D12).
+    const index = this.useCache ? read?.index : undefined;
+    this.indexStamp = this.useCache ? (index?.stamp ?? stampOf(this.cachePath)) : "";
+    const cached = !this.useCache
+      ? null
+      : index
+        ? parsedIndex(index.text)
+        : readJson<IndexFile | null>(this.cachePath, null);
     g.indexRead = cached?.version === INDEX_VERSION;
     const old = g.indexRead ? cached!.entries : {};
     const reused = reuseEntries(
@@ -203,6 +234,8 @@ export class GraphRefresh {
         this.hooks.detectMoves(
           vanished,
           walk.files.filter((f) => !old[f.rel]),
+          // Read with the walk, when its index was (none: no note to tell by), never here.
+          index ? (index.hashes ?? {}) : undefined,
         );
     }
     // And git's renames, when HEAD moved on the branch since this copy last looked (20.21).
@@ -234,8 +267,7 @@ export class GraphRefresh {
   }
 
   private get cachePath(): string {
-    const g = this.graph;
-    return join(cacheDir(g.loc), "index.json");
+    return indexFile(this.graph.loc);
   }
 
   /** When the index on disk was last written (20.10): how fresh it is; null when there's none. */
@@ -249,7 +281,7 @@ export class GraphRefresh {
 
   indexedAt(): Date | null {
     try {
-      return statSync(this.cachePath).mtime;
+      return disk.stat(this.cachePath).mtime;
     } catch {
       return null;
     }
@@ -318,7 +350,7 @@ export class GraphRefresh {
     let e = this.adopted.get(rel);
     if (!e) {
       try {
-        const st = statSync(join(g.root, rel));
+        const st = disk.stat(join(g.root, rel));
         e = extractNote({ rel, abs: join(g.root, rel), size: st.size, mtimeMs: st.mtimeMs });
         this.adopted.set(rel, e);
       } catch {
@@ -447,9 +479,19 @@ export class GraphRefresh {
 /** A file's stamp, its mtime and size in a word: "" for none. */
 function stampOf(path: string): string {
   try {
-    const st = statSync(path);
+    const st = disk.stat(path);
     return `${st.mtimeMs}:${st.size}`;
   } catch {
     return "";
+  }
+}
+
+/** An index read as text elsewhere (SD-T8), parsed as `readJson` parses the file: null when there's none, or it isn't
+ *  JSON. */
+function parsedIndex(text: string | null): IndexFile | null {
+  try {
+    return text === null ? null : (JSON.parse(text) as IndexFile);
+  } catch {
+    return null;
   }
 }
