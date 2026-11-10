@@ -247,7 +247,8 @@ export interface AppOptions {
    * the graph opens, so a moved folder's cache is adopted first. Left out, the App records it itself.
    */
   recorded?: { carriedFrom: string | null };
-  /** The explorer's listings read off the main thread (T12): the TUI's; a test's App reads them at once. */
+  /** The explorer's listings read off the main thread (T12), and the watcher's looks (SD-T3): the TUI's; a test's App
+   *  reads them at once. */
   listOffThread?: boolean;
   /** Started by a restart (UPG): this window's session, from its note, and what's said of it. */
   restarted?: { session: SessionState | null; said: { level: Level; text: string } };

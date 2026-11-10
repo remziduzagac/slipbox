@@ -1,114 +1,102 @@
-// Pending file changes and move reconciliation over the original watcher state, read through the seam (disk.ts).
-import type { Dirent, Stats } from "node:fs";
-import * as disk from "../../../foundation/platform/disk.ts";
-import { join } from "node:path";
-import { under, walksInto } from "../../vaults/home/paths.ts";
-import { parentOf, SETTLE_MS } from "../../walk/io/stamps.ts";
+// Pending file changes and move reconciliation over the original watcher state. Each is a look (reads.ts): what it
+// reads is asked as a batch — on the disk threads, or here at once — and judged where it's read (judging.ts); what it
+// means is decided here, against what the watcher knows when the answer comes (SD-D5, SD-D8).
+import { basename, join } from "node:path";
+import { under } from "../../vaults/home/paths.ts";
+import { type PathStat, parentOf } from "../../walk/io/stamps.ts";
 import type { Settling, ReconciliationOptions, ReconciliationState, ReconciliationDirectories } from "./contracts.ts";
+import type { PathVerdict } from "./judging.ts";
+import { type Look, runHere, SLICE } from "./reads.ts";
 import type { Went } from "./state.ts";
-import { isSymlink, changedAt, statOrNull } from "./io.ts";
+import { noteStamp } from "./io.ts";
+
 export class WatchReconciliation {
   constructor(
     private readonly opts: ReconciliationOptions,
     private readonly state: ReconciliationState,
     private readonly directories: ReconciliationDirectories,
   ) {}
+
+  /** Whether our own write of `rel` was told since a look asked at `asked` (`writes`): its answer is older. */
+  private writtenSince(rel: string, asked: number): boolean {
+    return (this.state.writtenAt.get(rel) ?? -1) >= asked;
+  }
+
   /**
-   * Where known notes that went (`went`) are now, in folders left to the walk (`into`): the same file by its time and
-   * size (a move keeps them), under the same path below a folder that went (`gone`: renamed or moved there — the other
-   * files known in it with them) or at the folder's top under any name (a note moved into it). Those alone: the rest of
-   * such a folder is the walk's. A note only into a folder found in this batch (`fresh`), or one changed since a little
-   * before it went — never a copy made long ago (`cp -a`), its times kept, though another note went just now — and
-   * never one home's walk wouldn't go into, nor through one (`walksInto`): a vault made in it, or a link it doesn't
-   * follow, since it was found.
+   * Where known notes that went (`went`) are now, in folders left to the walk (`into`): each folder listed, and its
+   * notes' candidates statted, where it's read (judging.ts's `movedInto`), the folders found in this batch (`fresh`)
+   * said so; in the order asked.
    */
-  movedTo(
+  *movedTo(
     into: readonly string[],
     fresh: ReadonlySet<string>,
     went: readonly Went[],
     gone: readonly { dir: string; files: string[] }[],
-  ): string[] {
-    const { filter, root } = this.opts;
-    const walked = new Map<string, boolean>();
-    const walks = (dir: string) => walked.get(dir) ?? walked.set(dir, walksInto(root, filter, dir)).get(dir)!;
-    const same = (rel: string, w: Went) => {
-      const st = statOrNull(join(root, rel));
-      return !!st && st.mtimeMs === w.mtimeMs && (w.size === undefined || st.size === w.size);
-    };
-    // A note seen gone a tick at most after it went, and a coarse clock (a rename changes the folder's ctime, not its
-    // mtime).
-    const late = Math.min(this.opts.pollMs ?? 2000, 10_000) + SETTLE_MS;
-    const byTime = new Map<number, Went[]>();
-    for (const w of went) {
-      const bucket = byTime.get(w.mtimeMs);
-      if (bucket) bucket.push(w);
-      else byTime.set(w.mtimeMs, [w]);
-    }
-    const folders = gone.map((g) => ({ ...g, notes: went.filter((w) => w.rel.startsWith(`${g.dir}/`)) }));
+  ): Look<string[]> {
+    const { root } = this.opts;
+    const dirs = [...new Set(into)];
+    const pollMs = this.opts.pollMs ?? 2000;
+    const list = dirs.map((d) => {
+      const attachments: string[] = [];
+      for (const [dir, inDir] of this.state.attachments) if (under(dir, d)) attachments.push(...inDir);
+      const moved = { fresh: fresh.has(d), went: [...went], gone: gone.map((g) => ({ ...g })), attachments, pollMs };
+      return { dir: join(root, d), judge: this.directories.judged({ moved }) };
+    });
+    const { listings } = yield { list };
     const there = new Set<string>();
-    for (const d of new Set(into)) {
-      const changed = fresh.has(d) ? Number.POSITIVE_INFINITY : (changedAt(join(root, d)) ?? Number.NEGATIVE_INFINITY);
-      /** A note that went before `d` changed, give or take: one that can be in it (not a copy made long before). */
-      const after = (w: Went) => changed >= w.at - late;
-      if (!went.some(after) || !walks(d)) continue;
-      // A folder that went, here now: its notes, once one of the first few is (another may have gone alone), and the
-      // other files known in it.
-      for (const g of folders) {
-        const notes = g.notes.filter(after);
-        const at = (rel: string) => `${d}${rel.slice(g.dir.length)}`;
-        if (!notes.slice(0, 20).some((w) => same(at(w.rel), w))) continue;
-        for (const w of notes) if (same(at(w.rel), w) && walks(parentOf(at(w.rel)))) there.add(at(w.rel));
-        for (const f of g.files) {
-          const rel = at(f);
-          if (
-            !this.state.attachments.get(parentOf(rel))?.has(rel) &&
-            disk.exists(join(root, rel)) &&
-            walks(parentOf(rel))
-          )
-            there.add(rel); // not found there before (a later batch in the tick looks again)
-        }
-      }
-      let entries: Dirent[] = [];
-      try {
-        entries = disk.entries(join(root, d));
-      } catch {}
-      for (const e of entries) {
-        if (!e.isFile()) continue;
-        const rel = `${d}/${e.name}`;
-        const st = statOrNull(join(root, rel));
-        if (st && byTime.get(st.mtimeMs)?.some((w) => after(w) && (w.size === undefined || st.size === w.size)))
-          there.add(rel);
-      }
-    }
+    for (const l of listings) if (l.how === "moved") for (const rel of l.there) there.add(rel);
     return [...there];
   }
 
-  /** Each path of `list` — which grows, as folders are taken in and gone ones say what they held — settled by stat. */
-  settle(batch: Settling, list: string[]): void {
+  /**
+   * Each path of `list` — which grows, as folders are taken in and gone ones say what they held — settled by stat: the
+   * paths not settled yet asked a slice at a time (`SLICE`), each slice judged where it's read and settled as it
+   * answers, up to a `.gitignore` among them (which changes how the rest are judged); one our own write was told for
+   * since it was asked, left pending for the next batch. The list is gone through once (`next`: where the next slice
+   * starts), however long.
+   */
+  *settle(batch: Settling, list: string[]): Look {
     const { filter, known, root } = this.opts;
+    const read = new Map<string, { st: PathStat; v: PathVerdict; asked: number }>();
+    let next = 0;
     for (let i = 0; i < list.length; i++) {
       const rel = list[i]!;
       if (batch.seen.has(rel)) continue;
-      batch.seen.add(rel);
       const name = rel.slice(rel.lastIndexOf("/") + 1);
+      if (name !== ".gitignore" && !read.has(rel)) {
+        const asking = new Set([rel]);
+        for (next = Math.max(next, i + 1); next < list.length && asking.size < SLICE; next++) {
+          const r = list[next]!;
+          if (basename(r) === ".gitignore") break;
+          if (!batch.seen.has(r) && !read.has(r)) asking.add(r);
+        }
+        const asked = this.state.writes;
+        const slice = [...asking];
+        const paths = slice.map((r) => join(root, r));
+        const { stats, judged = [] } = yield { stat: { paths, judge: this.directories.judgeBy() } };
+        slice.forEach((r, k) => read.set(r, { st: stats[k]!, v: judged[k] ?? {}, asked }));
+      }
+      batch.seen.add(rel);
       if (name === ".gitignore") {
         filter.invalidate(rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "");
         batch.rescan = true;
         continue;
       }
-      let st: Stats | null = null;
-      try {
-        st = disk.stat(join(root, rel));
-      } catch {}
+      const { st: stat, v, asked } = read.get(rel)!;
+      if (this.writtenSince(rel, asked)) {
+        this.state.pending.add(rel); // read before our own write: settled with the next batch
+        continue;
+      }
+      let st = "error" in stat ? null : stat;
       // A symlink as the walk takes it (0.11, VV-D6): a folder within the root never followed, nothing outside
       // adopted unless you follow it.
-      if (st && isSymlink(join(root, rel)) && !this.directories.symlinkKept(rel)) {
+      if (st && v.link && !this.directories.symlinkKept(rel, v.link)) {
         if (!known.has(rel)) continue;
         st = null; // a note that became such a link: gone
       }
-      if (st?.isDirectory()) {
-        if (filter.exclusion(rel, true) === null && !this.state.watchers.has(rel) && !this.state.polled.has(rel)) {
-          if (this.directories.found(rel) === "adopt") list.push(...this.directories.adoptTree(rel));
+      if (st?.kind === "dir") {
+        if (v.dir === null && !this.state.watchers.has(rel) && !this.state.polled.has(rel)) {
+          if (this.directories.found(rel) === "adopt") list.push(...(yield* this.directories.adopting(rel)));
           else {
             batch.found.push(rel);
             batch.candidates.push(rel);
@@ -141,7 +129,7 @@ export class WatchReconciliation {
         }
         if (wasLeft) continue; // a folder left to the walk: never a file, nothing to say
       }
-      if (filter.exclusion(rel, false) !== null) continue;
+      if (v.file !== null) continue;
       if (!filter.isNoteName(name)) {
         // Editors' temporary files (vim's 4913, backups~, swap files) are never attachments.
         if (/^\d+$|~$|\.sw[a-p]$|^\.#|^#.*#$/.test(name)) continue;
@@ -180,36 +168,57 @@ export class WatchReconciliation {
     this.state.recentlyWent.push({ rel, mtimeMs, size: this.state.sizes.get(rel), tick: this.state.ticks, at });
   }
 
+  /** `vanishing`, read here at once. */
+  vanished(batch: Settling): void {
+    runHere(this.vanishing(batch), this.directories.judging());
+  }
+
   /**
    * A batch's last look (`flush`), before moves are followed: a rename reports only the new name, so notes that
    * vanished from the directories heard from, or moved away under the same name, are found here — gone, and kept as
    * gone lately (`went`), so where they went is followed — and a burst of writes in a folder reported as one event is
-   * said for the rest of it.
+   * said for the rest of it. Their stats asked a slice at a time, each compared when it answers with what's known then.
    */
-  vanished(batch: Settling): void {
-    const { known, root } = this.opts;
+  *vanishing(batch: Settling): Look {
+    const { known } = this.opts;
     const dirs = new Set(batch.paths.map((p) => (p.includes("/") ? p.slice(0, p.lastIndexOf("/")) : "")));
     const createdNames = new Set(
       batch.changes.filter((c) => c.kind === "created").map((c) => c.rel.slice(c.rel.lastIndexOf("/") + 1)),
     );
-    for (const rel of [...known.keys()]) {
+    const asking = [...known.keys()].filter((rel) => {
       const slash = rel.lastIndexOf("/");
       const dir = slash >= 0 ? rel.slice(0, slash) : "";
-      if (!(dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) || batch.seen.has(rel)) continue;
-      const st = statOrNull(join(root, rel));
+      return (dirs.has(dir) || createdNames.has(rel.slice(slash + 1))) && !batch.seen.has(rel);
+    });
+    for (let i = 0; i < asking.length; i += SLICE) yield* this.vanishedIn(batch, asking.slice(i, i + SLICE), dirs);
+  }
+
+  /** One slice of `vanishing`'s notes (`asking`), statted, and compared when it answers with what's known then. */
+  private *vanishedIn(batch: Settling, asking: string[], dirs: ReadonlySet<string>): Look {
+    const { known, root } = this.opts;
+    const asked = this.state.writes;
+    const { stats } = yield { stat: { paths: asking.map((rel) => join(root, rel)) } };
+    asking.forEach((rel, k) => {
+      const was = known.get(rel);
+      if (was === undefined) return; // gone from what's known since it was asked
+      if (this.writtenSince(rel, asked)) {
+        this.state.pending.add(rel);
+        return;
+      }
+      const st = noteStamp(stats[k]);
       if (!st) {
-        this.went(batch, rel, known.get(rel)!);
+        this.went(batch, rel, was);
         known.delete(rel);
         batch.changes.push({ rel, kind: "deleted", isNote: true });
       } else if (
-        dirs.has(dir) &&
-        (st.mtimeMs !== known.get(rel) || (this.state.sizes.has(rel) && this.state.sizes.get(rel) !== st.size)) &&
+        dirs.has(parentOf(rel)) &&
+        (st.mtimeMs !== was || (this.state.sizes.has(rel) && this.state.sizes.get(rel) !== st.size)) &&
         this.state.ownWrites.get(rel) !== st.mtimeMs
       ) {
         known.set(rel, st.mtimeMs);
         this.state.sizes.set(rel, st.size);
         batch.changes.push({ rel, kind: "changed", isNote: true });
       }
-    }
+    });
   }
 }

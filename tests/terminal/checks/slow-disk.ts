@@ -1,7 +1,8 @@
 // A slow disk (T12, #9): what reads one off the main thread — home's walk and the background index's, the explorer's
-// listings — never holds up the keys or the screen, and still does what it did. The disk a check can't mount is
-// slipbox's own stand-in (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]`): a folder of that name takes so long
-// to list, on whichever thread lists it. Each check builds a small home of its own.
+// listings, the watcher's looks (SD-T3) — never holds up the keys or the screen, and still does what it did. The disk a
+// check can't mount is slipbox's own stand-in (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a
+// folder of that name takes so long to list, on whichever thread lists it — and, given a fourth part, each stat and read
+// of what's in it so long on a disk thread. Each check builds a small home of its own.
 
 import { chmodSync } from "node:fs";
 import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open } from "../check.ts";
@@ -376,6 +377,44 @@ export const SLOW_DISK: Check[] = [
       await s.where(/^~\/other(?: │|$)/, /o\.md/, 5000);
       await explorerOpen(s);
       await s.until(() => listed(s, /\saaa$/) && listed(s, /\szzz$/), 10_000, "home's rows, after the vault changed");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: the vault open on a slow disk — the watcher's looks hold up no key; an agent's note seen once read",
+    covers: { cases: ["vault", "watching"], commands: [] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      // Each stat and read under the folder takes three seconds, on a disk thread (its fourth part): every look the
+      // watcher makes reads it — the folder's own stamp at each tick, the note's when its event is settled.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:1::3000` },
+      setup: (s) => smallHome(s, { [`~/notes/${SLOW}/near.md`]: "# Near\n" }),
+    },
+    run: async (s) => {
+      await s.where(/^~\/notes(?: │|$)/, /index\.md/);
+      const wrote = performance.now();
+      s.write(`~/notes/${SLOW}/agents.md`, "# An agent's note\n");
+      // Keys through three of the watcher's looks (a tick's two stats under the folder each, six seconds), each
+      // answered short of a stat's three seconds; the agent's note in the switcher once its stat answered — not before.
+      const waits: number[] = [];
+      let seenAfter: number | null = null;
+      while (performance.now() - wrote < 20_000 || seenAfter === null) {
+        s.expect(performance.now() - wrote < 60_000, "the agent's note in the switcher within a minute");
+        await Bun.sleep(400);
+        const at = performance.now();
+        await s.keys("ctrl+p");
+        await s.see(/Open note \(\d+\)/, 30_000);
+        waits.push(Math.round(performance.now() - at));
+        await s.type("agents");
+        await s.settle();
+        if (seenAfter === null && s.rowOf(new RegExp(`${SLOW}/agents\\.md`)) >= 0)
+          seenAfter = Math.round(performance.now() - wrote);
+        await s.keys("escape");
+        await s.notSee(/Open note \(\d+\)/);
+      }
+      s.expect(Math.max(...waits) < 1000, `every key answered within a second meanwhile: ${waits.join(", ")} ms`);
+      s.expect((seenAfter ?? 0) >= 2000, `the agent's note seen once its stat answered, not before: ${seenAfter} ms`);
     },
   },
   {

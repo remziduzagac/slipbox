@@ -64,6 +64,14 @@ followed links' probe uses, `src/core/workspace/vaults/symlinks.ts:401`): a read
 of the runtime's own threads, which can't be given up on per request (*memory*, research.md), and the walk's, the
 listing's and the watcher's code is synchronous and shared with the CLI (T12: the same code wherever it runs).
 
+> **Note (2026-11-10), from SD-T3's review, settled by the maintainer's standing instruction to take the recommended
+> answer:** the watcher's requests are the disk threads' background ones (`LookAsk.background`): one at a time, the
+> rest going past them meanwhile, so the watcher's tick (a stat and a listing of each polled folder) and its sweep
+> never hold both threads, and a key's read (opening by path, an explorer listing) finds the other free. Chosen over
+> keeping one thread for what a key asks, which would also keep the watcher off the second thread while a walk holds
+> the first. A walk holding one thread and a watcher's request the other still leaves a key waiting, as SD-D2's cost
+> says.
+
 ## SD-D3: Nobody asked, nothing waits (2026-11-09)
 
 Agreed: question 3, answered (a).

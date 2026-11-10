@@ -1,6 +1,7 @@
 // Existing followed-link verdicts and their refusal reasons.
 
-import { realpathSync, type Stats, statSync } from "node:fs";
+import type { Stats } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import { answered, linkAnswer } from "../../vaults/symlinks.ts";
 import { isInside } from "../../vaults/vault.ts";
 import type { LinkVerdict } from "../contracts.ts";
@@ -29,13 +30,13 @@ export const LINK_REASON = {
 export function symlinkVerdict(abs: string, realRoot: string): LinkVerdict {
   let target: string;
   try {
-    target = realpathSync(abs);
+    target = disk.realpath(abs);
   } catch {
     return { kept: false, reason: "broken symlink" };
   }
   let st: Stats;
   try {
-    st = statSync(target);
+    st = disk.stat(target);
   } catch {
     return { kept: false, reason: null };
   }

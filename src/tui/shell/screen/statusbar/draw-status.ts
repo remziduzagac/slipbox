@@ -229,12 +229,14 @@ export function drawStatus(app: App, c: Canvas, band: Band, geo: Geometry): void
   const w = app.watcher;
   const watch = w?.degraded
     ? { text: "⚠ not watching", role: "warn" as Role }
-    : w
-      ? {
-          text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`,
-          role: "check_done" as Role,
-        }
-      : { text: "○ not watching", role: "status_dim" as Role };
+    : w?.notAnswering
+      ? { text: "⚠ disk not answering", role: "warn" as Role }
+      : w
+        ? {
+            text: `● watching${w.polledDirs.length ? ` (${w.polledDirs.length} polled)` : ""}`,
+            role: "check_done" as Role,
+          }
+        : { text: "○ not watching", role: "status_dim" as Role };
   const rx = c.width - rightW;
   // None here: the Problems panel's button, dim — clicked, the root's (1.7).
   if (!problems.length && rx - x - 3 - stringWidth(watch.text) > 8) {

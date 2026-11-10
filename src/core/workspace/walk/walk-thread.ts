@@ -11,7 +11,8 @@
 import type { Config } from "../../application/config/config.ts";
 import type { HomeWalk } from "../vaults/home.ts";
 import type { IndexAnswer, Opened } from "../graph/index-job.ts";
-import type { DiskRequest, PathStat, ReadAnswer, WalkAnswer, WalkAsk } from "./disk-jobs.ts";
+import type { JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
+import type { DiskRequest, ListAsk, PathStat, ReadAnswer, StatAsk, WalkAnswer, WalkAsk } from "./disk-jobs.ts";
 import type { FolderListing } from "./listing.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
@@ -256,25 +257,38 @@ export const DISK_DEADLINES: Readonly<Record<Asker, number>> = {
 export const IDLE_MS = 60_000;
 
 /** A look's batch (SD-D8, its note of 2026-11-10): every path it stats (links followed, or their own: `own`), and each
- *  folder it lists. */
+ *  folder it lists; the watcher's judged with the walk's filter as they're read (`judge`, SD-T3). Asked in the
+ *  background (`background`: the watcher's), its requests go one at a time, with any other background request's, so
+ *  they never hold both threads: what a key asks finds the other (SD-D2's note of 2026-11-10). */
 export interface LookAsk {
-  stat?: { paths: string[]; own?: boolean };
-  list?: { dir: string; walk: Config["walk"]; hidden: boolean }[];
+  stat?: StatAsk;
+  list?: ListAsk[];
+  background?: boolean;
 }
 
-/** A look's batch answered: its stats in the order asked, and a listing for each folder. */
+/** A look's batch answered: its stats in the order asked (each judged, when asked: `judged`), and a listing for each
+ *  folder. */
 export interface LookAnswer {
   stats: PathStat[];
-  listings: FolderListing[];
+  judged?: PathVerdict[];
+  listings: (FolderListing | JudgedListing)[];
 }
 
 type Timers = Pick<typeof globalThis, "setTimeout" | "clearTimeout">;
 type Timer = ReturnType<typeof setTimeout>;
-type DiskThread = { requests: WorkerRequests; busy: boolean; walking: boolean; idle: Timer | null };
-/** A request waiting for a thread; a walk's, once it has waited a look's deadline, `urgent`, and its timers. */
+type DiskThread = {
+  requests: WorkerRequests;
+  busy: boolean;
+  walking: boolean;
+  background: boolean;
+  idle: Timer | null;
+};
+/** A request waiting for a thread; a walk's, once it has waited a look's deadline, `urgent`; a background look's
+ *  (`background`); and its timers. */
 type Waiting = {
   walk: boolean;
   urgent: boolean;
+  background: boolean;
   timers: Timer[];
   resolve: (t: DiskThread) => void;
   reject: (err: Error) => void;
@@ -292,7 +306,9 @@ const pastDeadline = () => new WorkerRequestError("worker request deadline excee
  * one that doesn't answer while the other is free. A walk takes a thread only while the other is left free for the
  * rest; until then it waits, and those asked after it go past it, a second walk waiting behind it. Once it has waited a
  * look's deadline it's passed no more: it takes the next thread free, unless the other is walking. Its deadline counts
- * from when it was asked, waiting included, so it's answered or fails `deadline`, never left waiting.
+ * from when it was asked, waiting included, so it's answered or fails `deadline`, never left waiting. A background
+ * look's requests (the watcher's) take a thread only while no other background request holds one: one at a time, the
+ * rest going past them meanwhile, so what a key asks never waits behind the watcher's on both threads.
  */
 export class DiskThreads {
   private readonly pool: DiskThread[];
@@ -323,6 +339,7 @@ export class DiskThreads {
       requests: new WorkerRequests(factory, { result: Infinity }),
       busy: false,
       walking: false,
+      background: false,
       idle: null,
     }));
   }
@@ -361,29 +378,38 @@ export class DiskThreads {
 
   /**
    * A look's batch (SD-D8): one `stat` of every path and a `list` of each folder, asked together, each with a look's
-   * deadline. Answered once all have; failed once one gives up, those still waiting for a thread withdrawn.
+   * deadline — in the background, one at a time (`background`). Answered once all have; failed once one gives up, those
+   * still waiting for a thread withdrawn.
    */
   async look(batch: LookAsk): Promise<LookAnswer> {
     const giveUp = new AbortController();
-    const { paths = [], own = false } = batch.stat ?? {};
+    const background = batch.background === true;
+    const { paths = [], own = false, judge } = batch.stat ?? {};
     const stats = paths.length
-      ? this.ask<{ stats: PathStat[] }>({ op: "stat", paths, ...(own ? { own } : {}) }, "look", giveUp)
+      ? this.ask<{ stats: PathStat[]; judged?: PathVerdict[] }>(
+          { op: "stat", paths, ...(own ? { own } : {}), ...(judge ? { judge } : {}) },
+          "look",
+          giveUp,
+          background,
+        )
       : Promise.resolve({ stats: [] });
     const lists = (batch.list ?? []).map((l) =>
-      this.ask<{ listing: FolderListing }>({ op: "list", ...l }, "look", giveUp),
+      this.ask<{ listing: FolderListing | JudgedListing }>({ op: "list", ...l }, "look", giveUp, background),
     );
     const [answered, ...listed] = await Promise.all([stats, ...lists] as const);
-    return { stats: answered.stats, listings: listed.map((l) => l.listing) };
+    const judged = "judged" in answered && answered.judged ? { judged: answered.judged } : {};
+    return { stats: answered.stats, ...judged, listings: listed.map((l) => l.listing) };
   }
 
   /** A request on a thread that's free, once one is, with what this thread knows (`walkContext`) as it's sent; its
    *  deadline its asker's, counted from then — a walk's from when it was asked. One of a batch that fails gives the
    *  batch up (`batch`) before its thread is free for the next: the rest of it still waiting for one withdrawn, never
-   *  sent, and what of it was sent given up, its thread started afresh, as past a deadline. */
-  private async ask<A>(request: DiskAsk, by: Asker, batch?: AbortController): Promise<A> {
+   *  sent, and what of it was sent given up, its thread started afresh, as past a deadline. A background request
+   *  (`background`) waits while another holds a thread. */
+  private async ask<A>(request: DiskAsk, by: Asker, batch?: AbortController, background = false): Promise<A> {
     const walk = request.op === "walk";
     const asked = this.now();
-    const on = await this.take(walk, batch?.signal);
+    const on = await this.take(walk, batch?.signal, background);
     try {
       const deadline = this.deadlines[by] - (walk ? this.now() - asked : 0);
       if (deadline <= 0) throw pastDeadline();
@@ -401,10 +427,10 @@ export class DiskThreads {
 
   /** A thread that's free, taken; or a place in the line, until one is — withdrawn when `signal` gives up first. A
    *  walk's place: passed no more once it has waited a look's deadline, and given up at its own. */
-  private take(walk: boolean, signal?: AbortSignal): Promise<DiskThread> {
+  private take(walk: boolean, signal?: AbortSignal, background = false): Promise<DiskThread> {
     if (this.closed) return Promise.reject(stopped());
     return new Promise((resolve, reject) => {
-      const waiting: Waiting = { walk, urgent: false, timers: [], resolve, reject };
+      const waiting: Waiting = { walk, urgent: false, background, timers: [], resolve, reject };
       this.line.push(waiting);
       signal?.addEventListener(
         "abort",
@@ -439,15 +465,16 @@ export class DiskThreads {
   }
 
   /** Each request in the line, in order, to the first thread free: a walk only while another is left free, the rest
-   *  going past it meanwhile — or, once it has waited a look's deadline, while the other isn't walking. */
+   *  going past it meanwhile — or, once it has waited a look's deadline, while the other isn't walking; a background
+   *  request only while no other holds a thread. */
   private dispatch(): void {
     const keep = Math.min(2, this.pool.length);
     for (let i = 0; i < this.line.length; ) {
       const free = this.pool.filter((t) => !t.busy);
       if (!free.length) return;
       const next = this.line[i]!;
-      const passed = next.walk && free.length < keep && !(next.urgent && !this.pool.some((t) => t.walking));
-      if (passed) {
+      const walkWaits = next.walk && free.length < keep && !(next.urgent && !this.pool.some((t) => t.walking));
+      if (walkWaits || (next.background && this.pool.some((t) => t.background))) {
         i++;
         continue;
       }
@@ -455,6 +482,7 @@ export class DiskThreads {
       const t = free[0]!;
       t.busy = true;
       t.walking = next.walk;
+      t.background = next.background;
       if (t.idle) this.timers.clearTimeout(t.idle);
       t.idle = null;
       next.resolve(t);
@@ -465,6 +493,7 @@ export class DiskThreads {
   private free(t: DiskThread): void {
     t.busy = false;
     t.walking = false;
+    t.background = false;
     if (this.closed) return;
     this.dispatch();
     if (t.busy) return;

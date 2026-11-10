@@ -15,8 +15,12 @@
 // Events can be lost (on macOS, Bun restarts its one FSEvents stream "since now" whenever a watch is
 // added or removed), so each tick stats the watched directories, and one whose mtime moved since it
 // was last looked at is listed again: what came or went there is settled as its events would have been.
+//
+// What it reads, it reads as looks (watch/reads.ts, SD-D8): each batch asked of the disk threads in the TUI, the screen
+// going on meanwhile, and the answer compared with what's known when it comes (SD-D5) — or, a test's, answered here at
+// once. One look is out at a time: a tick while one is, or a flush, waits for it. A look given up on (SD-D6) is said
+// once (`onNotAnswering`), and the next waits a minute.
 
-import type { Dirent } from "node:fs";
 import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
 import { parentOf, settled } from "../walk/io/stamps.ts";
@@ -24,33 +28,71 @@ import type { WatcherOptions, Settling } from "./watch/contracts.ts";
 import { WatchState } from "./watch/state.ts";
 import { WatchDirectories } from "./watch/directories.ts";
 import { WatchReconciliation } from "./watch/reconciliation.ts";
-import { every, dirMtime, watchTakes, statOrNull } from "./watch/io.ts";
+import { every, noteStamp, watchTakes } from "./watch/io.ts";
+import type { JudgedFolder } from "./watch/judging.ts";
+import {
+  drive,
+  type Look,
+  type LookEnd,
+  readsHere,
+  readsOnThreads,
+  SLICE,
+  type WatchAnswer,
+  type WatchReads,
+} from "./watch/reads.ts";
+
+/** How long the looks wait after one is given up on (SD-D6): the disk's minute. */
+const PAUSE_MS = 60_000;
 
 export class VaultWatcher {
   private readonly state = new WatchState();
   private readonly directories: WatchDirectories;
   private readonly reconciliation: WatchReconciliation;
+  private readonly reads: WatchReads;
   degraded: string | null = null;
 
-  /** The root's real path: a symlink is kept when it points inside it, or out and you follow it (0.11, VV-D6). */
-  private readonly realRoot: string;
+  /** A look given up on (SD-D6), the disk not answering in time: until the next one answers. */
+  notAnswering = false;
+
+  /** When the looks start again after one was given up on (epoch ms, `now`). */
+  private pausedUntil = 0;
+
+  /** A look out (`run`), its answer not come: a tick meanwhile asks nothing, a flush waits for it (`flushWanted`). */
+  private out = false;
+  private flushWanted = false;
+
+  /** Why the look out is ending early, while its own `finally` blocks run (`drive`'s `ending`). */
+  private ending: LookEnd["how"] | null = null;
+
+  /** The sweep under way on the disk threads: a chain of its own, one at a time. */
+  private sweeping = false;
+
+  private kicked = false;
 
   constructor(private readonly opts: WatcherOptions) {
-    let realRoot = opts.root;
-    try {
-      realRoot = disk.realpath(opts.root);
-    } catch {}
-    this.realRoot = realRoot;
     const owner = this;
-    this.directories = new WatchDirectories(opts, this.state, this.realRoot, {
-      get degraded() {
-        return owner.degraded;
+    this.directories = new WatchDirectories(
+      opts,
+      this.state,
+      () => {
+        try {
+          return disk.realpath(opts.root);
+        } catch {
+          return opts.root;
+        }
       },
-      degrade: (reason) => this.degrade(reason),
-      ensurePollTimer: () => this.ensurePollTimer(),
-      schedule: () => this.schedule(),
-    });
+      {
+        get degraded() {
+          return owner.degraded;
+        },
+        degrade: (reason) => this.degrade(reason),
+        ensurePollTimer: () => this.ensurePollTimer(),
+        schedule: () => this.schedule(),
+        stampLater: (dirRel, readAt) => this.stampLater(dirRel, readAt),
+      },
+    );
     this.reconciliation = new WatchReconciliation(opts, this.state, this.directories);
+    this.reads = opts.offThread ? readsOnThreads() : readsHere(() => this.directories.judging());
 
     for (const [k, v] of opts.sizes ?? []) this.state.sizes.set(k, v);
     for (const rel of opts.attachments ?? []) this.directories.attachment(rel, true);
@@ -82,8 +124,9 @@ export class VaultWatcher {
     this.state.sizes.set(rel, st.size);
   }
 
-  /** After a rescan: watch exactly `dirs`, and adopt the new graph's notes as known. */
+  /** After a rescan: watch exactly `dirs`, and adopt the new graph's notes as known. A look out answers too late. */
   sync(dirs: string[], known: Map<string, number>, sizes?: Map<string, number>): void {
+    this.state.syncs++;
     // Home's walk kept: nothing left to it any more — what the watcher left, and moves to follow, forgotten.
     if (!this.opts.walkPending?.()) {
       this.state.left.clear();
@@ -118,8 +161,10 @@ export class VaultWatcher {
     return [...this.state.polled];
   }
 
-  /** Our own write of `rel`, stamped as written (`written`), else as it is on disk now: not reacted to. */
+  /** Our own write of `rel`, stamped as written (`written`), else as it is on disk now: not reacted to — nor a look's
+   *  stat of it asked before (SD-D5). */
   noteOwnWrite(rel: string, written?: { mtimeMs: number; size: number }): void {
+    this.state.writtenAt.set(rel, this.state.writes++);
     try {
       const st = written ?? disk.stat(join(this.opts.root, rel));
       this.state.ownWrites.set(rel, st.mtimeMs);
@@ -145,154 +190,303 @@ export class VaultWatcher {
     (this.state.pollTimer as { unref?: () => void }).unref?.();
   }
 
+  private now(): number {
+    return this.opts.now?.() ?? Date.now();
+  }
+
+  /** Whether a look may be asked now: none out, none given up on in the last minute. */
+  private free(): boolean {
+    return !this.state.closed && !this.out && this.now() >= this.pausedUntil;
+  }
+
+  /**
+   * A look run to its end (`drive`): one at a time, its answers taken while the watcher is the one it was asked of — not
+   * closed, not synced since (SD-D5). Then whatever waited for it: a flush, the stamps of folders registered meanwhile.
+   */
+  private run(look: Look): void {
+    this.out = true;
+    const syncs = this.state.syncs;
+    drive(look, this.reads, () => !this.state.closed && this.state.syncs === syncs, {
+      now: () => this.now(),
+      answered: (at) => this.answered(at),
+      ending: (how) => {
+        this.ending = how;
+      },
+      end: (e) => {
+        this.out = false;
+        this.ended(e);
+        this.after();
+      },
+    });
+  }
+
+  private ended(e: LookEnd): void {
+    if (!this.out && !this.sweeping) this.state.writtenAt.clear(); // no look asked before them is out
+    if (e.how !== "failed" || this.state.closed) return;
+    this.pausedUntil = this.now() + PAUSE_MS;
+    if (this.notAnswering) return;
+    this.notAnswering = true;
+    this.opts.onNotAnswering?.(true);
+  }
+
+  /** A look answered, asked at `askedAt`: the disk answers again — once a look asked after the pause answers, never
+   *  one asked before it was given up on. */
+  private answered(askedAt: number): void {
+    if (!this.notAnswering || this.state.closed || askedAt < this.pausedUntil) return;
+    this.notAnswering = false;
+    this.pausedUntil = 0;
+    this.opts.onNotAnswering?.(false);
+  }
+
+  private after(): void {
+    if (!this.free()) return;
+    if (this.flushWanted) this.flush();
+    else if (this.state.unstamped.size) this.run(this.stamping());
+  }
+
+  /** A folder registered on the disk threads' way: its stamps asked by a look of their own, once none is out. */
+  private stampLater(dirRel: string, readAt: number): boolean {
+    if (this.reads.here) return false;
+    this.state.unstamped.set(dirRel, readAt);
+    if (!this.kicked) {
+      this.kicked = true;
+      queueMicrotask(() => {
+        this.kicked = false;
+        this.after();
+      });
+    }
+    return true;
+  }
+
+  /** The folders registered whose stamps are still to be read, still watched, taken to be asked. */
+  private unstamped(): Map<string, number> {
+    const taken = new Map<string, number>();
+    for (const [d, at] of this.state.unstamped) if (this.state.watchers.has(d)) taken.set(d, at);
+    this.state.unstamped.clear();
+    return taken;
+  }
+
+  /** Folders taken to be stamped and not (their look ended early): still to be. */
+  private unstampedAgain(taken: Map<string, number>): void {
+    for (const [d, at] of taken) if (!this.state.unstamped.has(d)) this.state.unstamped.set(d, at);
+  }
+
+  /** The stamps of the folders registered since the last look (`watchDir`'s two stats): a folder and its `.gitignore`. */
+  private *stamping(): Look {
+    const taken = this.unstamped();
+    const dirs = [...taken.keys()];
+    let done = false;
+    try {
+      const paths = dirs.flatMap((d) => [join(this.opts.root, d), join(this.opts.root, d, ".gitignore")]);
+      const { stats } = yield { stat: { paths } };
+      dirs.forEach((d, k) => {
+        if (this.state.watchers.has(d))
+          this.directories.stamp(d, taken.get(d)!, { dir: stats[2 * k]!, gitignore: stats[2 * k + 1]! });
+      });
+      done = true;
+    } finally {
+      if (!done) this.unstampedAgain(taken);
+    }
+  }
+
   /** Stat-scan polled directories (and, when degraded, open files) for changes. Exposed for tests. */
   pollTick(): void {
+    if (this.free()) this.run(this.ticking());
+  }
+
+  /**
+   * A tick's look: one batch — each watched folder and its `.gitignore`, each note followed, statted; each polled folder
+   * listed, its notes statted — compared, when it answers, with what's known then.
+   */
+  private *ticking(): Look {
     const { filter, known, root } = this.opts;
-    const tick = ++this.state.ticks;
+    const { state } = this;
+    const tick = ++state.ticks;
     // A move's ends seen more than a tick apart are no move to pair any more.
-    for (const [d, at] of this.state.leftSeen) if (at < tick - 1) this.state.leftSeen.delete(d);
-    while (this.state.recentlyWent[0] && this.state.recentlyWent[0].tick < tick - 1) this.state.recentlyWent.shift();
-    while (this.state.recentlyGone[0] && this.state.recentlyGone[0].tick < tick - 1) this.state.recentlyGone.shift();
+    for (const [d, at] of state.leftSeen) if (at < tick - 1) state.leftSeen.delete(d);
+    while (state.recentlyWent[0] && state.recentlyWent[0].tick < tick - 1) state.recentlyWent.shift();
+    while (state.recentlyGone[0] && state.recentlyGone[0].tick < tick - 1) state.recentlyGone.shift();
     // Bun's fs.watch drops some events: a directory renamed out of the vault reports nothing, a
     // rename reports only the new name, and on macOS nothing at all is reported for a moment after
     // any watch is added or removed. So stat each watched directory: one gone is reported, one whose
     // mtime moved is listed again; and every ~15 ticks sweep every known note as a backstop.
+    const watched = [...state.watchers.keys()];
+    const ignores = [...state.gitignores.keys()];
+    const fresh = this.unstamped();
+    const freshDirs = [...fresh.keys()];
+    // The notes followed into folders left to the walk, whose folders no watch sees: looked at every tick.
+    for (const rel of state.followed)
+      if (!known.has(rel) || state.watchers.has(parentOf(rel))) state.followed.delete(rel);
+    const followed = [...state.followed];
+    const polled = [...state.polled];
+    const paths = [
+      ...watched.map((d) => join(root, d)),
+      ...ignores.map((d) => join(root, d, ".gitignore")),
+      ...freshDirs.map((d) => join(root, d, ".gitignore")),
+      ...followed.map((rel) => join(root, rel)),
+    ];
+    const list = polled.map((d) => ({
+      dir: join(root, d),
+      judge: this.directories.judged({
+        entries: { skip: this.directories.childNames(d), notesOnly: true, stat: true, links: false },
+      }),
+    }));
     const statAt = Date.now();
-    const moved: [string, number][] = [];
-    for (const d of this.state.watchers.keys()) {
-      const mtime = dirMtime(join(root, d));
-      if (mtime === null) {
-        if (d) this.state.pending.add(d);
-      } else if (mtime !== this.state.stamps.get(d)) moved.push([d, mtime]);
+    let answer: WatchAnswer;
+    let answered = false;
+    try {
+      answer = yield { stat: { paths }, list };
+      answered = true;
+    } finally {
+      if (!answered) this.unstampedAgain(fresh); // still to be stamped, by the next look
     }
+    const { stats } = answer;
+    const listings = answer.listings as JudgedFolder[];
+    const freshAt = new Map(freshDirs.map((d, k) => [d, watched.length + ignores.length + k]));
+    const moved: [string, number][] = [];
+    watched.forEach((d, k) => {
+      if (!state.watchers.has(d)) return;
+      const st = stats[k]!;
+      // Registered since the last look: stamped from this one, as it would have been when it was registered.
+      const readAt = fresh.get(d);
+      if (readAt !== undefined) this.directories.stamp(d, readAt, { dir: st, gitignore: stats[freshAt.get(d)!]! });
+      if ("error" in st) {
+        if (d) state.pending.add(d);
+      } else if (st.mtimeMs !== state.stamps.get(d)) moved.push([d, st.mtimeMs]);
+    });
     // The sweep compares each known note's mtime and size, not just that it exists: fs.watch merges a
     // burst of writes (a git checkout) into an event or two, and a missed change would stay missed.
     if (tick % 15 === 0) {
-      for (const rel of known.keys()) {
-        const st = statOrNull(join(root, rel));
-        if (
-          !st ||
-          st.mtimeMs !== known.get(rel) ||
-          (this.state.sizes.has(rel) && this.state.sizes.get(rel) !== st.size)
-        )
-          this.state.pending.add(rel);
-      }
+      if (this.reads.here) yield* this.sweep(false);
+      else this.startSweep();
     }
-    for (const [dirRel, before] of this.state.gitignores) {
-      const now = this.directories.gitignoreStamp(dirRel);
+    ignores.forEach((dirRel, k) => {
+      const before = state.gitignores.get(dirRel);
+      if (before === undefined) return;
+      const st = stats[watched.length + k]!;
+      const now = "error" in st ? -1 : st.mtimeMs;
       if (now !== before) {
-        this.state.gitignores.set(dirRel, now);
+        state.gitignores.set(dirRel, now);
         filter.invalidate(dirRel);
-        this.state.rescan = true;
+        state.rescan = true;
       }
+    });
+    const at = watched.length + ignores.length + freshDirs.length;
+    followed.forEach((rel, k) => {
+      if (!known.has(rel) || state.watchers.has(parentOf(rel))) return;
+      const st = noteStamp(stats[at + k]);
+      if (!st || st.mtimeMs !== known.get(rel) || (state.sizes.has(rel) && state.sizes.get(rel) !== st.size))
+        state.pending.add(rel);
+    });
+    polled.forEach((dirRel, k) => this.directories.polledSeen(dirRel, listings[k]!, tick));
+    if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) state.pending.add(rel);
+    if (state.pending.size || state.rescan || state.toWalk.size || (state.leftSeen.size && state.recentlyWent.length))
+      yield* this.flushing();
+    if (moved.length) yield* this.lookingAgain(moved, statAt);
+  }
+
+  /** The sweep on the disk threads, unless one is under way or the looks are paused: its slices asked one after
+   *  another, ticks going on — dropped once they pause (SD-D6), asking nothing more meanwhile. */
+  private startSweep(): void {
+    if (this.sweeping || this.now() < this.pausedUntil) return;
+    this.sweeping = true;
+    const syncs = this.state.syncs;
+    const current = () => !this.state.closed && this.state.syncs === syncs && this.now() >= this.pausedUntil;
+    drive(this.sweep(true), this.reads, current, {
+      now: () => this.now(),
+      answered: (at) => this.answered(at),
+      ending: () => {},
+      end: (e) => {
+        this.sweeping = false;
+        this.ended(e);
+      },
+    });
+  }
+
+  /** Every known note statted, a slice at a time: one changed or gone pending — settled at once when on its own. */
+  private *sweep(alone: boolean): Look {
+    const { known, root } = this.opts;
+    const notes = [...known.keys()];
+    for (let i = 0; i < notes.length; i += SLICE) {
+      const slice = notes.slice(i, i + SLICE);
+      const asked = this.state.writes;
+      const { stats } = yield { stat: { paths: slice.map((rel) => join(root, rel)) } };
+      const before = this.state.pending.size;
+      slice.forEach((rel, k) => {
+        const was = known.get(rel);
+        if (was === undefined || (this.state.writtenAt.get(rel) ?? -1) >= asked) return; // gone, or ours since
+        const st = noteStamp(stats[k]);
+        if (!st || st.mtimeMs !== was || (this.state.sizes.has(rel) && this.state.sizes.get(rel) !== st.size))
+          this.state.pending.add(rel);
+      });
+      if (alone && this.state.pending.size > before) this.flush();
     }
-    // The notes followed into folders left to the walk, whose folders no watch sees: looked at every tick.
-    for (const rel of this.state.followed) {
-      if (!known.has(rel) || this.state.watchers.has(parentOf(rel))) {
-        this.state.followed.delete(rel);
-        continue;
-      }
-      const st = statOrNull(join(root, rel));
-      if (!st || st.mtimeMs !== known.get(rel) || (this.state.sizes.has(rel) && this.state.sizes.get(rel) !== st.size))
-        this.state.pending.add(rel);
-    }
-    for (const dirRel of this.state.polled) {
-      let entries: Dirent[] = [];
-      try {
-        entries = disk.entries(join(root, dirRel));
-      } catch {
-        this.state.polled.delete(dirRel);
-        continue;
-      }
-      const seen = new Set<string>();
-      for (const e of entries) {
-        const rel = dirRel ? `${dirRel}/${e.name}` : e.name;
-        if (e.isDirectory()) {
-          if (!this.state.watchers.has(rel) && !this.state.polled.has(rel) && filter.exclusion(rel, true) === null) {
-            const to = this.directories.found(rel);
-            if (to === "adopt") {
-              this.directories.watchDir(rel);
-              this.state.rescan = true;
-            } else {
-              this.directories.leave(rel, to);
-              this.state.leftSeen.set(rel, tick); // where a note that went may be, for a tick
-            }
-          }
-          continue;
-        }
-        if (!filter.isNoteName(e.name) || filter.exclusion(rel, false) !== null) continue;
-        seen.add(rel);
-        let mtime: number | undefined;
-        try {
-          mtime = disk.stat(join(root, rel)).mtimeMs;
-        } catch {}
-        if (mtime !== undefined && mtime !== known.get(rel)) this.state.pending.add(rel);
-      }
-      for (const rel of known.keys()) {
-        const parent = rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "";
-        if (parent === dirRel && !seen.has(rel)) this.state.pending.add(rel);
-      }
-    }
-    if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) this.state.pending.add(rel);
-    if (
-      this.state.pending.size ||
-      this.state.rescan ||
-      this.state.toWalk.size ||
-      (this.state.leftSeen.size && this.state.recentlyWent.length)
-    )
-      this.flush();
-    if (moved.length) this.lookAgain(moved, statAt);
   }
 
   /**
    * List again the watched directories whose mtime moved (stat'ed at `statAt`), and add what came or
    * went there to the pending paths, as their events would have: a new note, attachment or
    * directory (adopted with all it holds), a known one gone. The debounce settles them with any
-   * events that did come.
+   * events that did come. A look of its own, exposed for tests (the tick asks it with its own).
    */
-  private lookAgain(moved: [string, number][], statAt: number): void {
+  lookAgain(moved: [string, number][], statAt: number): void {
+    this.run(this.lookingAgain(moved, statAt));
+  }
+
+  /** `lookAgain` as a look: each folder listed and its entries judged where it's read, compared with what's known then. */
+  private *lookingAgain(moved: [string, number][], statAt: number): Look {
     const { filter, known, root, listed } = this.opts;
+    const { state } = this;
+    const list = moved.map(([d]) => ({
+      dir: join(root, d),
+      judge: this.directories.judged({
+        entries: {
+          skip: listed ? null : this.directories.childNames(d, true),
+          notesOnly: !!listed,
+          stat: false,
+          links: true,
+        },
+      }),
+    }));
+    const { listings } = yield { list };
     // What's known in each: whatever isn't listed there now went.
-    const missing = new Map(moved.map(([d]) => [d, new Set(this.state.attachments.get(d))]));
+    const missing = new Map(moved.map(([d]) => [d, new Set(state.attachments.get(d))]));
     for (const rel of known.keys()) missing.get(parentOf(rel))?.add(rel);
-    const before = this.state.pending.size;
+    const before = state.pending.size;
     let seenLeft = false;
-    for (const [d, mtime] of moved) {
-      let entries: Dirent[];
-      try {
-        entries = disk.entries(join(root, d));
-      } catch {
-        continue; // gone since: the next tick reports it
-      }
-      this.state.stamps.set(d, settled(mtime, statAt));
+    moved.forEach(([d, mtime], k) => {
+      const listing = listings[k] as JudgedFolder;
+      if (listing.error !== null) return; // gone since: the next tick reports it
+      state.stamps.set(d, settled(mtime, statAt));
       const gone = missing.get(d)!;
-      for (const e of entries) {
+      for (const e of listing.entries) {
         const rel = d ? `${d}/${e.name}` : e.name;
-        if (e.isDirectory()) {
+        if (e.kind === "dir") {
           // A folder the walk would take and not watched yet: adopted, with all it holds — unless a walk is to look into
           // it, and it's nothing to name (`found`): one left before is still left, its markers not looked for again.
-          if (listed || this.state.watchers.has(rel) || this.state.polled.has(rel)) continue;
-          const wasLeft = this.state.left.has(rel);
-          if (!wasLeft && filter.exclusion(rel, true) !== null) continue;
+          if (listed || state.watchers.has(rel) || state.polled.has(rel)) continue;
+          const wasLeft = state.left.has(rel);
+          // Not judged (watched or left when asked, and not now): gone since, as its parent's next look says.
+          if (!wasLeft && e.excluded !== null) continue;
           if (wasLeft || this.directories.found(rel) === "leave") {
             this.directories.leave(rel, "leave");
-            if (!this.state.leftSeen.has(rel)) seenLeft = true;
-            this.state.leftSeen.set(rel, this.state.ticks);
+            if (!state.leftSeen.has(rel)) seenLeft = true;
+            state.leftSeen.set(rel, state.ticks);
             continue;
           }
         } else {
           if (gone.delete(rel)) continue; // known, and still here
           if (listed && !filter.isNoteName(e.name)) continue;
           // As the walk takes it: a symlink to a file inside the root, or one you follow (0.11, VV-D6).
-          if (filter.exclusion(rel, false) !== null || (e.isSymbolicLink() && !this.directories.symlinkKept(rel)))
+          if (e.excluded !== null || (e.kind === "link" && !(e.link && this.directories.symlinkKept(rel, e.link))))
             continue;
         }
-        this.state.pending.add(rel);
+        state.pending.add(rel);
       }
-      for (const rel of gone) this.state.pending.add(rel);
-    }
+      for (const rel of gone) state.pending.add(rel);
+    });
     // A folder left, found as a known note went lately: where it went, maybe (`movedTo`).
-    if (this.state.pending.size > before || (seenLeft && this.state.recentlyWent.length)) this.schedule();
+    if (state.pending.size > before || (seenLeft && state.recentlyWent.length)) this.schedule();
   }
 
   private degrade(reason: string): void {
@@ -310,46 +504,81 @@ export class VaultWatcher {
     this.state.timer = setTimeout(() => this.flush(), this.opts.debounceMs);
   }
 
-  /** Settle pending paths by stat. Exposed for tests. */
+  /** Settle pending paths by stat — once the look out has answered. Exposed for tests. */
   flush(): void {
     this.state.timer = null;
-    const leftSeen = [...this.state.leftSeen.keys()];
+    if (this.out || this.now() < this.pausedUntil) {
+      this.flushWanted = true;
+      return;
+    }
+    this.flushWanted = false;
+    this.run(this.flushing());
+  }
+
+  /** `flush` as a look: what the settle reads asked of the disk, and the batch said once it all answered. */
+  private *flushing(): Look {
+    const { state } = this;
+    this.flushWanted = false; // this one takes what's pending
+    const leftSeen = [...state.leftSeen.keys()];
     const batch: Settling = {
-      paths: [...this.state.pending],
+      paths: [...state.pending],
       seen: new Set(),
       changes: [],
-      rescan: this.state.rescan,
+      rescan: state.rescan,
       found: [],
       candidates: leftSeen,
       following: this.opts.walkPending?.() ?? false,
     };
-    this.state.pending.clear();
-    this.state.rescan = false;
-    this.reconciliation.settle(batch, batch.paths);
-    this.reconciliation.vanished(batch);
-    // Known notes moved lately into a folder left to the walk: found there, so they stay and the move is seen.
-    if (batch.following && this.state.recentlyWent.length && batch.candidates.length) {
-      const moved = this.reconciliation.movedTo(
-        batch.candidates,
-        new Set(batch.found),
-        this.state.recentlyWent,
-        this.state.recentlyGone,
-      );
-      this.reconciliation.settle(batch, moved);
-      for (const rel of moved)
-        if (this.opts.known.has(rel) && !this.state.watchers.has(parentOf(rel))) this.state.followed.add(rel);
+    state.pending.clear();
+    state.rescan = false;
+    let done = false;
+    try {
+      yield* this.reconciliation.settle(batch, batch.paths);
+      yield* this.reconciliation.vanishing(batch);
+      // Known notes moved lately into a folder left to the walk: found there, so they stay and the move is seen.
+      if (batch.following && state.recentlyWent.length && batch.candidates.length) {
+        const moved = yield* this.reconciliation.movedTo(
+          batch.candidates,
+          new Set(batch.found),
+          state.recentlyWent,
+          state.recentlyGone,
+        );
+        batch.paths.push(...moved); // settled with the rest, or pending again with them
+        yield* this.reconciliation.settle(batch, batch.paths);
+        for (const rel of moved)
+          if (this.opts.known.has(rel) && !state.watchers.has(parentOf(rel))) state.followed.add(rel);
+      }
+      done = true;
+    } finally {
+      if (!done) this.unsettled(batch);
     }
     for (const d of new Set(batch.found)) {
-      if (batch.following) this.state.leftSeen.set(d, this.state.ticks); // where a note that goes next may be, for a tick
+      if (batch.following) state.leftSeen.set(d, state.ticks); // where a note that goes next may be, for a tick
       // Named in order, each name taking its room under home's cap (`found` again: the room changed).
       const to = this.directories.found(d);
       if (to !== "adopt") this.directories.leave(d, to);
     }
-    const toWalk = [...this.state.toWalk];
-    this.state.toWalk.clear();
+    const toWalk = [...state.toWalk];
+    state.toWalk.clear();
     const { changes, rescan } = batch;
     if (changes.length || rescan || toWalk.length)
       this.opts.onBatch({ changes, rescan, ...(toWalk.length ? { toWalk } : {}) });
+  }
+
+  /**
+   * A flush's look ended before it settled all: given up on (SD-D6), what it settled is said, the rest pending again;
+   * dropped (synced since, SD-D5), all of it pending again, to be settled against what the build knows.
+   */
+  private unsettled(batch: Settling): void {
+    const { state } = this;
+    if (state.closed) return;
+    const failed = this.ending === "failed";
+    for (const rel of batch.paths) if (!failed || !batch.seen.has(rel)) state.pending.add(rel);
+    if (!failed) {
+      state.rescan ||= batch.rescan;
+      return;
+    }
+    if (batch.changes.length || batch.rescan) this.opts.onBatch({ changes: batch.changes, rescan: batch.rescan });
   }
 
   watchNamed(dirs: readonly string[], listed: (dirRel: string) => boolean): void {

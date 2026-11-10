@@ -1,6 +1,6 @@
 // Walk filter caches, ignore rules, mounts and note admission.
 
-import { realpathSync, statSync } from "node:fs";
+import * as disk from "../../../foundation/platform/disk.ts";
 import { readRegular, SMALL_FILE } from "../../../foundation/platform/fsutil.ts";
 import { join, relative, sep } from "node:path";
 import ignore, { type Ignore } from "ignore";
@@ -45,6 +45,8 @@ export class WalkFilter {
   /** Home's folders where another filesystem is mounted (VV-D2), as home's paths for them: read from the mount table
    *  at each walk (`readMounts`), the first time one's needed else. */
   private mounts: Set<string> | null = null;
+  /** `epoch`'s count. */
+  private reread = 0;
 
   /** `home`: home's filter (VV-D2) — its skip list, never a `.gitignore`. */
   constructor(
@@ -82,9 +84,10 @@ export class WalkFilter {
     if (!this.home) return;
     let real = this.root;
     try {
-      real = realpathSync(this.root);
+      real = disk.realpath(this.root);
     } catch {}
     this.mounts = mountsIn(this.root, real);
+    this.reread++;
   }
 
   /** Whether `rel` is, or is in, a folder of home where another filesystem is mounted (VV-D2); never in a vault. */
@@ -220,7 +223,7 @@ export class WalkFilter {
     const abs = join(this.root, rel);
     let mtimeMs: number;
     try {
-      mtimeMs = statSync(abs).mtimeMs;
+      mtimeMs = disk.stat(abs).mtimeMs;
     } catch {
       return false; // not there: no note in it
     }
@@ -264,6 +267,13 @@ export class WalkFilter {
   /** Drop a cached .gitignore, e.g. when the watcher sees it change. */
   invalidate(dirRel: string): void {
     this.gitignores.delete(dirRel);
+    this.reread++;
+  }
+
+  /** How many times what it read of the disk was dropped or read again (a `.gitignore`, the mount table): a filter
+   *  made the same on a disk thread and kept there (the watcher's, judging.ts) is made again once this moves. */
+  get epoch(): number {
+    return this.reread;
   }
 
   private gitignoreFor(dirRel: string): Ignore | null {

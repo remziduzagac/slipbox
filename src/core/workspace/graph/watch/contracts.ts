@@ -3,6 +3,8 @@
 import type { WalkFilter } from "../../walk/filtering/filter.ts";
 import type { Stamp } from "../../walk/contracts.ts";
 import type { WatchState } from "./state.ts";
+import type { JudgeBy, JudgeContext, LinkKept, ListJudge } from "./judging.ts";
+import type { Look } from "./reads.ts";
 export interface WatchChange {
   rel: string;
   kind: "created" | "changed" | "deleted";
@@ -62,6 +64,12 @@ export interface WatcherOptions {
   walkPending?: () => boolean;
   /** The clock (epoch ms): tests set it. */
   now?: () => number;
+  /** Its reads made on the disk threads (SD-D8: the TUI's), each look asked there and its answer taken when it comes;
+   *  else here, at once (a test's). */
+  offThread?: boolean;
+  /** A look given up on (SD-D6: the disk didn't answer in time), and looked at again a minute later (`true`); the
+   *  next look answered (`false`). */
+  onNotAnswering?: (notAnswering: boolean) => void;
 }
 
 /** A batch being settled (`flush`): the paths, what came of them, and the folders left to a walk among them. */
@@ -82,13 +90,18 @@ export interface DirectoryHost {
   degrade(reason: string): void;
   ensurePollTimer(): void;
   schedule(): void;
+  /** A folder registered, its stamps left to the next look (on the disk threads): true; false, or none, read now. */
+  stampLater?(dirRel: string, readAt: number): boolean;
 }
 export interface ReconciliationDirectories {
-  adoptTree(dirRel: string): string[];
+  adopting(dirRel: string): Look<string[]>;
   attachment(rel: string, there: boolean): void;
   forget(dirRel: string): void;
   found(dirRel: string): "adopt" | "ask" | "leave";
-  symlinkKept(rel: string): "file" | "dir" | null;
+  judging(): JudgeContext;
+  judgeBy(): JudgeBy;
+  judged(how: ListJudge["how"]): ListJudge;
+  symlinkKept(rel: string, link: LinkKept): "file" | "dir" | null;
   unwatchTree(dirRel: string): void;
 }
 
@@ -113,6 +126,17 @@ export type DirectoryOptions = Pick<
 
 export type ReconciliationState = Pick<
   WatchState,
-  "attachments" | "left" | "ownWrites" | "polled" | "recentlyGone" | "recentlyWent" | "sizes" | "ticks" | "watchers"
+  | "attachments"
+  | "left"
+  | "ownWrites"
+  | "pending"
+  | "polled"
+  | "recentlyGone"
+  | "recentlyWent"
+  | "sizes"
+  | "ticks"
+  | "watchers"
+  | "writes"
+  | "writtenAt"
 >;
 export type ReconciliationOptions = Pick<WatcherOptions, "filter" | "known" | "root" | "now" | "pollMs">;

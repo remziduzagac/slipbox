@@ -10,3 +10,9 @@ export function watcherState(watcher: VaultWatcher): WatchState {
 export function watcherDirectories(watcher: VaultWatcher): WatchDirectories {
   return (watcher as unknown as { directories: WatchDirectories }).directories;
 }
+
+/** Whether a watcher's look is out (its answer not come), or its sweep under way on the disk threads. */
+export function watcherBusy(watcher: VaultWatcher): boolean {
+  const w = watcher as unknown as { out: boolean; sweeping: boolean; flushWanted: boolean };
+  return w.out || w.sweeping || w.flushWanted;
+}
