@@ -426,7 +426,15 @@ describe("the disk threads (SD-D2)", () => {
       await threads.access(free, "key");
       await threads.walk({ how: "vault", filter: new WalkFilter(root, WALK).settings });
       await threads.look({ stat: { paths: [b] }, list: [{ dir: free, walk: WALK, hidden: false }] });
-      const sent = asked.mock.calls.map(([r, o]) => `${(r as { op: string }).op} ${o?.deadline}`);
+      // This pool's requests alone: another file's pool (home's walk stepped by an app a test left running, say) can
+      // send its own meanwhile, and the spy is on every `WorkerRequests`.
+      const mine = new Set(
+        (threads as unknown as { pool: { requests: WorkerRequests }[] }).pool.map((t) => t.requests),
+      );
+      const by = (asked.mock as unknown as { contexts: unknown[] }).contexts;
+      const sent = asked.mock.calls
+        .filter((_, i) => mine.has(by[i] as WorkerRequests))
+        .map(([r, o]) => `${(r as { op: string }).op} ${o?.deadline}`);
       expect(sent).toEqual([
         "list 60003",
         "list 60001",
