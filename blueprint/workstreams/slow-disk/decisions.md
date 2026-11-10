@@ -206,10 +206,11 @@ crossing threads before their events).
 
 > **Note (2026-11-10), from SD-T3's review:** a look's stats go a hundred a request (`SLICE`), as the sweep's do: a
 > tick's (each watched folder's stamp with its `.gitignore`'s, the notes followed, the polled folders' listings with
-> the first), the stamps of the folders registered, a settle's. Each slice is taken as it answers. One given up on keeps
-> what answered before it; the next tick asks every slice again, and the folders still unstamped are stamped by the
-> next look. As one request, a tick of a vault with thousands of folders on a slow disk could miss its minute every
-> time, and keep nothing it had read.
+> the first), the stamps of the folders registered, a settle's. Each slice is taken as it answers, and a flush wanted
+> meanwhile runs between two slices, not after the last. One given up on keeps what answered before it; the next tick
+> starts after it and goes round to it, so a slice that never answers keeps none behind it from being looked at, and
+> the folders still unstamped are stamped by the next look. As one request, a tick of a vault with thousands of folders
+> on a slow disk could miss its minute every time, and keep nothing it had read.
 
 ## SD-D9: The start takes the screen first (2026-11-09)
 

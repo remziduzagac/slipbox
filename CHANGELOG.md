@@ -301,7 +301,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   outside it. Those looks read the disk in the background now, and a note an agent writes still shows up once the disk
   has answered. A disk that doesn't answer within a minute shows `⚠ disk not answering` on the status line, said once
   in Messages; slipbox looks again a minute later, and the status line clears once the disk answers. A vault of many
-  folders is looked at a hundred files at a time, so what the disk answered before a part it didn't is kept.
+  folders is looked at a hundred files at a time, so what the disk answered before a part it didn't is kept, and a
+  part that never answers doesn't stop slipbox looking at the rest.
 - A followed link that leads out of the vault can be renamed or moved itself, from the explorer or with `slipbox mv`.
   The link moves and stays followed, what it leads to stays where it is, and a relative link moved to another folder
   still leads to the same place. Before, the move was refused as `… resolves outside the vault`.

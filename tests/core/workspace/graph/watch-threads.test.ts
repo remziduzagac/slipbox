@@ -398,6 +398,86 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
     }
   });
 
+  test("a flush wanted while a tick is out runs between its slices: the settle's stats asked before the tick's next slice", async () => {
+    const held = holding();
+    // `held` and 49 more fill the first slice; `""`, last, the second.
+    const dirs = ["held", ...Array.from({ length: SLICE / 2 - 1 }, (_, i) => `f${i}`), ""];
+    const notes = dirs.map((d) => (d ? `${d}/n.md` : "n.md"));
+    const root = tree(Object.fromEntries(notes.map((rel) => [rel, "# N\n"])));
+    const { w, state, said } = await watching(root, dirs, notes);
+    try {
+      unwatched(state);
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      writeFileSync(join(root, "n.md"), "# N, changed\n");
+      state.pending.add("n.md");
+      w.flush();
+      held.release();
+      await quiet(w);
+      const paths = asked.mock.calls.slice(0, 3).map(([b]) => b.stat?.paths ?? []);
+      expect([paths[0]!.length, paths[1], paths[2]!.length]).toEqual([SLICE, [join(root, "n.md")], 2]);
+      expect(said).toEqual(["changed n.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a flush wanted while folders registered are stamped runs between their slices", async () => {
+    const held = holding();
+    const dirs = ["held", ...Array.from({ length: SLICE / 2 - 1 }, (_, i) => `f${i}`), "g"];
+    const root = tree({ "a.md": "# A\n", ...Object.fromEntries(dirs.map((d) => [`${d}/n.md`, "# N\n"])) });
+    const { w, state, said } = await watching(root, [""], ["a.md"]);
+    try {
+      unwatched(state);
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.sync(["", ...dirs], knownIn(root, ["a.md"]).known);
+      await untilHeld(held);
+      writeFileSync(join(root, "a.md"), "# A, changed\n");
+      state.pending.add("a.md");
+      w.flush();
+      held.release();
+      await quiet(w);
+      const paths = asked.mock.calls.slice(0, 3).map(([b]) => b.stat?.paths ?? []);
+      expect([paths[0]!.length, paths[1], paths[2]!.length]).toEqual([SLICE, [join(root, "a.md")], 2]);
+      expect(said).toEqual(["changed a.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a tick given up on at a slice that never answers: the next starts after it, so the folders behind it are looked at", async () => {
+    const held = holding();
+    // `""`, `held` and 48 more fill the first slice; `gone`, last, the second.
+    const dirs = ["", "held", ...Array.from({ length: SLICE / 2 - 2 }, (_, i) => `f${i}`), "gone"];
+    const notes = dirs.map((d) => (d ? `${d}/n.md` : "n.md"));
+    const root = tree(Object.fromEntries(notes.map((rel) => [rel, "# N\n"])));
+    let clock = Date.now();
+    const { w, state } = await watching(root, dirs, notes, { now: () => clock });
+    try {
+      unwatched(state);
+      rmSync(join(root, "gone"), { recursive: true });
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      crash((s) => s.paths.includes(join(root, "held")));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      expect(state.pending.size).toBe(0);
+      // A minute later, `held` still not answering: the next tick asks `gone` first, then goes round to `held`.
+      clock += 60_001;
+      w.pollTick();
+      await until("the next tick's second slice asked", () => asked.mock.calls.length === 3);
+      expect(asked.mock.calls.map(([b]) => b.stat?.paths.length)).toEqual([SLICE, 2, SLICE]);
+      expect([...state.pending]).toEqual(["gone"]);
+    } finally {
+      w.close();
+    }
+  });
+
   test("a tree moved in is taken in a folder at a time: those listed before one held are watched meanwhile; given up on there, what's left pending again", async () => {
     const held = holding();
     const root = tree({ "a.md": "# A\n" });

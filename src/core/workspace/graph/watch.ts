@@ -18,8 +18,9 @@
 //
 // What it reads, it reads as looks (watch/reads.ts, SD-D8): each batch asked of the disk threads in the TUI, the screen
 // going on meanwhile, and the answer compared with what's known when it comes (SD-D5) — or, a test's, answered here at
-// once. One look is out at a time: a tick while one is, or a flush, waits for it. A look given up on (SD-D6) is said
-// once (`onNotAnswering`), and the next waits a minute.
+// once. One look is out at a time: a tick while one is waits for it, and so does a flush — or, a look in slices (a
+// tick's, the stamps'), for its slice. A look given up on (SD-D6) is said once (`onNotAnswering`), and the next waits a
+// minute.
 
 import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
@@ -58,7 +59,8 @@ export class VaultWatcher {
   /** When the looks start again after one was given up on (epoch ms, `now`). */
   private pausedUntil = 0;
 
-  /** A look out (`run`), its answer not come: a tick meanwhile asks nothing, a flush waits for it (`flushWanted`). */
+  /** A look out (`run`), its answer not come: a tick meanwhile asks nothing, a flush waits for it, or for its slice
+   *  (`flushWanted`). */
   private out = false;
   private flushWanted = false;
 
@@ -69,6 +71,10 @@ export class VaultWatcher {
   private sweeping = false;
 
   private kicked = false;
+
+  /** The group a tick's slices start at: after the slice the last tick given up on, so one that never answers doesn't
+   *  keep those behind it from being looked at. */
+  private tickFrom = 0;
 
   constructor(private readonly opts: WatcherOptions) {
     const owner = this;
@@ -286,11 +292,16 @@ export class VaultWatcher {
     }));
     let done = false;
     try {
-      yield* statsInSlices(groups);
+      yield* statsInSlices(groups, { between: () => this.flushBetween() });
       done = true;
     } finally {
       if (!done) this.unstampedAgain(taken); // those not stamped yet
     }
+  }
+
+  /** Between a look's slices: a flush wanted meanwhile, so a change heard waits for a slice, not for the whole look. */
+  private *flushBetween(): Look {
+    if (this.flushWanted) yield* this.flushing();
   }
 
   /** Stat-scan polled directories (and, when degraded, open files) for changes. Exposed for tests. */
@@ -301,7 +312,7 @@ export class VaultWatcher {
   /**
    * A tick's look: each watched folder and its `.gitignore`, each note followed, statted a slice at a time — the first
    * slice with each polled folder listed, its notes statted — each slice compared, as it answers, with what's known then.
-   * One given up on keeps what answered before; the next tick looks at them all again.
+   * One given up on keeps what answered before; the next tick starts after it, and goes round to it.
    */
   private *ticking(): Look {
     const { known, root } = this.opts;
@@ -330,12 +341,20 @@ export class VaultWatcher {
     const seen = (listings: JudgedListing[]) =>
       polled.forEach((dirRel, k) => this.directories.polledSeen(dirRel, listings[k] as JudgedFolder, tick));
     const statAt = Date.now();
+    const from = this.tickFrom;
+    let next = from;
     let done = false;
     try {
-      yield* statsInSlices(groups, { list, seen });
+      const asking = (k: number) => {
+        next = k;
+      };
+      yield* statsInSlices(groups, { from, listed: { list, seen }, between: () => this.flushBetween(), asking });
       done = true;
     } finally {
-      if (!done) this.unstampedAgain(fresh); // those not stamped yet: by the next look
+      if (!done) {
+        this.unstampedAgain(fresh); // those not stamped yet: by the next look
+        this.tickFrom = next; // the next tick starts after the slice given up on, and goes round to it
+      }
     }
     // The sweep compares each known note's mtime and size, not just that it exists: fs.watch merges a
     // burst of writes (a git checkout) into an event or two, and a missed change would stay missed.
@@ -468,7 +487,7 @@ export class VaultWatcher {
     this.state.timer = setTimeout(() => this.flush(), this.opts.debounceMs);
   }
 
-  /** Settle pending paths by stat — once the look out has answered. Exposed for tests. */
+  /** Settle pending paths by stat — once the look out has answered, or its slice has. Exposed for tests. */
   flush(): void {
     this.state.timer = null;
     if (this.out || this.now() < this.pausedUntil) {

@@ -101,13 +101,14 @@ go of.
   with the walk's that found it (`Graph.dirStamps`); one that came is listed there a folder at a time, nearest first,
   each stamped as it's listed and watched as it answers. A look given up on keeps what answered before: what it settled
   is said, what it didn't, and the folders it hadn't listed, are pending again; a tick's folder gone or `.gitignore`
-  changed stays seen, the folders not stamped yet are stamped by the next look, and the next tick asks every slice
-  again. The watcher's logic is written as looks
-  (`watch/reads.ts`), each yielding the batch it needs: one out at a time, a flush asked meanwhile made once it
-  answers, the sweep a chain of its own that asks nothing while the looks are paused; the warning cleared only by an
-  answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a time, so a
-  key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on the thread
-  that asks, with the same code.
+  changed stays seen, the folders not stamped yet are stamped by the next look, and the next tick starts after the
+  slice given up on and goes round to it, no slice across the end, so one that never answers keeps none behind it from
+  being looked at. The watcher's logic is written as looks (`watch/reads.ts`), each yielding the batch it needs: one
+  out at a time, a flush asked meanwhile made once it answers — or, a look in slices (a tick's, the stamps'), between
+  two of its slices — the sweep a chain of its own that asks nothing while the looks are paused; the warning cleared
+  only by an answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a
+  time, so a key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on
+  the thread that asks, with the same code.
 - **The TUI's look each second** (SD-T4; § External changes). One request a second: the open files no watcher sees,
   your config's and the vault's `.slipbox/config.toml`'s stamps, git's `HEAD`, its branch's ref, its `index.lock` and
   its rebase folders and what an operation under way leaves there, and the CLI's activity file, which the background
