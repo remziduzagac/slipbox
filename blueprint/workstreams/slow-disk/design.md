@@ -209,7 +209,9 @@ the second is let go of.
   going into a vault, slipbox's own folders on a slow disk (SD-T9) would otherwise hold it, and the keys, behind them.
   After a rename or a folder operation (SD-D11), the build is read there
   too, but the keys after it wait their turn, as after an open, `reading the vault…` in the status line, and `esc`
-  doesn't give it up, nor can the background tasks: the write is made, and the graph must follow it. Measured at
+  doesn't give it up, nor can the background tasks: the write is made, and the graph must follow it. So does the
+  vault walked again for a link followed or forgotten (VV-D6), its target answering as slipbox starts among them: the
+  next key finds what's through it, or no longer does — a list of notes opened then, all of them. Measured at
   10,000 notes (an index of 10 MiB, a local disk): the walk and the index's text crossing hold the screen's thread
   3–6 ms, the graph built from them here 25–29 ms, 18 of it the index parsed; built here whole, as before, 54–62 ms.
   The index sent parsed would hold it 13–18 ms as it crosses, saving no more than the parse.

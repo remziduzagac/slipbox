@@ -232,6 +232,25 @@ describe("the other builds read on a disk thread (SD-T8)", () => {
     expect(held.gaveUp).toBe(0);
     await quit(h);
   });
+
+  test("held: the vault walked again for a link followed now — its target answering as slipbox starts — the keys after it waiting for the graph that follows it", async () => {
+    const h = await vaultWith({ "held/a.md": "# A\n" });
+    const held = holdWalks();
+    h.app.following.walkAgain();
+    await untilHeld(held);
+    // What's through the link, there once it's read: a list of notes opened next would find it (the switcher's).
+    writeFileSync(join(h.root, "held/b.md"), "# B\n");
+    expect(h.app.watch.builds.holding).toBe(true);
+    const row = h.app.view!.cur.row;
+    const j = press(h, "j");
+    expect(h.app.view!.cur.row).toBe(row);
+    held.release();
+    await j;
+    expect(h.app.graph.notes.has("held/b.md")).toBe(true);
+    expect(h.app.view!.cur.row).toBe(row + 1);
+    expect(held.gaveUp).toBe(0);
+    await quit(h);
+  });
 });
 
 describe("a build's answer checked (SD-T8, SD-D5)", () => {
