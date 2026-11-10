@@ -53,6 +53,9 @@ export interface WalkAsk {
   filter: FilterSettings;
   home?: { key: string; asked: string[]; limits?: WalkLimits };
   index?: string;
+  /** A key's build (SD-D11): it takes a thread as a key's read does, not waiting for two free (SD-D2) — the thread kept
+   *  free is the keys', and every key is waiting for this walk. */
+  key?: boolean;
 }
 
 /**

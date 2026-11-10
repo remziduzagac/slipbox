@@ -306,8 +306,8 @@ type DiskThread = {
   background: boolean;
   idle: Timer | null;
 };
-/** A request waiting for a thread; a walk's, once it has waited a look's deadline, `urgent`; a background look's
- *  (`background`); and its timers. */
+/** A request waiting for a thread; a walk's `urgent` once it has waited a look's deadline, at once for a key's build;
+ *  a background look's (`background`); and its timers. */
 type Waiting = {
   walk: boolean;
   urgent: boolean;
@@ -415,9 +415,7 @@ export class DiskThreads {
     return (await this.ask<{ access: string | null }>({ op: "access", dir }, by, giveUp)).access;
   }
 
-  /** The vault open walked for a build (`WalkAsk`), with a walk's deadline. Never a background request, though no key
-   *  may wait for it: a walk holds one thread only while the other is free already (SD-D2), and as a background one it
-   *  would hold the watcher's looks back for as long as it's read, each given up on past its minute. */
+  /** The vault open walked for a build (`WalkAsk`), with a walk's deadline: asked as a walk, not in the background. */
   async walk(ask: WalkAsk): Promise<WalkAnswer> {
     return (await this.ask<{ walked: WalkAnswer }>({ op: "walk", ask }, "walk")).walked;
   }
@@ -458,7 +456,7 @@ export class DiskThreads {
     background = false,
     withdraw?: AbortSignal,
   ): Promise<A> {
-    const walk = request.op === "walk";
+    const walk = request.op === "walk" && (request.ask.key ? "key" : true);
     const asked = this.now();
     const on = await this.take(walk, batch?.signal ?? withdraw, background);
     try {
@@ -477,11 +475,11 @@ export class DiskThreads {
   }
 
   /** A thread that's free, taken; or a place in the line, until one is — withdrawn when `signal` gives up first. A
-   *  walk's place: passed no more once it has waited a look's deadline, and given up at its own. */
-  private take(walk: boolean, signal?: AbortSignal, background = false): Promise<DiskThread> {
+   *  walk's place: passed no more after a look's deadline, a key's build's at once; given up at its own. */
+  private take(walk: boolean | "key", signal?: AbortSignal, background = false): Promise<DiskThread> {
     if (this.closed) return Promise.reject(stopped());
     return new Promise((resolve, reject) => {
-      const waiting: Waiting = { walk, urgent: false, background, timers: [], resolve, reject };
+      const waiting: Waiting = { walk: !!walk, urgent: walk === "key", background, timers: [], resolve, reject };
       this.line.push(waiting);
       signal?.addEventListener(
         "abort",

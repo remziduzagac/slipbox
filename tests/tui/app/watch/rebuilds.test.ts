@@ -438,6 +438,30 @@ describe("a vault's first build (SD-T8)", () => {
     expect(h.app.graph.notes.has("held/x.md")).toBe(true);
     await quit(h);
   });
+
+  test("held: a vault gone into while a disk thread is busy with a read no key waits for — its first build, the keys waiting for it, takes the other at once", async () => {
+    const other = write(makeVault(), { "x.md": "# X\n" });
+    const h = await vaultWith({ "held/a.md": "# A\n" });
+    const held = holdWalks();
+    // One thread held by the explorer's listing of the vault left's `held` folder, as slipbox's own folders on a slow
+    // disk hold one going into a vault (SD-T9): a walk waits for two free, but the keys wait for this one.
+    const listed = diskThreads()
+      .list(join(h.root, "held"), h.app.config.walk, false)
+      .catch(() => null);
+    let listedYet = false;
+    void listed.then(() => (listedYet = true));
+    await untilHeld(held, "the listing");
+    expect(h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true })).toBe(true);
+    expect(h.app.reads.busy).toBe(true);
+    await until(() => h.app.graph.builds > 0 && !h.app.reads.busy, "the vault's first build, the keys let go");
+    expect(h.app.graph.notes.has("x.md")).toBe(true);
+    // Built, the keys let go, while that thread is still held.
+    expect(listedYet).toBe(false);
+    held.release();
+    expect(await listed).not.toBeNull();
+    expect(held.gaveUp).toBe(0);
+    await quit(h);
+  });
 });
 
 describe("a build that goes wrong (SD-T8)", () => {

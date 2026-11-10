@@ -19,8 +19,9 @@ they answer in `disk-jobs.ts`): two, light — no index, no parser — each star
 the first thread free, in the order asked, so never behind one that doesn't answer while the other is free; a walk
 takes a thread only while the other is left for the rest, and until then waits, the requests asked after it going past
 it and a second walk waiting behind it. Once it has waited a look's deadline it's passed no more: it takes the next
-thread free, unless the other is walking. A background request (the watcher's looks) takes a thread only while no other
-background request holds one, the rest going past it meanwhile. They answer, the same code as the thread that asks
+thread free, unless the other is walking; so does a key's build's walk from the start, every key waiting for it
+(SD-T8). A background request (the watcher's looks) takes a thread only while no other background request holds one,
+the rest going past it meanwhile. They answer, the same code as the thread that asks
 would run, through the seam
 below, with what that thread knows and they can't see for themselves (`walkContext`); a path's own error is its answer,
 and a request fails only when its thread does:
@@ -202,7 +203,10 @@ the second is let go of.
   graph never built until its first answer: the keys wait for it as for a key's build, whether a note was named, the
   tabs brought back or neither, `reading the vault…` in the status line, `esc` not letting them go, and the
   background tasks can't stop it — they'd act on an empty graph, a rename rewriting none of the links to what it
-  moves. Its note opens once it's built. After a rename or a folder operation (SD-D11), the build is read there
+  moves. Its note opens once it's built. A key's build's walk takes a disk thread at once, as a key's read does, not
+  waiting for the other to be free: the thread SD-D2 keeps free is the keys', and every key is waiting on this walk —
+  going into a vault, slipbox's own folders on a slow disk (SD-T9) would otherwise hold it, and the keys, behind them.
+  After a rename or a folder operation (SD-D11), the build is read there
   too, but the keys after it wait their turn, as after an open, `reading the vault…` in the status line, and `esc`
   doesn't give it up, nor can the background tasks: the write is made, and the graph must follow it. Measured at
   10,000 notes (an index of 10 MiB, a local disk): the walk and the index's text crossing hold the screen's thread
@@ -210,7 +214,8 @@ the second is let go of.
   The index sent parsed would hold it 13–18 ms as it crosses, saving no more than the parse.
 - **slipbox's own folders** (SD-T9). What's read of them at a vault gone into, as the Vaults window opens and as a
   link's completion asks is read there (`own`), what was read last used meanwhile. Going into a vault, its session and
-  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into, and its
+  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into once its
+  graph is first built (SD-T8), and its
   tabs open where they were left once it answers — not over a tab opened meanwhile, though the note the switch was for
   opens and is shown all the same, unless you opened it yourself meanwhile; the recents of the moment first, a UI
   override set meanwhile kept; its session isn't saved until then. The machine's positions are carried over from the

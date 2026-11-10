@@ -87,6 +87,10 @@ What the description left open, settled here for the maintainer to confirm; desi
 - The walk is asked as `DiskThreads.walk`, not as a background request. SD-D2 already leaves the other thread free
   while a walk holds one; in the background line it would hold the watcher's looks, asked behind it, past their
   minute.
+- A key's build's walk takes a disk thread at once (`WalkAsk.key`: urgent from the start), not waiting for both to be
+  free: the thread SD-D2 keeps free is for the keys, and every key is waiting on this walk. Found rebasing onto SD-T9:
+  going into a vault whose state folder is on a slow disk, the session read held one thread, the vault's first walk
+  waited behind it, and the keys with it, though its notes were on a local disk. Two walks still never hold both.
 - A key's build: every build asked inside `Builds.forKey` is a key's, whether through the rebuilder or asked
   outright. That covers a rename's `apply`, a folder restored from the trash and one pasted (`files.ts`), and the
   vault's own config renamed (a graph made anew). The keys after it wait (`reads.hold`); `reading the vault…` takes

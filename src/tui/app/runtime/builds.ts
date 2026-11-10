@@ -216,7 +216,7 @@ export class Builds {
   }
 
   /** `asked`'s walk and index asked of a disk thread, with a walk's deadline (SD-D6): one thread, while the other is
-   *  free (SD-D2). `readAgain`: read once more already, the graph built since by something else. */
+   *  free (SD-D2), a key's at once. `readAgain`: read once more already, the graph built since by something else. */
   private start(asked: Asked[], readAgain = false): void {
     const app = this.app;
     const { loc, graph: base } = app;
@@ -251,6 +251,7 @@ export class Builds {
       filter: target.filter.settings,
       ...(loc.mode === "home" ? { home: { key: loc.key, asked: [...target.askedFolders] } } : {}),
       ...(useCache && !isListed(loc) ? { index: indexFile(loc) } : {}),
+      ...(key() ? { key: true } : {}),
     };
     this.built = diskThreads()
       .walk(ask)
