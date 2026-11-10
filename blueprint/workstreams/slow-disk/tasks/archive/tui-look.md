@@ -66,11 +66,17 @@ By the maintainer's instruction to take the recommended answer (SD-D12):
 What the description left open, settled here for the maintainer to confirm, each the recommended option taken by
 the maintainer's standing instruction; design.md's sections it delivers say how.
 
-- One batch a second, two parts of it at most (`src/tui/app/runtime/look.ts`, `Look`, which `Watch` owns): a `stat`
-  of the open files outside the vault, the config files, the activity file and the tool's files; with it, as
-  `LookAsk.jobs`, a `git` job and a `way` job. The config and the tool's settings are read in a second batch only when
-  their stamps moved. The new jobs live in `src/core/workspace/walk/look-jobs.ts` (`answerLookJob`); `disk-jobs.ts`
-  only dispatches to it, and `walk-thread.ts`'s `look()` takes and answers them beside its stats and listings.
+- One batch a second, one request (`src/tui/app/runtime/look.ts`, `Look`, which `Watch` owns), so a look holds one
+  disk thread: as `LookAsk.jobs`, a `git` job and a `way` job, then a `stat` of the open files outside the vault, the
+  config files, the activity file and the tool's files (their folders stamped by whether they're there, Obsidian
+  rewriting what's in `.obsidian/` while it runs). The config and the tool's settings are read in a second batch only
+  when their stamps moved. The new jobs live in `src/core/workspace/walk/look-jobs.ts` (`answerLook`, the `look`
+  request); `disk-jobs.ts` only dispatches to it, and `walk-thread.ts`'s `look()` sends a batch's jobs with its stats
+  as one request.
+- Git's state taken in the order it was asked: each question numbered as it's asked (`askGit`), the feed's (`saw`) and
+  the operation kept (`keepOperation`) take an answer only when no later question's has come first; a key's own read
+  of the operation (`operationAgain`) counts as one asked then. A key that ran git awaits `Git.checkHead()`, settled
+  once the look it asks has answered and a switch is done.
 - Git's state read whole each look (`gitSeenAt`, `vault-feed.ts`): the checkout, `HEAD` and its commit, the lock,
   the rebase folders and the operation, by the code the screen's thread used (`checkoutAt`, `headOf`, `headCommit`,
   `operationOf`), not a stat of `HEAD` and then a read when it moved: a few small files, one round trip, and the same
@@ -96,8 +102,11 @@ the maintainer's standing instruction; design.md's sections it delivers say how.
   the TUI's; no new option. A test's App looks here, at once, as before, unless the test says (`look.offThread`).
 - Given up on, a minute on (SD-D6): said once in Messages, `disk not answering: the look at your config, git and the
   open files gave up; it looks again in a minute`, worded beside the watcher's (SD-T3), whose status line indicator
-  covers both; asked again a minute later (`LOOK_AGAIN_MS`), and said again only after one has answered. Stopped
-  (quitting) says nothing.
+  covers both; asked again a minute later (`LOOK_AGAIN_MS`), and said again only after one has answered. Nothing is
+  asked meanwhile, however it's asked for: a look wanted (git ran, a build's look of every file, one wanted while the
+  last was out) is kept for the minute's end; the feed's question isn't asked, its batches applied as git was last
+  seen. The activity file's stamp is unknown till a look answers again, and unknown isn't quiet: the background index
+  waits. Stopped (quitting) says nothing.
 - Left on the screen's thread, for other tasks: the start's reads (the feed's `HEAD`, the operation until the first
   answer, the config: SD-T9, SD-T10); a vault gone into (SD-T9); autosave's check of git's lock before a save
   (`Git.indexLocked`, SD-D7); a changed open file's text, read here as before (SD-T5, SD-T6). The held tests met two

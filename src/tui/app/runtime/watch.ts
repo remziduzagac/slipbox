@@ -231,7 +231,7 @@ export class Watch {
           changed = true;
         }
         // HEAD moved without a file changing with it (5.9): a switch between branches alike.
-        if (this.app.git.checkHead()) changed = true;
+        if (this.app.feed.checkHead()) changed = true;
         if (changed) this.app.host.requestRender();
       },
       Math.min(this.app.config.watch.poll_ms, 1000),
@@ -252,7 +252,7 @@ export class Watch {
   poll(all = false): boolean {
     // Off the screen's thread (the TUI's): asked of a disk thread, what changed taken when it answers (`polled`).
     if (this.look.offThread) {
-      this.look.request(all);
+      void this.look.request(all);
       return false;
     }
     const seen: Polled[] = [];

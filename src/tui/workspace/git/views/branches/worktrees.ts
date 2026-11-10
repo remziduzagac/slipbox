@@ -291,9 +291,10 @@ export class BranchWorktrees {
         if (how === "make") return make() && done(`made ${name} from ${from}`, at);
         app.git.beforeCheckout(() => {
           if (!make()) return;
-          void switchLater(c.root, name).then((why) => {
-            // Refused or not, HEAD may have moved (stopped partway; a hook refusing once switched): seen at once.
-            app.git.checkHead();
+          void switchLater(c.root, name).then(async (why) => {
+            // Refused or not, HEAD may have moved (stopped partway; a hook refusing once switched): seen, and the
+            // switch done (its tabs back), before what's said and shown.
+            await app.git.checkHead();
             if (why) {
               // Made all the same, only not checked out (or not all of it): shown as one just made is.
               app.message("warn", `${name} made, but git: ${why}`);

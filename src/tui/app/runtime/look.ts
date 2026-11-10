@@ -1,20 +1,23 @@
 // The TUI's look each second (5.1–5.4, 5.9, 5.10, 20.9; SD-T4): what no watcher sees — the open files it doesn't watch,
 // your config and the vault's, git's state where the vault is, the CLI's activity file, the root's tool's settings —
-// asked of a disk thread (SD-D2), one look out at a time: a tick while one is out asks nothing (SD-D3). What it finds is
-// taken when it comes, against what's there then (SD-D5): all of it dropped for a vault left meanwhile, a file's stamp
-// for a buffer closed, saved or read again since, a way checked before a link was answered. What's drawn of git and
-// the tool's settings are what it last found (SD-D13), never read as they're drawn. Given up on (SD-D6): said once, and
-// looked at again a minute later. A test's App looks on the screen's thread, at once, as before (`Watch.startPolling`).
+// asked of a disk thread (SD-D2) as one request, one look out at a time: a tick while one is out asks nothing (SD-D3).
+// What it finds is taken when it comes, against what's there then (SD-D5): all of it dropped for a vault left
+// meanwhile, a file's stamp for a buffer closed, saved or read again since, a way checked before a link was answered,
+// git's state asked before what's kept was (`askGit`). What's drawn of git and the tool's settings are what it last
+// found (SD-D13), never read as they're drawn. Given up on (SD-D6): said once, and nothing asked for a minute — a look
+// asked for meanwhile kept for then. A test's App looks on the screen's thread, at once, as before
+// (`Watch.startPolling`).
 
 import type { Stamp } from "../../../core/foundation/platform/fsutil.ts";
 import { WorkerRequestError } from "../../../core/foundation/workers/worker-requests.ts";
-import { keepOperation } from "../../../core/workspace/git/branches/operation-status.ts";
+import { askGit, keepOperation } from "../../../core/workspace/git/branches/operation-status.ts";
 import { headOf } from "../../../core/workspace/git/git.ts";
 import { activityFile } from "../../../core/workspace/graph/autoindex.ts";
 import { toolFiles, toolSaid } from "../../../core/workspace/links/convention.ts";
 import { isInside } from "../../../core/workspace/vaults/vault.ts";
 import type { GitAsker, GitSeen, Head } from "../../../core/workspace/vaults/vault-feed.ts";
-import type { LookJob, PathStat, WayAnswer } from "../../../core/workspace/walk/look-jobs.ts";
+import type { PathStat } from "../../../core/workspace/walk/io/stamps.ts";
+import type { LookJob, WayAnswer } from "../../../core/workspace/walk/look-jobs.ts";
 import { diskThreads, type LookAnswer, type LookAsk } from "../../../core/workspace/walk/walk-thread.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import type { App } from "./app.ts";
@@ -29,6 +32,9 @@ const stampOf = (s: PathStat | null | undefined): Stamp | null =>
 
 /** A stat's answer as an mtime; -1 for its error, as `mtimeOf` has it. */
 const mtime = (s: PathStat | undefined): number => (s && !("error" in s) ? s.mtimeMs : -1);
+
+/** A tool's folder as its stamp has it: there or not, never its mtime (`toolFiles`). */
+const there = (s: PathStat | undefined): string => (s && !("error" in s) && s.kind === "dir" ? "dir" : "none");
 
 /** A place as a disk thread is told it. */
 const place = (loc: App["loc"]) => ({ mode: loc.mode, root: loc.root });
@@ -46,8 +52,11 @@ interface Asked {
   links: number;
   /** The config files statted, as last loaded; the tool's settings' files (none in Elsewhere). */
   config: string[];
-  tool: string[];
+  tool: { path: string; folder: boolean }[];
 }
+
+/** A look asked for and not yet taken by one: of every open file (`all`), and what waits for its answer. */
+type Wanted = { all: boolean; waiters: (() => void)[] };
 
 export class Look {
   /** Made on the disk threads as the explorer's listings are read there (the TUI's: `AppOptions.listOffThread`); else
@@ -59,12 +68,13 @@ export class Look {
     this.off = off;
   }
   private off: boolean | null = null;
-  /** The CLI's activity file's mtime as last found (-1: none): an agent at work holds the background index back. */
-  activityAt = -1;
+  /** The CLI's activity file's mtime as last found (-1: none): an agent at work holds the background index back. Null:
+   *  not known — no look has answered yet, or the last was given up on. */
+  activityAt: number | null = null;
   /** A look asked and not answered: none other asked meanwhile. */
   private out = false;
-  /** Asked for while one was out (git ran, a build): another once it's answered — of every open file, `all`. */
-  private again: { all: boolean } | null = null;
+  /** Asked for while one was out, or while the look rests (git ran, a build): asked once it may be. */
+  private wanted: Wanted | null = null;
   /** Given up on: no look before then (SD-D6); said once, until one answers. */
   private restAt = Number.NEGATIVE_INFINITY;
   private said = false;
@@ -91,19 +101,24 @@ export class Look {
     this.tick();
   }
 
-  /** The look each second: asked, unless one is out, or the last was given up on less than a minute ago. */
+  /** The look each second: asked, with any asked for meanwhile, unless one is out, or the last was given up on less
+   *  than a minute ago. */
   tick(): void {
-    if (this.out || this.app.now() < this.restAt) return;
-    void this.look(false);
+    if (this.out || this.resting()) return;
+    this.wanted ??= { all: false, waiters: [] };
+    this.next();
   }
 
-  /** A look asked for now (git ran, a build): at once, or once the one out has answered. `all`: every open file. */
-  request(all = false): void {
-    if (this.out) {
-      this.again = { all: all || (this.again?.all ?? false) };
-      return;
-    }
-    void this.look(all);
+  /** A look asked for now (git ran, a build), `all`: of every open file. Asked at once; or once the one out has
+   *  answered; or, the look given up on, once its minute is over (SD-D6). Settled once that look has answered or been
+   *  given up on. */
+  request(all = false): Promise<void> {
+    return new Promise((done) => {
+      const w = (this.wanted ??= { all: false, waiters: [] });
+      w.all ||= all;
+      w.waiters.push(done);
+      this.next();
+    });
   }
 
   /** Once no look is out (tests). */
@@ -111,12 +126,15 @@ export class Look {
     while (this.out) await this.answered;
   }
 
-  /** HEAD looked at again, git having run (a checkout, a pull): here at once; off the screen's thread, a look asked and
-   *  what moved said when it answers. True when it moved, here. */
-  checkHead(): boolean {
-    if (!this.offThread) return this.app.feed.checkHead();
-    this.request();
-    return false;
+  /** HEAD looked at again, git having run (a checkout, a pull, a merge): settled once it's seen and a move said and
+   *  done (`headMoved`). Here at once; off the screen's thread, once the look asked for it has answered. So what the key
+   *  does next comes after it, as on the screen's thread. */
+  async checkHead(): Promise<void> {
+    if (!this.offThread) {
+      this.app.feed.checkHead();
+      return;
+    }
+    await this.request();
   }
 
   /** HEAD as drawn (SD-D13): what the look last found — before it has, what the feed saw at the start — never read as
@@ -134,15 +152,18 @@ export class Look {
    *  null on it. */
   asker(): GitAsker | null {
     if (!this.offThread) return null;
+    // Given up on, its minute not over (SD-D6): nothing asked — the feed applies its batches as git was last seen.
     this.gitAsker ??= {
-      git: async () => {
+      git: async (asked) => {
+        if (this.resting()) throw new Error("the look given up on: asked again in a minute");
         const loc = this.app.loc;
         const [answer] = (await diskThreads().look({ jobs: [{ op: "git", loc: place(loc) }] })).jobs;
         const seen = (answer as { git: GitSeen }).git;
-        if (this.app.loc === loc) this.keepGit(seen);
+        if (this.app.loc === loc) this.keepGit(seen, asked);
         return seen;
       },
       locked: async (lock) => {
+        if (this.resting()) return false;
         const [s] = await diskThreads().stat([lock], "look");
         return !!s && !("error" in s);
       },
@@ -150,22 +171,34 @@ export class Look {
     return this.gitAsker;
   }
 
-  private async look(all: boolean): Promise<void> {
+  /** Given up on less than a minute ago (SD-D6): nothing asked of the disk till then. */
+  private resting(): boolean {
+    return this.app.now() < this.restAt;
+  }
+
+  /** What's wanted, asked now — unless a look is out, or the look rests: then once it may be. */
+  private next(): void {
+    const w = this.wanted;
+    if (!w || this.out || this.resting() || this.app.quitting) return;
+    this.wanted = null;
+    void this.look(w);
+  }
+
+  private async look(w: Wanted): Promise<void> {
     this.out = true;
     let done = () => {};
     this.answered = new Promise((r) => {
       done = r;
     });
     try {
-      if (await this.lookOnce(all)) this.app.host.requestRender();
+      if (await this.lookOnce(w.all)) this.app.host.requestRender();
     } catch (err) {
       this.gaveUp(err as Error);
     } finally {
       this.out = false;
       done();
-      const again = this.again;
-      this.again = null;
-      if (again && !this.app.quitting) void this.look(again.all);
+      for (const settle of w.waiters) settle();
+      this.next();
     }
   }
 
@@ -175,19 +208,21 @@ export class Look {
     const app = this.app;
     if (app.loc !== this.lastLoc) {
       this.lastLoc = app.loc;
-      keepOperation(app, null);
+      keepOperation(app, null, askGit());
     }
     const a = this.plan(all);
+    const asked = askGit();
     const first = await diskThreads().look(this.batchOf(a));
     if (!this.current(a)) return false;
     this.said = false;
-    let changed = this.taken(a, first);
+    let changed = this.taken(a, first, asked);
     const stats = first.stats.slice(a.plain.length);
     const config = stats.slice(0, a.config.length);
     const tool = stats.slice(a.config.length + 1);
     const known = app.settings.stamped;
     const moved = a.config.some((f, k) => mtime(config[k]) !== known.get(f));
-    const toolAt = a.tool.length ? `${a.loc.root}:${tool.map(mtime).join(":")}` : "";
+    const stamps = tool.map((s, k) => (a.tool[k]?.folder ? there(s) : mtime(s)));
+    const toolAt = a.tool.length ? `${a.loc.root}:${stamps.join(":")}` : "";
     const toolMoved = toolAt !== this.toolAt;
     if (!moved && !toolMoved) return changed;
     const loads = app.settings.loads;
@@ -223,7 +258,8 @@ export class Look {
     return { loc, plain, ways, links: this.app.following.changes, config, tool };
   }
 
-  /** One batch: a stat of every path (the files, the config's, the activity file, the tool's), git's state, the ways. */
+  /** One batch, one request: git's state, the ways, and a stat of every path (the files, the config's, the activity
+   *  file, the tool's). */
   private batchOf(a: Asked): LookAsk {
     const { loc } = a;
     const jobs: LookJob[] = [{ op: "git", loc: place(loc) }];
@@ -232,7 +268,7 @@ export class Look {
       const looking = [...this.app.following.looking];
       jobs.push({ op: "way", place: at, looking, paths: a.ways.map((w) => w.buf.abs) });
     }
-    const paths = [...a.plain.map((p) => p.buf.abs), ...a.config, activityFile(), ...a.tool];
+    const paths = [...a.plain.map((p) => p.buf.abs), ...a.config, activityFile(), ...a.tool.map((t) => t.path)];
     return { stat: { paths }, jobs };
   }
 
@@ -241,11 +277,12 @@ export class Look {
     return this.app.loc === a.loc && !this.app.quitting;
   }
 
-  /** The first answer taken: git's state kept and HEAD decided, the activity file's stamp, the open files' — each only
-   *  while its buffer is open and as it was, its way only while the answers to links are. */
-  private taken(a: Asked, first: LookAnswer): boolean {
+  /** The first answer taken: git's state kept, unless one asked after it is (`asked`), and HEAD decided; the activity
+   *  file's stamp; the open files' — each only while its buffer is open and as it was, its way only while the answers
+   *  to links are. */
+  private taken(a: Asked, first: LookAnswer, asked: number): boolean {
     const app = this.app;
-    this.keepGit((first.jobs[0] as { git: GitSeen }).git);
+    this.keepGit((first.jobs[0] as { git: GitSeen }).git, asked);
     this.activityAt = mtime(first.stats[a.plain.length + a.config.length]);
     const open = new Set(app.buffers.values());
     const still = (l: Looked) => open.has(l.buf) && l.buf.stamp === l.stamp;
@@ -265,18 +302,21 @@ export class Look {
     return changed;
   }
 
-  /** Git's state as a disk thread found it, kept: what the feed decides by, the checkout, what's drawn. */
-  private keepGit(seen: GitSeen): void {
-    this.app.feed.saw(seen);
+  /** Git's state as a disk thread found it, kept: what the feed decides by, the checkout, what's drawn — unless what's
+   *  kept answered a question asked after this one (`asked`): answers can come in another order than asked. */
+  private keepGit(seen: GitSeen, asked: number): void {
+    if (!this.app.feed.saw(seen, asked)) return;
     this.app.git.reads.took(this.app.loc.root, seen.checkout);
-    keepOperation(this.app, seen.operation);
+    keepOperation(this.app, seen.operation, asked);
   }
 
-  /** The look given up on (SD-D6): said once, until one answers; the next a minute later. Quitting: nothing. */
+  /** The look given up on (SD-D6): said once, until one answers; the next a minute later, the activity file's stamp
+   *  unknown till then. Quitting: nothing. */
   private gaveUp(err: Error): void {
     const kind = err instanceof WorkerRequestError ? err.kind : null;
     if (this.app.quitting || kind === "stopped") return;
     this.restAt = this.app.now() + LOOK_AGAIN_MS;
+    this.activityAt = null;
     if (this.said) return;
     this.said = true;
     this.app.message(

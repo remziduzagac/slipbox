@@ -128,13 +128,15 @@ export function toolRead(root: string): ToolRead | null {
   return null;
 }
 
-/** What the tools' settings are read from under `root`, Obsidian's then zk's: what the look stamps. */
-export function toolFiles(root: string): string[] {
+/** What the tools' settings are read from under `root`, Obsidian's then zk's: what the look stamps — a folder by
+ *  whether it's there (`folder`), since Obsidian rewrites what's in `.obsidian/` while it runs; a settings file by its
+ *  mtime. */
+export function toolFiles(root: string): { path: string; folder: boolean }[] {
   return [
-    join(root, ".obsidian"),
-    join(root, ".obsidian", "app.json"),
-    join(root, ".zk"),
-    join(root, ".zk", "config.toml"),
+    { path: join(root, ".obsidian"), folder: true },
+    { path: join(root, ".obsidian", "app.json"), folder: false },
+    { path: join(root, ".zk"), folder: true },
+    { path: join(root, ".zk", "config.toml"), folder: false },
   ];
 }
 

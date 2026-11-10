@@ -80,9 +80,10 @@ export class Git {
     return !!c && existsSync(join(c.gitDir, "index.lock"));
   }
 
-  /** HEAD looked at (the poll, each batch): when it moved, said so, and the branch's tabs back. True when it moved.
-   *  Not while git still writes: then it hasn't finished moving. Off the screen's thread, asked of the look (SD-T4). */
-  checkHead(): boolean {
+  /** HEAD looked at, git having run: when it moved, said so, and the branch's tabs back. Not while git still writes:
+   *  then it hasn't finished moving. Off the screen's thread, asked of the look (SD-T4): settled once it has answered,
+   *  what moved done — what the key does next awaits it, so it comes after, as here. */
+  checkHead(): Promise<void> {
     return this.app.watch.look.checkHead();
   }
 
@@ -293,7 +294,7 @@ export class Git {
         if (item.data === NEW) {
           return this.app.overlays.prompt("new branch: ", (name) => {
             // Made where HEAD is: no file changes, so it's waited for.
-            if (name.trim()) this.beforeCheckout(() => this.checkedOut(createBranch(c, name.trim())));
+            if (name.trim()) this.beforeCheckout(() => void this.checkedOut(createBranch(c, name.trim())));
           });
         }
         const name = item.data as string;
@@ -338,9 +339,9 @@ export class Git {
    * A checkout done — the switch handled as one event (5.9) — or git's refusal said. Refused or not, HEAD may have
    * moved (a hook refusing once it's switched, a checkout stopped partway): read again, and the files with it.
    */
-  private checkedOut(why: GitDone): void {
+  private async checkedOut(why: GitDone): Promise<void> {
     if (why) this.app.message("warn", `git: ${why}`);
-    this.checkHead();
+    await this.checkHead();
     void this.refreshNow().then(() => this.app.host.requestRender());
   }
 

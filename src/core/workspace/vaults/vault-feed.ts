@@ -8,6 +8,7 @@ import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
 import { type Checkout, checkoutOf, headCommit, headOf } from "../git/git.ts";
 import { type Operation, operationOf } from "../git/branches/operation.ts";
+import { askGit } from "../git/branches/operation-status.ts";
 import type { Graph } from "../graph/graph.ts";
 import { deepestOutside, inFolders } from "./home.ts";
 import { checkoutAt, type VaultLocation } from "./vault.ts";
@@ -48,10 +49,10 @@ export function gitSeenAt(loc: Pick<VaultLocation, "mode" | "root">): GitSeen {
   return { checkout: c, lock, locked, rebasing, head, operation: operationOf(c) };
 }
 
-/** How the feed asks git's state off the screen's thread (the TUI's, a disk thread): the whole of it, or its lock's
- *  stat alone; each answered when the thread does. */
+/** How the feed asks git's state off the screen's thread (the TUI's, a disk thread): the whole of it — the question's
+ *  number given (`askGit`) — or its lock's stat alone; each answered when the thread does. */
 export interface GitAsker {
-  git(): Promise<GitSeen>;
+  git(asked: number): Promise<GitSeen>;
   locked(lock: string): Promise<boolean>;
 }
 
@@ -147,6 +148,8 @@ export class VaultFeed {
   head: Head | null = null;
   /** Git's state as the look last found it, off the screen's thread (SD-T4); null: not looked at yet, or read here. */
   seen: GitSeen | null = null;
+  /** The question `seen` answered (`askGit`): an answer to one asked before it is dropped. */
+  private seenAsked = 0;
   private held: WatchBatch[] = [];
   private wait: ReturnType<typeof setTimeout> | null = null;
   /** When HEAD last moved. */
@@ -167,9 +170,13 @@ export class VaultFeed {
     return { branch: headOf(c).branch, commit: headCommit(c) };
   }
 
-  /** Git's state given by the look, off the screen's thread: what's decided and drawn from now on. */
-  saw(seen: GitSeen): void {
+  /** Git's state given by the look, off the screen's thread: what's decided and drawn from now on — unless what's seen
+   *  answered a question asked after this one (`asked`), the answers having come out of order. True when it's taken. */
+  saw(seen: GitSeen, asked: number): boolean {
+    if (asked < this.seenAsked) return false;
     this.seen = seen;
+    this.seenAsked = asked;
+    return true;
   }
 
   /** git is mid-commit (or mid-anything) in the vault's checkout (5.10). */
@@ -205,14 +212,18 @@ export class VaultFeed {
     if (this.asking || this.wait) return;
     this.asking = true;
     const at = this.resets;
+    const asked = askGit();
     const answered = (seen: GitSeen | null) => {
-      this.asking = false;
+      // Asked for a vault left: its question is no longer the one out (`reset`), so it leaves `asking` alone.
       if (this.closed || at !== this.resets) return;
-      if (seen) this.seen = seen;
-      if (seen?.locked && seen.lock) return this.waitForGit(asker, seen.lock);
+      this.asking = false;
+      // Decided by the state last asked: this answer, unless a look asked after it answered first.
+      if (seen) this.saw(seen, asked);
+      const now = seen ? this.seen : null;
+      if (now?.locked && now.lock) return this.waitForGit(asker, now.lock);
       this.flush();
     };
-    asker.git().then(answered, () => answered(null));
+    asker.git(asked).then(answered, () => answered(null));
   }
 
   /** git's lock waited out: looked at every 100 ms — here, or its stat alone asked off the screen's thread, one out at
@@ -226,8 +237,8 @@ export class VaultFeed {
       if (!asker || !lock) return this.gitLocked() ? this.waitForGit() : this.flush();
       this.asking = true;
       const done = (locked: boolean) => {
-        this.asking = false;
         if (this.closed || at !== this.resets) return;
+        this.asking = false;
         if (locked) this.waitForGit(asker, lock);
         // Let go: the whole state asked again, HEAD as git left it, before the batches go.
         else this.askThenFlush(asker);

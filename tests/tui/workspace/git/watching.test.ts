@@ -40,10 +40,10 @@ describe("a branch switch as one event (5.9)", () => {
     f.app.session.save("feat");
     expect(git(root, "checkout", "-q", "main").exitCode).toBe(0);
     const h = await harness({ root, open: "a.md", config: on });
-    expect(h.app.git.checkHead()).toBe(false);
+    expect(h.app.feed.checkHead()).toBe(false);
     expect(git(root, "checkout", "-q", "feat").exitCode).toBe(0);
     // HEAD seen first, as the feed sees it before the batch the checkout brings: feat's tab back, c.md no note yet.
-    expect(h.app.git.checkHead()).toBe(true);
+    expect(h.app.feed.checkHead()).toBe(true);
     const c = h.app.tabs[0]!.views[0]!.buf;
     expect([c.key, c.rel]).toEqual(["c.md", null]);
     // The watcher's batch: c.md came. The tab's note is the vault's, its link resolved.
@@ -56,24 +56,24 @@ describe("a branch switch as one event (5.9)", () => {
     const root = repo();
     if (!root) return;
     const h = await harness({ root, open: "a.md", config: (c) => (c.ui.restore_session = true) });
-    expect(h.app.git.checkHead()).toBe(false);
+    expect(h.app.feed.checkHead()).toBe(false);
     git(root, "checkout", "-q", "-b", "feat");
-    expect(h.app.git.checkHead()).toBe(true);
+    expect(h.app.feed.checkHead()).toBe(true);
     expect(h.app.messages.at(-1)!.text).toBe("switched to branch feat"); // none kept for feat yet: these stay
     await h.app.run("file.open b.md");
     expect(shown(h)).toEqual(["b.md"]);
     git(root, "checkout", "-q", "main");
-    h.app.git.checkHead();
+    h.app.feed.checkHead();
     expect(h.app.messages.at(-1)!.text).toBe("switched to branch main: its tabs are back");
     expect(shown(h)).toEqual(["a.md"]);
     git(root, "checkout", "-q", "feat");
-    h.app.git.checkHead();
+    h.app.feed.checkHead();
     expect(shown(h)).toEqual(["b.md"]);
     // Unsaved: what's open stays open.
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
     expect(h.app.view!.buf.dirty).toBe(true);
     git(root, "checkout", "-q", "main");
-    h.app.git.checkHead();
+    h.app.feed.checkHead();
     expect(h.app.messages.at(-1)!.text).toBe(
       "switched to branch main — unsaved notes stay open, so its tabs aren't brought back",
     );
@@ -86,12 +86,12 @@ describe("a branch switch as one event (5.9)", () => {
     writeFileSync(join(root, "b.md"), "# B\n\n[a](a.md)\n");
     git(root, "commit", "-q", "-am", "b links a");
     const h = await harness({ root, open: "b.md", config: (c) => (c.ui.restore_session = true) });
-    h.app.git.checkHead();
+    h.app.feed.checkHead();
     const said = h.app.messages.length;
     // A commit moving nothing: HEAD moved, nothing to say, the tabs as they are.
     writeFileSync(join(root, "a.md"), "# A\n\nThe first note, long enough to know again by its text.\nMore.\n");
     git(root, "commit", "-q", "-am", "more");
-    expect(h.app.git.checkHead()).toBe(true);
+    expect(h.app.feed.checkHead()).toBe(true);
     expect(h.app.messages.length).toBe(said);
     // As a pull brings it: a.md moved, and changed as it went; b.md's link left as it was.
     git(root, "checkout", "-q", "-b", "upstream");
@@ -103,9 +103,9 @@ describe("a branch switch as one event (5.9)", () => {
     );
     git(root, "commit", "-q", "-am", "moved");
     git(root, "checkout", "-q", "main");
-    h.app.git.checkHead(); // a switch, and back: nothing moved
+    h.app.feed.checkHead(); // a switch, and back: nothing moved
     git(root, "merge", "-q", "--ff-only", "upstream");
-    h.app.git.checkHead();
+    h.app.feed.checkHead();
     expect(h.app.messages.at(-1)!.text).toBe(
       "branch main moved on: git moved 1 file — links to it say where (space v p); space l r relinks a note's",
     );
@@ -126,7 +126,7 @@ describe("a branch switch as one event (5.9)", () => {
     if (git(root, "init", "-q", "-b", "main").exitCode !== 0) return;
     const later = Date.now() + 5_000; // the next look for a repository
     (h.app as unknown as { now: () => number }).now = () => later;
-    expect(h.app.git.checkHead()).toBe(true); // news for the top bar (20.14)
+    expect(h.app.feed.checkHead()).toBe(true); // news for the top bar (20.14)
     expect(topRow(h.frame())).toContain("⎇ main");
     expect(h.app.messages.some((m) => m.text.startsWith("switched"))).toBe(false); // not a switch
   });
@@ -161,7 +161,7 @@ describe("a branch switch as one event (5.9)", () => {
     const restore = (c: Config) => (c.ui.restore_session = true);
     const h = await harness({ root, open: "a.md", config: restore });
     git(root, "checkout", "-q", "-b", "feat");
-    h.app.git.checkHead(); // main's tabs kept: a.md
+    h.app.feed.checkHead(); // main's tabs kept: a.md
     await h.app.run("file.open b.md");
     h.app.session.save(); // feat's: b.md
     expect(shown(await harness({ root, open: null, config: restore }))).toEqual(["b.md"]);

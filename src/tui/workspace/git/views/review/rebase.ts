@@ -50,7 +50,7 @@ function busy(app: App): boolean {
 async function after(app: App, r: RemoteDone, done: string): Promise<void> {
   const c = app.git.checkout;
   if (!c) return;
-  app.git.checkHead();
+  await app.git.checkHead();
   await app.git.refreshNow();
   const op = operationAgain(app, c);
   const trust = isTrusted(c.root) ? "" : " — this vault isn't trusted, so no hook ran";

@@ -4,7 +4,8 @@
 // the seam (SD-D10) — with what that thread knows and this one can't see for itself (`walkContext`) taken first. A
 // path's own error is its answer, by its code; the request fails only when its thread does (a deadline, a crash). The
 // watcher's stats and listings are judged with the walk's filter as they're read (`judge`: graph/watch/judging.ts). The
-// TUI's look's own (a way, git's state, the config, a tool's settings) are look-jobs.ts's.
+// TUI's look's own jobs (a way, git's state, the config, a tool's settings) are look-jobs.ts's, asked with its stats as
+// one request (`look`).
 
 import type { Config } from "../../application/config/config.ts";
 import * as disk from "../../foundation/platform/disk.ts";
@@ -25,7 +26,7 @@ import type { FilterSettings, WalkLimits, WalkResult } from "./contracts.ts";
 import { filterFrom } from "./filtering/filter.ts";
 import { codeOf, type PathStat, statOf } from "./io/stamps.ts";
 import { type FolderListing, listFolder } from "./listing.ts";
-import { answerLookJob, LOOK_OPS, type LookJob, type LookJobAnswer } from "./look-jobs.ts";
+import { answerLookJob, type LookJob, type LookJobAnswer } from "./look-jobs.ts";
 import { listDirectory, walkVault } from "./traversal/walk.ts";
 
 export type { PathStat };
@@ -62,24 +63,39 @@ export interface StatAsk {
   judge?: JudgeBy;
 }
 
+/** Paths statted, in the order asked; each judged too, when asked (`judged`). */
+export interface StatAnswer {
+  stats: PathStat[];
+  judged?: PathVerdict[];
+}
+
+/** The TUI's look's jobs and its stats, asked as one request: one thread held by a look, however much it asks (SD-T4). */
+export interface LookRequest {
+  stat?: StatAsk;
+  jobs: LookJob[];
+}
+
+/** A look's request answered: each job's answer, then its stats. */
+export type LookRequestAnswer = StatAnswer & { jobs: LookJobAnswer[] };
+
 export type DiskRequest = { context: WalkContext } & (
   | ({ op: "list" } & ListAsk)
   | ({ op: "stat" } & StatAsk)
   | { op: "read"; path: string }
   | { op: "access"; dir: string }
   | { op: "walk"; ask: WalkAsk }
-  | LookJob
+  | ({ op: "look" } & LookRequest)
 );
 
 export type DiskAnswer =
   | { listing: FolderListing | JudgedListing }
-  | { stats: PathStat[]; judged?: PathVerdict[] }
+  | StatAnswer
   | { read: ReadAnswer }
   | { access: string | null }
   | { walked: WalkAnswer }
-  | LookJobAnswer;
+  | LookRequestAnswer;
 
-const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access", "walk", ...LOOK_OPS]);
+const DISK_OPS: ReadonlySet<string> = new Set(["list", "stat", "read", "access", "walk", "look"]);
 
 /** Whether `req` is one the disk threads answer. */
 export const isDiskRequest = (req: { op: string }): req is DiskRequest => DISK_OPS.has(req.op);
@@ -107,6 +123,14 @@ function indexOf(path: string): { text: string | null; stamp: string } {
   }
 }
 
+/** Paths statted, each judged too when `judge` asks. */
+function statsOf(ask: StatAsk): StatAnswer {
+  const stats = ask.paths.map((p) => statOf(p, ask.own === true));
+  if (!ask.judge) return { stats };
+  const ctx = judgeContextFor(ask.judge);
+  return { stats, judged: ask.paths.map((p, i) => judgePath(p, stats[i]!, ctx)) };
+}
+
 function walkOf(ask: WalkAsk): WalkAnswer {
   const filter = filterFrom(ask.filter);
   const index = ask.index === undefined ? {} : { index: indexOf(ask.index) };
@@ -126,19 +150,18 @@ export function answerDisk(req: DiskRequest): DiskAnswer {
     case "list":
       if ("judge" in req) return { listing: judgeListing(req.dir, req.judge.how, judgeContextFor(req.judge)) };
       return { listing: listFolder(req.dir, req.walk, req.hidden) };
-    case "stat": {
-      const stats = req.paths.map((p) => statOf(p, req.own === true));
-      if (!req.judge) return { stats };
-      const ctx = judgeContextFor(req.judge);
-      return { stats, judged: req.paths.map((p, i) => judgePath(p, stats[i]!, ctx)) };
-    }
+    case "stat":
+      return statsOf(req);
     case "read":
       return { read: readOf(req.path) };
     case "access":
       return { access: folderUnreadable(req.dir) };
     case "walk":
       return { walked: walkOf(req.ask) };
-    default:
-      return answerLookJob(req);
+    case "look": {
+      // Its jobs first: git's state is asked before the stats of what it found (D153).
+      const jobs = req.jobs.map(answerLookJob);
+      return { ...statsOf(req.stat ?? { paths: [] }), jobs };
+    }
   }
 }

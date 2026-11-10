@@ -17,6 +17,8 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { setReadWait } from "../../../../src/core/foundation/platform/disk.ts";
+import { WorkerRequestError } from "../../../../src/core/foundation/workers/worker-requests.ts";
+import { operationAgain } from "../../../../src/core/workspace/git/branches/operation-status.ts";
 import { activityFile } from "../../../../src/core/workspace/graph/autoindex.ts";
 import { linkKey } from "../../../../src/core/workspace/vaults/symlinks.ts";
 import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
@@ -127,11 +129,11 @@ const git = (cwd: string, ...args: string[]) =>
   ]);
 
 /** A vault on `main` (named short, so the top bar has room for what's under way), its repository's own folder
- *  (`--separate-git-dir`) under `held`: git's state read there, the notes not. */
-function repo(): { root: string; gitDir: string } {
+ *  (`--separate-git-dir`) under `held`: git's state read there, the notes not. Or, `free`, not under it. */
+function repo(free = false): { root: string; gitDir: string } {
   const top = folder("look-git");
   const root = join(top, "vault");
-  const gitDir = join(top, "held", "git");
+  const gitDir = join(top, free ? "free" : "held", "git");
   mkdirSync(join(root, ".slipbox"), { recursive: true });
   writeFileSync(join(root, ".slipbox", "config.toml"), '[vault]\nname = "looked"\n');
   mkdirSync(dirname(gitDir));
@@ -147,15 +149,35 @@ function repo(): { root: string; gitDir: string } {
   return { root, gitDir };
 }
 
+/** The vault's scratch, as an agent has written it, opened: outside the vault, in slipbox's state folder — under
+ *  `held` once `stateHeld`, where a look reads git's state, then stats it, and waits. */
+function openScratch(h: Harness): string {
+  const scratch = h.app.scratch.location().path;
+  mkdirSync(dirname(scratch), { recursive: true });
+  writeFileSync(scratch, "# Scratch\n");
+  h.app.open(scratch);
+  return scratch;
+}
+
+/** Awaited till `cond` holds — what another thread, git or the feed does, told by what it leaves — or thrown by
+ *  HELD_MS. */
+async function until(cond: () => boolean, what: string): Promise<void> {
+  const end = performance.now() + HELD_MS;
+  while (!cond()) {
+    if (performance.now() > end) throw new Error(`never: ${what}`);
+    await Bun.sleep(5);
+  }
+}
+
+/** The messages said so far that start with `start`. */
+const said = (h: Harness, start: string) => h.app.messages.map((m) => m.text).filter((t) => t.startsWith(start));
+
 /** The scratch open — outside the vault, in slipbox's state folder, under `held` — as an agent has written it. */
 async function scratchOpen(opts: Parameters<typeof harness>[0] = {}) {
   stateHeld();
   const h = await harness(opts);
   const look = offThread(h);
-  const scratch = h.app.scratch.location().path;
-  mkdirSync(dirname(scratch), { recursive: true });
-  writeFileSync(scratch, "# Scratch\n");
-  h.app.open(scratch);
+  const scratch = openScratch(h);
   const buf = h.app.view!.buf;
   expect([buf.abs, buf.rel, buf.source]).toEqual([scratch, null, "# Scratch\n"]);
   return { h, look, buf, scratch };
@@ -276,9 +298,10 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     mkdirSync(dirname(activityFile()), { recursive: true });
     writeFileSync(activityFile(), "");
     await looked(look);
-    expect(look.activityAt).toBe(statSync(activityFile()).mtimeMs);
+    const at = statSync(activityFile()).mtimeMs;
+    expect(look.activityAt).toBe(at);
     // An agent's command a moment ago: someone's working.
-    now = look.activityAt + 500;
+    now = at + 500;
     h.app.lastInputAt = 0;
     holdNow(held);
     expect(h.app.watch.nobodyWorking(now)).toBe(false);
@@ -286,7 +309,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     expect(h.app.watch.nobodyWorking(now)).toBe(true);
     // Another command since, found by the next look.
     held.release();
-    rewrite(activityFile(), "", (now - look.activityAt) / 1000);
+    rewrite(activityFile(), "", (now - at) / 1000);
     await looked(look);
     expect(h.app.watch.nobodyWorking(now)).toBe(false);
     expect(held.gaveUp).toBe(0);
@@ -420,5 +443,196 @@ describe("a look given up on (SD-D6)", () => {
     look.tick();
     await look.settled();
     expect(said()).toBe(2);
+  });
+
+  test("nothing asked for a minute, however it's asked for — a look wanted, a build's look of every file, one asked for while the last was out, the feed's question — and what was wanted asked once it's over", async () => {
+    holding();
+    let now = 1_000_000;
+    const { h, look } = await scratchOpen({ now: () => now });
+    await looked(look);
+    const asked = spyOn(diskThreads(), "look");
+    asked.mockRejectedValueOnce(new WorkerRequestError("worker request deadline exceeded", "deadline"));
+    look.tick();
+    // Wanted while that one is out: asked once it may be, and settled once it has answered.
+    let answered = false;
+    const wanted = look.request().then(() => {
+      answered = true;
+    });
+    await look.settled();
+    expect(said(h, "disk not answering")).toHaveLength(1);
+    void look.request();
+    h.app.watch.poll(true);
+    h.app.feed.receive({ changes: [], rescan: false });
+    await Bun.sleep(0);
+    look.tick();
+    expect(asked.mock.calls.length).toBe(1);
+    expect(answered).toBe(false);
+    // The minute over: what was wanted, every open file among it, asked at the next tick.
+    now += LOOK_AGAIN_MS;
+    look.tick();
+    await wanted;
+    expect(asked.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("git's state taken in the order it was asked, whatever order the answers come in", () => {
+  test("a look asked before a checkout, answered after the feed's question asked since: HEAD never moves back", async () => {
+    const held = holding();
+    const r = repo(true);
+    stateHeld();
+    const h = await harness({ root: r.root, open: "index.md" });
+    const look = offThread(h);
+    openScratch(h);
+    await looked(look);
+    holdNow(held);
+    look.request();
+    // git's state read (main), the look now waiting on the scratch.
+    await untilHeld(held);
+    expect(git(r.root, "checkout", "-q", "-b", "feat").exitCode).toBe(0);
+    // A batch the watcher brings: git's state asked again, on the other thread, and answered first.
+    h.app.feed.receive({ changes: [], rescan: false });
+    await until(() => said(h, "switched to").length > 0, "the feed's question answered");
+    held.release();
+    await look.settled();
+    expect(said(h, "switched to")).toEqual(["switched to branch feat"]);
+    expect(whereNow(h)).toContain("feat");
+    expect(held.gaveUp).toBe(0);
+  });
+
+  test("what's under way read again by a key (a rebase aborted) after a look was asked: the look's answer, older, never draws it back", async () => {
+    const held = holding();
+    const r = repo(true);
+    stateHeld();
+    const h = await harness({ root: r.root, open: "index.md" });
+    const look = offThread(h);
+    openScratch(h);
+    mkdirSync(join(r.gitDir, "rebase-merge"));
+    writeFileSync(join(r.gitDir, "rebase-merge", "head-name"), "refs/heads/main\n");
+    writeFileSync(join(r.gitDir, "rebase-merge", "msgnum"), "1\n");
+    writeFileSync(join(r.gitDir, "rebase-merge", "end"), "2\n");
+    await looked(look);
+    expect(h.frame().split("\n")[0]).toContain("rebasing 1/2");
+    holdNow(held);
+    look.request();
+    await untilHeld(held);
+    // The rebase aborted, and the key that did it reads what's under way at once.
+    rmSync(join(r.gitDir, "rebase-merge"), { recursive: true });
+    expect(operationAgain(h.app, h.app.git.checkout!)).toBeNull();
+    held.release();
+    await look.settled();
+    expect(h.frame().split("\n")[0]).not.toContain("rebasing");
+    expect(held.gaveUp).toBe(0);
+  });
+});
+
+describe("a slow disk under a key that runs git", () => {
+  test("a branch switched from the branches list, git's folder held: what the key does next waits for the switch to be seen and done, as on the screen's thread; keys handled meanwhile", async () => {
+    const held = holding();
+    const r = repo();
+    expect(git(r.root, "branch", "feat").exitCode).toBe(0);
+    const h = await harness({ root: r.root, open: "index.md" });
+    const look = offThread(h);
+    await looked(look);
+    // What the switch does after HEAD is seen: git's files looked at again (`refreshNow`), the switch said or not.
+    const order: string[] = [];
+    spyOn(h.app.git, "refreshNow").mockImplementation(async () => {
+      order.push(said(h, "switched to branch feat").length ? "after the switch" : "before the switch");
+    });
+    const checked = spyOn(look, "checkHead");
+    h.app.git.openBranches();
+    holdNow(held);
+    await h.keys(..."feat".split(""), "enter");
+    await until(() => checked.mock.calls.length > 0, "the switch done by git");
+    await untilHeld(held);
+    await keyMeanwhile(h);
+    expect(order).toEqual([]);
+    held.release();
+    await until(() => order.length > 0, "git's files looked at again");
+    expect(order).toEqual(["after the switch"]);
+    expect(held.gaveUp).toBe(0);
+  });
+});
+
+describe("what a look holds and stamps", () => {
+  test("a look holds one disk thread, however much it asks: a key's read goes past it while git's folder and the scratch are held", async () => {
+    const held = holding();
+    const r = repo();
+    stateHeld();
+    const h = await harness({ root: r.root, open: "index.md" });
+    const look = offThread(h);
+    openScratch(h);
+    await looked(look);
+    holdNow(held);
+    look.request();
+    await untilHeld(held);
+    const free = folder("look-free");
+    const [s] = await diskThreads().stat([free], "key");
+    expect([held.letGo, s && "kind" in s ? s.kind : s]).toEqual([false, "dir"]);
+    held.release();
+    await look.settled();
+    expect(held.gaveUp).toBe(0);
+  });
+
+  test("Obsidian at work, rewriting what's in .obsidian/: its settings aren't read again, nor the convention said again", async () => {
+    holding();
+    const root = folder("look-busy-tool");
+    mkdirSync(join(root, ".obsidian"));
+    writeFileSync(join(root, ".obsidian", "app.json"), '{"newLinkFormat": "relative"}\n');
+    writeFileSync(join(root, "a.md"), "# A\n");
+    const h = await harness({ root, open: "a.md" });
+    const look = offThread(h);
+    await looked(look);
+    const asked = spyOn(diskThreads(), "look");
+    // Obsidian saves its workspace: the folder changes, its settings file doesn't.
+    writeFileSync(join(root, ".obsidian", "workspace.json"), "{}\n");
+    const at = statSync(join(root, ".obsidian")).mtimeMs / 1000 + 10;
+    utimesSync(join(root, ".obsidian"), at, at);
+    await looked(look);
+    expect(asked.mock.calls.map(([b]) => (b.jobs ?? []).map((j) => j.op))).toEqual([["git"]]);
+  });
+
+  test("the activity file not yet found, the first look held: someone may be working, and the background index waits", async () => {
+    const held = holding();
+    stateHeld();
+    const now = Date.now() + 60_000;
+    mkdirSync(dirname(activityFile()), { recursive: true });
+    // An agent's command a minute before `now`: once the look finds it, nobody is working.
+    writeFileSync(activityFile(), "");
+    const h = await harness({ now: () => now, config: (c) => (c.index.idle_seconds = 1) });
+    const look = offThread(h);
+    holdNow(held);
+    h.app.lastInputAt = 0;
+    look.request();
+    await untilHeld(held);
+    expect(h.app.watch.nobodyWorking(now)).toBe(false);
+    held.release();
+    await look.settled();
+    expect(h.app.watch.nobodyWorking(now)).toBe(true);
+    expect(held.gaveUp).toBe(0);
+  });
+
+  test("the look given up on: the activity file's stamp no longer known, and the background index waits", async () => {
+    holding();
+    stateHeld();
+    let now = Date.now() + 60_000;
+    mkdirSync(dirname(activityFile()), { recursive: true });
+    writeFileSync(activityFile(), "");
+    const h = await harness({ now: () => now, config: (c) => (c.index.idle_seconds = 1) });
+    const look = offThread(h);
+    await looked(look);
+    h.app.lastInputAt = 0;
+    expect(h.app.watch.nobodyWorking(now)).toBe(true);
+    spyOn(diskThreads(), "look").mockRejectedValueOnce(
+      new WorkerRequestError("worker request deadline exceeded", "deadline"),
+    );
+    look.tick();
+    await look.settled();
+    expect(said(h, "disk not answering")).toHaveLength(1);
+    expect(h.app.watch.nobodyWorking(now)).toBe(false);
+    // A minute on, a look answered: known again.
+    now += LOOK_AGAIN_MS;
+    look.tick();
+    await look.settled();
+    expect(h.app.watch.nobodyWorking(now)).toBe(true);
   });
 });

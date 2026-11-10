@@ -110,20 +110,27 @@ go of.
   only by an answer to a look asked after the pause. Its requests are the disk threads' background ones, one at a
   time, so a key's read finds the other thread (SD-D2's note of 2026-11-10). A test's watcher answers each at once, on
   the thread that asks, with the same code.
-- **The TUI's look each second** (SD-T4; § External changes). One batch a second, never two out: a `stat` of the open
-  files no watcher sees, of your config's and the vault's `.slipbox/config.toml`, of the CLI's activity file (which the
-  background index statted every quarter second) and of Obsidian's or zk's settings; git's state where the vault is,
-  read whole there as the screen's thread read it — the checkout, `HEAD` and its commit, its `index.lock`, its rebase
-  folders and what an operation under way leaves there; and each open file of the vault's way checked there for a link
-  not followed, the file statted only when there's none. Your config and the vault's are read and parsed there when
-  their stamps moved, and Obsidian's or zk's settings with them, a second batch. What comes back is taken against
-  what's there then (SD-D5): nothing for a vault left, a file's stamp only for a buffer still open and as it was, a
-  way only while the answers to links are as they were. A batch the watcher brings asks git's state there before it's
-  applied (D153); while git holds its lock, the lock alone is asked every 100 ms, one stat out at a time. What the top
-  bar and the git panel draw of git — the branch, the operation under way — and the tool's settings the links'
-  convention says are what this look last found (SD-D13), never read as they're drawn; a key that acts on the
-  operation reads it at once. Given up on, a minute on, it's said once in Messages and asked again a minute later
-  (SD-D6). A test's App looks on the screen's thread, at once, as before.
+- **The TUI's look each second** (SD-T4; § External changes). One batch a second, never two out, asked as one request,
+  so a look holds one disk thread: git's state where the vault is, read whole there as the screen's thread read it —
+  the checkout, `HEAD` and its commit, its `index.lock`, its rebase folders and what an operation under way leaves
+  there; each open file of the vault's way checked there for a link not followed, the file statted only when there's
+  none; then a `stat` of the open files no watcher sees, of your config's and the vault's `.slipbox/config.toml`, of
+  the CLI's activity file (which the background index statted every quarter second) and of Obsidian's or zk's settings
+  — their folder by whether it's there (Obsidian rewrites what's in `.obsidian/` while it runs), their settings file by
+  its mtime. Your config and the vault's are read and parsed there when their stamps moved, and Obsidian's or zk's
+  settings with them, a second batch. What comes back is taken against what's there then (SD-D5): nothing for a vault
+  left, a file's stamp only for a buffer still open and as it was, a way only while the answers to links are as they
+  were, git's state only when no question of it asked later has been answered first — so `HEAD` never moves back, and
+  an operation a key read at once isn't drawn over. A batch the watcher brings asks git's state there before it's
+  applied (D153), one question out at a time; while git holds its lock, the lock alone is asked every 100 ms, one stat
+  out at a time. What the top bar and the git panel draw of git — the branch, the operation under way — and the tool's
+  settings the links' convention says are what this look last found (SD-D13), never read as they're drawn; a key that
+  acts on the operation reads it at once. A key that ran git (a checkout, a pull, a merge, a rebase's step) asks a
+  look and goes on once it has answered and a switch is done, as on the screen's thread. Given up on, a minute on, it's
+  said once in Messages, and nothing is asked for a minute (SD-D6): no look, nor the feed's question (its batches
+  applied as git was last seen); a look wanted meanwhile is asked once the minute is over. Before a look has answered,
+  and while it's given up on, the activity file's stamp isn't known, and the background index waits (20.9). A test's
+  App looks on the screen's thread, at once, as before.
 - **A note's text** (SD-T6). A changed note's (the watcher's batch, an open note reloaded) and the background parse's
   are read on a disk thread and parsed here as before (`extractText` from the text given); the background parse reads
   the next slice's notes while one is parsed. What a hover or completion asks of a note not parsed yet is shown
