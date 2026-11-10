@@ -80,6 +80,27 @@ describe("a note opened reads on a disk thread (SD-T5)", () => {
     expect(held.gaveUp).toBe(0);
   });
 
+  test("held: a note a key opens, its read done after the key — the session told once it's in, no key after it", async () => {
+    const h = await vaultWith({ "held/a.md": "one\ntwo\n" });
+    // The note current each time the session is told what's open.
+    const told: string[] = [];
+    const publish = h.app.session.publishState.bind(h.app.session);
+    h.app.session.publishState = () => {
+      told.push(h.app.view?.buf.key ?? "");
+      publish();
+    };
+    const held = holding();
+    await switcher(h, "held/a");
+    const enter = press(h, "enter");
+    await untilHeld(held);
+    held.release();
+    await enter;
+    await h.app.reads.settled();
+    expect(h.app.view!.buf.key).toBe("held/a.md");
+    expect(told).toContain("held/a.md");
+    expect(held.gaveUp).toBe(0);
+  });
+
   test("held: esc while it reads leaves the window on the note before, the keys typed meanwhile dropped; the answer opens nothing", async () => {
     const h = await vaultWith({ "held/a.md": "one\ntwo\n" });
     const held = holding();
