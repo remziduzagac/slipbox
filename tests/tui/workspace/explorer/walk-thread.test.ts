@@ -28,8 +28,8 @@ import { probe, setLinkAnswer } from "../../../../src/core/workspace/vaults/syml
 import { homeAt, setRootMarkers } from "../../../../src/core/workspace/vaults/vault.ts";
 import { SlicedWalk, setFolderReader } from "../../../../src/core/workspace/walk/walk.ts";
 import {
-  ListThreads,
-  listThreads,
+  DiskThreads,
+  diskThreads,
   setWalkWorker,
   WalkThread,
 } from "../../../../src/core/workspace/walk/walk-thread.ts";
@@ -1242,7 +1242,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     const slow = join(top, "slow");
     ex.expanded.add(slow);
     await listed(h);
-    const asked = spyOn(listThreads(), "list");
+    const asked = spyOn(diskThreads(), "list");
     chmodSync(quick, 0o000);
     try {
       ex.listings.again(top);
@@ -1291,7 +1291,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
   test("a listing thread held up on a folder that doesn't answer: the folders listed next go to the other, never behind it", async () => {
     setWalkWorker(slowWorker);
     const top = tree({ "stuck/s.md": "# S\n", "one/a.md": "# A\n", "two/b.md": "# B\n" });
-    const threads = listThreads();
+    const threads = diskThreads();
     await Promise.all([0, 1].map(() => threads.list(top, DEFAULT_CONFIG.walk, false)));
     // Asked at once after it: none of them sent behind it, whichever thread it's on.
     const at = performance.now();
@@ -1303,7 +1303,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
 
   test("the listing threads stopped: a listing asked just before is refused, no thread started again for it", async () => {
     let started = 0;
-    const threads = new ListThreads(() => {
+    const threads = new DiskThreads(() => {
       started++;
       return slowWorker();
     });
@@ -1357,7 +1357,7 @@ describe("the explorer's listings off the main thread (T12, #9)", () => {
     // A deadline short of the stuck folder's answer, past a started thread's: both threads started first.
     setWalkWorker(slowWorker, { step: 1500, whole: 1500 });
     const { top, h } = await besideSlow({ "stuck/s.md": "# S\n" });
-    await Promise.all([0, 1].map(() => listThreads().list(top, DEFAULT_CONFIG.walk, false)));
+    await Promise.all([0, 1].map(() => diskThreads().list(top, DEFAULT_CONFIG.walk, false)));
     const ex = h.app.explorer;
     ex.expanded.add(join(top, "stuck"));
     ex.invalidateTree();

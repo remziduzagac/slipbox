@@ -8,7 +8,7 @@ import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.t
 import { untildePath } from "../../../../src/core/foundation/platform/paths.ts";
 import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
 import { initVault, locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
-import { listThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
+import { diskThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import type { ListOverlay } from "../../../../src/tui/app/runtime/app.ts";
 import { isPath, pathPick, typedPath } from "../../../../src/tui/shell/overlays/open-path.ts";
 import { Listings } from "../../../../src/tui/workspace/explorer/listings.ts";
@@ -61,7 +61,7 @@ async function besideStuck(deadline?: number): Promise<string> {
     mkdirSync(dirname(join(top, rel)), { recursive: true });
     writeFileSync(join(top, rel), "# X\n");
   }
-  await Promise.all([0, 1].map(() => listThreads().list(top, DEFAULT_CONFIG.walk, false)));
+  await Promise.all([0, 1].map(() => diskThreads().list(top, DEFAULT_CONFIG.walk, false)));
   return top;
 }
 

@@ -1,12 +1,12 @@
 // The explorer's listings (T12, VV-D5): the folders it lists a level at a time — above the vault open, beside it,
-// other vaults, what its walk leaves out unfolded, Elsewhere — read on the listing threads (walk-thread.ts), kept, and
+// other vaults, what its walk leaves out unfolded, Elsewhere — read on the disk threads (walk-thread.ts), kept, and
 // read again in the background as the tree is built again, never on the main thread, where a folder on a disk that
 // answers slowly would freeze the keys and the screen. A folder not listed yet says so once its read has taken a moment
 // (`PENDING_MS`); an answer that changed nothing draws nothing, one for a folder let go of meanwhile is dropped, and
 // rows that come keep the selection on the row it was on.
 
 import { listFolder, type FolderListing } from "../../../core/workspace/walk/listing.ts";
-import { listThreads } from "../../../core/workspace/walk/walk-thread.ts";
+import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import { WorkerRequestError } from "../../../core/foundation/workers/worker-requests.ts";
 import type { App } from "../../app/runtime/app.ts";
 
@@ -46,7 +46,7 @@ export class Listings {
   private serial = 0;
   private tree = 0;
 
-  /** `offThread`: read on the listing threads (the TUI's); else here, at once, as the tree is built (a test's App). */
+  /** `offThread`: read on the disk threads (the TUI's); else here, at once, as the tree is built (a test's App). */
   constructor(
     private readonly app: App,
     readonly offThread = false,
@@ -136,7 +136,7 @@ export class Listings {
     const n = ++this.serial;
     k.reading = n;
     const empty = { dir, entries: [], notes: false, scope: null };
-    listThreads()
+    diskThreads()
       .list(dir, this.app.config.walk, this.app.ui.hidden_files)
       .then(
         (listing) => this.answered(dir, n, settings, listing),

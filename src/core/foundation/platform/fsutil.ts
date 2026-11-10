@@ -2,7 +2,6 @@
 // in the same directory, so a crash or a full disk never truncates a note.
 
 import {
-  accessSync,
   chmodSync,
   closeSync,
   constants,
@@ -262,6 +261,13 @@ export function readText(path: string): DecodedFile {
   return decodeText(disk.readRegular(path));
 }
 
+/** `readText`'s text and the stamp of the file it read, from the one open (`readRegularStat`): a save renamed over the
+ *  path meanwhile never pairs the old text with the new stamp, which would hide that save from `changedOnDisk`. */
+export function readTextStamped(path: string): DecodedFile & { stamp: Stamp } {
+  const { bytes, stat } = disk.readRegularStat(path);
+  return { ...decodeText(bytes), stamp: { mtimeMs: stat.mtimeMs, size: stat.size } };
+}
+
 /** The small files a vault controls (config, .gitignore, version): 1 MB is far more than any needs. */
 export const SMALL_FILE = 1 << 20;
 
@@ -332,12 +338,12 @@ export function carryPaths(file: string, from: string, to: string): void {
   if (changed) writeJson(file, next);
 }
 
-/** Why a folder can't be read, in a few words (VV-D5); null when it can. */
+/** Why a folder can't be read, in a few words (VV-D5), through the seam (disk.ts); null when it can. */
 export function folderUnreadable(dir: string): string | null {
   try {
-    if (!statSync(dir).isDirectory()) return "it isn't a folder";
+    if (!disk.stat(dir).isDirectory()) return "it isn't a folder";
     // Listed (read) and gone into (searched): both, as the account running slipbox may.
-    accessSync(dir, constants.R_OK | constants.X_OK);
+    disk.access(dir, constants.R_OK | constants.X_OK);
     return null;
   } catch (err) {
     return unreadableWords((err as NodeJS.ErrnoException).code ?? (err as Error).message);

@@ -153,8 +153,7 @@ export const SEAM_READERS = [
  */
 export const DISK_READERS: Record<string, string> = {
   "src/core/application/distribution/install.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
-  "src/core/foundation/platform/fsutil.ts":
-    "`folderUnreadable`, asked as `access` (SD-T7); `readJson`'s callers (SD-T8, SD-T9); a write's own reads (SD-D7)",
+  "src/core/foundation/platform/fsutil.ts": "`readJson`'s callers (SD-T8, SD-T9); a write's own reads (SD-D7)",
   "src/core/workspace/git/branches/gitrebase.ts": "the operation under way, kept from the TUI's look (SD-T4, SD-D13)",
   "src/core/workspace/graph/graph-lookup.ts": "a link into a nested vault, as it's drawn (SD-T11)",
   "src/core/workspace/graph/graph-resolve.ts": "a `/…` link's first folder, as it's drawn (SD-T11)",

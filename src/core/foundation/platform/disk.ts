@@ -1,5 +1,5 @@
 // The one seam the reads of the disk go through (SD-D10): a folder's listing, a path's stat and lstat (its real path
-// too, and whether anything is there), a file's bytes. Each is node:fs's own call, made on whichever thread asks — the
+// too, whether anything is there, and whether you may use it), a file's bytes. Each is node:fs's own call, made on whichever thread asks — the
 // screen's, the walk's, a listing's — and the CLI's, which calls these directly. What it adds is for the tests alone: a
 // terminal test's slow disk (`SLIPBOX_SLOW_DISK`, `slowDisk`) and a unit test's hold (tests/fixtures/walk/slow.ts).
 //
@@ -11,6 +11,7 @@
 // moves each off it.
 
 import {
+  accessSync,
   closeSync,
   constants,
   type Dirent,
@@ -145,6 +146,12 @@ export function exists(path: string): boolean {
   return existsSync(path);
 }
 
+/** Whether this account may use `path` as `mode` asks (`constants.R_OK`, …): `accessSync`'s, thrown as it throws. */
+export function access(path: string, mode: number): void {
+  readWait(path);
+  accessSync(path, mode);
+}
+
 /** `path`'s real path, every link on its way followed: `realpathSync`'s. */
 export function realpath(path: string): string {
   readWait(path);
@@ -163,13 +170,19 @@ export function readFile(path: string): Buffer {
  * Opened without blocking, so a FIFO is refused rather than waited on.
  */
 export function readRegular(path: string, max = Number.POSITIVE_INFINITY): Buffer {
+  return readRegularStat(path, max).bytes;
+}
+
+/** `readRegular`'s bytes and the stat it checked them by, both of the one file it opened: a file renamed over the path
+ *  meanwhile (a save written aside) is neither's. */
+export function readRegularStat(path: string, max = Number.POSITIVE_INFINITY): { bytes: Buffer; stat: Stats } {
   readWait(path);
   const fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
   try {
-    const st = fstatSync(fd);
-    if (!st.isFile()) throw Object.assign(new Error(`${path}: not a regular file`), { code: "ENOTREG" });
-    if (st.size > max) throw Object.assign(new Error(`${path}: larger than ${max} bytes`), { code: "EFBIG" });
-    return readFileSync(fd);
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw Object.assign(new Error(`${path}: not a regular file`), { code: "ENOTREG" });
+    if (stat.size > max) throw Object.assign(new Error(`${path}: larger than ${max} bytes`), { code: "EFBIG" });
+    return { bytes: readFileSync(fd), stat };
   } finally {
     closeSync(fd);
   }

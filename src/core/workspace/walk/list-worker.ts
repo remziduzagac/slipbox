@@ -1,20 +1,17 @@
-// The explorer's listing threads (T12; `ListThreads` in walk-thread.ts asks them): a folder listed off the main thread
-// (`listFolder`), with what the asking thread knows taken first. Apart from the walk's worker, and light — no index, no
-// parser — so one starts at once, and a fast folder's first listing comes before its row would say `listing…`.
+// The disk threads (SD-D2; `DiskThreads` in walk-thread.ts asks them), the explorer's listing threads (T12) grown: a
+// folder listed, a batch of paths statted, a file's text read, a folder's access, the vault open walked, off the main
+// thread (disk-jobs.ts), with what the asking thread knows taken first. Apart from the walk's worker, and light — no
+// index, no parser — so one starts at once, and a fast folder's first listing comes before its row would say
+// `listing…`.
 
-import type { Config } from "../../application/config/config.ts";
-import { listFolder } from "./listing.ts";
-import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
+import { answerDisk, type DiskRequest } from "./disk-jobs.ts";
 
 declare const self: Worker;
 
-type ListRequest = { id: number; dir: string; walk: Config["walk"]; hidden: boolean; context: WalkContext };
-
-self.onmessage = (e: MessageEvent<ListRequest>) => {
-  const { id, dir, walk, hidden, context } = e.data;
+self.onmessage = (e: MessageEvent<DiskRequest & { id: number }>) => {
+  const { id } = e.data;
   try {
-    enterContext(context);
-    self.postMessage({ id, listing: listFolder(dir, walk, hidden) });
+    self.postMessage({ id, ...answerDisk(e.data) });
   } catch (err) {
     self.postMessage({ id, error: (err as Error).message ?? String(err) });
   }

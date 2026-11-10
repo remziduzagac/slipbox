@@ -15,13 +15,14 @@ two seconds while the watcher looks. This workstream moves those reads off it.
 option recommended (§ Questions answered), and agreed its other decisions as proposed; the questions its tasks had
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
-decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, is done (2026-11-10); the other tasks are `todo`.
+decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, and SD-T2, the disk threads, are done (2026-11-10);
+the other tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 `done`, the rest `todo`.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 and SD-T2 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -311,7 +312,8 @@ merges (SD-D14), its design text.
 
 - [SD-T1](tasks/archive/seam.md): every read the workstream moves through one seam the stand-in and the hold reach.
   `done`
-- [SD-T2](tasks/disk-threads.md): the listing threads become the disk threads: stat, read, access, walk. `todo`
+- [SD-T2](tasks/archive/disk-threads.md): the listing threads become the disk threads: stat, read, access, walk.
+  `done`
 - [SD-T3](tasks/watcher-look.md): the watcher's look every two seconds, and its settle, on the disk threads. `todo`
 - [SD-T4](tasks/tui-look.md): the TUI's look every second, what's drawn of git, and the activity file. `todo`
 - [SD-T5](tasks/opening-a-note.md): a note opened reads on a disk thread; the key waits, `esc` gives it up. `todo`
