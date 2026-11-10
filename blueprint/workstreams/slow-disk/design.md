@@ -88,7 +88,8 @@ go of.
 - **The watcher's look** (SD-D8, SD-T3; § Bun's watcher, and what covers its gaps). The watcher keeps its state and
   logic here, and its `fs.watch` registrations, whose events come here. Each tick asks its stats a hundred a request
   (`SLICE`), each taken as it answers — the watched folders' stamps, each with its `.gitignore`'s, and the notes
-  followed into folders left to home's walk — the first with a `list` request of each polled folder; and every
+  followed into folders left to home's walk — and last, in a request of their own, a `list` of each polled folder, so
+  one that doesn't answer (a network mount, most often) costs only its listing, asked again at the next tick; and every
   15th tick the sweep's stats of the known notes, a hundred a request, each asked when the last answers; a sweep still
   under way at the next 15th tick goes on, and none other starts. A tick whose answer hasn't come asks nothing new. A
   folder whose mtime moved is listed again there; the settle by stat (`flush`) asks its stats there too, a hundred a

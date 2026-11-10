@@ -270,11 +270,11 @@ The rules, each an agreed decision:
 By area:
 
 - **§ 1, the watcher's look** (SD-T3): each tick on a disk thread, a hundred stats a request, each taken as it answers
-  — the folders' stamps, the `.gitignore`s', the followed notes', the polled folders' listings — and the sweep in
-  slices, carried on from where it was when the next is due. The relisting and the settle by stat asked there too,
-  each entry's verdict and a move's search with them; the batch delivered when they answer. Shown: nothing (the
-  last look stands). Not answering: `⚠ disk not answering` on the status line, said once in Messages,
-  looked at again a minute later. The registration's stamps are asked there and compared with the walk's
+  — the folders' stamps, the `.gitignore`s', the followed notes'; the polled folders' listings in a request of their
+  own — and the sweep in slices, carried on from where it was when the next is due. The relisting and the settle by
+  stat asked there too, each entry's verdict and a move's search with them; the batch delivered when they answer.
+  Shown: nothing (the last look stands). Not answering: `⚠ disk not answering` on the status line, said once in
+  Messages, looked at again a minute later. The registration's stamps are asked there and compared with the walk's
   (`Graph.dirStamps`, made on the thread) when they come; the registration itself stays.
 - **§ 2, the TUI's look** (SD-T4): the open files' stamps and their ways' links, the config's and git's `HEAD` and
   operation asked of a disk thread in one request a second, the config and the tool's settings read again there when

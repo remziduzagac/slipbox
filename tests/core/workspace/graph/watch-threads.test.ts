@@ -478,6 +478,39 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
     }
   });
 
+  test("a polled folder that doesn't answer costs only its listing: the tick's stats answered and settled, the folder listed again at the next tick", async () => {
+    const held = holding();
+    const root = tree({ "n.md": "# N\n", "gone/n.md": "# N\n", "held/n.md": "# N\n" });
+    let clock = Date.now();
+    const { w, state, said } = await watching(root, ["", "gone"], ["n.md", "gone/n.md", "held/n.md"], {
+      now: () => clock,
+    });
+    try {
+      unwatched(state);
+      state.polled.add("held");
+      rmSync(join(root, "gone"), { recursive: true });
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      // The stats asked on their own and settled: `gone` said while the listing waits in `held`.
+      expect(asked.mock.calls[0]![0].list ?? []).toEqual([]);
+      expect(said).toEqual(["deleted gone/n.md"]);
+      crash((s) => s.dir === join(root, "held"));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      // A minute later, the next tick lists it again: a note made there meanwhile found.
+      held.release();
+      writeFileSync(join(root, "held/m.md"), "# M\n");
+      clock += 60_001;
+      w.pollTick();
+      await quiet(w);
+      expect(said).toEqual(["deleted gone/n.md", "created held/m.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
   test("a tree moved in is taken in a folder at a time: those listed before one held are watched meanwhile; given up on there, what's left pending again", async () => {
     const held = holding();
     const root = tree({ "a.md": "# A\n" });

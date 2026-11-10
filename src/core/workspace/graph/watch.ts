@@ -30,7 +30,7 @@ import { WatchState } from "./watch/state.ts";
 import { WatchDirectories } from "./watch/directories.ts";
 import { WatchReconciliation } from "./watch/reconciliation.ts";
 import { every, noteStamp, watchTakes } from "./watch/io.ts";
-import type { JudgedFolder, JudgedListing } from "./watch/judging.ts";
+import type { JudgedFolder } from "./watch/judging.ts";
 import {
   drive,
   type Look,
@@ -310,9 +310,9 @@ export class VaultWatcher {
   }
 
   /**
-   * A tick's look: each watched folder and its `.gitignore`, each note followed, statted a slice at a time — the first
-   * slice with each polled folder listed, its notes statted — each slice compared, as it answers, with what's known then.
-   * One given up on keeps what answered before; the next tick starts after it, and goes round to it.
+   * A tick's look: each watched folder and its `.gitignore`, each note followed, statted a slice at a time, each slice
+   * compared, as it answers, with what's known then; one given up on keeps what answered before, and the next tick
+   * starts after it and goes round to it. Then, in a request of their own, each polled folder listed, its notes statted.
    */
   private *ticking(): Look {
     const { known, root } = this.opts;
@@ -331,15 +331,6 @@ export class VaultWatcher {
       if (!known.has(rel) || state.watchers.has(parentOf(rel))) state.followed.delete(rel);
     const moved: [string, number][] = [];
     const groups = tickGroups(this.opts, state, this.directories, fresh, moved);
-    const polled = [...state.polled];
-    const list = polled.map((d) => ({
-      dir: join(root, d),
-      judge: this.directories.judged({
-        entries: { skip: this.directories.childNames(d), notesOnly: true, stat: true, links: false },
-      }),
-    }));
-    const seen = (listings: JudgedListing[]) =>
-      polled.forEach((dirRel, k) => this.directories.polledSeen(dirRel, listings[k] as JudgedFolder, tick));
     const statAt = Date.now();
     const from = this.tickFrom;
     let next = from;
@@ -348,7 +339,7 @@ export class VaultWatcher {
       const asking = (k: number) => {
         next = k;
       };
-      yield* statsInSlices(groups, { from, listed: { list, seen }, between: () => this.flushBetween(), asking });
+      yield* statsInSlices(groups, { from, between: () => this.flushBetween(), asking });
       done = true;
     } finally {
       if (!done) {
@@ -363,9 +354,32 @@ export class VaultWatcher {
       else this.startSweep();
     }
     if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) state.pending.add(rel);
-    if (state.pending.size || state.rescan || state.toWalk.size || (state.leftSeen.size && state.recentlyWent.length))
-      yield* this.flushing();
+    if (this.flushDue()) yield* this.flushing();
     if (moved.length) yield* this.lookingAgain(moved, statAt);
+    // Last, and asked on their own: a polled folder that doesn't answer (a network mount, most often) costs only its
+    // listing, the stats before it taken; it's listed again at the next tick.
+    const polled = [...state.polled];
+    if (!polled.length) return;
+    const list = polled.map((d) => ({
+      dir: join(root, d),
+      judge: this.directories.judged({
+        entries: { skip: this.directories.childNames(d), notesOnly: true, stat: true, links: false },
+      }),
+    }));
+    const { listings } = yield { list };
+    polled.forEach((dirRel, k) => this.directories.polledSeen(dirRel, listings[k] as JudgedFolder, tick));
+    if (this.flushDue()) yield* this.flushing();
+  }
+
+  /** Whether a flush has something to settle or say. */
+  private flushDue(): boolean {
+    const { state } = this;
+    return !!(
+      state.pending.size ||
+      state.rescan ||
+      state.toWalk.size ||
+      (state.leftSeen.size && state.recentlyWent.length)
+    );
   }
 
   /** The sweep on the disk threads, unless one is under way or the looks are paused: its slices asked one after
