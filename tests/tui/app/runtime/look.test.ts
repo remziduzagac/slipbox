@@ -3,7 +3,8 @@
 // root's tool's settings — asked of a disk thread while keys are handled and frames drawn, taken when they answer against
 // what's there then. What waits is told by the hold (`Hold`), never by a clock (#75): a `held` folder holds the disk
 // threads' reads under it, and this thread's too, so a read of it left here holds the test's key until it gives up
-// (`gaveUp`).
+// (`gaveUp`), named with what asked for it (`gaveUpHere`). A test of the disk threads alone holds them alone: a read
+// here, whoever's, isn't what it's about.
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import {
   mkdirSync,
@@ -71,6 +72,11 @@ function holding(deadline?: number): Hold {
 function holdNow(h: Hold): void {
   h.again();
   setReadWait(heldReads);
+}
+
+/** No read given up on, on any thread: none left on this one, where it would have held the keys. */
+function noneGaveUp(h: Hold): void {
+  expect({ gaveUp: h.gaveUp, here: h.gaveUpHere }).toEqual({ gaveUp: 0, here: [] });
 }
 
 /** Awaited till a disk thread waits in a `held` folder; thrown by HELD_MS, the look never reaching it. A test holds
@@ -197,7 +203,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     held.release();
     await look.settled();
     expect(buf.source).toBe("# Scratch\n\nAn agent's line.\n");
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("git's folder held: a key handled and drawn, the top bar the branch kept, while HEAD is asked; let go, a branch switched meanwhile seen and drawn, then a rebase started meanwhile", async () => {
@@ -232,7 +238,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     held.release();
     await look.settled();
     expect(whereNow(h)).toContain("feat rebasing 1/2");
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("an open file whose way goes through a held folder: a key handled meanwhile; let go, a link not followed on its way still refused", async () => {
@@ -267,7 +273,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     await look.settled();
     // Nothing read through it.
     expect(far.source).toBe("# Far\n");
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("your config's folder held: a key handled; let go, a setting changed meanwhile is applied", async () => {
@@ -288,7 +294,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     await look.settled();
     expect(h.app.ui.line_numbers).toBe(true);
     expect(h.app.messages.some((m) => m.text.includes("config reloaded"))).toBe(true);
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("the CLI's activity file, as the look last found it, holds the background index back: never statted as it's asked", async () => {
@@ -314,7 +320,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     rewrite(activityFile(), "", (now - at) / 1000);
     await looked(look);
     expect(h.app.watch.nobodyWorking(now)).toBe(false);
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("Obsidian's settings as the look read them: the links' convention says them, never reading them as it's said; read again once they change", async () => {
@@ -362,7 +368,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     rmSync(join(r.gitDir, "index.lock"));
     while (!h.app.graph.notes.has("new.md") && performance.now() < end) await Bun.sleep(5);
     expect(h.app.graph.notes.has("new.md")).toBe(true);
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 });
 
@@ -390,7 +396,7 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
     expect(h.app.messages.map((m) => m.text).filter((t) => t.startsWith("switched to"))).toEqual([]);
     // The vault left's checkout isn't taken for the one open.
     expect(h.app.git.checkout).toBeNull();
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("an answer for a buffer closed meanwhile is dropped", async () => {
@@ -406,7 +412,7 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
     held.release();
     await look.settled();
     expect(buf.source).toBe("# Scratch\n");
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 });
 
@@ -557,7 +563,7 @@ describe("git's state taken in the order it was asked, whatever order the answer
     held.release();
     await look.settled();
     expect(whereNow(h)).not.toContain("rebasing");
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 });
 
@@ -585,7 +591,7 @@ describe("a slow disk under a key that runs git", () => {
     held.release();
     await until(() => order.length > 0, "git's files looked at again");
     expect(order).toEqual(["after the switch"]);
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 });
 
@@ -598,7 +604,9 @@ describe("what a look holds and stamps", () => {
     const look = offThread(h);
     openScratch(h);
     await looked(look);
-    holdNow(held);
+    // The disk threads alone held: what this test asks is of them, and a read of a `held` folder here — another
+    // feature's — would hold its key too.
+    held.again();
     look.request();
     await untilHeld(held);
     const free = folder("look-free");
@@ -606,7 +614,7 @@ describe("what a look holds and stamps", () => {
     expect([held.letGo, s && "kind" in s ? s.kind : s]).toEqual([false, "dir"]);
     held.release();
     await look.settled();
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("in the background, as the watcher's look: while one of its requests is out, the look and the feed's question wait their turn, and a key's read takes the other thread", async () => {
@@ -632,7 +640,7 @@ describe("what a look holds and stamps", () => {
     await watcher;
     await wanted;
     await until(() => diskThreads().waiting === 0, "the feed's question asked");
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("Obsidian at work, rewriting what's in .obsidian/: its settings aren't read again, nor the convention said again", async () => {
@@ -670,7 +678,7 @@ describe("what a look holds and stamps", () => {
     held.release();
     await look.settled();
     expect(h.app.watch.nobodyWorking(now)).toBe(true);
-    expect(held.gaveUp).toBe(0);
+    noneGaveUp(held);
   });
 
   test("the look given up on: the activity file's stamp no longer known, and the background index waits", async () => {

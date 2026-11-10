@@ -117,6 +117,10 @@ the maintainer's standing instruction; design.md's sections it delivers say how.
   more, and keep clear of them: the explorer's marks of a link's row (`Following.describe` → `linkKey`, SD-T7), and
   the switcher's preview (`preview.ts` → `rootAt`, SD-T5). `linkKey`'s and `linkTarget`'s real paths go through the
   seam now, so a hold sees them.
+- A hold on the test's own thread (`holdNow`) holds every read of a `held` path made there, whoever's. On macOS's
+  runner one such read, not made on Linux, held the thread test's thread three times ten seconds, past its timeout.
+  So a test of the disk threads alone holds them alone (`held.again()`), and the hold names each read given up on the
+  test's thread with what asked for it (`Hold.gaveUpHere`), which the tests check is empty.
 - `CHECKS_FOR`: `look.ts` and `look-jobs.ts` name the slow disk's checks and the look's (`LOOK_CHECKS`: watching,
   configuration, git, source control, symlinks, links); `walk-thread.ts` and `disk-jobs.ts` add the look's;
   `operation.ts` joins git's. The other files this task changes (`watch.ts`, `settings.ts`, `app.ts`, `vault-feed.ts`,
