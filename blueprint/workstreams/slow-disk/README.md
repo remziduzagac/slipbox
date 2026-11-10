@@ -253,9 +253,9 @@ The rules, each an agreed decision:
 - **Writes stay (SD-D7).** A note's save, a file operation (with the checks its guards make before writing), the
   scratch and an export are written on the screen's thread, as now.
 - **The watcher stays, its reads go (SD-D8).** The watcher's state and logic stay on the screen's thread; each look
-  asks one batch of the disk threads — a `stat` request of every path it stats and a `list` request of each folder it
-  lists, asked together — and compares the answer with what's known when it comes; a look whose answer hasn't come
-  asks nothing new. Each entry's verdict (the filter's, a link's) is made with its listing, on the listing's thread.
+  asks its reads of the disk threads — its stats a hundred a request, a `list` request of each folder it lists — and
+  compares each answer with what's known when it comes; a look whose answer hasn't come asks nothing new. Each
+  entry's verdict (the filter's, a link's) is made with its listing, on the listing's thread.
 - **The screen first (SD-D9).** The start takes the screen, then reads the vault: its note waits for its graph
   (`reading the vault…`), as a big note waits for its parse; `q` quits meanwhile.
 - **The tests' seam (SD-D10).** Every read moved goes through one module, which the stand-in (`SLIPBOX_SLOW_DISK`) and
@@ -269,11 +269,11 @@ The rules, each an agreed decision:
 
 By area:
 
-- **§ 1, the watcher's look** (SD-T3): one batch per tick on a disk thread — the folders' stamps, the `.gitignore`s',
-  the followed notes', the polled folders' listings — and the sweep in slices, carried on from where it was when the
-  next is due. The relisting and the settle by stat asked there too, each entry's verdict and a move's search with
-  them; the batch delivered when they answer. Shown:
-  nothing (the last look stands). Not answering: `⚠ disk not answering` on the status line, said once in Messages,
+- **§ 1, the watcher's look** (SD-T3): each tick on a disk thread, a hundred stats a request, each taken as it answers
+  — the folders' stamps, the `.gitignore`s', the followed notes', the polled folders' listings — and the sweep in
+  slices, carried on from where it was when the next is due. The relisting and the settle by stat asked there too,
+  each entry's verdict and a move's search with them; the batch delivered when they answer. Shown: nothing (the
+  last look stands). Not answering: `⚠ disk not answering` on the status line, said once in Messages,
   looked at again a minute later. The registration's stamps are asked there and compared with the walk's
   (`Graph.dirStamps`, made on the thread) when they come; the registration itself stays.
 - **§ 2, the TUI's look** (SD-T4): the open files' stamps and their ways' links, the config's and git's `HEAD` and
@@ -344,7 +344,7 @@ By the maintainer, as proposed:
 - **SD-D1**, the parts and their order: the inventory above, moved in the tasks' order; what stays named; what
   drawing a note reads last (question 6).
 - **SD-D5**, every answer checked against what it was asked under; changes meanwhile applied again.
-- **SD-D8**, the watcher's state and logic stay; its reads go, one batch per look.
+- **SD-D8**, the watcher's state and logic stay; its reads go, a look's stats a hundred a request.
 - **SD-D10**, one seam for the tests; a test's App reads here unless asked.
 
 By the maintainer's instruction to take the recommended answer, for the questions the tasks had left open:

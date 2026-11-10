@@ -23,13 +23,13 @@
 
 import * as disk from "../../foundation/platform/disk.ts";
 import { join } from "node:path";
-import { parentOf, settled } from "../walk/io/stamps.ts";
+import { type PathStat, parentOf, settled } from "../walk/io/stamps.ts";
 import type { WatcherOptions, Settling } from "./watch/contracts.ts";
 import { WatchState } from "./watch/state.ts";
 import { WatchDirectories } from "./watch/directories.ts";
 import { WatchReconciliation } from "./watch/reconciliation.ts";
 import { every, noteStamp, watchTakes } from "./watch/io.ts";
-import type { JudgedFolder } from "./watch/judging.ts";
+import type { JudgedFolder, JudgedListing } from "./watch/judging.ts";
 import {
   drive,
   type Look,
@@ -37,9 +37,10 @@ import {
   readsHere,
   readsOnThreads,
   SLICE,
-  type WatchAnswer,
+  statsInSlices,
   type WatchReads,
 } from "./watch/reads.ts";
+import { tickGroups } from "./watch/ticks.ts";
 
 /** How long the looks wait after one is given up on (SD-D6): the disk's minute. */
 const PAUSE_MS = 60_000;
@@ -271,21 +272,24 @@ export class VaultWatcher {
     for (const [d, at] of taken) if (!this.state.unstamped.has(d)) this.state.unstamped.set(d, at);
   }
 
-  /** The stamps of the folders registered since the last look (`watchDir`'s two stats): a folder and its `.gitignore`. */
+  /** The stamps of the folders registered since the last look (`watchDir`'s two stats): a folder and its `.gitignore`,
+   *  a slice at a time, each folder stamped as its slice answers. */
   private *stamping(): Look {
+    const { root } = this.opts;
     const taken = this.unstamped();
-    const dirs = [...taken.keys()];
+    const groups = [...taken].map(([d, readAt]) => ({
+      paths: [join(root, d), join(root, d, ".gitignore")],
+      seen: ([dir, gitignore]: PathStat[]) => {
+        taken.delete(d);
+        if (this.state.watchers.has(d)) this.directories.stamp(d, readAt, { dir: dir!, gitignore: gitignore! });
+      },
+    }));
     let done = false;
     try {
-      const paths = dirs.flatMap((d) => [join(this.opts.root, d), join(this.opts.root, d, ".gitignore")]);
-      const { stats } = yield { stat: { paths } };
-      dirs.forEach((d, k) => {
-        if (this.state.watchers.has(d))
-          this.directories.stamp(d, taken.get(d)!, { dir: stats[2 * k]!, gitignore: stats[2 * k + 1]! });
-      });
+      yield* statsInSlices(groups);
       done = true;
     } finally {
-      if (!done) this.unstampedAgain(taken);
+      if (!done) this.unstampedAgain(taken); // those not stamped yet
     }
   }
 
@@ -295,11 +299,12 @@ export class VaultWatcher {
   }
 
   /**
-   * A tick's look: one batch — each watched folder and its `.gitignore`, each note followed, statted; each polled folder
-   * listed, its notes statted — compared, when it answers, with what's known then.
+   * A tick's look: each watched folder and its `.gitignore`, each note followed, statted a slice at a time — the first
+   * slice with each polled folder listed, its notes statted — each slice compared, as it answers, with what's known then.
+   * One given up on keeps what answered before; the next tick looks at them all again.
    */
   private *ticking(): Look {
-    const { filter, known, root } = this.opts;
+    const { known, root } = this.opts;
     const { state } = this;
     const tick = ++state.ticks;
     // A move's ends seen more than a tick apart are no move to pair any more.
@@ -310,75 +315,34 @@ export class VaultWatcher {
     // rename reports only the new name, and on macOS nothing at all is reported for a moment after
     // any watch is added or removed. So stat each watched directory: one gone is reported, one whose
     // mtime moved is listed again; and every ~15 ticks sweep every known note as a backstop.
-    const watched = [...state.watchers.keys()];
-    const ignores = [...state.gitignores.keys()];
     const fresh = this.unstamped();
-    const freshDirs = [...fresh.keys()];
-    // The notes followed into folders left to the walk, whose folders no watch sees: looked at every tick.
     for (const rel of state.followed)
       if (!known.has(rel) || state.watchers.has(parentOf(rel))) state.followed.delete(rel);
-    const followed = [...state.followed];
+    const moved: [string, number][] = [];
+    const groups = tickGroups(this.opts, state, this.directories, fresh, moved);
     const polled = [...state.polled];
-    const paths = [
-      ...watched.map((d) => join(root, d)),
-      ...ignores.map((d) => join(root, d, ".gitignore")),
-      ...freshDirs.map((d) => join(root, d, ".gitignore")),
-      ...followed.map((rel) => join(root, rel)),
-    ];
     const list = polled.map((d) => ({
       dir: join(root, d),
       judge: this.directories.judged({
         entries: { skip: this.directories.childNames(d), notesOnly: true, stat: true, links: false },
       }),
     }));
+    const seen = (listings: JudgedListing[]) =>
+      polled.forEach((dirRel, k) => this.directories.polledSeen(dirRel, listings[k] as JudgedFolder, tick));
     const statAt = Date.now();
-    let answer: WatchAnswer;
-    let answered = false;
+    let done = false;
     try {
-      answer = yield { stat: { paths }, list };
-      answered = true;
+      yield* statsInSlices(groups, { list, seen });
+      done = true;
     } finally {
-      if (!answered) this.unstampedAgain(fresh); // still to be stamped, by the next look
+      if (!done) this.unstampedAgain(fresh); // those not stamped yet: by the next look
     }
-    const { stats } = answer;
-    const listings = answer.listings as JudgedFolder[];
-    const freshAt = new Map(freshDirs.map((d, k) => [d, watched.length + ignores.length + k]));
-    const moved: [string, number][] = [];
-    watched.forEach((d, k) => {
-      if (!state.watchers.has(d)) return;
-      const st = stats[k]!;
-      // Registered since the last look: stamped from this one, as it would have been when it was registered.
-      const readAt = fresh.get(d);
-      if (readAt !== undefined) this.directories.stamp(d, readAt, { dir: st, gitignore: stats[freshAt.get(d)!]! });
-      if ("error" in st) {
-        if (d) state.pending.add(d);
-      } else if (st.mtimeMs !== state.stamps.get(d)) moved.push([d, st.mtimeMs]);
-    });
     // The sweep compares each known note's mtime and size, not just that it exists: fs.watch merges a
     // burst of writes (a git checkout) into an event or two, and a missed change would stay missed.
     if (tick % 15 === 0) {
       if (this.reads.here) yield* this.sweep(false);
       else this.startSweep();
     }
-    ignores.forEach((dirRel, k) => {
-      const before = state.gitignores.get(dirRel);
-      if (before === undefined) return;
-      const st = stats[watched.length + k]!;
-      const now = "error" in st ? -1 : st.mtimeMs;
-      if (now !== before) {
-        state.gitignores.set(dirRel, now);
-        filter.invalidate(dirRel);
-        state.rescan = true;
-      }
-    });
-    const at = watched.length + ignores.length + freshDirs.length;
-    followed.forEach((rel, k) => {
-      if (!known.has(rel) || state.watchers.has(parentOf(rel))) return;
-      const st = noteStamp(stats[at + k]);
-      if (!st || st.mtimeMs !== known.get(rel) || (state.sizes.has(rel) && state.sizes.get(rel) !== st.size))
-        state.pending.add(rel);
-    });
-    polled.forEach((dirRel, k) => this.directories.polledSeen(dirRel, listings[k]!, tick));
     if (this.degraded) for (const rel of this.opts.pollTargets?.() ?? []) state.pending.add(rel);
     if (state.pending.size || state.rescan || state.toWalk.size || (state.leftSeen.size && state.recentlyWent.length))
       yield* this.flushing();

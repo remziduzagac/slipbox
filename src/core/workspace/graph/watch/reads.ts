@@ -37,6 +37,41 @@ export const SLICE = 100;
 /** A look's logic: what it asks, yielded batch by batch, and what it comes to. */
 export type Look<R = void> = Generator<WatchAsk, R, WatchAnswer>;
 
+/** Paths a look stats together, and what it makes of their stats, in the order asked. */
+export interface StatGroup {
+  paths: string[];
+  seen(stats: PathStat[]): void;
+}
+
+/** Folders a look lists, and what it makes of their listings, in the order asked. */
+export interface ListGroup {
+  list: NonNullable<WatchAsk["list"]>;
+  seen(listings: JudgedListing[]): void;
+}
+
+/**
+ * `groups`' stats asked a slice at a time — at most `SLICE` paths a request, a group never split — the first slice
+ * with `listed`'s listings; each slice taken (`seen`) as it answers, so what answered is kept when a later one isn't.
+ */
+export function* statsInSlices(groups: StatGroup[], listed?: ListGroup): Look {
+  for (let i = 0, first = true; first || i < groups.length; first = false) {
+    const slice: StatGroup[] = [];
+    let size = 0;
+    for (; i < groups.length && (!slice.length || size + groups[i]!.paths.length <= SLICE); i++) {
+      slice.push(groups[i]!);
+      size += groups[i]!.paths.length;
+    }
+    const list = first && listed ? { list: listed.list } : {};
+    const answer = yield { stat: { paths: slice.flatMap((g) => g.paths) }, ...list };
+    if (first) listed?.seen(answer.listings);
+    let k = 0;
+    for (const g of slice) {
+      g.seen(answer.stats.slice(k, k + g.paths.length));
+      k += g.paths.length;
+    }
+  }
+}
+
 /** Where the watcher's reads are made: here, at once (`here`), or on the disk threads. */
 export interface WatchReads {
   readonly here: boolean;

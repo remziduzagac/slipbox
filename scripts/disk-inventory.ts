@@ -119,6 +119,7 @@ export const SEAM_READERS = [
   "src/core/workspace/graph/watch/reads.ts",
   "src/core/workspace/graph/watch/reconciliation.ts",
   "src/core/workspace/graph/watch/state.ts",
+  "src/core/workspace/graph/watch/ticks.ts",
   "src/core/workspace/vaults/vault-feed.ts",
   "src/core/workspace/walk/filtering/filter.ts",
   "src/core/workspace/walk/traversal/symlinks.ts",

@@ -2,9 +2,10 @@
 // what's known when it comes — dropped once the watcher was synced to a build since, a path we wrote since settled
 // again; a look the disk doesn't answer in time said once, the looks paused a minute — the sweep too — cleared by the
 // next answer to a look asked after; home's notes moved into a folder left to its walk found there by a listing on a
-// thread; a flush and a tree taken in asked in pieces, what answered kept; a key's read never behind the watcher on
-// both threads; one filter a thread, made again when a `.gitignore` changes. What waits is told by the hold (`Hold`,
-// this thread's reads too) or a thread's crash, never by a clock (#75); work is counted, not timed.
+// thread; a tick, the folders' stamps, a flush and a tree taken in asked in pieces, what answered kept; a key's read
+// never behind the watcher on both threads; one filter a thread, made again when a `.gitignore` changes. What waits is
+// told by the hold (`Hold`, this thread's reads too) or a thread's crash, never by a clock (#75); work is counted, not
+// timed.
 
 import { afterEach, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
@@ -332,6 +333,66 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
       await quiet(w);
       expect(said.sort()).toEqual(first.map((rel) => `created ${rel}`).sort());
       expect([...state.pending].sort()).toEqual([...rest].sort());
+    } finally {
+      w.close();
+    }
+  });
+
+  test("a tick stats its folders a slice at a time: a folder gone before the slice held is pending meanwhile, and stays pending when that slice is given up on", async () => {
+    const held = holding();
+    // A folder's stamp and its `.gitignore`'s: `""`, `gone` and 48 more fill the first slice, `held` the second.
+    const dirs = ["", "gone", ...Array.from({ length: SLICE / 2 - 2 }, (_, i) => `f${i}`), "held"];
+    const notes = dirs.map((d) => (d ? `${d}/n.md` : "n.md"));
+    const root = tree(Object.fromEntries(notes.map((rel) => [rel, "# N\n"])));
+    let clock = Date.now();
+    const { w, state, said } = await watching(root, dirs, notes, { now: () => clock });
+    try {
+      unwatched(state);
+      rmSync(join(root, "gone"), { recursive: true });
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.pollTick();
+      await untilHeld(held);
+      expect(asked.mock.calls.map(([b]) => b.stat?.paths.length)).toEqual([SLICE, 2]);
+      expect([...state.pending]).toEqual(["gone"]);
+      crash((s) => s.paths.includes(join(root, "held")));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      expect([...state.pending]).toEqual(["gone"]);
+      // A minute later, the next tick looks at every folder again and settles what's pending.
+      held.release();
+      clock += 60_001;
+      w.pollTick();
+      await quiet(w);
+      expect(said).toEqual(["deleted gone/n.md"]);
+    } finally {
+      w.close();
+    }
+  });
+
+  test("folders registered are stamped a slice at a time: those answered before one given up on stay stamped, the rest stamped by the next tick", async () => {
+    const held = holding();
+    const dirs = [...Array.from({ length: SLICE / 2 }, (_, i) => `f${i}`), "held"];
+    const root = tree({ "a.md": "# A\n", ...Object.fromEntries(dirs.map((d) => [`${d}/n.md`, "# N\n"])) });
+    let clock = Date.now();
+    const { w, state } = await watching(root, [""], ["a.md"], { now: () => clock });
+    try {
+      const asked = spyOn(diskThreads(), "look");
+      held.again();
+      w.sync(["", ...dirs], new Map());
+      await untilHeld(held);
+      expect(asked.mock.calls.map(([b]) => b.stat?.paths.length)).toEqual([SLICE, 2]);
+      expect(dirs.filter((d) => state.stamps.has(d))).toEqual(dirs.slice(0, -1));
+      crash((s) => s.paths.includes(join(root, "held")));
+      await until("given up on", () => w.notAnswering);
+      await quiet(w);
+      expect([...state.unstamped.keys()]).toEqual(["held"]);
+      expect(dirs.filter((d) => state.stamps.has(d))).toEqual(dirs.slice(0, -1));
+      held.release();
+      clock += 60_001;
+      w.pollTick();
+      await quiet(w);
+      expect(state.stamps.has("held")).toBe(true);
     } finally {
       w.close();
     }
