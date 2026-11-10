@@ -5,7 +5,8 @@
 // listed only while `files.hidden` is on (its `shift+h`), left out as the walk leaves them, `.git` never; a link is
 // left to the walk's rules (VV-D6).
 
-import { type Dirent, readdirSync } from "node:fs";
+import type { Dirent } from "node:fs";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 import { join } from "node:path";
 import { classify, type FileGroup } from "../../../core/documents/model/filetypes.ts";
 import { listsName } from "../../../core/workspace/walk/listing.ts";
@@ -53,7 +54,7 @@ export function fromDisk(
   for (let dir = queue.shift(); dir !== undefined; dir = queue.shift()) {
     let entries: Dirent[];
     try {
-      entries = readdirSync(join(app.loc.root, dir), { withFileTypes: true });
+      entries = disk.entries(join(app.loc.root, dir));
     } catch {
       continue; // gone, or not yours to read: its row says so
     }

@@ -3,7 +3,7 @@
 // add`), that worktree's name, and the branch checked out. Worktrees are separate vaults of one
 // repository: each keeps its own state, the main checkout is the one other vaults' links mean.
 
-import { readFileSync, statSync } from "node:fs";
+import * as disk from "../../foundation/platform/disk.ts";
 import { basename, dirname, join, relative, resolve } from "node:path";
 
 export interface Checkout {
@@ -21,7 +21,7 @@ export interface Checkout {
 
 function read(file: string): string | null {
   try {
-    return readFileSync(file, "utf8");
+    return disk.readFile(file).toString("utf8");
   } catch {
     return null;
   }
@@ -29,7 +29,7 @@ function read(file: string): string | null {
 
 function isDir(p: string): boolean {
   try {
-    return statSync(p).isDirectory();
+    return disk.stat(p).isDirectory();
   } catch {
     return false;
   }
@@ -64,7 +64,7 @@ export function checkoutOf(dir: string): Checkout | null {
  */
 export function worktreeFingerprint(gitDir: string): string | null {
   try {
-    const st = statSync(join(gitDir, "commondir"));
+    const st = disk.stat(join(gitDir, "commondir"));
     return `${st.ino}:${st.mtimeMs}`;
   } catch {
     return null;
@@ -86,7 +86,7 @@ export function headOf(c: Pick<Checkout, "gitDir">): { branch: string | null; co
   const file = join(c.gitDir, "HEAD");
   let mtimeMs = -1;
   try {
-    mtimeMs = statSync(file).mtimeMs;
+    mtimeMs = disk.stat(file).mtimeMs;
   } catch {
     return { branch: null, commit: null };
   }

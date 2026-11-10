@@ -3,25 +3,31 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeCoreSandbox } from "../support/core-sandbox.ts";
+import { DISK_READERS, DISK_SEAM, diskReadsOf, SEAM_READERS } from "../../scripts/disk-inventory.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
 const sandbox = makeCoreSandbox();
 
 describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
-  /** A tree of its own: the script copied into it (it checks the tree it sits in), and these files. */
-  const check = (files: Record<string, string>) => {
+  /** A tree of its own: the scripts copied into it (they check the tree they sit in), and these files. A tree written
+   *  for the other rules asks not to be held to the slow-disk inventory (`--no-inventory`); one for it, `inventory`. */
+  const check = (files: Record<string, string>, inventory = false) => {
     const top = mkdtempSync(join(sandbox, "boundary-"));
     mkdirSync(join(top, "scripts"));
-    writeFileSync(
-      join(top, "scripts", "check-boundary.ts"),
-      readFileSync(join(import.meta.dir, "../..", "scripts", "check-boundary.ts"), "utf8"),
-    );
+    // Each named whole, so the tests a change runs (scripts/ci-scope.ts) see these two scripts used, not every one.
+    const scripts = {
+      "check-boundary.ts": join(import.meta.dir, "../..", "scripts", "check-boundary.ts"),
+      "disk-inventory.ts": join(import.meta.dir, "../..", "scripts", "disk-inventory.ts"),
+    };
+    for (const [name, from] of Object.entries(scripts))
+      writeFileSync(join(top, "scripts", name), readFileSync(from, "utf8"));
     for (const [rel, text] of Object.entries(files)) {
       mkdirSync(join(top, rel, ".."), { recursive: true });
       writeFileSync(join(top, rel), text);
     }
-    const r = Bun.spawnSync([process.execPath, join(top, "scripts", "check-boundary.ts")]);
+    const args = inventory ? [] : ["--no-inventory"];
+    const r = Bun.spawnSync([process.execPath, join(top, "scripts", "check-boundary.ts"), ...args]);
     return { code: r.exitCode, out: r.stdout.toString(), err: r.stderr.toString() };
   };
 
@@ -620,5 +626,121 @@ describe("the boundary check (0.3, scripts/check-boundary.ts)", () => {
       "src/core/rendering/layout/markdown/render.ts: imports ../../media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
       "src/tui/app/runtime/app.ts: imports ../../../core/rendering/media/diagrams/diagram-render.ts (only src/core/rendering/media/diagrams/diagram-worker.ts may: it runs there alone)",
     ]);
+  });
+
+  describe("the slow-disk inventory's reads (SD-T1, SD-D12; scripts/disk-inventory.ts)", () => {
+    /** The inventory as listed: the seam; each file that reads through it importing what isn't a read (a type,
+     *  `constants`, `watch`); each one listed, a read. */
+    const inventory = (): Record<string, string> => ({
+      [DISK_SEAM]: 'import { statSync } from "node:fs";\nexport const stat = statSync;\n',
+      ...Object.fromEntries(
+        SEAM_READERS.map((f) => [
+          f,
+          'import type { Stats } from "node:fs";\nimport { constants, type Dirent, watch } from "node:fs";\n' +
+            "export const w = [watch, constants];\nexport type D = [Dirent, Stats];\n",
+        ]),
+      ),
+      ...Object.fromEntries(
+        Object.keys(DISK_READERS).map((f) => [f, 'import { statSync } from "node:fs";\nexport const s = statSync;\n']),
+      ),
+    });
+    const said = (err: string) =>
+      err
+        .split("\n")
+        .filter((l) => l.startsWith("  "))
+        .map((l) => l.trim());
+    const marks = "src/tui/workspace/explorer/marks.ts";
+    const unlisted = (reads: string) =>
+      `${marks}: reads the disk itself (${reads}): the slow-disk inventory reads through ${DISK_SEAM} (SD-D10), or DISK_READERS lists it, with why`;
+
+    test("the inventory as listed passes: what reads through the seam imports no read, each one listed does", () => {
+      const r = check(inventory(), true);
+      expect(r.err).toBe("");
+      expect(r.code).toBe(0);
+    });
+
+    test("a read imported in a file of the inventory not listed fails it, however it's imported", () => {
+      for (const [source, read] of [
+        ['import { constants, existsSync } from "node:fs";', "existsSync"],
+        ['import {\n  type Dirent,\n  lstatSync as lstat,\n} from "fs";', "lstatSync"],
+        ['import * as fs from "node:fs";\nexport const s = fs.statSync;', "statSync"],
+        ['import { readFile } from "node:fs/promises";', "readFile"],
+        ['import { promises } from "node:fs";\nexport const r = promises.readdir;', "readdir"],
+      ]) {
+        const r = check({ ...inventory(), [marks]: source! }, true);
+        expect(r.code).toBe(1);
+        expect(said(r.err)).toEqual([unlisted(read!)]);
+      }
+    });
+
+    test("every way to read the disk counts: fs.promises, a name exported again, import() unawaited, Bun.file, streams, polls and globs", () => {
+      const cases: [string, string[]][] = [
+        // node:fs's promises through a module imported whole.
+        ['import * as fs from "node:fs";\nawait fs.promises.readFile(p);', ["readFile"]],
+        ['import fs from "fs";\nconst t = await fs.promises.stat(p);', ["stat"]],
+        // A read exported again, by name or with the rest.
+        ['export { statSync } from "node:fs";', ["statSync"]],
+        ['export { type Stats, readdirSync as list } from "fs";', ["readdirSync"]],
+        ['export * from "node:fs/promises";', ["node:fs"]],
+        // A module loaded at run time, awaited or not.
+        ['const fs = import("node:fs");', ["node:fs"]],
+        ['import("fs").then((fs) => fs.statSync(p));', ["node:fs"]],
+        // Bun's own file: its text, whether it's there, its size.
+        ["const t = await Bun.file(p).text();", ["Bun.file"]],
+        ["const f = Bun.file(p);\nif (await f.exists()) n = f.size;", ["Bun.file"]],
+        // A stream, a vector read, a stat polled, a file as a blob, a glob.
+        ['import { createReadStream, readvSync } from "node:fs";', ["createReadStream", "readvSync"]],
+        ['import { watchFile } from "node:fs";', ["watchFile"]],
+        ['import { openAsBlob, globSync } from "node:fs";', ["globSync", "openAsBlob"]],
+        ['import { glob } from "node:fs/promises";', ["glob"]],
+      ];
+      // Each case missed, said whole: one way unseen names its own.
+      expect(cases.filter(([source, reads]) => !Bun.deepEquals(diskReadsOf(source), reads))).toEqual([]);
+      // In the check itself, as any read is.
+      const r = check({ ...inventory(), [marks]: 'export { statSync } from "node:fs";\n' }, true);
+      expect(said(r.err)).toEqual([unlisted("statSync")]);
+    });
+
+    test("what isn't a read counts for nothing: a comment naming one, a write, a type, a URL", () => {
+      const none = [
+        '// import { statSync } from "node:fs"; fs.promises.readFile, Bun.file(p)',
+        '/* export { readFileSync } from "node:fs";\n   await import("node:fs") */',
+        'import { type Stats, writeFileSync, watch } from "node:fs";\nwriteFileSync(p, "x"); // not statSync',
+        'export type { Dirent } from "node:fs";\nconst u = "https://example.com//fs";',
+        'await Bun.write(p, "x");',
+      ];
+      expect(none.map((source) => [source, diskReadsOf(source)]).filter(([, reads]) => reads!.length)).toEqual([]);
+    });
+
+    test("an entry left for a file that reads nothing fails it, and so does one for a file not there", () => {
+      const refresh = "src/core/workspace/graph/refresh.ts";
+      const stale = check(
+        {
+          ...inventory(),
+          [refresh]: 'import { type Stats, writeFileSync } from "node:fs";\nexport const w = writeFileSync;\n',
+        },
+        true,
+      );
+      expect(stale.code).toBe(1);
+      expect(said(stale.err)).toEqual([
+        `${refresh}: reads nothing of the disk itself, but DISK_READERS lists it (${DISK_READERS[refresh]}): take its entry out`,
+      ]);
+      const { [refresh]: _, ...gone } = inventory();
+      const moved = check(gone, true);
+      expect(moved.code).toBe(1);
+      expect(said(moved.err)).toEqual([
+        `${refresh}: in the slow-disk inventory, but not there (moved or renamed: its entry follows it)`,
+      ]);
+    });
+
+    test("the seam gone fails it, said as the seam's: renaming it never switches the inventory's rule off", () => {
+      const { [DISK_SEAM]: _, ...without } = inventory();
+      const r = check({ ...without, [marks]: 'import { statSync } from "node:fs";\n' }, true);
+      expect(r.code).toBe(1);
+      expect(said(r.err)).toEqual([
+        `${DISK_SEAM}: the seam the slow-disk inventory reads through (SD-D10), but not there (moved or renamed: DISK_SEAM follows it)`,
+        unlisted("statSync"),
+      ]);
+    });
   });
 });

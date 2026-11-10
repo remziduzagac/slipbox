@@ -10,6 +10,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { diskReadViolations, inventoryGone, inventoryHeld } from "./disk-inventory.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 const RULES: Record<string, string[]> = {
@@ -774,7 +775,7 @@ function files(dir: string): string[] {
 
 // Run as a script (`bun run check:boundary`); a test imports importsOf alone.
 if (import.meta.main) {
-  const violations: string[] = [];
+  const violations: string[] = inventoryHeld() ? inventoryGone(ROOT) : [];
   for (const [dir, banned] of Object.entries(RULES)) {
     for (const file of files(join(ROOT, dir))) {
       for (const spec of importsOf(readFileSync(file, "utf8"))) {
@@ -790,34 +791,36 @@ if (import.meta.main) {
 
   for (const file of files(join(ROOT, "src"))) {
     const from = relative(ROOT, file);
-    violations.push(...commandViolations(from, readFileSync(file, "utf8")));
-    violations.push(...mutationViolations(from, readFileSync(file, "utf8")));
-    violations.push(...graphCompositionViolations(from, readFileSync(file, "utf8")));
-    violations.push(...codeLayoutViolations(from, readFileSync(file, "utf8")));
-    violations.push(...syntaxViolations(from, readFileSync(file, "utf8")));
-    violations.push(...markdownViolations(from, readFileSync(file, "utf8")));
-    violations.push(...pdfViolations(from, readFileSync(file, "utf8")));
-    violations.push(...explorerViolations(from, readFileSync(file, "utf8")));
-    violations.push(...drawingOwnerViolations(from, readFileSync(file, "utf8")));
-    violations.push(...diagnosticsHelperViolations(from, readFileSync(file, "utf8")));
-    violations.push(...bufferLayoutViolations(from, readFileSync(file, "utf8")));
-    violations.push(...sourceEditingViolations(from, readFileSync(file, "utf8")));
-    violations.push(...navigationHelperViolations(from, readFileSync(file, "utf8")));
-    violations.push(...releaseDiscoveryViolations(from, readFileSync(file, "utf8")));
-    violations.push(...themeVocabularyViolations(from, readFileSync(file, "utf8")));
-    violations.push(...serverProtocolViolations(from, readFileSync(file, "utf8")));
-    violations.push(...exportEncodingViolations(from, readFileSync(file, "utf8")));
-    violations.push(...editingContextViolations(from, readFileSync(file, "utf8")));
-    violations.push(...renameMechanismViolations(from, readFileSync(file, "utf8")));
-    violations.push(...searchMechanismViolations(from, readFileSync(file, "utf8")));
-    violations.push(...walkingMechanismViolations(from, readFileSync(file, "utf8")));
-    violations.push(...parsingMechanismViolations(from, readFileSync(file, "utf8")));
-    violations.push(...inputMechanismViolations(from, readFileSync(file, "utf8")));
-    violations.push(...gitMechanismViolations(from, readFileSync(file, "utf8")));
-    violations.push(...primitiveViolations(from, readFileSync(file, "utf8")));
-    violations.push(...appCompositionViolations(from, readFileSync(file, "utf8")));
-    violations.push(...drawingCompositionViolations(from, readFileSync(file, "utf8")));
-    for (const spec of valueImportsOf(readFileSync(file, "utf8"))) {
+    const text = readFileSync(file, "utf8");
+    violations.push(...commandViolations(from, text));
+    violations.push(...mutationViolations(from, text));
+    violations.push(...graphCompositionViolations(from, text));
+    violations.push(...codeLayoutViolations(from, text));
+    violations.push(...syntaxViolations(from, text));
+    violations.push(...markdownViolations(from, text));
+    violations.push(...pdfViolations(from, text));
+    violations.push(...explorerViolations(from, text));
+    violations.push(...drawingOwnerViolations(from, text));
+    violations.push(...diagnosticsHelperViolations(from, text));
+    violations.push(...bufferLayoutViolations(from, text));
+    violations.push(...sourceEditingViolations(from, text));
+    violations.push(...navigationHelperViolations(from, text));
+    violations.push(...releaseDiscoveryViolations(from, text));
+    violations.push(...themeVocabularyViolations(from, text));
+    violations.push(...serverProtocolViolations(from, text));
+    violations.push(...exportEncodingViolations(from, text));
+    violations.push(...editingContextViolations(from, text));
+    violations.push(...renameMechanismViolations(from, text));
+    violations.push(...searchMechanismViolations(from, text));
+    violations.push(...walkingMechanismViolations(from, text));
+    violations.push(...parsingMechanismViolations(from, text));
+    violations.push(...inputMechanismViolations(from, text));
+    violations.push(...gitMechanismViolations(from, text));
+    violations.push(...primitiveViolations(from, text));
+    violations.push(...appCompositionViolations(from, text));
+    violations.push(...drawingCompositionViolations(from, text));
+    if (inventoryHeld()) violations.push(...diskReadViolations(from, text));
+    for (const spec of valueImportsOf(text)) {
       if (!spec.startsWith(".")) continue;
       const target = relative(ROOT, resolve(dirname(file), spec));
       const owners = OWNERS[target];

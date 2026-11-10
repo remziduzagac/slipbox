@@ -66,8 +66,9 @@
   screen's thread instead.
 - **Terminal checks.** A `slow disk: …` check per task in `tests/terminal/checks/slow-disk.ts`, passing on Linux and
   macOS in CI; T12's ten pass unchanged. Pull requests skip the terminal job (D266), so before each task's pull
-  request merges, the terminal checks it reaches run locally, listed for approval first (D207), as well as its unit
-  tests (SD-D14); each task adds `CHECKS_FOR` entries in `scripts/ci-scope.ts` for `disk.ts` and the files it moves.
+  request merges, the terminal checks it reaches run locally, as well as its unit tests (SD-D14 and its note); each
+  task adds `CHECKS_FOR` entries in `scripts/ci-scope.ts` for the files it moves, and `disk.ts`, which every feature
+  reads through, has none, so a change to it reaches every check.
 - **What's drawn.** A draw never reads the disk: git's state is the look's, a count of every note is of what's parsed
   so far, marked partial (SD-D13). Held, the top bar, the Problems tab and the Info panel draw at once.
 - **Memory.** The disk threads' cost measured with one and two started, recorded in SD-T2 and on #56.

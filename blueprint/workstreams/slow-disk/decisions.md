@@ -5,8 +5,8 @@ was agreed: SD-D2, SD-D3, SD-D4, SD-D6, SD-D7 and SD-D9 by the maintainer's answ
 § Questions answered, the option recommended in each); SD-D1, SD-D5, SD-D8 and SD-D10 by the maintainer, as proposed;
 SD-D11 and SD-D12, the questions the tasks had left open, by the maintainer's instruction to take the recommended
 answer; SD-D13 and SD-D14, and the notes of 2026-11-10 under SD-D1, SD-D6, SD-D8 and SD-D12, the same way, from the
-design's review. An entry is never rewritten; a dated note goes under it (blueprint/README.md § How things are
-recorded).
+design's review; the notes under SD-D10 and SD-D14, from SD-T1's. An entry is never rewritten; a dated note goes under
+it (blueprint/README.md § How things are recorded).
 
 ## SD-D1: The parts, in order (2026-11-09)
 
@@ -236,6 +236,16 @@ shipped one.
 **Not chosen:** a FUSE mount in CI (a privilege the runners don't give, and none on macOS); timing the reads (#75);
 every test's App on threads.
 
+> **Note (2026-11-10), from SD-T1's review, settled by the maintainer's standing instruction to take the recommended
+> option:** the seam keeps two listings apart. A walk's listing (`readFolder`: a walk, the explorer's listing threads,
+> the filter) takes the stand-in on every thread, the screen's too, as since T12: a walk put back on the screen's thread
+> is slowed there, and T12's checks see it. The rest — the listings SD-T1 moves to the seam (`entries`: the watcher's,
+> the explorer's tree) and every stat and read — take it on every thread but the screen's, each thread reading it once
+> as it starts (a test sets a thread's own with `setSlowDisk`). A test takes the hold on the threads it asks it of
+> (`setFolderReader` for a walk's listing, `setReadWait` for the rest), its walk's worker holding a stat or a read
+> only once asked. So the screen's thread reads those as it did until a task moves them: that task's held test takes
+> the hold there for the reads it moves, and the net grows task by task.
+
 ## SD-D11: A rename's build: on a disk thread, the keys after it waiting (2026-11-09)
 
 Agreed by the maintainer's instruction to take the recommended answer.
@@ -368,3 +378,9 @@ turns `dev` red for everyone after it.
 **Cost:** A local run of the reached checks per task, minutes each.
 
 **Not chosen:** CI's run after the merge alone.
+
+> **Note (2026-11-10), from SD-T1's review:** `core/foundation/platform/disk.ts` has no `CHECKS_FOR` entry. Every
+> feature reads through it, so a change to it alone reaches every check, never the slow disk's alone
+> (`tests/terminal-coverage.test.ts` holds it there). And the maintainer gave the workstream a standing go: the checks a
+> task reaches run without a list asked for first; where a task reaches every check, the slow-disk checks and those of
+> the features its files touch run, and `dev`'s full run covers the rest after the merge.
