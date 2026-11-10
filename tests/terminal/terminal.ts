@@ -2,10 +2,12 @@
 // headless xterm (`@xterm/headless`), which keeps the screen — its text, colours and cursor — for the checks to read
 // (TT-D2). It answers what a program asks a terminal at start as a modern terminal does: the cursor's place and the
 // device's attributes (xterm's own answers), its colours, and the Kitty keyboard protocol (flags pushed and popped,
-// keys then encoded so). It keeps the title and every OSC 52 copy. POSIX only: Bun's pseudo-terminal is.
+// keys then encoded so). It keeps the title and every OSC 52 copy, and reads slipbox's mark after each frame it wrote
+// (trace mode). POSIX only: Bun's pseudo-terminal is.
 
 import { constants } from "node:os";
 import xtermHeadless from "@xterm/headless";
+import { FRAME_SHOWN } from "../../src/tui/shell/terminal/trace.ts";
 import { encodeKey, type Keyboard } from "./keys.ts";
 
 const { Terminal: XTerm } = xtermHeadless as unknown as { Terminal: typeof import("@xterm/headless").Terminal };
@@ -123,6 +125,11 @@ export class HeadlessTerminal {
   output = "";
   /** When the program last wrote anything (performance.now()). */
   lastOutput = 0;
+  /**
+   * Of each slipbox (its run, trace.ts), the number of the last frame whose mark this terminal has read
+   * (`FRAME_SHOWN`, trace mode): that frame, and every one before it, is on the screen.
+   */
+  readonly framesShown = new Map<string, number>();
   /** When the frame being drawn began (synchronized output, mode 2026), as xterm has read it: null between frames. */
   private frameSince: number | null = null;
   private readonly clock: () => number;
@@ -166,6 +173,12 @@ export class HeadlessTerminal {
     };
     p.registerCsiHandler({ prefix: "?", final: "h" }, (ps) => frame(ps, true));
     p.registerCsiHandler({ prefix: "?", final: "l" }, (ps) => frame(ps, false));
+    // slipbox's mark after a frame it wrote (trace.ts): read here, in order, so what came before it is on the screen.
+    p.registerOscHandler(FRAME_SHOWN, (d) => {
+      const [run, n] = d.split(";");
+      if (run && n) this.framesShown.set(run, Math.max(Number(n) || 0, this.framesShown.get(run) ?? 0));
+      return true;
+    });
     p.registerOscHandler(10, (d) => (d === "?" ? (this.reply(`\x1b]10;${oscColor(colors.fg)}\x07`), true) : false));
     p.registerOscHandler(11, (d) => (d === "?" ? (this.reply(`\x1b]11;${oscColor(colors.bg)}\x07`), true) : false));
     p.registerOscHandler(52, (d) => {

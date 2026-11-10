@@ -4,7 +4,7 @@
 // file changed in a repository, then a note written in the vault, whose news has the panel ask git again. The pointer
 // moves and clicks as a terminal reports it (SGR's mouse reports). Source control's own checks are source-control.ts's.
 
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Check, EXPLORER, explorerOpen, explorerRow, leader } from "../check.ts";
 import type { Session, SessionOptions } from "../session.ts";
@@ -143,10 +143,7 @@ const rowBg = (s: Session, y: number) => {
 };
 
 /** How many frames slipbox has drawn so far (SLIPBOX_TRACE's `frame` lines). */
-const frames = (s: Session) =>
-  readFileSync(s.trace, "utf8")
-    .split("\n")
-    .filter((l) => l === "frame").length;
+const frames = (s: Session) => s.framesPainted();
 
 /** The screen rows of the panel holding `needle`, top to bottom. */
 const rowsWith = (s: Session, needle: string) =>

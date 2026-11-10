@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { buildHome } from "../../scripts/build-home.ts";
+import { type Traced, traced } from "../../src/tui/shell/terminal/trace.ts";
 import type { Keyboard } from "./keys.ts";
 import { releasesBuilt } from "./releases.ts";
 import { HeadlessTerminal, type StyledRun } from "./terminal.ts";
@@ -294,40 +295,54 @@ export class Session {
     await this.settle();
   }
 
-  /** The commands run so far (SLIPBOX_TRACE: its other lines are keys handled and frames painted). */
+  /** The commands run so far (SLIPBOX_TRACE: its other lines are keys handled and frames written). */
   commands(): string[] {
     return readFileSync(this.trace, "utf8")
       .split("\n")
-      .filter((l) => l && l !== "key" && l !== "frame");
+      .filter((l) => l && !traced(l));
   }
 
-  /** The trace's lines: commands run, `key` for each key or paste handled, `frame` for each frame painted. */
-  private traced(): string[] {
-    return readFileSync(this.trace, "utf8").split("\n");
+  /** The trace's keys handled and frames written (trace.ts), in order, a restart's too: the trace is the session's. */
+  private traced(): Traced[] {
+    return readFileSync(this.trace, "utf8")
+      .split("\n")
+      .map(traced)
+      .filter((l) => l !== null);
   }
 
-  /** How many frames slipbox has painted so far: none while it has nothing new to draw. */
+  /** How many frames slipbox has written so far with something newly painted: none while it has nothing new to draw. */
   framesPainted(): number {
-    return this.traced().filter((l) => l === "frame").length;
+    return this.traced().filter((l) => l.kind === "frame").length;
   }
 
   /** How many keys and pastes slipbox has handled so far. */
   private handled(): number {
-    return this.traced().filter((l) => l === "key").length;
+    return this.traced().filter((l) => l.kind === "key").length;
   }
 
   /**
-   * Wait until slipbox has handled `n` more keys than `before`, and painted a frame after the last of them (or WAIT
-   * has gone by, or it has exited): on a loaded machine it reads keys late and draws late, and what a check reads
-   * next must show them.
+   * Wait until slipbox has handled `n` more keys than `before`, written a frame painted after the last of them, and
+   * this terminal has read it — slipbox's mark after it (trace.ts) — or WAIT has gone by, or it has exited. On a loaded
+   * machine slipbox reads keys late, draws late, and the terminal reads what it wrote later still: a frame written
+   * isn't on the screen yet, and what a check reads next must show the keys. No keys sent (`keys()`, `type("")`): none
+   * to wait for.
    */
   private async taken(before: number, n: number): Promise<void> {
+    if (n === 0) return;
     const shown = () => {
       let keys = 0;
-      let at = -1;
-      const lines = this.traced();
-      for (let i = 0; i < lines.length && at < 0; i++) if (lines[i] === "key" && ++keys === before + n) at = i;
-      return at >= 0 && lines.indexOf("frame", at) > at;
+      let key: Traced | null = null;
+      for (const line of this.traced()) {
+        if (!key) {
+          if (line.kind === "key" && ++keys === before + n) key = line;
+          continue;
+        }
+        // A frame painted after the key: its slipbox's with a greater number, or a later slipbox's (a restart in
+        // place). Any one read will do: what's on the screen is that, or later.
+        if (line.kind !== "frame" || (line.run === key.run && line.n <= key.n)) continue;
+        if ((this.term.framesShown.get(line.run) ?? 0) >= line.n) return true;
+      }
+      return false;
     };
     const end = Date.now() + WAIT;
     while (!shown() && !this.exited() && Date.now() < end) await sleep(5);

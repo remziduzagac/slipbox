@@ -371,11 +371,18 @@ does nothing.
 
 **In step with slipbox.** On a loaded machine slipbox reads a key late and draws late: a check that reads the screen
 right after sending keys can read the frame before them, and act on it (the link under the cursor, the line it's on). So
-with `SLIPBOX_TRACE` set, slipbox writes, beside each command run, a `key` line once it has handled a key or a paste and
-a `frame` line for each frame it paints (src/tui/shell/terminal/run.ts); `keys`, `type` and `paste` return once every
-key sent is handled and a frame painted after the last (a named key is one key, typed text one per code point, a paste
-one), then once nothing more is written for 40 ms. A check timed against the clock (an answer within two seconds while
-it indexes) says `alone` and runs by itself after the others, where it times slipbox, not the machine.
+with `SLIPBOX_TRACE` set, slipbox writes lines beside each command run (src/tui/shell/terminal/trace.ts, run.ts).
+A `key` line comes once it has handled a key or a paste, with how many frames it had painted by then. A `frame` line
+comes once OpenTUI has written a frame with something newly painted in it, with how many frames had been painted. A
+frame written isn't on the screen yet: the terminal reads it later. So slipbox also marks each traced frame in its
+output, after the frame's bytes: a private OSC, `ESC ] 7701 ; run ; n BEL`, n the `frame` line's number, which the
+tests' terminal reads in order with the rest. Each line and mark names its slipbox's run: a restart in place
+(`execve`) keeps the process and the terminal, and the slipbox it starts numbers its frames from 1 again. A frame
+shows a key when it's from the key's run with a greater number, or from a later run. `keys`, `type` and `paste`
+return once every key sent is handled (a named key is one key, typed text one per code point, a paste one), and the
+terminal has read the mark of a frame that shows the last of them. Then they wait until nothing more is written for
+40 ms. A check timed against the clock (an answer within two seconds while it indexes) says `alone` and runs by
+itself after the others, where it times slipbox, not the machine.
 
 A check that must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
 (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload

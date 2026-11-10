@@ -9,6 +9,7 @@ import { join, relative } from "node:path";
 import { COMMAND_SPECS } from "../src/core/application/commands/catalog.ts";
 import { EXPLORER, explorerClosed, explorerOpen, inSwitcher, mode, modeOf, OUTLINE, opened } from "./terminal/check.ts";
 import { encodeKey } from "./terminal/keys.ts";
+import { FRAME_SHOWN } from "../src/tui/shell/terminal/trace.ts";
 import { REPO, Session, type SessionOptions, WAIT, whereOnBar, locationOnBar } from "./terminal/session.ts";
 import { HeadlessTerminal } from "./terminal/terminal.ts";
 
@@ -195,6 +196,15 @@ describe("the headless terminal", () => {
     const t = await run("printf '\\033]0;slipbox — home.md\\007\\033]52;c;aGk=\\007\\033]52;c;dGhlcmU=\\033\\\\'");
     expect(t.title).toBe("slipbox — home.md");
     expect(t.copies).toEqual(["hi", "there"]);
+    t.dispose();
+  });
+  test("slipbox's marks of the frames it wrote read, each slipbox's (its run) apart: one's never another's", async () => {
+    const t = await run(`printf 'drawn\\033]${FRAME_SHOWN};a;3\\007\\033]${FRAME_SHOWN};b;1\\007'`);
+    expect(t.screen()[0]).toBe("drawn");
+    expect([...t.framesShown]).toEqual([
+      ["a", 3],
+      ["b", 1],
+    ]);
     t.dispose();
   });
   test("it answers as a modern terminal: the Kitty keyboard flags pushed, its colours; then keys go Kitty's way", async () => {
@@ -388,10 +398,11 @@ describe("what the checks share (check.ts)", () => {
   // A quick switcher beside an explorer that has a row of `by-name.md` from the start, as one read from the disk has a
   // note just written, and a message's box whose second row begins with it too; the switcher's list has the note's own
   // row only once LISTED exists, as the graph has the note only once the watcher's batch has come. Each ctrl+p it takes
-  // is a `p` in OPENS.
+  // is a `p` in OPENS. Each frame is marked as slipbox's are once written (trace.ts).
   const switcher = [
     "stty -echo -icanon min 1 time 0",
-    "shown=0",
+    "shown=0 n=0",
+    `took() { printf 'key fake %s\\nframe fake %s\\n' "$n" "$((n + 1))" >> "$T"; n=$((n + 1)); }`,
     "draw() {",
     "  printf '\\033[?2026h\\033[2J\\033[H      by-name.md            │ index.md'",
     "  printf '\\033[9;30H┌ written ─────────────────┐\\033[10;30H│ by-name.md by an agent   │'",
@@ -401,7 +412,7 @@ describe("what the checks share (check.ts)", () => {
     "    printf '\\033[4;30H│ %s     │' \"$row\"",
     "    printf '\\033[5;30H└───────────────────── 1/1 ┘'",
     "  fi",
-    "  printf '\\033[?2026l'",
+    `  printf '\\033[?2026l\\033]${FRAME_SHOWN};fake;%s\\007' "$n"`,
     "}",
     "draw",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
@@ -409,7 +420,7 @@ describe("what the checks share (check.ts)", () => {
     '    if [ "$(wc -c < "$OPENS")" -eq 1 ]; then sleep 0.4; fi',
     '    if [ "$REOPEN" = 1 ] && [ "$(wc -c < "$OPENS")" -ge 2 ]; then : > "$LISTED"; fi',
     '  elif [ "$c" = "$(printf \'\\033\')" ]; then shown=0; fi',
-    "  draw; printf 'key\\nframe\\n' >> \"$T\"",
+    "  took; draw",
     "done",
   ].join("\n");
 
@@ -462,14 +473,15 @@ describe("what the checks share (check.ts)", () => {
 
   // The explorer as `space e` cycles it (panels.ts: opened and focused, focused, closed), on a screen behind its own
   // trace: a key is in the trace at once with a frame after it, but what it did is drawn LAG ms later, as a loaded
-  // runner's slipbox paints before its terminal has caught up. Meanwhile the which-key popup drawn after `space` stays,
-  // its line for `space e` the command's title, as slipbox's is (#18). Its frames are marked as slipbox's are
-  // (synchronized output), so a wait reads each whole.
+  // runner's slipbox writes a frame it painted. Meanwhile the which-key popup drawn after `space` stays, its line for
+  // `space e` the command's title, as slipbox's is (#18). Its frames are marked as slipbox's are (synchronized output,
+  // so a wait reads each whole; the mark once written, trace.ts, so a key's waits for it).
   const LAG = 400;
   const LABEL = COMMAND_SPECS.find((c) => c.id === "explorer.cycle")!.title;
   const cycling = [
     "stty -echo -icanon min 1 time 0",
-    "pending=0",
+    "pending=0 n=0",
+    `took() { printf 'key fake %s\\nframe fake %s\\n' "$n" "$((n + 1))" >> "$T"; n=$((n + 1)); }`,
     "draw() {",
     "  printf '\\033[?2026h\\033[2J\\033[H'",
     "  if [ $shown = 1 ]; then printf ' ≡  Explorer   +  +  │ home.md'; else printf '    home.md'; fi",
@@ -478,10 +490,11 @@ describe("what the checks share (check.ts)", () => {
     // No status line in zen: the frame's end alone.
     "  if [ $zen = 1 ]; then printf '\\033[?2026l'",
     "  else printf '\\033[8;1H %s  notes  ‹ home.md ›  L1:1\\033[?2026l' \"$chip\"; fi",
+    `  printf '\\033]${FRAME_SHOWN};fake;%s\\007' "$n"`,
     "}",
     "draw",
     'while c=$(dd bs=1 count=1 2>/dev/null) && [ -n "$c" ]; do',
-    "  if [ \"$c\" = ' ' ]; then pending=1; draw; printf 'key\\nframe\\n' >> \"$T\"",
+    "  if [ \"$c\" = ' ' ]; then pending=1; took; draw",
     // From the test, not keys: r begins a repaint, the screen cleared and its frame left open; R draws it whole.
     "  elif [ \"$c\" = r ]; then printf '\\033[?2026h\\033[2J'",
     '  elif [ "$c" = R ]; then draw',
@@ -490,7 +503,7 @@ describe("what the checks share (check.ts)", () => {
     "    if [ $shown = 1 ] && [ $focused = 0 ]; then focused=1",
     "    elif [ $shown = 1 ]; then shown=0; focused=0",
     "    else shown=1; focused=1; fi",
-    "    printf 'key\\nframe\\n' >> \"$T\"; sleep $LAG; draw",
+    "    took; sleep $LAG; draw",
     "  fi",
     "done",
   ].join("\n");
@@ -679,6 +692,99 @@ describe("starting slipbox (session.ts)", () => {
     },
     TEST_BUDGETS.terminalPreload,
   );
+  /**
+   * A fake slipbox (`script`, sh, with `hold <file>` waiting for the test to write that file), in a session of its
+   * own; `held` sends a key whose frame it holds, and checks `keys` returns only once it's written and marked.
+   */
+  const faked = (script: string) => {
+    const dir = mkdtempSync(join(tmpdir(), "slipbox-mark-"));
+    const bin = join(dir, "slipbox");
+    const hold = 'hold() { until [ -e "$1" ]; do sleep 0.02; done; }';
+    writeFileSync(bin, `#!/bin/sh\nT="$SLIPBOX_TRACE"\n${hold}\n${script}\n`, { mode: 0o755 });
+    const s = new Session({ bin, noWait: true, env: { HOLDS: dir } });
+    const held = async (key: string, go: string, drawn: string) => {
+      let returned = false;
+      const keyed = s.keys(key).then(() => {
+        returned = true;
+      });
+      await Bun.sleep(300); // its frame written, not yet read: quiet, well past settle's 40 ms
+      expect(returned).toBe(false);
+      const went = performance.now();
+      writeFileSync(join(dir, go), "");
+      await keyed;
+      expect(s.screen()[0]).toBe(drawn);
+      expect(performance.now() - went).toBeLessThan(WAIT / 2); // its mark, not WAIT gone by
+    };
+    const done = () => {
+      s.cleanup();
+      rmSync(dir, { recursive: true, force: true });
+    };
+    return { s, held, done };
+  };
+
+  test("a key's frame waited for until the terminal has read it: slipbox's mark after it", async () => {
+    const { s, held, done } = faked(String.raw`stty raw -echo
+      printf 'frame a 1
+' >> "$T"; printf 'listening]${FRAME_SHOWN};a;1'
+      dd bs=1 count=1 >/dev/null 2>&1
+      printf 'key a 1
+frame a 2
+' >> "$T"; hold "$HOLDS/go"
+      printf '[2J[Hdrawn]${FRAME_SHOWN};a;2'; exec sleep 30`);
+    try {
+      await s.start();
+      await until(() => s.screen()[0] === "listening", "the program to listen");
+      await held("j", "go", "drawn");
+    } finally {
+      done();
+    }
+  });
+
+  test("no keys sent, none waited for: `keys()` before slipbox has handled any returns at once", async () => {
+    const { s, done } = faked(
+      String.raw`printf 'frame a 1\n' >> "$T"; printf 'listening\033]${FRAME_SHOWN};a;1\007'; exec sleep 30`,
+    );
+    try {
+      await s.start();
+      await until(() => s.screen()[0] === "listening", "the program to listen");
+      const sent = performance.now();
+      await s.keys();
+      expect(performance.now() - sent).toBeLessThan(WAIT / 2);
+    } finally {
+      done();
+    }
+  });
+
+  test("a restart in place — the same process, a slipbox numbering its frames from 1 again — its frames waited for as its own", async () => {
+    // The first slipbox has written 5 frames; the key it handles last restarts it in place (exec), and the next
+    // slipbox's first frame shows the key.
+    const { s, held, done } = faked(String.raw`if [ "$1" != again ]; then
+        stty raw -echo
+        printf 'frame a 5
+' >> "$T"; printf 'listening]${FRAME_SHOWN};a;5'
+        dd bs=1 count=1 >/dev/null 2>&1
+        printf 'key a 5
+' >> "$T"; exec "$0" again
+      fi
+      printf 'frame b 1
+' >> "$T"; hold "$HOLDS/restarted"
+      printf '[2J[Hrestarted]${FRAME_SHOWN};b;1'
+      dd bs=1 count=1 >/dev/null 2>&1
+      printf 'key b 1
+frame b 2
+' >> "$T"; hold "$HOLDS/drawn"
+      printf '[2J[Hdrawn]${FRAME_SHOWN};b;2'; exec sleep 30`);
+    try {
+      await s.start();
+      await until(() => s.screen()[0] === "listening", "the program to listen");
+      const pid = s.pid();
+      await held("r", "restarted", "restarted");
+      expect(s.pid()).toBe(pid);
+      await held("j", "drawn", "drawn");
+    } finally {
+      done();
+    }
+  });
   test("started once its keys go Kitty's way: the flags it pushes after its first frame waited for (#74)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "slipbox-flags-"));
     const bin = join(dir, "late-flags");

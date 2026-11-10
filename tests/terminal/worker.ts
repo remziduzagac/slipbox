@@ -3,6 +3,7 @@
 // 1.4.2), and so a check that crashes takes only itself down. The result goes to the file as JSON.
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { traced } from "../../src/tui/shell/terminal/trace.ts";
 import { CHECKS } from "./checks/index.ts";
 import { CheckFailed, Session, Skipped } from "./session.ts";
 
@@ -56,9 +57,9 @@ try {
 // What slipbox last did, said with a failure: the commands it ran, and how many keys it had handled (the trace).
 if (outcome === "fail") {
   const trace = readFileSync(s.trace, "utf8").split("\n").filter(Boolean);
-  const keys = trace.filter((l) => l === "key").length;
+  const keys = trace.filter((l) => traced(l)?.kind === "key").length;
   const last = trace
-    .filter((l) => l !== "key" && l !== "frame")
+    .filter((l) => !traced(l))
     .slice(-12)
     .join(", ");
   detail = `${detail}\n(the last commands run: ${last || "none"}; ${keys} keys handled)`;
