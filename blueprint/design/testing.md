@@ -381,8 +381,11 @@ tests' terminal reads in order with the rest. Each line and mark names its slipb
 shows a key when it's from the key's run with a greater number, or from a later run. `keys`, `type` and `paste`
 return once every key sent is handled (a named key is one key, typed text one per code point, a paste one), and the
 terminal has read the mark of a frame that shows the last of them. Then they wait until nothing more is written for
-40 ms. A check timed against the clock (an answer within two seconds while it indexes) says `alone` and runs by
-itself after the others, where it times slipbox, not the machine.
+40 ms. The start is the same: slipbox takes the screen before it reads the vault and the note it opens, so it writes a
+`ready` line once those reads are in, with the frame it paints next, and a check's start returns once the terminal has
+read that frame's mark (30 s at most; a release's slipbox, `bin`, writes none). A check that looks at the start while
+it's read says `noWait`. A check timed against the clock (an answer within two seconds while it indexes) says `alone`
+and runs by itself after the others, where it times slipbox, not the machine.
 
 A check that must hold slipbox mid-work has Bun preload a script of the tests' into slipbox's own process, not the CLI's
 (`preload`): the spelling checks of a dictionary still loading and of one that won't load preload

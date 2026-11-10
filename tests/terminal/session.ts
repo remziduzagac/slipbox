@@ -224,6 +224,7 @@ export class Session {
       : [process.execPath, ...preload, join(REPO, "src", "main.ts"), ...(this.opts.args ?? []), ...file];
     // What the slipbox before wrote is drawn first: its queries' answers, and its keyboard flags, are its own.
     await this.until(() => this.term.drawn, undefined, "the terminal to draw what the slipbox before wrote");
+    const readied = this.readies().length;
     this.term.spawn(argv, { cwd, env: this.processEnv() });
     if (this.opts.noWait) return;
     await this.until(() => /\b(READ|SOURCE|FILES|LENS|NORMAL)\b/.test(this.statusLine()), 15000, "slipbox to start");
@@ -233,12 +234,22 @@ export class Session {
       await this.until(() => this.term.kittyKeys, 15000, "slipbox to ask for Kitty's keys");
     // Its first frame isn't its last at start: what it reads after drawing (the index, git) redraws it.
     await this.settle();
-    // The vault read after the screen is taken: until then the keys wait and a click is dropped. A check that looks at
-    // the start while it's read waits itself (`noWait`).
-    const reading = () => this.statusLine().includes("reading the vault…");
-    if (!reading()) return;
-    await this.until(() => !reading(), 60_000, "slipbox to read the vault");
-    await this.settle();
+    // The vault, and what the start opens, read after the screen is taken (SD-T10): until they're in, the keys wait, a
+    // click is dropped, `esc` gives up the note, and its window is empty or says `reading the vault…`. Its `ready` on
+    // the screen (trace.ts); a release's slipbox (`bin`) says none. A check that looks at the start while it's read
+    // waits itself (`noWait`). One held past the wait goes on as it is.
+    if (bin) return;
+    const end = Date.now() + 30_000;
+    const shown = () => {
+      const ready = this.readies()[readied];
+      return !!ready && (this.term.framesShown.get(ready.run) ?? 0) >= ready.n;
+    };
+    while (!shown() && !this.exited() && Date.now() < end) await sleep(5);
+  }
+
+  /** The trace's `ready` lines: each slipbox's start in, a restart's too. */
+  private readies(): Traced[] {
+    return this.traced().filter((l) => l.kind === "ready");
   }
 
   /**
