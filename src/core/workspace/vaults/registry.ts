@@ -21,6 +21,7 @@ import {
   writeJson,
 } from "../../foundation/platform/fsutil.ts";
 import { cacheHome, stateHome, vaultKey } from "../../foundation/platform/paths.ts";
+import { indexWritten } from "../graph/index/written.ts";
 
 export const MARKER = ".slipbox";
 
@@ -313,6 +314,8 @@ export function writeRoots(roots: KnownRoot[]): boolean {
  */
 export function noteIndexed(key: string | string[], at = new Date()): void {
   const keys = new Set(typeof key === "string" ? [key] : key);
+  // Said whether or not this machine's list knows them: the explorer's rows look again (written.ts).
+  indexWritten([...keys]);
   const list = readRoots();
   const found = list.filter((x) => keys.has(x.key));
   if (!found.length) return;

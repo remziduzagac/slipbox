@@ -6,6 +6,7 @@ import type { NoteFile, WalkFilter } from "../../walk/walk.ts";
 import type { NoteEntry } from "../graph-types.ts";
 import type { EditorOverlay } from "../overlays/editor.ts";
 import { INDEX_VERSION, type IndexFile } from "./schema.ts";
+import { indexWritten } from "./written.ts";
 
 interface BuildContext {
   readonly notes: Map<string, NoteEntry>;
@@ -65,6 +66,8 @@ export function persistIndex(context: PersistContext, entries: Record<string, No
     branch: context.branchNow(),
     reached: [...context.reached],
   } satisfies IndexFile);
+  // Said on this thread: one written on another is said where it's recorded (`noteIndexed`).
+  indexWritten([context.loc.key]);
   return Date.now();
 }
 

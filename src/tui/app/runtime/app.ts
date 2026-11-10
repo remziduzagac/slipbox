@@ -31,6 +31,7 @@ import { stopParsePool } from "../../../core/documents/markdown/parse-pool.ts";
 import { stopWalkThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import { Listings } from "../../workspace/explorer/listings.ts";
 import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
+import { onIndexWritten } from "../../../core/workspace/graph/index/written.ts";
 import { stopSpellThread } from "../../../core/documents/diagnostics/spell-thread.ts";
 import { stopSyntaxThread } from "../../../core/documents/syntax/syntax-thread.ts";
 import { appendFileSync } from "node:fs";
@@ -208,8 +209,8 @@ export class App {
   lastInputAt = 0;
   /** Home, for an export's places and `~/` (a test's own, never yours). */
   home = homedir();
-  /** Stops following what loads lazily (a grammar), on quit. */
-  private stopLazy: (() => void) | null = null;
+  /** Stops following what loads lazily (a grammar) and the vaults' indexes written (the explorer's rows), on quit. */
+  private stopFollowing: (() => void)[] = [];
 
   // The features, each a controller of its own (D235).
   /** The configuration: keys, theme, glyphs, the UI settings, and live reload. */
@@ -371,7 +372,7 @@ export class App {
     if (carriedFrom) this.message("info", carried(this.loc, carriedFrom));
 
     this.reads.here(() => openInitialWindows(this, opts, carriedFrom)); // the start reads here until SD-T10
-    this.stopLazy = this.viewPolicy.followLazy();
+    this.stopFollowing = [this.viewPolicy.followLazy(), onIndexWritten((keys) => this.explorer.listings.indexed(keys))];
     this.session.publishState();
     this.settings.recordStamps();
     if (opts.watch !== false) {
@@ -583,7 +584,7 @@ export class App {
     } catch {}
     this.watcher?.close();
     this.exporter.cancel(true);
-    this.stopLazy?.();
+    for (const stop of this.stopFollowing) stop();
     stopParsePool();
     stopWalkThreads();
     stopBacklinkJobs();
