@@ -473,9 +473,12 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
   measure and OpenTUI's (`हिन्दी` is 3); `wcwidth` — terminals that don't — as wide as its first code point (`हिन्दी` 2,
   a flag 1). OpenTUI's third method, `unicode-wide`, is counted as `unicode`. A test holds slipbox to OpenTUI's own
   cells on every grapheme the reference set and halden hold, and every glyph slipbox draws of its own; OpenTUI's table
-  has the heart and exclamation ornaments wide (❠ to ❧: ❤, the unicode set's ❢), which slipbox follows, and Bengali's
-  reph 1, which it doesn't. A terminal may still count differently from OpenTUI: libghostty gives an Indic spacing
-  mark a column of its own.
+  has the heart and exclamation ornaments wide (❠ to ❧: ❤), which slipbox follows, and Bengali's reph 1, which it
+  doesn't. A terminal may still count differently from OpenTUI: libghostty gives an Indic spacing mark a column of its
+  own, and terminals draw those ornaments one cell. Where they differ, the row is out of step on the screen: what
+  follows the cluster is pulled a cell left, and once only that is drawn again, it lands a cell further than the rest.
+  So every glyph slipbox draws of its own is one OpenTUI, in each of its methods, and the terminal count alike (a test
+  holds them to Bun's measure, as the clustering terminals count); the unicode set's important callout is `✱`.
 
 `rendering/layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation (`、` `。` `）`
 `」` `…`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and opening punctuation (`（` `「`)

@@ -223,7 +223,8 @@ const unicode: Glyphs = {
   embed: "⧉",
   image: "▣",
   footnote: "†",
-  callout: { note: "ℹ", tip: "✦", important: "❢", warning: "⚠", caution: "✖", quote: "❝" },
+  // Each as wide to OpenTUI as to the terminal: `❢`, wide to OpenTUI alone, put its row out of step (widths.test.ts).
+  callout: { note: "ℹ", tip: "✦", important: "✱", warning: "⚠", caution: "✖", quote: "❝" },
   fmOpen: "≡",
   ellipsis: "…",
   vbar: "┃",
