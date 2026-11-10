@@ -59,6 +59,10 @@ const VAULT_CHECKS = [
 // the operation drawn, a link not followed on a file's way, the links' convention.
 const LOOK_CHECKS = ["watching", "configuration", "git", "source-control", "symlinks", "links"];
 
+// A vault nested in another, its index built on a thread: its row in the explorer marked once its folder's listing
+// reads it (VV-D9, SD-T7).
+const NESTED_INDEX_CHECKS = "peek backlinks: a vault nested";
+
 /**
  * The terminal checks a changed file of the app's runs, by check file or a piece of their names
  * (`bun run test:terminal <piece>…`): a feature's own files, which only its checks drive. A file of the app's none
@@ -114,20 +118,43 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // marks read; and the thread that lists them (SD-D2). The disk threads themselves left this entry once every note
   // opened was read on them (SD-T5): a change to them runs every check, as the seam's does. The vault open's own folders
   // are listed there too, each entry judged by the walk's filter (SD-T7): what it leaves out and why, the nested vaults'
-  // names, the links in it.
+  // names and whether their index is built, the links in it.
   [
     /^src\/core\/workspace\/walk\/(listing|list-worker)\.ts$/,
-    ["slow disk", "home", "view", "Elsewhere", "marks", "home-watching", "explorer-marks", "roots", "symlinks"],
+    [
+      "slow disk",
+      "home",
+      "view",
+      "Elsewhere",
+      "marks",
+      "home-watching",
+      "explorer-marks",
+      "roots",
+      "symlinks",
+      NESTED_INDEX_CHECKS,
+    ],
   ],
   // The TUI's look each second (SD-T4), asked of those threads: the open files no watcher sees and their ways, the
   // config, git's state and what's drawn of it, the root's tool's settings for the links' convention.
   [/^src\/(?:core\/workspace\/walk\/look-jobs|tui\/app\/runtime\/look)\.ts$/, ["slow disk", ...LOOK_CHECKS]],
   // The explorer's listings, of the folders outside the vault open and of its own (SD-T7), and the rows the walk didn't
   // give built from them: what the walk leaves out (busy, ignored, hidden, `walk.exclude`), a file made since, home's
-  // folders before its walk, a link's folder, a nested vault's name.
+  // folders before its walk, a link's folder, a nested vault's name, and its row's mark once its index is built.
   [
     /^src\/tui\/workspace\/explorer\/(?:listings|explorer-disk)\.ts$/,
-    ["slow disk", "view", "Elsewhere", "marks", "explorer-marks", "roots", "symlinks", "home", "files", "new-file"],
+    [
+      "slow disk",
+      "view",
+      "Elsewhere",
+      "marks",
+      "explorer-marks",
+      "roots",
+      "symlinks",
+      "home",
+      "files",
+      "new-file",
+      NESTED_INDEX_CHECKS,
+    ],
   ],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],

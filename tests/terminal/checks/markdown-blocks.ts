@@ -2,7 +2,7 @@
 
 import { type Check, pos } from "../check.ts";
 import type { Session, StyledRun } from "../session.ts";
-import { line, tablesAligned } from "../support/reading.ts";
+import { line, paneColumn, tablesAligned } from "../support/reading.ts";
 
 /**
  * The style `text` is drawn in on the first row holding `on` too (a heading's mark and its text: not the breadcrumb's
@@ -97,7 +97,8 @@ export const MARKDOWN_BLOCKS: Check[] = [
       await s.see(/▪ and a dash inside that/);
       // The item's own blocks, under its text: a table, a quote.
       const item = s.rowOf("• Follow up with Aiko on the retry design");
-      const col = (row: number, ch: string) => [...s.screen()[row]!].indexOf(ch);
+      // In display columns, in the note's pane: never shifted by what the explorer beside it shows.
+      const col = (row: number, ch: string) => paneColumn(s, row, ch);
       const table = s.rowOf(/┌─+┬─+┐/);
       const quote = s.rowOf("Do not merge before the restart test passes");
       s.expect(item >= 0 && table > item && quote > table, "the item's table and quote after it");
@@ -106,9 +107,12 @@ export const MARKDOWN_BLOCKS: Check[] = [
       // Ordered: 9 and 10 end in one column.
       await s.restart({ startAt: "home/notes/meetings/2026-09-10-q4-okr-planning.md" });
       await s.see("10. Pay down the tile-cache debt");
-      const nine = s.screen()[s.rowOf("9. Hire the backend engineer")]!;
-      const ten = s.screen()[s.rowOf("10. Pay down the tile-cache debt")]!;
-      s.expect(nine.indexOf("9.") === ten.indexOf("10.") + 1, `9. and 10. lined up:\n${nine}\n${ten}`);
+      const nine = s.rowOf("9. Hire the backend engineer");
+      const ten = s.rowOf("10. Pay down the tile-cache debt");
+      s.expect(
+        col(nine, "9. Hire") === col(ten, "10. Pay") + 1,
+        `9. and 10. lined up:\n${s.screen()[nine]}\n${s.screen()[ten]}`,
+      );
       // Tasks: open and done, each its box.
       await s.restart({ startAt: "home/notes/daily/2026-09-11.md" });
       await s.see("☐ OKR comments from Priya, still waiting");

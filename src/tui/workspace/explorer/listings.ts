@@ -191,6 +191,20 @@ export class Listings {
     }
   }
 
+  /** The listings that show a vault among `keys` (by its key) read again when next shown, shown as they were
+   *  meanwhile, however lately they were read: that vault's index was just written, which its row says (VV-D9) — and
+   *  nothing in the folder changed, for the tree to be built again by. A read under way is dropped: it may have looked
+   *  before the index was there. */
+  indexed(keys: readonly string[]): void {
+    const written = new Set(keys);
+    if (!written.size) return;
+    for (const k of this.kept.values())
+      if (k.listing?.entries.some((e) => e.vault && written.has(e.vault.key))) {
+        k.at = 0;
+        k.reading = null;
+      }
+  }
+
   private read(key: string, k: Kept, settings: string): void {
     const n = ++this.serial;
     k.reading = n;
