@@ -213,7 +213,8 @@ describe("medium", () => {
       await until(() => !app.graph.notes.has("x/y/z/deep.md"));
       expect(app.graph.notes.has("x/y/z/deep.md")).toBe(false);
     } finally {
-      app.watcher?.close();
+      // Quit, not only its watcher closed: its background index's tick would run on into later files' tests.
+      app.quit();
     }
   });
   test("watcher: renames leave no ghost notes (Bun reports only the new name)", async () => {
@@ -237,7 +238,7 @@ describe("medium", () => {
       const notes = [...app.graph.notes.keys()].sort();
       expect(notes).toEqual(["b/keep.md", "b/x.md", "h.md"]);
     } finally {
-      app.watcher?.close();
+      app.quit();
     }
   });
   test("watcher: files that come and go before the watch reports anything still reach the graph (#56)", async () => {
@@ -270,7 +271,7 @@ describe("medium", () => {
       expect(notes()).toBe("b/keep.md,b/x.md,c/new.md,h.md");
       expect(files()).toBe("new.png");
     } finally {
-      app.watcher?.close();
+      app.quit();
     }
   });
   test("a rescan reloads open buffers whose files changed", async () => {
