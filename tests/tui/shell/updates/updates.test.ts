@@ -566,7 +566,7 @@ describe("restarting (UPG-T5)", () => {
     const h = await harness();
     withEnv(h);
     await h.app.run("window.split_side");
-    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("file.open notes/alpha.md");
     await h.keys(":", ..."restart".split(""), "enter");
     await Bun.sleep(10);
     expect(h.quit.called).toBe(true);
@@ -605,7 +605,7 @@ describe("restarting (UPG-T5)", () => {
     withEnv(h);
     await h.keys("i", "X", "escape");
     await h.app.run("window.split_side");
-    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("file.open notes/alpha.md");
     await h.keys("i", "Y", "escape");
     writeFileSync(join(h.root, "index.md"), "changed on disk meanwhile, by another hand\n");
     await h.app.updates.restart();
@@ -718,7 +718,7 @@ describe("restarting (UPG-T5)", () => {
     const first = await harness();
     withEnv(first);
     await first.app.run("window.split_side");
-    await first.app.run("note.open notes/alpha.md");
+    await first.app.run("file.open notes/alpha.md");
     await first.app.updates.restart();
     const note = takeNote({ pid: process.pid, ppid: -1 })!;
     // Another window on the vault saves its own session meanwhile.

@@ -102,9 +102,9 @@ the arrow and page keys.
 | Key | Its other route | What it does |
 | --- | --- | --- |
 | `ctrl+p` | `space f f` | the switcher |
-| `ctrl+shift+p` | `:` or `space f p` | the command palette |
-| `ctrl+shift+f` | `space f g` | find in every note |
-| `ctrl+shift+h` | `space f shift+r` | find and replace in every note |
+| `ctrl+shift+p` | `:` | the command palette |
+| `ctrl+shift+f` | `space / g` | find in every note |
+| `ctrl+shift+h` | `space / shift+r` | find and replace in every note |
 | `ctrl+o` | `space h p` | back |
 | `ctrl+t c` | `space t c` | a new tab |
 | `ctrl+tab` | `g t` | the next tab |

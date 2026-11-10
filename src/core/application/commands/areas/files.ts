@@ -1,16 +1,17 @@
-// Command specs: notes, folders, vaults, problems, config, help and the app.
+// Command specs: notes, any file, folders, vaults, problems, config, help and the app.
 
 import type { CommandSpec } from "../contracts";
 
 const I = null; // interaction: needs a human at a terminal
 
 export const FILE_SPECS: CommandSpec[] = [
-  // note, folder, app
+  // note, file, folder, app: `space n` what a note has, `space f` any file (D274)
   {
-    id: "note.create",
-    title: "New note",
+    id: "file.create",
+    title: "New note or file",
     cli: "slipbox write <path> --create",
-    desc: "Asks for a name (folders too: projects/idea) and makes the note beside this one; it opens, typed into below its title",
+    desc: "Asks for a name (folders too: projects/idea; a note without an extension) and makes it beside this one; it opens, a note typed into below its title",
+    formerly: ["note.create"],
   },
   {
     id: "folder.create",
@@ -19,10 +20,11 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "Asks for a name and makes the folder beside this note (in the explorer: in the selected folder)",
   },
   {
-    id: "note.reload",
-    title: "Reload note from disk",
+    id: "file.reload",
+    title: "Reload the file from disk",
     cli: "slipbox render <note>",
-    desc: "Reads the note from disk again",
+    desc: "Reads the file from disk again (with unsaved changes, asks first)",
+    formerly: ["note.reload"],
   },
   {
     id: "note.edit",
@@ -75,16 +77,18 @@ export const FILE_SPECS: CommandSpec[] = [
   },
   { id: "lens.reset", title: "Lens to its own size", cli: I, desc: "Lets the lens size itself again, after + or -" },
   {
-    id: "note.send",
+    id: "file.send",
     title: "Send to your running editor",
     cli: "slipbox send <note> --line <n>",
-    desc: "Opens the note at the cursor's line in an editor already running elsewhere: by default, a running nvim",
+    desc: "Opens the file at the cursor's line in an editor already running elsewhere: by default, a running nvim",
+    formerly: ["note.send"],
   },
   {
-    id: "note.send_pick",
+    id: "file.send_pick",
     title: "Choose the editor to send to",
     cli: "slipbox send <note> --server <socket>",
-    desc: "Lists the running nvims to pick the one space n s sends to, then sends the note there",
+    desc: "Lists the running nvims to pick the one space f s sends to, then sends the file there",
+    formerly: ["note.send_pick"],
   },
   {
     id: "note.export",
@@ -105,10 +109,11 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "Notes picked in the order wanted (this one first; a pick again takes it out), then the format and where: one document, a chapter a note",
   },
   {
-    id: "note.info",
+    id: "file.info",
     title: "Info: open, focus, close",
     cli: "slipbox stat <note>",
     desc: "The Info view in the right panel: the file's path, vault, size, dates, counts, state, properties, tags, links",
+    formerly: ["note.info"],
   },
   {
     id: "note.properties",
@@ -135,34 +140,39 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "Shows the vault, its name and copies, notes, watcher, cache and state",
   },
   {
-    id: "note.delete",
-    title: "Delete the note",
+    id: "file.delete",
+    title: "Delete the file",
     cli: "slipbox rm <note>",
-    desc: "Moves it (the explorer's selected note, when it has focus) to the trash, after asking what breaks",
+    desc: "Moves it (the explorer's selected file, when it has focus) to the trash, after asking what breaks",
+    formerly: ["note.delete"],
   },
   {
-    id: "note.copy",
-    title: "Duplicate the note",
+    id: "file.copy",
+    title: "Duplicate the file",
     cli: "slipbox cp <note> [path]",
     desc: "A copy beside it (name-copy), opened",
+    formerly: ["note.copy"],
   },
   {
-    id: "note.move",
-    title: "Move the note to a folder…",
+    id: "file.move",
+    title: "Move the file to a folder…",
     cli: "slipbox mv <note> <folder>/<name>",
-    desc: "Picks a folder from a tree for it (the explorer's selected note, when it has focus); links fixed after a preview",
+    desc: "Picks a folder from a tree for it (the explorer's selected file, when it has focus); links fixed after a preview",
+    formerly: ["note.move"],
   },
   {
-    id: "note.yank",
-    title: "Copy the note, to paste",
+    id: "file.yank",
+    title: "Copy the file, to paste",
     cli: "slipbox cp <note> <new-path>",
-    desc: "space d p (p in the explorer) pastes a copy of it (the explorer's selected note, when it has focus) in a folder",
+    desc: "space d p (p in the explorer) pastes a copy of it (the explorer's selected file, when it has focus) in a folder",
+    formerly: ["note.yank"],
   },
   {
-    id: "note.cut",
-    title: "Cut the note, to paste",
+    id: "file.cut",
+    title: "Cut the file, to paste",
     cli: "slipbox mv <note> <new-path>",
-    desc: "space d p (p in the explorer) moves it (the explorer's selected note, when it has focus) to a folder, links fixed",
+    desc: "space d p (p in the explorer) moves it (the explorer's selected file, when it has focus) to a folder, links fixed",
+    formerly: ["note.cut"],
   },
   {
     id: "folder.rename",
@@ -225,10 +235,11 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "The trash, on its last row: enter asks, then removes all that was deleted here for good. Nothing stays past 30 days anyway",
   },
   {
-    id: "note.rename",
-    title: "Rename or move the note",
+    id: "file.rename",
+    title: "Rename or move the file",
     cli: "slipbox mv <note> <new-path>",
     desc: "Its links rewritten wherever they're reached, after a preview, each in its form",
+    formerly: ["note.rename"],
   },
   {
     id: "heading.rename",
@@ -262,10 +273,11 @@ export const FILE_SPECS: CommandSpec[] = [
   },
   { id: "vault.switch_stay", title: "Stay in this vault", cli: null, desc: "Cancels the pending vault switch" },
   {
-    id: "folders.open",
+    id: "vault.open",
     title: "Vaults: go into one",
     cli: "slipbox vaults",
     desc: "Every known vault and home workspace, worktrees grouped under their repository; enter goes into one",
+    formerly: ["folders.open"],
   },
   {
     id: "root.trust",
@@ -286,16 +298,18 @@ export const FILE_SPECS: CommandSpec[] = [
     desc: "Each symlink you said to follow, or not, or are just looking at, with where it leads; enter forgets the answer: asked again when it's next opened, and one followed is followed no more",
   },
   {
-    id: "folders.default",
+    id: "vault.default",
     title: "Which copy a folder's links open",
     cli: "slipbox folders default <name> <path>",
     desc: "A named folder with two copies here: pick the one its pointers open",
+    formerly: ["folders.default"],
   },
   {
-    id: "folder.name",
-    title: "Name this folder, as pointers name it",
+    id: "vault.name",
+    title: "Name this vault, as pointers name it",
     cli: "slipbox name <new>",
     desc: "This vault, or the explorer's selected one: a .slipbox/ folder's name changed (the old one kept, pointers by it still found), after a preview; a repository given one",
+    formerly: ["folder.name"],
   },
   {
     id: "link.relink",

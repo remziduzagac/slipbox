@@ -166,7 +166,7 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
     expect(h.app.info.rows().find((r) => r.key === "index")).toBeUndefined(); // not its folder's ⊘ any more
     // A note made in a hidden folder by its path: listed once, in that folder's rows, its folder still the row by its
     // path.
-    await h.app.run("note.create /.notes/later");
+    await h.app.run("file.create /.notes/later");
     expect(h.app.view!.buf.rel).toBe(".notes/later.md");
     expect(names(h).filter((n) => n.trim() === ".notes")).toHaveLength(1);
     expect(

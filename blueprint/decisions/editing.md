@@ -231,6 +231,9 @@ which is why remark was chosen (D5).
 
 ## D149: The explorer makes and changes files (18.x, 2026-09-30)
 
+> **Amended by D274 (2026-11-09):** a file's leader keys are `space f`'s, for any file; `space n` keeps what only a
+> note has.
+
 **Decision:** The explorer makes and changes files with buttons as well as keys: new notes and folders, rename, move,
 copy, cut and paste, delete and restore, for folders as for notes. Its file operations fix links
 as the rename does, after its preview (D143). A delete moves the file to the vault's trash, in its state, rather than

@@ -757,3 +757,34 @@ A list opened in the background still asks for its own (Remove…'s question, Me
 **Not chosen:** a frame asked for at each place that says something in the background (`BranchView.answered`, as the
 issue proposed), which leaves every new path to remember it; a frame after a message said inside a frame, which could
 keep drawing if something were said on every frame.
+
+## D274: The `space` groups by what they act on: a note's, any file's, finding's (#104, 2026-11-09)
+
+**Decision:** The leader's groups are named for what they act on. `space n` (+note) keeps what only a note has: a task
+ticked, its views and the lens, a heading renamed, footnotes, properties, a conflict resolved, export, the editor at
+its line. `space f` (+file) takes what any file has: new, rename, move, delete, copy, cut, a copy beside it, save and
+save all, reload, Info, its problems, send to a running editor, reveal in the explorer, and opening one, by its name
+(`space f f`, `ctrl+p` as before) or its path (`space f e`). Finding moves to `space /` (+find): in the note and in
+every note, search, replace, a heading, the breadcrumb, the tags, the types, a line. `space d` reads +directory and
+`space v` +vault; only that label says "directory", and titles and docs keep "folder". A key that moved keeps its
+letter: `space n m` is `space f m`, `space f g` is `space / g`. The palette's leader key, `space f p`, goes: `:` and
+`ctrl+shift+p` open it. The commands are named for their group: `note.rename` is `file.rename`, `folders.open` is
+`vault.open`, twenty in all. A spec's `formerly` keeps the ids it had, which `[keys]`, `[aliases]`, the recent
+commands, a run by id and a vault's forbidden commands read as its id now; only that one is listed. The CLI's command
+names don't change. The keys and ids, old and new, are in the CHANGELOG.
+
+**Why:** The maintainer's calls (#104, item 3, and its comment of 2026-11-09). `space n` mixed what any file takes with
+what only a note has, under a note's name: its keys rename and delete code files, as "Delete the note". `space f` was
+find, so `f` didn't mean file. `/` finds in vim and in less. `+file` and `+directory` read as the pair a terminal's user
+knows; everywhere else slipbox says "folder". A letter kept across the move leaves only the group's key to learn
+again. The palette finds nothing: `:` is one key, About and help name it, and under `space /` it would be misfiled
+again. A config or a script naming the old ids keeps working, so the rename costs nobody a setting.
+
+**Cost:** Every file key under `space n` and every find key under `space f` moves, and has to be learned again. The
+palette has no leader key; the which-key leads to it through About and help. The former ids stay for good: a later
+rename adds to `formerly` and never takes an id that was. EG's planned list of the vault's TODOs (EG-D9) moves from
+`space f x`, now cut, to `space / x`.
+
+**Not chosen:** the palette at `space / p`; the commands keeping their ids, so help and `slipbox commands` would name
+a code file's save `note.save`; the former ids in a table apart from the specs; "directory" in the titles and the docs
+(ideas.md § Navigation).

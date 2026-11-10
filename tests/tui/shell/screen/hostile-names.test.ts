@@ -21,7 +21,7 @@ describe("review cycle 4 (TUI, a hostile vault's names)", () => {
     await h.keys("escape", "space", "space"); // the switcher lists it by name
     shots.push(h.frame());
     await h.keys("escape");
-    await h.app.run("note.open notes/alpha.md");
+    await h.app.run("file.open notes/alpha.md");
     await h.app.run("backlinks.open");
     shots.push(h.frame());
     for (const s of shots) {

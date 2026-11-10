@@ -26,7 +26,7 @@ What is in the box:
 
 ## What to change first
 
-- `editor.command` and `editor.remote`: how `leader n e` and `leader n s` (our leader is backslash) open the file
+- `editor.command` and `editor.remote`: how `leader n e` and `leader f s` (our leader is backslash) open the file
   you are reading in your editor. These are only ever read from your own file; a repository's `.slipbox/config.toml` cannot set them, so cloning
   something never decides what runs on your machine.
 - `[language-server.*]`: where your language servers live. Ours point at the Homebrew paths.

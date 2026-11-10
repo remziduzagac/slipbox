@@ -31,10 +31,10 @@ export const NAVIGATION_TOOLS: Check[] = [
   // --- tags -----------------------------------------------------------------------------------
   {
     area: "navigating",
-    name: "tags: space f t lists them with counts, a tag its notes; a #tag in the text followed",
+    name: "tags: space / t lists them with counts, a tag its notes; a #tag in the text followed",
     covers: { cases: ["tags"], commands: ["tag.list"] },
     run: async (s) => {
-      await leader(s, "f", "t");
+      await leader(s, "/", "t");
       await s.see(/Tags \(\d+\)/, 10000); // after the index is read
       await s.see(/#dome\/shutter +2 notes/);
       await s.type("shutter");
@@ -87,7 +87,7 @@ export const NAVIGATION_TOOLS: Check[] = [
       await outlineOpen(s);
       await s.see("Outline");
       await s.keys("escape");
-      await leader(s, "f", "o");
+      await leader(s, "/", "o");
       await s.see("Headings —");
       await s.type("O25");
       await s.keys("enter");
@@ -105,19 +105,19 @@ export const NAVIGATION_TOOLS: Check[] = [
   },
   {
     area: "navigating",
-    name: "breadcrumb: space f b opens the heading path as a list; typing filters it, enter jumps to one",
+    name: "breadcrumb: space / b opens the heading path as a list; typing filters it, enter jumps to one",
     covers: { cases: ["breadcrumb", "outline"], commands: ["breadcrumb.path", "outline.pick"] },
     options: { open: HANDBOOK, size: { cols: 100, rows: 34 } },
     run: async (s) => {
       // Under O22's first subheading: the path is the title, O22, the subheading (here).
       const sub = lineOf(s, HANDBOOK, "### The gateway client block");
-      await leader(s, "f", "o");
+      await leader(s, "/", "o");
       await s.see("Headings —");
       await s.type("gateway client block");
       await s.keys("enter");
       await s.until(() => pos(s).line === sub, 3000, "the cursor on the subheading");
       await s.keys("j", "j");
-      await leader(s, "f", "b");
+      await leader(s, "/", "b");
       await s.see("Path");
       await s.see(/└─ O22: Remote access through one gateway/);
       await s.see(/└─ The gateway client block\s+here/);

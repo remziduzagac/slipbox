@@ -170,17 +170,17 @@ export class ExplorerActions {
     return this.app.region === "sidebar" && this.app.panels.sidebarShown && this.app.leftView === "explorer";
   }
 
-  /** What `space n …` acts on (18.13): the explorer's selected note or file when it has focus, else
-   *  this note; null (and said) without one. */
-  noteTarget(): ExplorerItem | null {
+  /** What `space f …` acts on (18.13, D274), or `space n o` with `of` "note": the explorer's selected file when it
+   *  has focus, else the one open; null (and said, in the words of the group that asked) without one. */
+  fileTarget(of: "file" | "note" = "file"): ExplorerItem | null {
     if (this.focused()) {
       const item = this.item();
       if (item && !item.dir) return item;
-      this.app.message("info", "space n acts on a note: select one (space d on a folder)");
+      this.app.message("info", `space ${of[0]} acts on a ${of}: select one (space d on a folder)`);
       return null;
     }
     const rel = this.app.view?.buf.rel ?? null;
-    if (rel === null) this.app.message("info", "open a note of this vault, or select one in the explorer");
+    if (rel === null) this.app.message("info", `open a ${of} of this vault, or select one in the explorer`);
     return rel === null ? null : { rel, dir: false };
   }
 

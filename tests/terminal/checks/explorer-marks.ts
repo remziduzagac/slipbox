@@ -135,7 +135,7 @@ const MARKED: Check[] = [
       await s.until(() => markOf(s, "dep") === "⊘" && markOf(s, "lib") === "⊘", 3000, "dep and lib, zoomed into: ⊘");
       await s.keys("escape");
       // Search finds the vault's note, and nothing in node_modules.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.see("search here — words");
       await s.type("mangosteen");
       await s.see(/"mangosteen" — 1 file\b/, 20_000);
@@ -160,7 +160,7 @@ const MARKED: Check[] = [
       await explorerOpen(s);
       await s.keys("escape"); // the keys back to the note: no menu over a row's marks
       await s.until(() => markOf(s, "build") === "●", 20_000, "build, indexed: ●");
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.see("search here — words");
       await s.type("marjoram");
       await s.see(/"marjoram" — 1 file\b/, 20_000);
@@ -172,7 +172,7 @@ const MARKED: Check[] = [
   {
     area: "navigating",
     name: "marks: the cursor on a ⊘ row, the status line says why — generated, git-ignored, walk.exclude; moved off, nothing; Info says it of the file open",
-    covers: { cases: ["explorer", "index", "status", "info"], commands: ["note.info"] },
+    covers: { cases: ["explorer", "index", "status", "info"], commands: ["file.info"] },
     // kestrel, a repository: node_modules and tmp in its .gitignore, vendor and docs/generated in its walk.exclude. Info
     // wide enough for its reason whole.
     options: { home: true, startAt: "home/work/kestrel/README.md", config: "[ui]\noutline_width = 60\n" },
@@ -203,7 +203,7 @@ const MARKED: Check[] = [
       await explorerRow(s, "api.md");
       await s.keys("enter");
       await opened(s, "docs/generated/api.md");
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       await s.see(/index +not indexed: walk\.exclude/);
     },
@@ -211,7 +211,7 @@ const MARKED: Check[] = [
   {
     area: "editing",
     name: "walk.exclude: n on its ⊘ row makes a note there, created and saved said not indexed; a busy folder's row still refused",
-    covers: { cases: ["new-note", "save", "explorer", "index"], commands: ["note.save"] },
+    covers: { cases: ["new-note", "save", "explorer", "index"], commands: ["file.save"] },
     // kestrel: docs/generated in its walk.exclude; node_modules busy, no note at its top.
     options: { home: true, startAt: "home/work/kestrel/README.md" },
     run: async (s) => {
@@ -287,7 +287,7 @@ const MARKED: Check[] = [
   {
     area: "navigating",
     name: "files.show auto: kestrel, a repository with .slipbox/, lists its code, the explorer's foot saying why; a narrows it, said; a notes vault leaves its code out, said (D272)",
-    covers: { cases: ["explorer", "vault"], commands: ["note.open"] },
+    covers: { cases: ["explorer", "vault"], commands: ["file.open"] },
     // kestrel: a repository whose .slipbox/ only names it; photography: a notes vault, its site and tools code. Each
     // vault's own `[files] show` taken out, so yours, `auto`, is what they list by.
     options: {

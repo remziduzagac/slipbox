@@ -135,7 +135,7 @@ describe("completion while typing (19.16)", () => {
     expect(h.app.snippet).not.toBeNull();
     // Saved with it: reverting changes no text, and still ends it.
     await h.keys("ctrl+s");
-    await h.app.run("note.revert");
+    await h.app.run("file.revert");
     expect(h.app.snippet).toBeNull();
     await h.app.languages.servers!.stopAll();
   });

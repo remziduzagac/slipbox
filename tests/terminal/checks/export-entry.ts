@@ -33,15 +33,15 @@ export const EXPORT_ENTRY: Check[] = [
   {
     area: "outside-and-code",
     name: "Info export: x and the Export row run the existing note export",
-    covers: { cases: ["info"], commands: ["note.info", "note.export"] },
+    covers: { cases: ["info"], commands: ["file.info", "note.export"] },
     run: async (s) => {
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       await s.keys("x");
       await s.see("Export home.md as");
       await s.see("Word (.docx)");
       await s.keys("escape");
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.keys("shift+g", "enter");
       await s.see("Export home.md as");
     },

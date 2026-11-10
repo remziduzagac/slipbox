@@ -18,8 +18,10 @@ export const WHICH_KEY: Check[] = [
       await s.see("everything about links");
       await s.see("About slipbox");
       await s.see("Background work");
-      // Into find's group: its entries; backspace back up to the groups; esc closes.
-      await s.keys("f");
+      // Each group named for what it acts on (D274).
+      for (const group of ["+find", "+file", "+note", "+directory", "+vault"]) await s.see(group);
+      // Into find's group, `/`: its entries; backspace back up to the groups; esc closes.
+      await s.keys("/");
       await s.see("Find in every note");
       await s.see("Search here");
       await s.keys("backspace");

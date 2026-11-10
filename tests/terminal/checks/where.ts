@@ -112,7 +112,7 @@ export const WHERE: Check[] = [
   {
     area: "links-and-files",
     name: "where you are: the workspace clicked lists all vaults; slash filters and enter changes workspace",
-    covers: { cases: ["vault", "mouse"], commands: ["folders.open"] },
+    covers: { cases: ["vault", "mouse"], commands: ["vault.open"] },
     options: { home: true, startAt: "home/notes/index.md", setup: (s) => void s.cliIn("~/work/kestrel", "ls") },
     run: async (s) => {
       await s.where(/^notes(?: │|$)/);

@@ -62,10 +62,10 @@ command = ["npx", "markdownlint-cli2"]
 
 [keys]
 "leader w" = "app.quit"
-"ctrl+s" = "note.save_force"
+"ctrl+s" = "file.save_force"
 
 [aliases]
-wq = "note.save_force"
+wq = "note.save_force"           # its id before the rename: refused all the same
 q = "app.quit"
 
 # The repository's identity, committed by Priya when she first opened it, so every clone is the same vault.

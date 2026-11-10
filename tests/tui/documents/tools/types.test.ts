@@ -23,9 +23,9 @@ describe("document types (22.2, 22.3)", () => {
     return { root, h: await harness({ root, open }) };
   };
 
-  test("space f d lists the types with their notes; a type's notes in order, each its status; one opens", async () => {
+  test("space / d lists the types with their notes; a type's notes in order, each its status; one opens", async () => {
     const { h } = await setup();
-    await h.keys("space", "f", "d");
+    await h.keys("space", "/", "d");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe("Document types (2)");
     expect(list.items.map((i) => [i.label, i.hint])).toEqual([
@@ -67,7 +67,7 @@ describe("document types (22.2, 22.3)", () => {
     h.app.open("index.md");
     await h.keys("]", "t");
     expect(h.app.view!.buf.rel).toBe("index.md");
-    expect(h.app.messages.at(-1)?.text).toBe("index.md is of no document type: space f d lists them");
+    expect(h.app.messages.at(-1)?.text).toBe("index.md is of no document type: space / d lists them");
   });
 
   test("frontmatter breaking its type's rules (22.2): in the note's problems, and the panel's All under Frontmatter — opened at its line", async () => {

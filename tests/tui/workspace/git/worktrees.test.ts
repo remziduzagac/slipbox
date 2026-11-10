@@ -54,7 +54,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     // From elsewhere: :folders lists it once, by its name — its worktrees are its branches, not copies (21.6).
     const { tildePath } = await import("../../../../src/core/workspace/vaults/names.ts");
     const other = await harness({ open: "index.md", width });
-    await other.app.run("folders.open");
+    await other.app.run("vault.open");
     const items = (other.app.overlay as ListOverlay).items.filter((i) => i.label === name && i.header);
     expect(items.map((i) => i.detail)).toEqual([tildePath(l.x)]);
     expect((other.app.overlay as ListOverlay).items.some((item) => item.label === "main" && item.indent === 1)).toBe(
@@ -132,7 +132,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     writeFileSync(join(repo, "r.md"), "# R\n");
     const h = await harness({ root: repo, open: "r.md" });
     expect(h.app.overlay).toBeNull();
-    await h.app.run("folders.open");
+    await h.app.run("vault.open");
     const list = h.app.overlay as ListOverlay;
     const at = list.items.findIndex((item) => (item.data as { root?: string } | null)?.root === one);
     expect(
@@ -150,7 +150,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: 2 copies on this machine — which do links to it open?`);
     await h.keys("escape");
     // Chosen later: :folders-default.
-    await h.app.run("folders.default");
+    await h.app.run("vault.default");
     expect((h.app.overlay as ListOverlay).title).toBe(`f${tag}: which copy do links open?`);
     expect((h.app.overlay as ListOverlay).items.map((i) => [i.label, i.hint])).toEqual([
       [tildePath(one), "links open it"],
@@ -162,13 +162,13 @@ describe("git worktrees in the TUI (17.19)", () => {
     await h.app.run("history.back");
     await answerSwitch(h);
     expect(h.app.loc.root).toBe(repo);
-    await h.app.run(`folder.name r${tag}`);
+    await h.app.run(`vault.name r${tag}`);
     expect(readFileSync(join(repo, ".slipbox", "config.toml"), "utf8")).toContain(`name = "r${tag}"`);
     expect(h.app.messages.at(-1)!.text).toContain(`is named r${tag}`);
     expect(h.app.loc.name).toBe(`r${tag}`); // shown by it from now on
     expect(topRow(h.frame())).toContain(`r${tag}`);
     // :open with a pointer: the note in the copy links open.
-    await h.app.run(`note.open slipbox://f${tag}/n.md`);
+    await h.app.run(`file.open slipbox://f${tag}/n.md`);
     await answerSwitch(h);
     expect(h.app.view!.buf.abs).toBe(join(two, "n.md"));
   });
@@ -195,7 +195,7 @@ describe("git worktrees in the TUI (17.19)", () => {
     const repo = mk(`r${tag}`);
     const clone = mk(`r${tag}-spike`);
     const h = await harness({ root: repo, open: "n.md" });
-    await h.app.run("folders.default");
+    await h.app.run("vault.default");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toBe(`r${tag}: which copy do links open?`);
     expect(list.items.map((i) => [i.label, i.hint])).toEqual([

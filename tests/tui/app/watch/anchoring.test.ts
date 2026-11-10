@@ -32,7 +32,7 @@ describe("external changes (5.3, 5.4) and anchoring (3.5)", () => {
     writeFileSync(join(h.root, "missing-note.md"), "# now exists\n");
     h.app.watch.applyChanges({ changes: [{ rel: "missing-note.md", kind: "created", isNote: true }], rescan: false });
     expect(role()).toBe("link");
-    await h.app.run("note.open missing-note.md");
+    await h.app.run("file.open missing-note.md");
     rmSync(join(h.root, "missing-note.md"));
     h.app.watch.applyChanges({ changes: [{ rel: "missing-note.md", kind: "deleted", isNote: true }], rescan: false });
     expect(h.frame()).toContain("deleted on disk");

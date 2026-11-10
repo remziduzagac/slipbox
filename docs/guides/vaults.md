@@ -241,7 +241,7 @@ You're in Elsewhere. The top bar says `Elsewhere`, and the status line `‹ /etc
 - **The symlink** in `sites-enabled` says where it leads, `→ /etc/nginx/sites-available/default  not followed`.
   Opening it asks first, as every symlink in Elsewhere does, with a line saying the target is outside your home folder.
   `l` just looks, read-only.
-- **No index:** `space f s` and `space l b` say Elsewhere has none.
+- **No index:** `space / s` and `space l b` say Elsewhere has none.
 
 From a vault, a file in `/etc` is a choice away:
 

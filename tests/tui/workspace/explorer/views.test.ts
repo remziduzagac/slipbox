@@ -9,7 +9,7 @@ makeSandbox();
 describe("the left panel's views and filter", () => {
   test("the rail's buttons pick the view; clicking the showing one hides the panel", async () => {
     const h = await harness({ open: "notes/alpha.md", width: 140, height: 30, config: (c) => (c.ui.sidebar = false) });
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/beta.md");
     h.frame();
     const hot = (id: string) => h.app.geometry!.hot.find((r) => r.id === id)!;
     const click = (id: string) => {
@@ -51,8 +51,8 @@ describe("the left panel's views and filter", () => {
   });
   test("each view keeps its position (selection, scroll, filter) while the other shows", async () => {
     const h = await harness({ open: "index.md", width: 140, height: 30 });
-    await h.app.run("note.open notes/alpha.md");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/alpha.md");
+    await h.app.run("file.open notes/beta.md");
     const click = (id: string) => {
       h.frame();
       const b = h.app.geometry!.hot.find((r) => r.id === id)!;
@@ -186,8 +186,8 @@ describe("the left panel's views and filter", () => {
   });
   test("history: a double-click in a filtered list jumps to the clicked entry, the filter cleared", async () => {
     const h = await harness();
-    await h.app.run("note.open notes/alpha.md");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/alpha.md");
+    await h.app.run("file.open notes/beta.md");
     await h.keys("space", "h", "h", "/", ...[..."index"]);
     const rows = h.app.history.rows();
     const i = rows.findIndex((r) => r.path === "index.md");
@@ -243,7 +243,7 @@ describe("the left panel's views and filter", () => {
     await three.keys("space", "h", "h");
     expect(three.app.history.rows().filter((r) => r.recent)).toHaveLength(3);
     const none = await harness({ root, config: (c) => (c.ui.history_limit = 0) });
-    await none.app.run("note.open notes/alpha.md");
+    await none.app.run("file.open notes/alpha.md");
     await none.keys("space", "h", "h");
     expect(none.app.history.rows().some((r) => r.heading || r.recent)).toBe(false);
     // Out of range: said, and the default kept.
@@ -256,8 +256,8 @@ describe("the left panel's views and filter", () => {
   });
   test("the history filters too", async () => {
     const h = await harness();
-    await h.app.run("note.open notes/alpha.md");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/alpha.md");
+    await h.app.run("file.open notes/beta.md");
     await h.keys("space", "h", "h", "/", "a", "l", "p");
     const rows = h.app.history.rows();
     expect(rows.map((r) => r.label)).toEqual([expect.stringContaining("alpha")]);

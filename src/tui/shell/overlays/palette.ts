@@ -31,12 +31,12 @@ import { PROBLEM_KEYMAP } from "../../documents/diagnostics/problems/at-cursor.t
 
 function argCandidates(a: App, cmd: string): string[] | null {
   switch (cmd) {
-    case "note.open":
+    case "file.open":
     case "window.split_side":
     case "window.split_stacked":
     case "tab.new":
     case "link.convert":
-      return cmd === "note.open"
+      return cmd === "file.open"
         ? [
             ...a.graph.notes.keys(),
             ...a.graph.filePaths().filter((p) => classify(p, a.config.walk.extensions).group !== "binary"),
@@ -63,14 +63,14 @@ function argCandidates(a: App, cmd: string): string[] | null {
 
 /** Commands whose argument is free text, with nothing to complete: a new name, a line, a query. */
 const FREE_ARG = new Set([
-  "note.create",
+  "file.create",
   "folder.create",
   "cursor.goto_line",
   "find.vault",
   "search.open",
-  "note.rename",
+  "file.rename",
   "heading.rename",
-  "folder.name",
+  "vault.name",
   "shell.run",
   "shell.filter",
   "edit.reflow",

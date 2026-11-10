@@ -74,7 +74,7 @@ export const REFLOW: Check[] = [
         "visual.unwrap",
         "edit.reflow",
         "edit.unwrap",
-        "note.save",
+        "file.save",
       ],
     },
     options: { home: true, startAt: "home/work/product/drafts/2.3-retro.md", size: { cols: 160, rows: 40 } },

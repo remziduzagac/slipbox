@@ -465,8 +465,8 @@ has a `•`.
 
 | To | Press |
 | --- | --- |
-| Save this note | `ctrl+s`, `space n w` or `:w` |
-| Save every unsaved note, open in a tab or not | `space n shift+w` or `:wa` |
+| Save this note | `ctrl+s`, `space f w` or `:w` |
+| Save every unsaved note, open in a tab or not | `space f shift+w` or `:wa` |
 | Save every unsaved note, then quit | `:wq`, `:x`, `:wqa` or `:xa` |
 
 If you quit (`ctrl+q`, or `:q` on the last window) with unsaved changes, slipbox refuses. The message names the notes.
@@ -522,7 +522,7 @@ The conflict prompt offers four answers, each by its key:
 
 `:e!` throws your changes away and loads the file (`u` brings them back).
 
-`space n r` (or `:reload`) reads the note from disk again.
+`space f r` (or `:reload`) reads the note from disk again.
 
 - On a note with unsaved changes whose file hasn't changed, it asks first. `y` throws your changes away and loads the
   file (`u` brings them back). `n` or `esc` keeps them, and autosave goes on as before.
@@ -635,7 +635,7 @@ Each visible finding is a warning:
 
 - counted on the status line
 - its line number coloured
-- listed in the Problems panel (`space n q`)
+- listed in the Problems panel (`space f q`)
 
 If markdownlint isn't installed, slipbox installs it into its own folder the first time it is needed. It doesn't if
 `lsp.auto_install = false` ([Privacy](privacy.md)).
@@ -773,7 +773,7 @@ slipbox comes back, and reloads the note if it changed.
 The editor is `editor.command`, else `$VISUAL`, else `$EDITOR`, else `vi`. The usual ones (vim, nvim, nano, emacs,
 helix, micro and others) open at the line.
 
-**`space n s`** sends the note to an editor already running elsewhere, such as nvim in another pane. It doesn't wait.
+**`space f s`** sends the note to an editor already running elsewhere, such as nvim in another pane. It doesn't wait.
 
 By default (`editor.remote = ["nvim"]`), slipbox finds the running nvims itself, any nvim 0.9 or later. It sends to:
 
@@ -781,7 +781,7 @@ By default (`editor.remote = ["nvim"]`), slipbox finds the running nvims itself,
 - else the only one
 - else it asks "Send to which nvim?", with the one working where the note lives first
 
-`space n p` always asks. The editor's saves show up in slipbox as they land.
+`space f p` always asks. The editor's saves show up in slipbox as they land.
 
 `editor.remote` can name other editors' commands instead. They run in order, with `{file}` and `{line}` filled in. For
 example: `["code -g {file}:{line}"]`.
@@ -789,7 +789,7 @@ example: `["code -g {file}:{line}"]`.
 These two settings name programs to run. So only your own configuration can set them, never a folder's
 ([Configuration](configuration.md)).
 
-From the command line, `slipbox send inbox.md --line 42` does what `space n s` does.
+From the command line, `slipbox send inbox.md --line 42` does what `space f s` does.
 
 <a id="editing"></a>
 

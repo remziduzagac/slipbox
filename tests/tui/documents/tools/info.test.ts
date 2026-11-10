@@ -20,9 +20,9 @@ describe("the Info view (3.19)", () => {
   const rows = (h: Harness) =>
     h.app.info.rows().map((r) => (r.heading ? `# ${r.key}` : `${"  ".repeat(r.depth)}${r.key}: ${r.value}`));
 
-  test("space n i: the file on screen — where, which root, its counts and state; its properties, tags and links; the rail's button above ▤", async () => {
+  test("space f i: the file on screen — where, which root, its counts and state; its properties, tags and links; the rail's button above ▤", async () => {
     const h = await setup();
-    await h.keys("space", "n", "i");
+    await h.keys("space", "f", "i");
     expect(h.app.rightView).toBe("info");
     expect(h.app.region).toBe("outline");
     const r = rows(h);
@@ -66,7 +66,7 @@ describe("the Info view (3.19)", () => {
 
   test("the filter's enter on a section heading folds that section, not the row at its index unfiltered", async () => {
     const h = await setup();
-    await h.keys("space", "n", "i");
+    await h.keys("space", "f", "i");
     expect(h.app.region).toBe("outline");
     await h.keys("/", ..."links");
     expect(h.app.info.rows()[h.app.outline.selected]).toMatchObject({ heading: true, section: "Links" });
@@ -83,7 +83,7 @@ describe("the Info view (3.19)", () => {
     writeFileSync(join(vault, "a.md"), "# A\n\n[[b]]\n");
     writeFileSync(join(vault, "b.md"), "# B\n");
     const h = await harness({ root: vault, open: "a.md" });
-    await h.keys("space", "n", "i");
+    await h.keys("space", "f", "i");
     const r = rows(h);
     const at = r.indexOf("writes: wikilinks");
     expect(r.slice(at, at + 4)).toEqual([
@@ -102,7 +102,7 @@ describe("the Info view (3.19)", () => {
     mkdirSync(join(notes, ".slipbox"));
     for (let i = 0; i < 6; i++) writeFileSync(join(notes, `n${i}.md`), `# N${i}\n\n[next](/n${(i + 1) % 6})\n`);
     const n = await harness({ root: notes, open: "n0.md" });
-    await n.keys("space", "n", "i");
+    await n.keys("space", "f", "i");
     expect(rows(n).slice(rows(n).indexOf("writes: markdown"), rows(n).indexOf("writes: markdown") + 4)).toEqual([
       "writes: markdown",
       "  path: from the vault's top",
@@ -130,7 +130,7 @@ describe("the Info view (3.19)", () => {
 
   test("enter opens what a row names: a property's line, a tag's notes, the backlinks; y copies; h folds a section; / filters", async () => {
     const h = await setup();
-    await h.keys("space", "n", "i");
+    await h.keys("space", "f", "i");
     const select = (label: string) => {
       h.app.outline.selected = h.app.info.rows().findIndex((r) => (r.heading ? `# ${r.key}` : r.key) === label);
       h.app.region = "outline";

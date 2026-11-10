@@ -65,7 +65,7 @@ describe("embeds in the TUI (1.11)", () => {
     expect(h.frame()).toContain("▎ rewritten by an agent");
     // Saved here, in another tab.
     await h.app.run("tab.new");
-    await h.app.run("note.open sub/inner.md");
+    await h.app.run("file.open sub/inner.md");
     await h.keys(
       "space",
       "n",

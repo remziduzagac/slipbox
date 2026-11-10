@@ -160,7 +160,7 @@ describe("space f e: a file by its path", () => {
 
   test("a whole path typed with no entry to pick opens as typed; :e reads ~ as home too", async () => {
     const { h, base, n } = await opened();
-    await h.app.run("note.open ~/app/design.md");
+    await h.app.run("file.open ~/app/design.md");
     expect(list(h).title).toBe(`Go into papp${n}? Your tabs there replace these`);
     await answerSwitch(h, "c");
     expect(h.app.view!.buf.rel).toBe("index.md");

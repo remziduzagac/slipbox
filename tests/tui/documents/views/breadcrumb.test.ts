@@ -6,13 +6,13 @@ import { makeSandbox, harness } from "../../../tui-harness.ts";
 makeSandbox();
 
 describe("breadcrumb collapse (…) and the path dropdown", () => {
-  test("space f b with the which-key popup drawn over the breadcrumb after space f: the dropdown under it all the same (#40)", async () => {
-    // Tall enough for the popup to hold `space f`'s keys in two columns with their explanations, reaching up over the
-    // breadcrumb: on a shorter screen it takes three columns, under it.
+  test("space / b with the which-key popup drawn over the breadcrumb after space /: the dropdown under it all the same (#40)", async () => {
+    // Sized for the popup to hold `space /`'s keys in two columns with their explanations, reaching up over the
+    // breadcrumb: on a shorter screen it takes three columns, and on a taller one it sits under it.
     const h = await harness({
       open: "samples/handbook/operations-handbook.md",
       width: 100,
-      height: 36,
+      height: 32,
       config: (c) => (c.ui.outline = false),
     });
     const v = h.app.view!;
@@ -22,7 +22,7 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     const hot = h.app.geometry!.hot;
     const crumb = hot.find((r) => r.id === "crumbmore:0") ?? hot.find((r) => r.id === "crumbicon:0")!; // its …, else its icon
     // A frame between the keys, as a slow machine draws one: the popup over the breadcrumb takes its clicks.
-    await h.keys("space", "f");
+    await h.keys("space", "/");
     h.frame();
     const popup = h.app.geometry!.popup!;
     expect(crumb.y >= popup.y && crumb.y < popup.y + popup.h && crumb.x < popup.x + popup.w).toBe(true);
@@ -31,7 +31,7 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     expect((h.app.overlay as ListOverlay).anchor).toEqual({ x: crumb.x, y: crumb.y });
     expect(h.frame()).toContain("└─");
   });
-  test("… opens the whole path as a dropdown under it; enter jumps; space f b opens it too", async () => {
+  test("… opens the whole path as a dropdown under it; enter jumps; space / b opens it too", async () => {
     const h = await harness({
       open: "samples/handbook/operations-handbook.md",
       width: 70,
@@ -67,7 +67,7 @@ describe("breadcrumb collapse (…) and the path dropdown", () => {
     // From the keyboard: the arrows move, and a click on an entry picks it.
     h.app.moveCursor(v, { row: target.line + 1, col: 0 });
     h.frame();
-    await h.keys("space", "f", "b");
+    await h.keys("space", "/", "b");
     expect(h.app.overlay?.kind).toBe("list");
     expect((h.app.overlay as ListOverlay).selected).toBe(2); // on the current heading
     await h.keys("up", "up");

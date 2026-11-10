@@ -170,7 +170,7 @@ export function editActions(): Record<string, Run> {
     "edit.repeat": (a) => sourceEdit(a, () => V.repeat(a)),
     "edit.undo": (a) => withView(a, (v) => undoRedo(a, v, "undo")),
     "edit.redo": (a) => withView(a, (v) => undoRedo(a, v, "redo")),
-    "note.save": (a) =>
+    "file.save": (a) =>
       withView(a, (v) => {
         // The commit editor's ctrl+s commits, its message changed or not: a commit git refused is tried again (26.3).
         // The merge screen's saves the file as settled, as its `w` does (GIT-D5): its own text never changes. A
@@ -183,21 +183,21 @@ export function editActions(): Record<string, Run> {
           return a.message("info", `${a.displayName(v.buf)} has no changes to save`);
         if (a.saving.save(v.buf)) a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)}`);
       }),
-    "note.save_force": (a) =>
+    "file.save_force": (a) =>
       withView(a, (v) => {
         // A virtual buffer (the floating window's: a commit's message, a report) has no file to force: `:w!` is `:w`.
-        if (v.buf.virtual || v.buf.newFile) return a.run("note.save");
+        if (v.buf.virtual || v.buf.newFile) return a.run("file.save");
         if (a.writeBuffer(v.buf, v.buf.contentToSave(), true))
           a.message("info", `saved ${a.displayName(v.buf)}${a.files.notIndexed(v.buf.abs)} over the file on disk`);
       }),
-    "note.revert": (a) => withView(a, (v) => revert(a, v.buf)),
+    "file.revert": (a) => withView(a, (v) => revert(a, v.buf)),
     "note.resolve": (a) =>
       withView(a, (v) => {
         if ((!v.buf.newFile && !v.buf.dirty) || !v.buf.changedOnDisk())
           return a.message("info", `${a.displayName(v.buf)} has no conflict with the file on disk`);
         a.saving.conflictPrompt(v.buf);
       }),
-    "note.save_all": (a) => {
+    "file.save_all": (a) => {
       for (const v of a.allViews()) if (v.insert) E.stopInsert(a, v);
       // The properties editor's changes too: written into their note (which it saves), the editor kept open.
       const f = a.floating?.kind === "properties" && a.floating.view.buf.dirty ? a.floating : null;
@@ -213,8 +213,8 @@ export function editActions(): Record<string, Run> {
       if (saved === dirty.length) a.message("info", `saved ${saved} note${saved === 1 ? "" : "s"}${said}`);
       else a.message("warn", `saved ${saved} of ${dirty.length} — the others say why above`);
     },
-    "note.send": (a) => withView(a, (v) => a.handoff.sendToEditor(v)),
-    "note.send_pick": (a) => withView(a, (v) => a.handoff.sendToEditor(v, true)),
+    "file.send": (a) => withView(a, (v) => a.handoff.sendToEditor(v)),
+    "file.send_pick": (a) => withView(a, (v) => a.handoff.sendToEditor(v, true)),
   };
 }
 
@@ -251,7 +251,7 @@ function undoRedo(a: App, v: View, which: "undo" | "redo"): void {
   );
 }
 
-/** `:e!`, and `space n r`'s discard once asked: the file loaded again over unsaved changes, one `u` away. */
+/** `:e!`, and `space f r`'s discard once asked: the file loaded again over unsaved changes, one `u` away. */
 export function revert(a: App, buf: View["buf"]): void {
   for (const w of a.allViews()) if (w.buf === buf) w.insert = false;
   // Out of insert so, a snippet being typed in it is over too (25.8).

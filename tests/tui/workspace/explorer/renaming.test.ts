@@ -36,10 +36,10 @@ describe("vaults in the TUI (17.x)", () => {
     return { base, notes, app, n };
   }
 
-  test("space n m renames a note: a preview of every change, then enter; open notes follow (17.15)", async () => {
+  test("space f m renames a note: a preview of every change, then enter; open notes follow (17.15)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
-    await h.keys("space", "n", "m");
+    await h.keys("space", "f", "m");
     const p = h.app.overlay as import("../../../../src/tui/app/runtime/app.ts").PromptOverlay;
     expect(p.kind).toBe("prompt");
     expect(p.text).toBe("notes/alpha");
@@ -69,10 +69,10 @@ describe("vaults in the TUI (17.x)", () => {
     );
   });
 
-  test("space n m into a folder: one that's there, or a path ending in /, keeps the note's name (DF-D4)", async () => {
+  test("space f m into a folder: one that's there, or a path ending in /, keeps the note's name (DF-D4)", async () => {
     const root = makeVault();
     const h = await harness({ root, open: "notes/alpha.md" });
-    await h.keys("space", "n", "m");
+    await h.keys("space", "f", "m");
     (h.app.overlay as import("../../../../src/tui/app/runtime/app.ts").PromptOverlay).text = "projects";
     await h.keys("enter");
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → projects/alpha.md: ");
@@ -81,10 +81,10 @@ describe("vaults in the TUI (17.x)", () => {
     expect(existsSync(join(root, "projects.md"))).toBe(false);
     expect(h.app.view!.buf.rel).toBe("projects/alpha.md");
     // `:mv` too; a folder named with a `/` is made, the root is `/`.
-    await h.app.run("note.rename later/");
+    await h.app.run("file.rename later/");
     expect((h.app.overlay as ListOverlay).title).toStartWith("projects/alpha.md → later/alpha.md: ");
     await h.keys("escape");
-    await h.app.run("note.rename /");
+    await h.app.run("file.rename /");
     expect((h.app.overlay as ListOverlay).title).toStartWith("projects/alpha.md → alpha.md: ");
   });
 
@@ -120,7 +120,7 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root, open: "notes/alpha.md" });
     const index = readFileSync(join(root, "index.md"), "utf8");
     const alpha = readFileSync(join(root, "notes", "alpha.md"), "utf8");
-    await h.app.run("note.rename notes/first");
+    await h.app.run("file.rename notes/first");
     await h.keys("enter");
     expect(h.app.view!.buf.rel).toBe("notes/first.md");
     await h.keys("space", "v", "shift+u");
@@ -155,14 +155,14 @@ describe("vaults in the TUI (17.x)", () => {
     const h = await harness({ root, open: "index.md" });
     await h.keys("space", "n", "v", "shift+a", "!", "escape");
     await h.app.run("tab.new");
-    await h.app.run("note.open notes/alpha.md");
-    await h.app.run("note.rename notes/first");
+    await h.app.run("file.open notes/alpha.md");
+    await h.app.run("file.rename notes/first");
     expect(h.app.overlay).toBeNull();
     expect(h.app.messages.at(-1)!.text).toContain("unsaved: index.md");
     await h.app.run("tab.prev");
     await h.keys("ctrl+s");
     await h.app.run("tab.next");
-    await h.app.run("note.rename notes/first");
+    await h.app.run("file.rename notes/first");
     expect((h.app.overlay as ListOverlay).title).toStartWith("notes/alpha.md → notes/first.md");
     await h.keys("escape"); // cancelled: nothing changed
     expect(existsSync(join(root, "notes", "alpha.md"))).toBe(true);
@@ -191,7 +191,7 @@ describe("vaults in the TUI (17.x)", () => {
   test("naming the folder anew, and relinking a moved note's links, from the TUI", async () => {
     const { notes, n } = await twoVaults();
     const h = await harness({ root: notes, open: "index.md" });
-    await h.app.run(`folder.name tnotes${n}b`);
+    await h.app.run(`vault.name tnotes${n}b`);
     await h.keys("enter");
     expect(h.app.loc.name).toBe(`tnotes${n}b`);
     expect(readFileSync(join(notes, ".slipbox", "config.toml"), "utf8")).toContain(`previous_names = ["tnotes${n}"]`);
@@ -201,7 +201,7 @@ describe("vaults in the TUI (17.x)", () => {
     h.app.graph.build(true);
     renameSync(join(notes, "todo.md"), join(notes, "tasks.md"));
     h.app.graph.build(true);
-    await h.app.run("note.open todo-link.md");
+    await h.app.run("file.open todo-link.md");
     await h.app.run("link.relink");
     expect((h.app.overlay as ListOverlay).title).toStartWith("relink: 1 change in 1 file");
     await h.keys("enter");
@@ -226,7 +226,7 @@ describe("vaults in the TUI (17.x)", () => {
     expect(existsSync(join(root, "projects", "projects-alpha.md"))).toBe(true);
     // Insisting: the same name typed again is made.
     await h.keys("escape"); // the new note opened to be typed into
-    await h.app.run("note.open projects/index.md");
+    await h.app.run("file.open projects/index.md");
     await h.keys("ctrl+n");
     for (const c of "alpha") await h.keys(c);
     await h.keys("enter", "ctrl+u");

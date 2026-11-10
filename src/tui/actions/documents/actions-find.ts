@@ -76,7 +76,7 @@ export function findActions(): Record<string, Run> {
           v, // typed in this window's find row
         );
       }),
-    // Search the vault (ctrl+shift+f, space f g): every note and every file the explorer shows, an
+    // Search the vault (ctrl+shift+f, space / g): every note and every file the explorer shows, an
     // open one as it is now (unsaved changes and all); enter opens it at the match.
     "search.open": (a, arg) => a.search.open(arg ?? ""),
     "find.vault": (a, arg) => {

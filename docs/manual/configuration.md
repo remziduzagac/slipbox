@@ -130,7 +130,7 @@ diff = "blocks"                # a note's diff opens as: blocks (each changed bl
 diff_layout = "auto"           # a code file's diff: auto (side by side where each side gets 80 columns) | unified
                                # (one column) | split (side by side)
 
-[search]                       # searching across notes: space f s, slipbox search
+[search]                       # searching across notes: space / s, slipbox search
 engine = "auto"                # auto (the index once it's built, else a scan) | index (built first) | scan (no index)
 
 [index]                        # the background index of your home folder, in the TUI
@@ -169,8 +169,8 @@ lens_max = 0.5                 # 0.1–1: …and stops at this share of the wind
 auto_pairs = false             # typing ( [ { " ' or ` puts its closing pair after the cursor
 text_width = 0                 # 0–1000: g q wraps a note's paragraphs to this; 0, the folder's markdownlint
                                # line_length, else .editorconfig's max_line_length, else 80 (see Editing)
-remote = ["nvim"]              # space n s: an editor already running, to send the note to; "nvim" finds the
-                               # running nvims (space n p picks); else commands, run in order; your file only
+remote = ["nvim"]              # space f s: an editor already running, to send the note to; "nvim" finds the
+                               # running nvims (space f p picks); else commands, run in order; your file only
 
 [spell]                        # spelling in notes; space u s turns it on or off
 enabled = false                # misspelt words marked
@@ -290,7 +290,8 @@ Keys are written as the [Keys](keys.md) chapter writes them. They are key names 
 - `leader` means the key `input.leader` names.
 
 A command is its ID, optionally followed by an argument: `"tab.goto 3"`, `"theme.set nord"`. `slipbox commands` lists
-every command's ID. `?` in the TUI lists every key bound.
+every command's ID. `?` in the TUI lists every key bound. A command renamed still answers to the ID it had: a file that
+binds `note.save` keeps working, though `slipbox commands` lists it as `file.save`.
 
 A key with a modifier slipbox doesn't know (`hyper+x`) is reported and never fires. It doesn't bind plain `x` instead. A
 command that doesn't exist is reported too.
@@ -569,7 +570,7 @@ A save does what `.editorconfig` asks, and only then:
 
 Each is done in the text first, as an undo step of its own.
 
-The Info view (`space n i`) says how a file is indented, and what said so.
+The Info view (`space f i`) says how a file is indented, and what said so.
 
 ## Spelling dictionaries
 

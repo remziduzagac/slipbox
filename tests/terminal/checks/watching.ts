@@ -54,7 +54,7 @@ export const WATCHING: Check[] = [
   {
     area: "outside-and-code",
     name: "watching: a note reached in a hidden folder, changed by an agent, reloads once — looked at where no watcher is (20.8)",
-    covers: { cases: ["watching"], commands: ["note.open", "backlinks.open"] },
+    covers: { cases: ["watching"], commands: ["file.open", "backlinks.open"] },
     options: {
       // The watcher's sweep each 3 s (15 ticks of 200 ms): soon enough to see it doesn't say the change again.
       config: "[watch]\npoll_ms = 200\n",
@@ -96,7 +96,7 @@ export const WATCHING: Check[] = [
   {
     area: "outside-and-code",
     name: "watching: a note reached in a hidden folder, deleted and made again by an agent — read again and indexed again, its backlink there",
-    covers: { cases: ["watching"], commands: ["note.open", "backlinks.open"] },
+    covers: { cases: ["watching"], commands: ["file.open", "backlinks.open"] },
     options: {
       setup: (s) => {
         if (!s.exists(".stash/back.md")) s.write(".stash/back.md", "# Back\n\nTo [home](../home.md).\n");
@@ -123,7 +123,7 @@ export const WATCHING: Check[] = [
   {
     area: "outside-and-code",
     name: "watching: a note reached in a hidden folder, the folder made a file by an agent — said deleted, slipbox goes on",
-    covers: { cases: ["watching"], commands: ["note.open"] },
+    covers: { cases: ["watching"], commands: ["file.open"] },
     options: {
       setup: (s) => {
         if (!s.exists(".junk/gone.md")) s.write(".junk/gone.md", "# Gone soon\n");
@@ -307,8 +307,8 @@ export const WATCHING: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "reload: not watching — an outside write waits for space n r, or :reload, which reloads it",
-    covers: { cases: ["watching", "reload"], commands: ["note.reload"] },
+    name: "reload: not watching — an outside write waits for space f r, or :reload, which reloads it",
+    covers: { cases: ["watching", "reload"], commands: ["file.reload"] },
     options: { open: KENJI, config: "[watch]\nenabled = false\n" },
     run: async (s) => {
       await s.see("second desk by the window");
@@ -318,9 +318,9 @@ export const WATCHING: Check[] = [
       await sleep(2000);
       s.expect(
         s.text().includes("second desk by the window") && !s.text().includes("third desk"),
-        "the outside write not shown before space n r",
+        "the outside write not shown before space f r",
       );
-      await leader(s, "n", "r");
+      await leader(s, "f", "r");
       await s.see("third desk, by the door");
       await s.status("↻ reloaded");
       // :reload likewise.

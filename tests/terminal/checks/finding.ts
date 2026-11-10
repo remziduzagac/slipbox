@@ -83,7 +83,7 @@ export const FINDING: Check[] = [
       await s.keys("escape", "escape");
       await s.keys("ctrl+s");
       await s.file(HANDBOOK, (t) => t.includes("BRILL") && !t.includes("Brill"), "every Brill replaced and saved");
-      await leader(s, "f", "r");
+      await leader(s, "/", "r");
       await s.see("⇄");
       await s.keys("escape");
     },
@@ -109,10 +109,10 @@ export const FINDING: Check[] = [
   },
   {
     area: "navigating",
-    name: "search: space f s ranks the vault's notes as you type; enter opens at the match; :search takes words",
+    name: "search: space / s ranks the vault's notes as you type; enter opens at the match; :search takes words",
     covers: { cases: ["search"], commands: ["search.open"] },
     run: async (s) => {
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.see("search here — words");
       await s.type("dome shutter");
       await s.see(/"dome shutter" — \d+ files/, 5000);

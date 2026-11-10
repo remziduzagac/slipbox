@@ -9,15 +9,15 @@ Following links and backlinks, the other way to get around, is in [Links and bac
 | --- | --- |
 | a note or file by its name | `ctrl+p`, `space f f` |
 | a file by its path, anywhere | `space f e`, or a path in `ctrl+p` |
-| notes by the words in them, ranked | `space f s` |
+| notes by the words in them, ranked | `space / s` |
 | text in this note | `ctrl+f`, `/` |
-| text in every note, line by line | `ctrl+shift+f`, `space f g` |
-| a heading in this note | `space o` (the outline), `space f o` |
+| text in every note, line by line | `ctrl+shift+f`, `space / g` |
+| a heading in this note | `space o` (the outline), `space / o` |
 | a footnote | `space n f` |
 | where you were | `ctrl+o`, `space h h` |
-| notes with a tag | `space f t` |
-| notes of a kind, such as decision records | `space f d` |
-| a command | `:`, `ctrl+shift+p`, `space f p`, `?` |
+| notes with a tag | `space / t` |
+| notes of a kind, such as decision records | `space / d` |
+| a command | `:`, `ctrl+shift+p`, `?` |
 | the last list of places again | `space '` |
 
 ## A note by its name: the switcher
@@ -89,7 +89,7 @@ them.
 
 ## Search
 
-Press `space f s` and type some words. Search ranks the vault's notes and data files by those words, as you type them.
+Press `space / s` and type some words. Search ranks the vault's notes and data files by those words, as you type them.
 You can also type `:search`, or `:search coffee grinder` to start with words.
 
 Each row shows:
@@ -182,7 +182,7 @@ says "scanned". `/`, opened as a folder, is always read that way.
 
 ## Find in a note
 
-1. Press `ctrl+f` or `/` (or `space f /`). The find row opens at the top of the window.
+1. Press `ctrl+f` or `/` (or `space / /`). The find row opens at the top of the window.
 2. Type what to find. As you type, the cursor moves to the first match after it, and every match is highlighted. The
    count shows at the row's right (`2/7`).
 3. Press `enter` to keep the search. To drop it instead, press `esc` while typing. The cursor goes back to where it was.
@@ -221,11 +221,11 @@ On the current row, you can jump to a character you type:
 | `;` | Repeat the jump |
 | `,` | Repeat the jump the other way |
 
-To go to a line by its number, press `ctrl+g` (or `space f l`), or type `:42`.
+To go to a line by its number, press `ctrl+g` (or `space / l`), or type `:42`.
 
 ### Find and replace
 
-Press `ctrl+h` to add a replace row under the find row. `space f r` does the same, and so does `tab` from the find row.
+Press `ctrl+h` to add a replace row under the find row. `space / r` does the same, and so does `tab` from the find row.
 
 Replacing works on the Markdown. So a rendered window switches to editing first, to SOURCE view or the lens, as
 `editor.edit_in` says ([Configuration](configuration.md)).
@@ -301,7 +301,7 @@ Confirming `a` works out the remaining replacements before it makes any of them;
 
 ## Find in every note
 
-Press `ctrl+shift+f` (or `space f g`), and type what to find. slipbox lists every line that has it, in every note and
+Press `ctrl+shift+f` (or `space / g`), and type what to find. slipbox lists every line that has it, in every note and
 every file the explorer shows. Each row is the place and the line, such as `ideas/coffee.md:12`. `enter` opens the file
 at that line.
 
@@ -314,7 +314,7 @@ takes `--regex`, `--whole` and `--ignore-case`, and `--files` for files other th
 
 ### Replace in every note
 
-1. Press `ctrl+shift+h` (or `space f shift+r`). slipbox asks what to find. The window's find, or text selected on one
+1. Press `ctrl+shift+h` (or `space / shift+r`). slipbox asks what to find. The window's find, or text selected on one
    line, is typed already.
 2. Give what to find. slipbox asks what to replace it with.
 3. Give the replacement. slipbox shows a preview: every line it would change, in every note and every file the
@@ -398,8 +398,8 @@ Inside the outline:
 
 Without opening a pane:
 
-- `space f o` lists the note's headings, to pick one.
-- `space f b` lists the headings the cursor is under, as the breadcrumb at the top of the window shows them.
+- `space / o` lists the note's headings, to pick one.
+- `space / b` lists the headings the cursor is under, as the breadcrumb at the top of the window shows them.
 - `[ [` and `] ]` move to the previous and next heading. [Reading](reading.md) has the keys that move through a note.
 
 From the command line, `slipbox outline <note>` lists a note's headings with their lines.
@@ -493,7 +493,7 @@ From the command line, `slipbox history` lists the notes read lately and what is
 
 ## Tags
 
-Press `space f t` (or type `:tags`) to list the vault's tags. Each shows how many notes carry it, and a nested tag is
+Press `space / t` (or type `:tags`) to list the vault's tags. Each shows how many notes carry it, and a nested tag is
 indented under its parent.
 
 Pick a tag to list its notes. A parent's list includes the notes of the tags under it. `enter` opens a note.
@@ -514,7 +514,7 @@ Some notes are of a kind, known by where they are. slipbox can list them in orde
 | `adr` | a note in a folder named `adr`, `adrs`, `decisions` or `decision-records` | the number in its file's name |
 | `skill` | an agent skill's `SKILL.md` | the path |
 
-Press `space f d` (or type `:types`) to list the types the vault has. Each shows how many notes are of it.
+Press `space / d` (or type `:types`) to list the types the vault has. Each shows how many notes are of it.
 
 Pick a type, or type `:type adr`, to list its notes in order. Each note shows:
 
@@ -546,7 +546,7 @@ From the command line, `slipbox types` lists the types, and `slipbox types adr` 
 
 ## A command by its name: the palette
 
-1. Press `:` to open the command palette. `ctrl+shift+p` or `space f p` opens it too, and so does its row in About
+1. Press `:` to open the command palette. `ctrl+shift+p` opens it too, and so does its row in About
    slipbox (a click on `slipbox` in the top bar).
 2. Type part of a command's name.
 3. Press `enter` to run it.

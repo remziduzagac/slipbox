@@ -40,6 +40,6 @@ status saying "Superseded by …" names the note that supersedes it: by a link (
 number in the type's naming (`ADR-0007`, `D7`, `0007`).
 
 `slipbox types` lists the types with how many notes each has and how many break its rules; `slipbox types adr` lists
-a type's notes in order, each its title, status and what supersedes it. In the TUI, `space f d` (`:types`) lists the
+a type's notes in order, each its title, status and what supersedes it. In the TUI, `space / d` (`:types`) lists the
 types, then a type's notes (`:type adr`), and `] t` / `[ t` open the next or previous note of the open one's type,
 saying where it is (`adr 2 of 5 — Superseded by …`).

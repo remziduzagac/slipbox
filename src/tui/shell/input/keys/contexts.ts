@@ -74,7 +74,7 @@ export const DEFAULT_EXPLORER_KEYS: Record<string, string> = {
   "shift+h": "toggle_hidden",
   // Making and changing files (18.x), in the selected folder or on the selected row. nvim-tree's
   // keys where they fit: r renames, d deletes (to the trash), y x p copy, cut and paste; n makes a
-  // note (space n n too, as everywhere), N a folder.
+  // note (space f n too, as everywhere), N a folder.
   n: "new_note",
   "shift+n": "new_folder",
   r: "rename",

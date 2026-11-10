@@ -31,7 +31,7 @@ test("context bindings retain source operators and independent pane overrides", 
 test("group help splits its first colon and aliases retain save and quit commands", () => {
   expect(parseGroup(" files : rename: move ")).toEqual({ name: "files", desc: "rename: move" });
   expect(parseGroup(" files ")).toEqual({ name: "files", desc: "" });
-  expect(DEFAULT_ALIASES.w).toBe("note.save");
+  expect(DEFAULT_ALIASES.w).toBe("file.save");
   expect(DEFAULT_ALIASES.wq).toBe("app.save_quit");
 });
 

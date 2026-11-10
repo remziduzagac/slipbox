@@ -264,7 +264,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     await h.keys("escape", "u");
     expect(h.app.floating).toBeNull();
     git(root, "checkout", "-q", "--", "a.md");
-    await h.app.run("note.open notes/../c.md");
+    await h.app.run("file.open notes/../c.md");
     git(root, "add", "c.md");
     git(root, "commit", "-q", "-m", "c");
     git(root, "checkout", "-q", "main");
@@ -347,7 +347,7 @@ describe("git in the TUI: marks, what changed, a note's diff, worktrees, conflic
     expect(h.app.view!.buf.rel).toBe("a.md");
     expect(h.app.cursorLine(h.app.view!)).toBe(4);
     // Filtered to it, the selection on its heading (git's answer came after the typing): enter goes to its first.
-    await h.app.run("note.open notes/b.md");
+    await h.app.run("file.open notes/b.md");
     await h.keys("space", "v", "p", "/", "a", ".", "m", "d");
     expect(h.app.problems.rows()[0]!.label).toBe("Conflicts (1)");
     h.app.problems.panel.all.selected = 0;

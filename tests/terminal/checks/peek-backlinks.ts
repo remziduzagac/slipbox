@@ -673,7 +673,7 @@ export const PEEK_BACKLINKS: Check[] = [
   {
     area: "links-and-files",
     name: "peek backlinks: a note of kestrel deleted since kestrel's index, linking here — once a link by name reaches kestrel, kestrel is caught up on the thread, and the Info view's count of this note's backlinks drops it, no key pressed (#10)",
-    covers: { cases: ["links/backlinks", "links/roots", "info"], commands: ["note.info"] },
+    covers: { cases: ["links/backlinks", "links/roots", "info"], commands: ["file.info"] },
     options: {
       home: true,
       startAt: "home/notes/by-name.md",
@@ -688,7 +688,7 @@ export const PEEK_BACKLINKS: Check[] = [
     },
     run: async (s) => {
       const index = indexOf(s, join(s.home, "work", "kestrel"));
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       s.expect((await infoCount(s)) === 1, "kestrel's index still lists the note gone, its link here counted");
       await s.keys("escape");
@@ -703,7 +703,7 @@ export const PEEK_BACKLINKS: Check[] = [
   {
     area: "links-and-files",
     name: "peek backlinks: a vault nested in kestrel, never indexed, its note linking here — a peek into kestrel builds its index on the thread, and this note's backlinks count it, in the Info view (#10)",
-    covers: { cases: ["links/backlinks", "vault", "info"], commands: ["link.follow", "note.info"] },
+    covers: { cases: ["links/backlinks", "vault", "info"], commands: ["link.follow", "file.info"] },
     options: {
       home: true,
       startAt: "home/notes/index.md",
@@ -716,7 +716,7 @@ export const PEEK_BACKLINKS: Check[] = [
     },
     run: async (s) => {
       const lab = join(s.home, "work", "kestrel", "lab");
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       const before = await infoCount(s);
       await s.keys("escape");
@@ -805,7 +805,7 @@ export const PEEK_BACKLINKS: Check[] = [
     },
     run: async (s) => {
       // The search widened to every vault this machine knows: lantern opened from the machine's list.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("wick");
       await s.keys("ctrl+a");
       await s.see("and the folders linked to it");

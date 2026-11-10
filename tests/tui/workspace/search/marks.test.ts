@@ -25,7 +25,7 @@ describe("review (tui): what a filter or a search marks, drawn where it is", () 
       config: (c) => (c.search.engine = "auto"),
     });
     await h.app.search.whenIndexed();
-    await h.keys("space", "f", "s");
+    await h.keys("space", "/", "s");
     for (const k of "quetzal") await h.keys(k);
     const list = h.app.overlay as ListOverlay;
     const hit = list.filtered.find((e) => e.item.label.startsWith("esc.md"));

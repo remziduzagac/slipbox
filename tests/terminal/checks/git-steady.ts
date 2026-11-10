@@ -318,7 +318,7 @@ export const GIT_STEADY: Check[] = [
   {
     area: "outside-and-code",
     name: "git panel: another view isn't held to the order drawn for the last, though the pointer rests on the rows (D261)",
-    covers: { cases: ["git", "mouse", "multiple-roots"], commands: ["git.view", "note.open"] },
+    covers: { cases: ["git", "mouse", "multiple-roots"], commands: ["git.view", "file.open"] },
     options: { startAt: "projects/a.md", config: "[ui]\nsidebar_width = 60\n", setup: grouped },
     run: async (s) => {
       await toPanel(s);
@@ -712,7 +712,7 @@ export const GIT_STEADY: Check[] = [
   {
     area: "outside-and-code",
     name: "git panel: the explorer's view zoomed out to a note opened, or its folder gone, while the wheel has scrolled the panel: the panel stays where the wheel left it; the explorer, shown again, on the note opened (D261)",
-    covers: { cases: ["git", "mouse", "explorer", "info"], commands: ["git.view", "note.open", "info.toggle"] },
+    covers: { cases: ["git", "mouse", "explorer", "info"], commands: ["git.view", "file.open", "info.toggle"] },
     options: repoAt((s) => {
       crowded(s);
       put(s, TRAIL, { "sub/s.md": "# S\n", "gone/g.md": "# G\n" });
@@ -780,7 +780,7 @@ export const GIT_STEADY: Check[] = [
   {
     area: "outside-and-code",
     name: "git panel: in a repository, the explorer's view zoomed in, then out to hold a note opened: the branch selected stays selected as This file's rows come above it (D261)",
-    covers: { cases: ["git", "explorer"], commands: ["git.view", "tab.close_all", "note.open"] },
+    covers: { cases: ["git", "explorer"], commands: ["git.view", "tab.close_all", "file.open"] },
     options: repoAt((s) => {
       branches(s);
       put(s, TRAIL, { "sub/s.md": "# S\n" });
@@ -848,7 +848,7 @@ export const GIT_STEADY: Check[] = [
   {
     area: "outside-and-code",
     name: "git panel: the explorer filtered, left by its rail for the git panel, a note opened there: back, its filter kept and the match it had selected (D261)",
-    covers: { cases: ["git", "explorer", "mouse"], commands: ["note.open"] },
+    covers: { cases: ["git", "explorer", "mouse"], commands: ["file.open"] },
     options: repoAt(crowded),
     run: async (s) => {
       /** The left rail's button showing `glyph`: its row. */

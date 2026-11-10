@@ -140,7 +140,7 @@ describe("medium", () => {
       watch: false,
     });
     app.draw(new TextCanvas(80, 20));
-    await app.run("note.open a.md");
+    await app.run("file.open a.md");
     rmSync(join(dir, "b.md"));
     app.watch.applyChanges({ changes: [{ rel: "b.md", kind: "deleted", isNote: true }], rescan: false });
     await app.input.handleKey("ctrl+o");

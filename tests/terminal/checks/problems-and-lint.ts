@@ -32,13 +32,13 @@ export const PROBLEMS_AND_LINT: Check[] = [
   },
   {
     area: "outside-and-code",
-    name: "problems: space n q — this file's problems with their lines, spaced; j shows the next, enter goes there; / filters; ctrl+w + resizes; tab to All, q closes; ⚠ 0 with none",
+    name: "problems: space f q — this file's problems with their lines, spaced; j shows the next, enter goes there; / filters; ctrl+w + resizes; tab to All, q closes; ⚠ 0 with none",
     covers: { cases: ["problems"], commands: ["problems.file"] },
     // Three pictures not taken yet, a paragraph apart.
     options: { open: "equipment/instrument-inventory.md" },
     run: async (s) => {
       await s.status(signed("{warning} 3"), 5000);
-      await leader(s, "n", "q");
+      await leader(s, "f", "q");
       await s.status("PROBLEMS");
       await s.see(/This file \(3\) +All \(\d+\)/);
       // Each problem: its sign, line:col, the message, who found it; under it, its line.
@@ -55,7 +55,7 @@ export const PROBLEMS_AND_LINT: Check[] = [
       await s.status(/L143:/);
       await s.see("This file (3)");
       // A blank row under the tabs, and between the problems.
-      await leader(s, "n", "q");
+      await leader(s, "f", "q");
       await s.status("PROBLEMS");
       // Read once the panel is drawn with the keys: what's wrong, or null.
       const spacing = (): string | null => {
@@ -192,7 +192,7 @@ export const PROBLEMS_AND_LINT: Check[] = [
       },
       run: async (s) => {
         await s.status(signed(`{warning} ${settings.count}`), 10000);
-        await leader(s, "n", "q");
+        await leader(s, "f", "q");
         await s.see(`This file (${settings.count})`);
         if (settings.hidden) {
           await s.see("hidden:");
@@ -292,7 +292,7 @@ export const PROBLEMS_AND_LINT: Check[] = [
   {
     area: "outside-and-code",
     name: "lint: as it flows — a finding after a save, hidden while unsaved, gone once fixed and saved",
-    covers: { cases: ["lint"], commands: ["note.save"] },
+    covers: { cases: ["lint"], commands: ["file.save"] },
     // A stand-in linter in markdownlint-cli2's format: a line with TODO is a finding.
     options: {
       open: MEETING,

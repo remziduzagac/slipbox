@@ -369,7 +369,7 @@ export const EDITING: Check[] = [
     name: "typing: as in a desktop editor — shift+arrows select, typing replaces, ctrl+z and ctrl+y while typing, pagedown; shift+right then d in normal mode (DF-D15)",
     covers: {
       cases: ["selection", "editing"],
-      commands: ["view.source", "edit.insert", "cursor.right", "visual.delete", "note.save"],
+      commands: ["view.source", "edit.insert", "cursor.right", "visual.delete", "file.save"],
     },
     options: at("~/notes/projects/kestrel-v2-3.md"),
     run: async (s) => {
@@ -441,7 +441,7 @@ export const EDITING: Check[] = [
         "edit.append_line_end",
         "edit.open_below",
         "edit.open_above",
-        "note.save",
+        "file.save",
         "edit.undo",
         "edit.redo",
       ],
@@ -601,7 +601,7 @@ export const EDITING: Check[] = [
         "edit.op_change",
         "edit.repeat",
         "edit.open_below",
-        "note.save",
+        "file.save",
       ],
     },
     options: at(OCT5),
@@ -653,7 +653,7 @@ export const EDITING: Check[] = [
     name: "repeat: . after an o begun in the render opens the same line again; . after a terminal's paste in normal mode puts it again, not the x before",
     covers: {
       cases: ["editing", "lens"],
-      commands: ["edit.open_below", "edit.repeat", "view.source", "edit.delete_char", "note.save"],
+      commands: ["edit.open_below", "edit.repeat", "view.source", "edit.delete_char", "file.save"],
     },
     options: at(OCT5),
     run: async (s) => {
@@ -696,7 +696,7 @@ export const EDITING: Check[] = [
     name: "moving lines: alt+shift+down and up, from the render; V's lines together, one undo step",
     covers: {
       cases: ["editing"],
-      commands: ["edit.move_line_down", "edit.move_line_up", "visual.line", "edit.undo", "note.save"],
+      commands: ["edit.move_line_down", "edit.move_line_up", "visual.line", "edit.undo", "file.save"],
     },
     options: at(SEPT1),
     run: async (s) => {
@@ -731,7 +731,7 @@ export const EDITING: Check[] = [
     name: "the change list: g ; and g , walk the places changed; g i types where it last stopped",
     covers: {
       cases: ["changes"],
-      commands: ["view.source", "edit.append_line_end", "change.prev", "change.next", "edit.insert_last", "note.save"],
+      commands: ["view.source", "edit.append_line_end", "change.prev", "change.next", "edit.insert_last", "file.save"],
     },
     options: at("~/notes/daily/2026-08-17.md"),
     run: async (s) => {
@@ -771,7 +771,7 @@ export const EDITING: Check[] = [
   {
     area: "editing",
     name: "cut and paste: ctrl+x cuts the cursor's line, ctrl+v puts it under the line the cursor is on",
-    covers: { cases: ["copy", "editing"], commands: ["edit.cut", "edit.paste", "note.save"] },
+    covers: { cases: ["copy", "editing"], commands: ["edit.cut", "edit.paste", "file.save"] },
     options: at(SEPT1),
     run: async (s) => {
       await ready(s);
@@ -804,7 +804,7 @@ export const EDITING: Check[] = [
     name: "comments: ctrl+/ comments a line out and back in; g c with a motion; V's lines with g c",
     covers: {
       cases: ["editing"],
-      commands: ["view.live", "edit.comment_line", "edit.op_comment", "visual.line", "visual.comment", "note.save"],
+      commands: ["view.live", "edit.comment_line", "edit.op_comment", "visual.line", "visual.comment", "file.save"],
     },
     options: at(SEPT1),
     run: async (s) => {
@@ -968,7 +968,7 @@ export const EDITING: Check[] = [
     name: "save all: :wa writes every changed note, on screen or not; the word count follows the typing",
     covers: {
       cases: ["save", "words"],
-      commands: ["view.source", "edit.open_below", "switcher.open", "note.save_all"],
+      commands: ["view.source", "edit.open_below", "switcher.open", "file.save_all"],
     },
     options: at(SEPT1),
     run: async (s) => {
@@ -1040,7 +1040,7 @@ export const EDITING: Check[] = [
   },
   {
     area: "editing",
-    name: "find: N from the bottom finds the match above; space f g opens a note at a match in the vault",
+    name: "find: N from the bottom finds the match above; space / g opens a note at a match in the vault",
     covers: { cases: ["find", "vault-find"], commands: ["find.open", "cursor.bottom", "find.prev", "find.vault"] },
     options: { open: HANDBOOK },
     run: async (s) => {
@@ -1049,7 +1049,7 @@ export const EDITING: Check[] = [
       await s.type("Weather");
       await s.keys("enter", "shift+g", "shift+n");
       await s.until(() => pos(s).line < 1200 && pos(s).line > 1, 3000, "N found a match above");
-      await leader(s, "f", "g");
+      await leader(s, "/", "g");
       await s.type("Tomasz: book the courier");
       await s.keys("enter");
       await s.see(/match(es)? in 1 file/);
@@ -1065,7 +1065,7 @@ export const EDITING: Check[] = [
     name: "conflict: an agent writes while you have changes; the prompt; :w! and :e!",
     covers: {
       cases: ["conflict"],
-      commands: ["view.source", "note.resolve", "note.save_force", "note.revert"],
+      commands: ["view.source", "note.resolve", "file.save_force", "file.revert"],
     },
     options: { open: MEETING },
     run: async (s) => {
@@ -1100,10 +1100,10 @@ export const EDITING: Check[] = [
   },
   {
     area: "editing",
-    name: "reload: space n r on a note with unsaved changes, the file as it was — asks to discard; n keeps them, autosave still on; y reloads, u brings them back (DF-D6)",
+    name: "reload: space f r on a note with unsaved changes, the file as it was — asks to discard; n keeps them, autosave still on; y reloads, u brings them back (DF-D6)",
     covers: {
       cases: ["autosave", "reload"],
-      commands: ["view.source", "note.reload", "edit.undo"],
+      commands: ["view.source", "file.reload", "edit.undo"],
     },
     options: { open: MEETING, config: "[editor]\nautosave_ms = 6000\n" },
     run: async (s) => {
@@ -1115,7 +1115,7 @@ export const EDITING: Check[] = [
       await s.type("kept after n");
       await s.keys("escape");
       await s.status("unsaved");
-      await leader(s, "n", "r");
+      await leader(s, "f", "r");
       await s.see("Discard your changes to meetings/2026-09-14-weekly.md?");
       s.expect(s.rowOf("(l) Load theirs") < 0, "not the conflict prompt: the file hasn't changed");
       await s.keys("n");
@@ -1134,7 +1134,7 @@ export const EDITING: Check[] = [
       await s.type("dropped by y");
       await s.keys("escape");
       await s.status("unsaved");
-      await leader(s, "n", "r");
+      await leader(s, "f", "r");
       await s.see("Discard your changes to meetings/2026-09-14-weekly.md?");
       await s.keys("y");
       await s.notSee("dropped by y");
@@ -1152,7 +1152,7 @@ export const EDITING: Check[] = [
     name: "lens: space n l edits in place; + - = its size; esc esc closes it",
     covers: {
       cases: ["lens"],
-      commands: ["view.live", "lens.grow", "lens.shrink", "lens.reset", "edit.append_line_end", "note.save"],
+      commands: ["view.live", "lens.grow", "lens.shrink", "lens.reset", "edit.append_line_end", "file.save"],
     },
     options: { open: HANDBOOK },
     run: async (s) => {
@@ -1195,7 +1195,7 @@ export const EDITING: Check[] = [
     name: "lens: a link followed from it opens the lens on the new note — its text drawn, typing lands there; ctrl+o back to the first",
     covers: {
       cases: ["lens"],
-      commands: ["view.live", "link.follow", "edit.insert", "note.save", "history.back"],
+      commands: ["view.live", "link.follow", "edit.insert", "file.save", "history.back"],
     },
     options: at(OCT5),
     run: async (s) => {
@@ -1282,7 +1282,7 @@ export const EDITING: Check[] = [
   {
     area: "editing",
     name: "create: ctrl+n a note, typed and saved; the explorer's N a folder and n a note in it; :mkdir",
-    covers: { cases: ["new-note"], commands: ["note.create", "note.save", "explorer.cycle", "folder.create"] },
+    covers: { cases: ["new-note"], commands: ["file.create", "file.save", "explorer.cycle", "folder.create"] },
     options: { open: HANDBOOK },
     run: async (s) => {
       await ready(s);
@@ -1426,7 +1426,7 @@ export const EDITING: Check[] = [
   {
     area: "editing",
     name: "hand-off: space n e runs the editor and comes back; send to a remote editor",
-    covers: { cases: ["editing"], commands: ["note.edit", "note.send", "note.send_pick"] },
+    covers: { cases: ["editing"], commands: ["note.edit", "file.send", "file.send_pick"] },
     // Each editor leaves a file behind, so the check is that it really ran, with the note's path.
     options: {
       config: `[editor]\ncommand = "sh -c 'echo $0 > $1' {file} {dir}/ran-edit"\nremote = ["sh -c 'echo $0 > $1' {file} {dir}/ran-send"]\n`,
@@ -1438,10 +1438,10 @@ export const EDITING: Check[] = [
       await s.until(() => existsSync(ran("ran-edit")), 5000, "the editor to run");
       await s.status("home.md", 5000);
       s.expect(readFileSync(ran("ran-edit"), "utf8").trim().endsWith("home.md"), "the editor got the note");
-      await leader(s, "n", "s");
+      await leader(s, "f", "s");
       await s.until(() => existsSync(ran("ran-send")), 5000, "the remote editor to run");
       s.expect(readFileSync(ran("ran-send"), "utf8").trim().endsWith("home.md"), "the remote editor got the note");
-      await leader(s, "n", "p");
+      await leader(s, "f", "p");
       await s.keys("escape");
     },
   },

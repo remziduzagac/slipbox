@@ -65,7 +65,7 @@ house style that writing-guide describes.
 ├────────────────────────────────────┼─────────────────────────────────────────┤
 │ projects/*.md (tags)               │ #tags in the text beside frontmatter    │
 │                                    │ tags, nested ones (#dome/shutter):      │
-│                                    │ space f t                               │
+│                                    │ space / t                               │
 ├────────────────────────────────────┼─────────────────────────────────────────┤
 │ people/partners-and-names.md       │ every link form, broken links,          │
 │                                    │ footnotes; CJK, emoji, ZWJ, RTL widths  │
@@ -147,7 +147,7 @@ vault, and
 • the explorer shows outreach with a vault's icon; enter goes into it;
 • the outreach link at the end of home goes there too, and ctrl+o comes back;
 • space l b on home.md lists the backlinks from outreach and school-visits;
-• space v v lists the vaults; space n m renames a note and fixes the links in
+• space v v lists the vaults; space f m renames a note and fixes the links in
   all three.
 
 scripts/sample-metrics.ts measures what each note exercises (lines, longest

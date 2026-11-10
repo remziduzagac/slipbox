@@ -226,7 +226,7 @@ in the machine's list (`roots.json`): there's no index to find again.
 Nothing in Elsewhere needs an index, and nothing that does is offered there, each said so rather than shown empty: it
 is listed a folder at a time, never walked (`isListed`: the graph lists the folder opened's notes, `listDirectory`; the
 watcher watches that folder alone); no backlinks (`space l b`, the Info view's count, `slipbox backlinks`), no search
-(`space f s`, `slipbox search`), no tags across it, no check of its links (`slipbox tags`, `problems`: exit 5,
+(`space / s`, `slipbox search`), no tags across it, no check of its links (`slipbox tags`, `problems`: exit 5,
 `Elsewhere has no index, so no …`; `needsIndex`), no git. The context bundle leaves backlinks out, said in a warning.
 Its settings are yours; `/` is the filesystem's root; a wikilink has no names to match. A peek at its file (a link from
 a vault) says under a note that it has no backlinks, and why.

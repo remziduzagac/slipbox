@@ -90,7 +90,7 @@ describe("out of the vault open, the links of the place a file is in: the peek, 
     expect(peeked(h)!.source).toContain("isn't followed in Elsewhere");
     expect(held(h)).toBe(false);
     h.app.overlays.closeFloating();
-    await h.app.run("note.open own.md");
+    await h.app.run("file.open own.md");
     await h.keys("tab", "enter");
     expect(h.app.floating).toBeNull();
     expect((h.app.overlay as ListOverlay).title).toBe(

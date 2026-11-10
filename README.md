@@ -123,7 +123,7 @@ everything else, and `?` lists every key. These are the keys to start with:
 | Save | `ctrl+s` |
 | Tick a task | `ctrl+l` (or `space n t`, or a click) |
 | Hand the note to your editor | `space n e` |
-| Hand the note to a running nvim | `space n s` |
+| Hand the note to a running nvim | `space f s` |
 | Quit | `ctrl+q` |
 
 Everything is clickable too.

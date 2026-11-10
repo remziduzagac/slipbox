@@ -457,7 +457,7 @@ export class Views {
     if (this.app.saving.save(buf, true)) this.app.message("info", done);
     // Any other failure has said why already.
     else if (buf.changedOnDisk() && !buf.deleted)
-      this.app.message("warn", `${done} — not saved yet (the file changed on disk: space n w decides)`);
+      this.app.message("warn", `${done} — not saved yet (the file changed on disk: space f w decides)`);
   }
 
   private bracketMemo: {

@@ -71,9 +71,9 @@ describe("saving and conflicts (step 4)", () => {
     expect(readFileSync(file, "utf8")).toBe("line!\n");
     expect(v.buf.conflictKept).toBe(false);
   });
-  test("space n r with unsaved changes, the file as it was: asks to discard them — y reloads, n and esc keep yours, autosave as it was (DF-D6)", async () => {
+  test("space f r with unsaved changes, the file as it was: asks to discard them — y reloads, n and esc keep yours, autosave as it was (DF-D6)", async () => {
     const { h, file, v } = await setup("line\n");
-    await h.keys("shift+a", "!", "escape", "space", "n", "r");
+    await h.keys("shift+a", "!", "escape", "space", "f", "r");
     expect(h.app.overlay).toMatchObject({
       kind: "prompt",
       confirm: true,
@@ -81,18 +81,18 @@ describe("saving and conflicts (step 4)", () => {
     });
     await h.keys("n");
     expect(v.buf.source).toBe("line!\n");
-    await h.keys("space", "n", "r", "escape");
+    await h.keys("space", "f", "r", "escape");
     expect(h.app.overlay).toBeNull();
     expect(v.buf.source).toBe("line!\n");
     expect(v.buf.conflictKept).toBe(false); // autosave left on, as the conflict prompt's esc wouldn't
-    await h.keys("space", "n", "r", "y");
+    await h.keys("space", "f", "r", "y");
     expect(v.buf.source).toBe("line\n");
     expect(v.buf.dirty).toBe(false);
     await h.keys("u");
     expect(v.buf.source).toBe("line!\n");
     // The file changed too: the conflict prompt, as before.
     await touch(file, "theirs\n");
-    await h.keys("space", "n", "r");
+    await h.keys("space", "f", "r");
     expect((h.app.overlay as ListOverlay).title).toContain("changed on disk");
   });
   test("(d) shows yours → theirs; (m) merges against the version you started from", async () => {

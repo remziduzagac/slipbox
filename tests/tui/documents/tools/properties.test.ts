@@ -90,7 +90,7 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
     await h.keys("escape", "escape");
     expect(read()).toBe('+++\ntitle = "T"\ndraft = true\n+++\n# T\n');
     // Changed under it: asks before writing over.
-    await h.keys("space", "n", "i", "e"); // the Info view's e
+    await h.keys("space", "f", "i", "e"); // the Info view's e
     expect(h.app.floating).not.toBeNull();
     const note = h.app.tab!.views[0]!.buf;
     note.edit(4, 0, "x");
@@ -140,7 +140,7 @@ describe("the properties editor: a note's frontmatter in a floating window (3.20
   test("a click on another tab (or a side pane) closes it, writing back, and does nothing else", async () => {
     const { h, read } = await setup("---\ntitle: A\n---\n# A\n");
     await h.app.run("tab.new");
-    await h.app.run("note.open index.md");
+    await h.app.run("file.open index.md");
     await h.app.run("tab.prev");
     expect(h.app.activeTab).toBe(0);
     await h.app.run("note.properties");

@@ -37,7 +37,7 @@ describe("lists and commands no test had run (the TUI model)", () => {
   test("a split with the window header off: each window titled by its note on its top row", async () => {
     const h = await harness({ width: 160, config: (c) => (c.ui.window_header = false) });
     await h.keys("ctrl+w", "v");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/beta.md");
     const [a, b] = h.app.geometry!.panes;
     const c = h.canvas();
     const top = (p: typeof a) => c.rows[p!.y - 1]!.slice(p!.x, p!.x + p!.w).join("");

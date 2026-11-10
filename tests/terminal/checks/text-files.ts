@@ -94,7 +94,7 @@ export const TEXT_FILES: Check[] = [
       await s.see(/research\/gps-traces\.md — larger than walk\.max_file_size/);
       await s.keys("escape");
       // A coordinate only it has finds nothing.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("47.37706");
       await s.until(() => /"47\.37706"/.test(s.text()), 5000, "the search to answer");
       s.expect(!s.text().includes("gps-traces.md:"), "search never reads the file over the cap");
@@ -250,7 +250,7 @@ export const TEXT_FILES: Check[] = [
   {
     area: "reading",
     name: "odd files: /dev/zero by a symlink and an unreadable note refused, said; a symlink out of the root never opened; the vault's info says why each was left out",
-    covers: { cases: ["text-files"], commands: ["note.open", "vault.info"] },
+    covers: { cases: ["text-files"], commands: ["file.open", "vault.info"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
       // A note that is /dev/zero: not a file, so not opened (a read would never end).
@@ -284,7 +284,7 @@ export const TEXT_FILES: Check[] = [
   {
     area: "reading",
     name: "odd files: a symlinked note edited and saved — written through to its target, still a symlink",
-    covers: { cases: ["text-files"], commands: ["view.source", "note.save"] },
+    covers: { cases: ["text-files"], commands: ["view.source", "file.save"] },
     options: { home: true, startAt: "home/notes/projects/kestrel-current.md" },
     run: async (s) => {
       await leader(s, "n", "v");
@@ -309,7 +309,7 @@ export const TEXT_FILES: Check[] = [
   {
     area: "reading",
     name: "line endings: a BOM before the frontmatter, CRLF and lone CRs drawn without stray cells; a save keeps the BOM and every CRLF",
-    covers: { cases: ["encoding", "frontmatter"], commands: ["view.source", "note.save"] },
+    covers: { cases: ["encoding", "frontmatter"], commands: ["view.source", "file.save"] },
     options: { home: true, startAt: "home/notes/daily/2026-09-16.md" },
     run: async (s) => {
       // A BOM before the frontmatter: the properties still read, nothing drawn for the BOM.

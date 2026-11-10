@@ -50,7 +50,7 @@ test("the converter's other TUI paths (20.1): every note, a note that isn't, not
   await h.app.run("link.convert c1");
   expect(h.app.messages.at(-1)?.text).toStartWith("unsaved: c1.md");
   h.app.view!.buf.edit(0, 1, "");
-  await h.app.run("note.save");
+  await h.app.run("file.save");
   // No note named: every note's.
   await h.app.run("link.convert");
   const rows = (h.app.overlay as ListOverlay).items.map((i) => i.label);

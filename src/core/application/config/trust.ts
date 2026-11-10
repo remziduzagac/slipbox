@@ -22,12 +22,13 @@ export const USER_ONLY: Record<string, string> = {
 
 /**
  * Commands a vault's keys and aliases may not name: each throws work away (quit without saving,
- * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq.
+ * revert, overwrite, clear), and a cloned vault could otherwise put one on ctrl+s or :wq. By their ids now: a file's
+ * are read that way before they're checked, `note.revert` as `file.revert` (`renewCommands`; D274).
  */
 export const VAULT_FORBIDDEN_COMMANDS = [
   "app.quit_force",
-  "note.revert",
-  "note.save_force",
+  "file.revert",
+  "file.save_force",
   "scratch.clear",
   "shell.run",
   "shell.filter",

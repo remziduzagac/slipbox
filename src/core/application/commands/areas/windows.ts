@@ -101,7 +101,12 @@ export const WINDOW_SPECS: CommandSpec[] = [
     cli: "slipbox ls",
     desc: "Opens the file tree, then focuses, closes it",
   },
-  { id: "explorer.reveal", title: "Reveal note in explorer", cli: I, desc: "Selects this note in the file tree" },
+  {
+    id: "explorer.reveal",
+    title: "Reveal the file in the explorer",
+    cli: I,
+    desc: "Opens the explorer with the file on screen selected, and focuses it",
+  },
   {
     id: "explorer.toggle_hidden",
     title: "Show or hide hidden files",

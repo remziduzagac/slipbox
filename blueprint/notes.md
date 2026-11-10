@@ -573,3 +573,13 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - On 2026-11-10 the design's review was answered: the inventory grew by the reads it had missed, the boundary check
   became an allow list, a look's deadline is set by what asked, and two decisions came of it (SD-D13, what's drawn is
   kept; SD-D14, each task's terminal checks run before it merges); the workstream's notes say each.
+
+## The `space` groups by what they act on (2026-11-09)
+
+- The issue (#104, item 3, reported 2026-10-26): `space n` held what any file takes beside what only a note has, named
+  for notes; `space f` was find; `space v` was labelled +folders. It proposed the five groups, the switcher staying at
+  `space f f`, the commands renamed with the old names kept, the palette's key moved to `space / p` or gone, and left
+  one point open: whether titles and docs say "directory" too.
+- The maintainer settled that point in its comment: only `space d`'s label. The pull request chose the rest: the
+  palette's key goes, the keys keep their letters, and the old ids are kept on each command (`formerly`). Recorded
+  as D274.

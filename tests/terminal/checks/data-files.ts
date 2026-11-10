@@ -26,7 +26,7 @@ export const DATA_FILES: Check[] = [
   {
     area: "reading",
     name: "data: the lens edits one key of a TOML file on its own line; space n v shows the source",
-    covers: { cases: ["data-modes"], commands: ["view.live", "view.source", "note.save"] },
+    covers: { cases: ["data-modes"], commands: ["view.live", "view.source", "file.save"] },
     options: { open: TOML },
     run: async (s) => {
       await s.see("bias_frames");

@@ -372,7 +372,7 @@ export const LINKED: Check[] = [
   {
     area: "links-and-files",
     name: "links: a note looked at through a file link, the link made a note of the vault's own — indexed, and its window takes typing",
-    covers: { cases: ["links/state", "watching"], commands: ["note.open"] },
+    covers: { cases: ["links/state", "watching"], commands: ["file.open"] },
     options: {
       home: true,
       startAt: "home/notes/to-shelf.md",

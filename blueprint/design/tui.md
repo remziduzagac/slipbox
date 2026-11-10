@@ -141,7 +141,7 @@ of segments (`Segment`, D269):
   available, a green arrow (`top:upgrade`, `app.about`, the theme's `upgrade_available`, VB-D7, VB-T7). No version:
   About has it;
 - at the right, Where you are: explorer zoom (`top:zoom`, `explorer.focus`), workspace labelled by its vault, or home
-  folder (`top:vault`, `folders.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file
+  folder (`top:vault`, `vault.open`), branch with tracking and operation (`top:branch`, branches menu), changed-file
   count (`top:changed`, `git.focus`). The vault remains in Info. Workspace ownership remains per branch, home folder,
   home or vault fallback (VB-D4, VB-D6);
 - at the right end, the permanent work count (`top:work`, `background.open`, `space b`), dim at zero and bright
@@ -216,7 +216,7 @@ the row, as now), and `▤` its.
 **The breadcrumb**, on the header after the name, starts with an icon (`§`, ascii `#`) that opens the heading finder
 when clicked, then the chain of headings that window's cursor is under, each cut to 40 columns. When they don't all
 fit, the middle collapses into `…`: the first heading, `…`, and as many of the innermost as fit; then only the first
-and the last, cut (down to 8 columns each); then `…` and the last; then `…` alone. Clicking `…` (or `space f b`) opens
+and the last, cut (down to 8 columns each); then `…` and the last; then `…` alone. Clicking `…` (or `space / b`) opens
 the whole path as a dropdown hanging under the header, centred across the screen, at least half its width (60 to 100
 columns) and room for 8 entries between blank rows, framed like the other popups: one heading per row, each hanging
 off the one above with `└─`, the current one marked `here` and selected. Typing filters it, as in every list (the
@@ -301,7 +301,7 @@ note's text as a layout shows it — the look of a pane's filter. The row stays 
 (`n`, `shift+n`, `*` move through the matches) and goes with it (`esc`, `:noh`); the text moves down
 two rows while it's there. A window too short for it asks in a question's window (below).
 
-**Replace** (`ctrl+h`, `space f r`, or `tab` from the find field) is the same find row with a second
+**Replace** (`ctrl+h`, `space / r`, or `tab` from the find field) is the same find row with a second
 row under it: `⇄ replacement` with `replace` and `all` buttons at its right, the rule under both. It works on the
 markdown, so a rendered window switches to editing first (`editor.edit_in`: SOURCE view or the lens)
 and every match is a real place in the file. `tab` / `ctrl+h` and `shift+tab` move between the two
@@ -523,11 +523,11 @@ out to the common parent (§ Side panes); where the tree can't show the vault (i
 names not listed: a worktree in `.claude/worktrees/`), the zoom moves to the vault. Started in a folder outside every
 vault (`slipbox /srv/x`), Elsewhere's, or in `~`, home, nothing opens over the explorer: the launcher of D50 is gone.
 
-**The vaults** (`space v v`, `:folders`, `folders.open`; `slipbox vaults`) list every known vault, named or not,
+**The vaults** (`space v v`, `:folders`, `vault.open`; `slipbox vaults`) list every known vault, named or not,
 most recent first. Home's folders appear as home workspaces, and worktrees group under their repository. `/` starts
 filtering; `enter` goes into the selected vault or home folder. Pointer lookup remains independent (VB-D5).
 **Which copy** a folder's links open (`space v
-shift+v`, `:folders-default`, `folders.default`; `slipbox folders default`): this folder's copies — its repository's, a
+shift+v`, `:folders-default`, `vault.default`; `slipbox folders default`): this folder's copies — its repository's, a
 clone with a `.slipbox/` name of its own among them (DF-D30) —, else a pick of the folders with two. **Names** here, on
 `space v i`, the Info view and messages are each vault's name as
 pointers give it — its `.slipbox/` name, else its repository's remote's — else its path (`~/…`); a named worktree as
@@ -569,7 +569,7 @@ like any file, and the TUI goes into it with the note open.
 
 ## Renames (plans `17.15`, `7.1`–`7.4`)
 
-`space n m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already — a folder there, or a
+`space f m` (`:rename <path>`, `:mv`) asks for the note's new path, the old one typed already — a folder there, or a
 path ending in `/`, moves it into that folder ([links.md](links.md) § Renames and moves; DF-D4, DF-D21); the explorer's
 `r` for the selected note's, file's or folder's new name, `m` for a folder to move it to (18.x, below); `space v n` for
 the vault's new name; `space n h` for a new name of the heading the cursor is under (the outline's `r`, its selected
@@ -599,7 +599,7 @@ rename.
 The explorer makes and changes files by keys and by buttons, on the selected row — a note, a file, or a folder
 (D149):
 
-- **New:** `n` a note (`space n n` too, as everywhere), `shift+n` a folder, in the selected folder or beside the
+- **New:** `n` a note (`space f n` too, as everywhere), `shift+n` a folder, in the selected folder or beside the
   selected file; the title's two buttons do the same (Nerd: a file and a folder with a plus; unicode `+`, `+▸`).
   which-key in a pane names its actions as help does ("New note here"), and a pane's own key sequence waits for its
   second key, whatever the note binds its first to.
@@ -648,12 +648,14 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   into a vault's or a folder's, selected. In Elsewhere, `space v m` offers the folder opened a `.slipbox/` and goes into
   it (§ Going into a vault).
 
-Every one of these has a leader key too, so which-key lists them (`18.13`): `space n` for a note (rename or move by
-path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a folder (new, rename, move, delete, copy,
-cut, paste), `space v` for a vault (make one, make it part of the vault holding it, rename it, the trash, restore). With
-the explorer focused they act on its selected row, elsewhere on the current note, its folder, or this vault — made part
-of the vault holding it, it's left for that vault, the note still open. What they do is the CLI's `rm`, `mv`, `cp`,
-`init` and `deinit` ([cli.md](../../docs/manual/cli.md)).
+Every one of these has a leader key too, so which-key lists them (`18.13`, D274): `space f` for a file, a note or not
+(new, rename or move by path, move, delete, copy, cut, `shift+y` a copy beside it), `space d` for a folder (new,
+rename, move, delete, copy, cut, paste), `space v` for a vault (make one, make it part of the vault holding it, rename
+it, the trash, restore). With the explorer focused they act on its selected row, elsewhere on the current file, its
+folder, or this vault — made part of the vault holding it, it's left for that vault, the file still open. Of `space f`,
+only rename, move, delete, copy and cut take the selected row (and new its folder); a copy beside, save, reload, Info,
+send and the rest act on the file open. What they do is the CLI's `rm`, `mv`, `cp`, `init` and `deinit`
+([cli.md](../../docs/manual/cli.md)).
 
 ## Following links
 
@@ -686,7 +688,7 @@ what it leads to, going there a choice (VV-D7; § The peek):
 | footnote `[1]` | jumps to the definition |
 | tag `#dome/shutter` | lists the notes with the tag (its nested ones too, `#dome/shutter/…`); enter opens one |
 
-**Tags** (`1.6`): `space f t` (`:tags`) lists the vault's tags, each with how many notes carry it — a nested tag
+**Tags** (`1.6`): `space / t` (`:tags`) lists the vault's tags, each with how many notes carry it — a nested tag
 indented under its parent, whose count includes its children's — and picking one lists its notes; `:tag name` goes
 straight there. A note's tags are its frontmatter's `tags:` and the `#tags` in its text ([links.md](links.md) § Tags;
 D53).
@@ -1418,7 +1420,7 @@ rules it meets. Each is generic: a place for buttons, whatever they open.
 - **The right rail** runs from under the tab strip's rule, its first button level with the window header. It holds the
   right panel's views: the Info's `ℹ` (Nerd: an i in a circle; ascii `i`), under it the outline's `▤`, then the
   footnotes' superscript (Nerd: `x²`; unicode `¹`; ascii `^`); the panel opens beside it. Without it, `▤` sits at the
-  window header's right end, and the Info and the footnotes open with `space n i` and `space n f`.
+  window header's right end, and the Info and the footnotes open with `space f i` and `space n f`.
 
 Every width (the panes, the note, the narrow cutoff) is shared out after the rails' columns.
 Zen mode hides both.
@@ -1499,10 +1501,10 @@ ghostty 1.2.0, TERM_PROGRAM herdsman 0.2.0, TERM xterm-ghostty, 236×60, inside 
 - `esc` leaves it; opened again, it's as you left it, the facts kept as edited. The draft is kept in memory only,
   never written to disk by slipbox, until `gh` has posted it or slipbox quits. (A copy you make is a copy: when no
   clipboard takes it, it's the state folder's `clipboard.txt`, as every copy's, and said.)
-- `ctrl+s` (`:w`) is `note.save`, which in the report runs `help.report_send`, the menu (§ Sending), changed or not.
+- `ctrl+s` (`:w`) is `file.save`, which in the report runs `help.report_send`, the menu (§ Sending), changed or not.
   The buffer's own save — which an edit that saves after it calls too (a link put in, a footnote added) — has nothing
   to write, and opens nothing. Never said as "saved" or "sent". A task toggled in it flips in its text. `:w!`
-  (`note.save_force`) on any virtual buffer is `:w`, and `App.writeBuffer` refuses a virtual buffer: the floating
+  (`file.save_force`) on any virtual buffer is `:w`, and `App.writeBuffer` refuses a virtual buffer: the floating
   window's text is never written to its name on disk (said). A task toggled in a read-only window — a peek, a
   hover — is refused, said, its file never written from there.
 
@@ -1680,15 +1682,15 @@ past theirs), so the content behind never runs up to the edge.
   `path:line`, the last query's answer the one shown; in a note, or where no server gives them, the vault's
   headings, slipbox's own symbols. `enter` opens the file there. A query starting with `/`, `~/`, `./` or `../` is a
   path instead (#104): its folder listed and completed as by path, below, each file's place previewed. Find in every
-  note (`ctrl+shift+f`, `space f g`) lists each line with the text or regex as `path:line` with the
+  note (`ctrl+shift+f`, `space / g`) lists each line with the text or regex as `path:line` with the
   line, an open note searched as it is now. Its question takes the window's find toggles, said in it: `alt+r` and
   `alt+w` flip them there.
-- **A file by its path** (#104; `space f e`, `note.open_path`; `tui/shell/overlays/open-path.ts`): a list whose filter
+- **A file by its path** (#104; `space f e`, `file.open_path`; `tui/shell/overlays/open-path.ts`): a list whose filter
   is a path, read as `:e` reads one — `~` home, a relative one from the vault's top. It's split at its last `/`: the
   folder before it is listed, its folders first, by name (hidden names as `files.hidden` lists them, or once the name
   begun starts with `.`), the entries holding the name begun after it, as every list matches (§ Filtering below).
   `tab` completes the path to the selected entry; `enter` goes into a folder, the list open, or opens a file through
-  `note.open` — another vault's asked first (D270; § Going into a vault); `ctrl+w` goes back a folder. `enter` with no
+  `file.open` — another vault's asked first (D270; § Going into a vault); `ctrl+w` goes back a folder. `enter` with no
   entry to pick opens the path as typed, `:e` saying why when it can't. A folder a link not followed leads to (VV-D6;
   `Following.blocked`, else `blockedThere` by the rule of the place holding it) isn't listed: one row says where the
   link leads, `→ ~/out  not followed`, and `enter` on it asks as the explorer does (follow it, just look, no); followed
@@ -1697,12 +1699,12 @@ past theirs), so the content behind never runs up to the edge.
   typed while another is read waits for it (`reading ~/x… once ~/y answers`), so one that doesn't answer holds one
   thread, never both. `reading ~/x…` until it comes; why when it can't be (`~/x: it isn't there`, `no answer in
   time`). `:e` reads `~/` as home too.
-- **Replace in every note** (`25.4`, D155; `ctrl+shift+h`, `space f shift+r`): what to find — the window's find, or a
+- **Replace in every note** (`25.4`, D155; `ctrl+shift+h`, `space / shift+r`): what to find — the window's find, or a
   selection on one line, typed already — then what with, then the rename's preview of each line it changes in every
   note and every file the explorer shows (`slipbox replace --all`'s, `--files` as the explorer has them). `enter` does
   it, `esc` leaves everything; `space v shift+u` takes it back, as a rename. A match across lines is one row, each
   break a `⏎`. Refused while a file with a match is unsaved: what's open isn't what's on disk.
-- **Search** (`6.5`, `6.9`; `space f s`, `:search words`): the vault's notes ranked by the words as they're typed — as
+- **Search** (`6.5`, `6.9`; `space / s`, `:search words`): the vault's notes ranked by the words as they're typed — as
   `slipbox search` ranks them ([search.md](search.md); [cli.md](../../docs/manual/cli.md) § `search`) — each a row:
   `path:line`, the section's heading and the line, its words marked, `+n` for the file's other sections with some of
   them. `enter` opens it on that line (rendered, at the line's start; in SOURCE view, on the word). The index is the
@@ -1757,7 +1759,7 @@ one no group claims would still be listed, under "Other", last:
   that section ("Inside the explorer", "Inside the history", "Inside Problems", "Inside the outline", "Inside
   Info", "Inside the footnotes", "Selection & copy"), with its heading at the top. A new panel view gets its
   own section.
-- **The palette (`:`)** is for doing things. Empty, it lists the commands last run from the
+- **The palette (`:`, `ctrl+shift+p`)** is for doing things. Empty, it lists the commands last run from the
   palette or help (the last 5, kept for the vault) and then every command by group (except the
   internal `esc` handler); typing ranks the best match first,
   without groups. Each command shows its first binding and first alias.
@@ -1792,6 +1794,15 @@ popup shows regardless: it is that mode's only cue). `backspace` goes up a level
 Groups read `+name`; clicking an entry presses its key, and the popup covers what's under it (clicks
 on its background do nothing). It also shows in resize mode (titled "resize", with "keys repeat ·
 any other key leaves").
+
+The leader's groups are named for what they act on (D274; `DEFAULT_GROUPS` in `tui/shell/input/keys/help.ts`):
+`space n` **+note**, what only a note has (a task ticked, its views and the lens, a heading renamed, footnotes,
+properties, a conflict resolved, export, the editor at its line); `space f` **+file**, any file, a note or not (the
+switcher and open by path, new, rename, move, delete, copy, cut, save, reload, Info, its problems, send, reveal in the
+explorer); `space /` **+find** (find and replace, in the note and in every note, search, a heading, the breadcrumb, the
+tags, the types, a line); `space d` **+directory**, a folder (the label alone says "directory": `space f` and `space d`
+read as file and directory, while titles and docs keep "folder"); `space v` **+vault**. A key moved between groups kept
+its letter. The palette has no leader key: `:` and `ctrl+shift+p` open it, and About and help list it.
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
 feedback all go to one place: a floating box briefly, the messages list permanently (the last
@@ -2028,7 +2039,7 @@ git — it's refused, said: that file is never written from there.
 the cursor's source line. `space n e` steps aside: the renderer suspends, the editor
 (`[editor] command`, else `$VISUAL`, `$EDITOR`, `vi`, given `+line` or `file:line` when it's a
 known editor) runs in this terminal once the main screen is back, and when it exits slipbox resumes — its screen
-written back before anything else — and reloads the note if it changed. `space n s` sends the note to an editor
+written back before anything else — and reloads the note if it changed. `space f s` sends the note to an editor
 already running elsewhere and doesn't wait; the watcher shows its saves as they land. From the properties editor,
 either closes it first (its text written back) and hands off its note at the top; from a hover, which isn't a file,
 nothing is handed off.
@@ -2038,7 +2049,7 @@ nvim since 0.9 listens on a socket in `$XDG_RUNTIME_DIR` (or `/tmp/nvim.$USER/�
 slipbox asks each for its working directory and current file, leaving out sockets nothing answers
 on. The one picked before for this vault is used while it answers (kept for the vault); else the
 only one running; else a picker, "Send to which nvim?", listing each by folder and file, the one
-working where the note lives first. `space n p` always opens it. The note goes over in two
+working where the note lives first. `space f p` always opens it. The note goes over in two
 commands, since nvim's `--remote` takes no `+line`: `--remote {file}`, then `--remote-send
 <C-\><C-N>:{line}<CR>` (the line alone, so a file name never becomes keys).
 
@@ -2261,7 +2272,7 @@ the only one (`16.16`, `16.17`; D112): Org and AsciiDoc files open as text.
   its extension (the switcher lists paths), notes' too (`home.md`, `halley.toml`): the formats sit side by side, and
   the extension says which is which. Folders show whether or not anything in them is listed, so a new or empty one is
   there to open and create in.
-- **New notes and folders** (`ctrl+n`, `space n n`, `:new`; `space d n`, `:mkdir`; `n` and `shift+n` in
+- **New notes and folders** (`ctrl+n`, `space f n`, `:new`; `space d n`, `:mkdir`; `n` and `shift+n` in
   the explorer): a name, from the current note's folder — or the explorer's selected folder when it
   has focus, or the vault's top with a leading `/` — and folders on the way are made. `.md` is added
   unless the name has a known extension (`.toml`, `.py`…). A note starts with its title (`# Name`),
@@ -2356,7 +2367,7 @@ about, and is left as a reload leaves it: no conflict kept or waiting over a cha
 turns it off) without a key pressed — not while you're in insert mode, not after (k) Keep yours until a saved, confirmed
 write, not over a file changed on disk (the conflict prompt comes instead), not with a merge's conflict markers in it,
 and not while git holds its `index.lock` (a commit in progress: it tries again later; in a worktree or submodule, the
-lock in the git directory its `.git` file names). **Hand-offs save first** (`4.10`; D145): `space n e`, `space n s` and
+lock in the git directory its `.git` file names). **Hand-offs save first** (`4.10`; D145): `space n e`, `space f s` and
 a capture into an open scratch write unsaved changes before the other side reads the file; `space s c` saves every
 unsaved note before it gathers the context bundle (`9.7`; D32), which it copies: the note, what it links to and what
 links to it, as `slipbox context` writes it ([cli.md](../../docs/manual/cli.md) § The scratch and the context bundle),
@@ -2378,7 +2389,7 @@ rather than rebuilt (`5.8`; D137).
   step. Its anchors keep your place, and the change is surfaced at once with `↻ reloaded` and a
   message (plan `5.4`). Other open notes re-lay out only if they link to it. A note with unsaved
   changes opens the conflict prompt instead ("Writing notes").
-- **Reloaded by hand** (`space n r`, `:reload`; DF-D6): a note without unsaved changes is read from disk again, as a
+- **Reloaded by hand** (`space f r`, `:reload`; DF-D6): a note without unsaved changes is read from disk again, as a
   change is. One with unsaved changes whose file is as it was loaded asks `Discard your changes to <note>? It's loaded
   from disk again: u brings them back.`: `y` loads the file as `:e!` does (one more undo step), `n` or `esc` keeps
   your text, and autosave is left as it was (the conflict prompt's `esc` would turn it off for the note: (k) Keep
@@ -2632,7 +2643,7 @@ title switching (`tab` / `shift+tab` too), the tab's filter after them (`/`: `�
 right end; then, a blank row above and below it, the tab's list. The panel has the keys while focused (`PROBLEMS` on
 the status line), `esc` handing them back to the note and `q` closing it.
 
-- **This file (n)** (`space n q`; a click on the status line's problems, or on a sign of the bar): every problem of the
+- **This file (n)** (`space f q`; a click on the status line's problems, or on a sign of the bar): every problem of the
   file on screen, from every source ("Problems where they are", at `[diagnostics] severity` and up), in the order they
   come, a blank row between them: on its first row the severity's sign, `line:col`, the message, and who found it dimmed
   at the right (`slipbox unresolved`, `markdownlint MD013`); under it the line's text, its leading blanks dropped, the
@@ -3087,7 +3098,7 @@ marked, two lines around it, under a head naming it and how it's settled, the st
   settle it, keeping what each side meant".
 - `n`, `p` (`git.merge_next`, `_prev`) move between conflicts; `tab` (`git.diff_view`) draws a note's sides as their
   lines, or as their blocks again, as in the diff window.
-- `w` (`git.merge_save`), and `ctrl+s` and `:w` there (`note.save` sends them to it, as the commit editor's), once
+- `w` (`git.merge_save`), and `ctrl+s` and `:w` there (`file.save` sends them to it, as the commit editor's), once
   every conflict is settled: the result into the buffer as one edit, saved through `App.writeBuffer`; refused, said,
   while one isn't, or when the buffer changed since the screen read it. A save refused (the file changed on disk) puts
   the buffer back as the screen read it, so nothing's in it the screen doesn't show, and says `x` reads the file again;

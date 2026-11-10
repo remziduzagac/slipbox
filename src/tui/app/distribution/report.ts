@@ -181,7 +181,7 @@ export class Reporter {
       const buf = new NoteBuffer(null, "report:", "report");
       buf.kind = { group: "note", format: "markdown" };
       // Never written anywhere: it's kept in memory only (RPT-D1). Its save, which an edit that saves after it (a link
-      // inserted, a footnote added) calls too, has nothing to do; ctrl+s (`:w`) opens the menu itself (note.save).
+      // inserted, a footnote added) calls too, has nothing to do; ctrl+s (`:w`) opens the menu itself (file.save).
       buf.virtual = { save: () => true };
       const terminal = this.app.host.terminal?.() ?? null;
       const size = { cols: this.app.width, rows: this.app.height };

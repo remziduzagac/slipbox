@@ -7,7 +7,7 @@ export const OPEN_BY_PATH: Check[] = [
   {
     area: "navigating",
     name: "open by path: space f e completes ~/ folders and files (tab, enter); the switcher takes ./ and ~/",
-    covers: { cases: ["switcher"], commands: ["note.open_path", "switcher.open"] },
+    covers: { cases: ["switcher"], commands: ["file.open_path", "switcher.open"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
       await s.status("index.md");

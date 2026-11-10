@@ -349,6 +349,8 @@ export function registerActions(app: App): void {
       hidden: spec.id === "app.escape",
     });
   }
+  // By a spec's id itself: one implemented under an id a command had before (D274) is left over from its rename.
+  const specified = new Set(COMMAND_SPECS.map((s) => s.id));
   for (const id of Object.keys(impl))
-    if (!app.registry.get(id)) throw new Error(`command ${id} has no spec in core/application/commands/catalog.ts`);
+    if (!specified.has(id)) throw new Error(`command ${id} has no spec in core/application/commands/catalog.ts`);
 }

@@ -132,6 +132,43 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- **Breaking:** the `space` groups are named for what they act on, and their keys moved with them. `space f` (+file)
+  acts on any file, a note or not; `space n` (+note) keeps what only a note has; finding is `space /` (+find);
+  `space d` reads +directory and `space v` +vault. Each key kept its letter, so only the group's key is new.
+  `space f f`, `space f e`, `ctrl+p` and `ctrl+n` stay. To keep an old key, bind it in `[keys]` where the groups left
+  it free: `"leader n m" = "file.rename"`.
+
+  | Was | Now | What |
+  | --- | --- | --- |
+  | `space n n` | `space f n` | a new note |
+  | `space n m`, `space n shift+m` | `space f m`, `space f shift+m` | rename or move the file; move it to a folder |
+  | `space n d` | `space f d` | delete the file |
+  | `space n y`, `space n x` | `space f y`, `space f x` | copy, cut the file |
+  | `space n shift+y` | `space f shift+y` | a copy of the file beside it |
+  | `space n w`, `space n shift+w` | `space f w`, `space f shift+w` | save, save every changed file |
+  | `space n r` | `space f r` | read the file from disk again |
+  | `space n i` | `space f i` | Info |
+  | `space n q` | `space f q` | the file's problems |
+  | `space n s`, `space n p` | `space f s`, `space f p` | send the file to a running nvim; choose the nvim |
+  | `space f /` | `space / /` | find in the note |
+  | `space f r`, `space f shift+r` | `space / r`, `space / shift+r` | replace in the note; in every note |
+  | `space f g` | `space / g` | find in every note |
+  | `space f s` | `space / s` | search |
+  | `space f o`, `space f b` | `space / o`, `space / b` | a heading; the headings the cursor is under |
+  | `space f t`, `space f d` | `space / t`, `space / d` | the tags; the document types |
+  | `space f l` | `space / l` | go to a line |
+  | `space f p` | `:`, `ctrl+shift+p` | the command palette, without a leader key now |
+  | | `space f shift+e` | new: the file shown in the explorer, as `space shift+e` |
+
+- The commands are named for their group. The old names still work wherever a command is named, `[keys]` and
+  `[aliases]` included, so a config that names them needs no change; `slipbox commands` lists the new ones:
+  `note.create` is `file.create`, `note.rename` `file.rename`, `note.move` `file.move`, `note.delete` `file.delete`,
+  `note.copy` `file.copy`, `note.yank` `file.yank`, `note.cut` `file.cut`, `note.save` `file.save`, `note.save_all`
+  `file.save_all`, `note.save_force` `file.save_force`, `note.revert` `file.revert`, `note.reload` `file.reload`,
+  `note.info` `file.info`, `note.send` `file.send`, `note.send_pick` `file.send_pick`, `note.open` `file.open`,
+  `note.open_path` `file.open_path`, `folders.open` `vault.open`, `folders.default` `vault.default` and `folder.name`
+  `vault.name`. The command-line commands keep their names.
+
 - **Breaking:** `space g` is a group now, so the git panel opens on `space g g`. Undo the change asks first.
 
 - Going into another vault asks first, whatever the way in (the explorer, `space v v`, `ctrl+click`, `:e`, git's Open,

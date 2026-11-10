@@ -276,7 +276,7 @@ So "the note I'm looking at" in a prompt needs no path. To point at a line, pres
 `path:line`, to paste.
 
 It works the other way round too. `slipbox send ideas/coffee --line 5` opens the note at that line in your running
-nvim, as `space n s` does from slipbox. The skill tells the agent to do so only when you ask.
+nvim, as `space f s` does from slipbox. The skill tells the agent to do so only when you ask.
 
 ## Where next
 

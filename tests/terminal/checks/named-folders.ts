@@ -40,7 +40,7 @@ export const NAMED: Check[] = [
   {
     area: "links-and-files",
     name: "named folders: space v shift+v picks which copy a folder's links open, :folders-default again; info says which (21.6)",
-    covers: { cases: ["links/named-folders", "vault"], commands: ["folders.default"] },
+    covers: { cases: ["links/named-folders", "vault"], commands: ["vault.default"] },
     options: {
       home: true,
       startAt: "home/notes/index.md",
@@ -122,7 +122,7 @@ export const NAMED: Check[] = [
   {
     area: "links-and-files",
     name: "naming: :name names the cooking vault, its pointer resolves, and vaults lists it (21.10)",
-    covers: { cases: ["links/named-folders", "rename", "links/state"], commands: ["folder.name"] },
+    covers: { cases: ["links/named-folders", "rename", "links/state"], commands: ["vault.name"] },
     options: { home: true, startAt: "home/hobbies/cooking/Home.md" },
     run: async (s) => {
       await s.ex("name cooking");
@@ -150,7 +150,7 @@ export const NAMED: Check[] = [
   {
     area: "links-and-files",
     name: "naming: space v n names this root anew, after a preview — paths into it and out of it as they were (21.10)",
-    covers: { cases: ["links/named-folders", "rename"], commands: ["folder.name"] },
+    covers: { cases: ["links/named-folders", "rename"], commands: ["vault.name"] },
     run: async (s) => {
       const outreach = s.read("outreach/index.md");
       await leader(s, "v", "n");
@@ -219,7 +219,7 @@ export const NAMED: Check[] = [
     run: async (s) => {
       // link-styles.md points into the worktree by `@agent/sync-retry` (its runbook says "parks at once"); kestrel's
       // own sync doc says it too.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.type("parks");
       await s.see(/"parks" — \d+ files?/, 15000); // once notes/ is indexed
       await s.keys("ctrl+a");

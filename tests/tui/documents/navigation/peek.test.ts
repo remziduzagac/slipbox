@@ -257,7 +257,7 @@ describe("vaults in the TUI (17.x)", () => {
       (await import("../../../../src/core/workspace/vaults/vault.ts")).initVault(bare, `tbare${n}`);
       writeFileSync(join(notes, "to-bare.md"), "[b](../bare/b.md)\n");
       h.app.overlays.closeFloating();
-      await h.app.run("note.open to-bare.md");
+      await h.app.run("file.open to-bare.md");
       await h.keys("tab", "enter");
       expect(h.app.view!.buf.abs).toBe(join(bare, "b.md"));
       expect(h.app.view!.buf.source).toContain(`**Linked from:** tbare${n} has no index here yet — building it`);

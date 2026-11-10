@@ -32,9 +32,9 @@ describe("overlays and the : prompt", () => {
     await h.keys("escape");
     expect(v.find).toBeNull();
   });
-  test("space f o outline picker", async () => {
+  test("space / o outline picker", async () => {
     const h = await harness({ open: "samples/handbook/operations-handbook.md" });
-    await h.keys("space", "f", "o");
+    await h.keys("space", "/", "o");
     expect(h.frame()).toContain("Headings");
     await h.keys("down", "down", "enter");
     expect(h.app.view!.cur.row).toBeGreaterThan(0);
@@ -150,7 +150,7 @@ describe("overlays and the : prompt", () => {
     expect(await start("v")).toEqual({ heading: "Selection & copy", selectedIsEntry: true });
     await h.keys("escape");
     expect(await start()).toEqual({ heading: "Cursor", selectedIsEntry: true }); // from the note: the top
-    await h.app.run("note.open notes/alpha.md"); // some history
+    await h.app.run("file.open notes/alpha.md"); // some history
     expect(await start("space", "h", "h")).toEqual({ heading: "Inside the history", selectedIsEntry: true });
     // It lists the history's keys, the jump keys gathered on one entry, and the filter's.
     await h.keys("space", "?");
@@ -238,7 +238,7 @@ describe("overlays and the : prompt", () => {
     await h.keys("Z");
     await h.keys("space", "m");
     expect(h.frame()).toContain("Messages");
-    await h.keys("escape", "space", "n", "i");
+    await h.keys("escape", "space", "f", "i");
     expect(h.frame()).toContain("backlinks");
     await h.keys("escape", "space", "v", "i");
     expect(h.frame()).toContain("watcher");

@@ -87,8 +87,8 @@ describe("links and history", () => {
   });
   test("history list jumps anywhere in the timeline", async () => {
     const h = await harness();
-    await h.app.run("note.open notes/alpha.md");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/alpha.md");
+    await h.app.run("file.open notes/beta.md");
     await h.keys("space", "h", "h");
     expect(h.frame()).toContain("History");
     // In the left panel, not a popup: focused, the current place selected and marked.
@@ -105,8 +105,8 @@ describe("links and history", () => {
   });
   test("history: a click selects an entry, a double-click jumps there", async () => {
     const h = await harness();
-    await h.app.run("note.open notes/alpha.md");
-    await h.app.run("note.open notes/beta.md");
+    await h.app.run("file.open notes/alpha.md");
+    await h.app.run("file.open notes/beta.md");
     await h.keys("space", "h", "h");
     h.frame();
     const sb = h.app.geometry!.sidebar!;

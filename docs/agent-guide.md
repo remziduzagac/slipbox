@@ -31,7 +31,7 @@ saved files. Unsaved TUI changes remain in its buffer until saved.
 3. **Two keys teach the rest.** `space` shows the keys that can follow it. `?` lists every key, with a filter. The
    person doesn't need vim: the arrows and the shortcuts of other editors work
    ([Keys you already know](https://remziduzagac.github.io/slipbox/docs/guides/keys-you-know/)).
-4. **Moving and finding.** `ctrl+p` opens a note by name, `enter` follows a link, `ctrl+o` goes back, `space f s`
+4. **Moving and finding.** `ctrl+p` opens a note by name, `enter` follows a link, `ctrl+o` goes back, `space / s`
    searches every note.
 5. **Editing.** `i` opens the lens (the Markdown around the cursor), `i` again types, `esc` steps back out, `ctrl+s`
    saves. `ctrl+k` shows the whole note as Markdown.

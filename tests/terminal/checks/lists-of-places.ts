@@ -76,7 +76,7 @@ export const LISTS_OF_PLACES: Check[] = [
         await s.type("route sharing");
         await previewed(s, /projects\/route-sharing\.md/, wide);
         await s.keys("escape");
-        await leader(s, "f", "s");
+        await leader(s, "/", "s");
         await s.type("operation log");
         await previewed(s, /[\w/.-]+\.md:\d+/, wide);
         await s.keys("escape");

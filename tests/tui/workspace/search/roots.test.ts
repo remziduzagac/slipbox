@@ -43,7 +43,7 @@ describe("vaults in the TUI (17.x)", () => {
       writeFileSync(join(app, "w2.md"), "# W2\n\nA walrus there.\n");
       const h = await harness({ root: notes, open: "index.md" });
       h.app.graph.reach!.graphAt(app)?.ensureAll(); // the app vault's index, as when opened
-      await h.keys("space", "f", "s");
+      await h.keys("space", "/", "s");
       for (const k of "walrus") await h.keys(k);
       const labels = () => (h.app.overlay as ListOverlay).filtered.map((e) => e.item.label);
       expect(labels()).toEqual(["w.md:3"]);

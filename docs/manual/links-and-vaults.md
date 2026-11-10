@@ -351,7 +351,7 @@ Elsewhere has no vault to read names or `/` from. There, your setting applies wh
 - In an Obsidian vault, it says "wikilinks, by name, without .md", from Obsidian's `.obsidian/app.json`.
 - In a repository, it says which share of its notes' links decided each part.
 
-The Info view (`space n i`) shows the same in its Links section. `y` there copies it.
+The Info view (`space f i`) shows the same in its Links section. `y` there copies it.
 
 The convention decides only the links slipbox makes. The scratch's `path:line` references aren't links. A rename keeps
 each existing link in the form it was written in.
@@ -401,7 +401,7 @@ A private name is written, and slipbox says that pointer works on this machine o
 
 `space l l` lists this note's own links, each with whether it resolves. `enter` follows one.
 
-The Info view (`space n i`) counts both. From the command line, use `slipbox backlinks <note>` and
+The Info view (`space f i`) counts both. From the command line, use `slipbox backlinks <note>` and
 `slipbox links <note>`.
 
 Backlinks are worked out from slipbox's index, never stored in your files. They include:
@@ -462,7 +462,7 @@ Each link keeps the form it was written in:
 
 | To rename or move | Keys | Command |
 | --- | --- | --- |
-| a note, by its path | `space n m` (`:rename`, `:mv`), or `r` and `m` in the explorer | `slipbox mv` |
+| a note, by its path | `space f m` (`:rename`, `:mv`), or `r` and `m` in the explorer | `slipbox mv` |
 | a heading | `space n h` for the heading the cursor is under, or `r` in the outline | `slipbox rename-heading` |
 
 You always see a preview first, with every line that will change, in every vault. `enter` does it, and `esc` leaves
@@ -518,7 +518,7 @@ It is one of the note's problems:
 
 [Configuration](configuration.md) has that setting.
 
-- `space n q` lists this note's problems.
+- `space f q` lists this note's problems.
 - `space v p` lists the whole vault's, broken links among them. [Code](code.md) describes the Problems panel.
 - `slipbox problems` lists the vault's broken, ambiguous and fragile links, and the notes nothing links to.
 

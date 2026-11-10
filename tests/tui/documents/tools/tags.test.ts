@@ -20,9 +20,9 @@ describe("tags (1.6)", () => {
     h.app.moveCursor(v, { row: l.line, col: l.col });
   };
 
-  test("space f t lists the tags with their counts; a tag lists its notes; one opens", async () => {
+  test("space / t lists the tags with their counts; a tag lists its notes; one opens", async () => {
     const { h } = await setup();
-    await h.keys("space", "f", "t");
+    await h.keys("space", "/", "t");
     const list = h.app.overlay as ListOverlay;
     expect(list.title).toMatch(/^Tags \(\d+\)/);
     const dome = list.items.find((i) => i.label === "#cupola")!;
@@ -38,7 +38,7 @@ describe("tags (1.6)", () => {
     expect(h.app.view!.buf.rel).toBe("other-tagged.md");
     // A save shows at once: a tag written in is listed.
     h.app.writeBuffer(h.app.view!.buf, "---\ntags: [cupola]\n---\n# Other\n\n#Notion and #freshly-added\n");
-    await h.keys("space", "f", "t");
+    await h.keys("space", "/", "t");
     expect((h.app.overlay as ListOverlay).items.some((i) => i.label === "#freshly-added")).toBe(true);
   });
 

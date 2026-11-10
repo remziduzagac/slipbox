@@ -261,6 +261,13 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - Fast browsing through breadcrumb dropdowns, as `quick-explorer`. (2026-09-25) The explorer's breadcrumb is built,
   a click on a folder zooming the view there (VV-D5); no dropdowns. (2026-10-17)
 - A hierarchical parent, child and sibling structure beyond flat links, as `breadcrumbs`. (2026-09-25)
+- The palette's leader key at `space / p` once finding moved there. (2026-10-26) Not chosen (D274): the palette finds
+  nothing, and `:` and `ctrl+shift+p` open it.
+- The commands keeping their ids when their keys moved to `space f`, `note.save` saving a code file. (2026-10-26) Not
+  chosen (D274): the ids follow the groups, the old ones kept as `formerly`.
+- A table of renamed ids apart from the commands. (2026-11-09) Not chosen (D274): each spec says the ids it had.
+- "Directory" in the commands' titles and the docs, as `space d`'s label says. (2026-10-26) Not chosen (D274): the
+  label alone.
 
 ## Search
 

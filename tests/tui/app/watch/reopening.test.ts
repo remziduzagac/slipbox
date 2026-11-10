@@ -13,19 +13,19 @@ describe("regression: :e of a file written a moment ago", () => {
     writeFileSync(join(root, "fresh.ts"), "export const x = 1;\n");
     writeFileSync(join(root, "fresh-note.md"), "# Fresh\n");
     expect(h.app.graph.filePaths()).not.toContain("fresh.ts"); // no watcher here: unknown, as in the race
-    await h.app.run("note.open fresh.ts");
+    await h.app.run("file.open fresh.ts");
     expect(h.app.view!.buf.rel).toBe("fresh.ts");
-    await h.app.run("note.open fresh-note.md");
+    await h.app.run("file.open fresh-note.md");
     expect(h.app.view!.buf.rel).toBe("fresh-note.md");
     // Nor one the walk leaves out: it opens (D249), but it isn't the vault's.
     mkdirSync(join(root, "node_modules"), { recursive: true });
     writeFileSync(join(root, "node_modules", "dep.ts"), "");
-    await h.app.run("note.open node_modules/dep.ts");
+    await h.app.run("file.open node_modules/dep.ts");
     expect(h.app.view!.buf.abs).toBe(join(root, "node_modules", "dep.ts"));
     expect(h.app.view!.buf.rel).toBeNull();
     expect(h.app.graph.filePaths()).not.toContain("node_modules/dep.ts");
     writeFileSync(join(dirname(root), "outside.ts"), "");
-    await h.app.run("note.open ../outside.ts");
+    await h.app.run("file.open ../outside.ts");
     expect(h.app.view!.buf.abs).toBe(join(root, "node_modules", "dep.ts"));
     expect(h.app.messages.at(-1)!.text).toBe('no note or file "../outside.ts"');
   });

@@ -734,7 +734,7 @@ It has two tabs, **This file** and **All**. Each says how many lint findings are
 all of them or hide them again. This includes rules in `lint.ignore`. The status line counts only findings shown;
 [Problems as you write](editing.md#problems-as-you-write) explains the defaults.
 
-**This file** (`space n q`) lists every problem of the file on screen, in order. Each problem shows:
+**This file** (`space f q`) lists every problem of the file on screen, in order. Each problem shows:
 
 - its sign
 - `line:column`

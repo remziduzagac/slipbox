@@ -240,7 +240,7 @@ export const ROOTS: Check[] = [
     name: "vaults: Elsewhere — a folder outside home and every vault opens in no-vault, its tabs its own, no index and said so; going into a vault brings its tabs",
     covers: {
       cases: ["vault", "links/roots", "links/state", "links/backlinks"],
-      commands: ["search.open", "backlinks.open", "folders.open"],
+      commands: ["search.open", "backlinks.open", "vault.open"],
     },
     options: {
       home: true,
@@ -268,7 +268,7 @@ export const ROOTS: Check[] = [
       await leader(s, "l", "b");
       await s.message("no backlinks in Elsewhere: it has no index");
       // No search across it.
-      await leader(s, "f", "s");
+      await leader(s, "/", "s");
       await s.message("Elsewhere has no index to search");
       // Into a vault: its own tabs; back with ctrl+o: Elsewhere's, the note where it was.
       await leader(s, "v", "v");
@@ -289,7 +289,7 @@ export const ROOTS: Check[] = [
     name: "vaults: home — started in ~, home is the vault: a note of its own has its backlinks once home is walked, while nobody works; the vaults in it their own",
     covers: {
       cases: ["vault", "links/roots", "links/travel", "links/backlinks", "info"],
-      commands: ["note.info", "backlinks.open"],
+      commands: ["file.info", "backlinks.open"],
     },
     options: {
       home: true,
@@ -306,7 +306,7 @@ export const ROOTS: Check[] = [
       s.expect(s.rowOf(/Folders \(\d+\)/) < 0, "home is a vault: no named folders to go into first");
       // A note of its own, at its top; its backlink lies below it, found once home is walked.
       await open(s, "todo.md");
-      await leader(s, "n", "i");
+      await leader(s, "f", "i");
       await s.status("INFO");
       await s.see(/vault +home \(~\)/);
       await s.see(/backlinks +1\b/, 20000);
@@ -463,7 +463,7 @@ export const ROOTS: Check[] = [
   {
     area: "links-and-files",
     name: "roots: where a file is — a root by its name, an unnamed one by its path; :folders goes into one; a file of home's a link leads to peeked at, o into home; a loose one peeked at, o beside (21.9, 21.10, VV-D2)",
-    covers: { cases: ["links/named-folders", "links/roots", "vault"], commands: ["folders.open"] },
+    covers: { cases: ["links/named-folders", "links/roots", "vault"], commands: ["vault.open"] },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {
       await s.where(/^notes(?: │|$)/); // named by its .slipbox/

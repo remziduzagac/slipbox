@@ -233,7 +233,7 @@ function show(app: App, m: MergeState): void {
   const { language, tabWidth } = diffLanguage(app, path, m.read);
   const buf = new NoteBuffer(null, `merge:${m.rel}`, `merge:${m.rel}`);
   buf.kind = { group: "text", format: "text" };
-  // `w` and, through `note.save`, `:w` and ctrl+s: the file saved as settled.
+  // `w` and, through `file.save`, `:w` and ctrl+s: the file saved as settled.
   buf.virtual = { save: () => mergeSave(app) };
   buf.readOnly = "the merge screen is read-only: o, t and b settle a conflict, e edits it in the lens";
   let made: { key: string; layout: Layout } | null = null;

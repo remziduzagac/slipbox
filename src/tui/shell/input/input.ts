@@ -360,7 +360,7 @@ export class Input {
     // Insert mode: keys are text, except the few that edit or move (editing.ts); save still works.
     const iv = this.app.view;
     if (this.app.region === "content" && iv?.insert && !this.app.pending.length) {
-      if (key === "ctrl+s") return void this.app.run("note.save");
+      if (key === "ctrl+s") return void this.app.run("file.save");
       // Undo and redo as a desktop editor has them (DF-D15): typing goes on after them.
       if (key === "ctrl+z" || key === "ctrl+y") return void this.app.run(key === "ctrl+z" ? "edit.undo" : "edit.redo");
       // The completion popup's keys first (19.16): moving in it, accepting, closing.

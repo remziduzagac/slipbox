@@ -120,7 +120,7 @@ export class Properties {
       else if (note.changedOnDisk() && !note.deleted)
         this.app.message(
           "warn",
-          `${this.app.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space n w decides)`,
+          `${this.app.displayName(note)}'s properties changed — not saved yet (the file changed on disk: space f w decides)`,
         );
     }
     f.original = body;

@@ -25,6 +25,20 @@ export const COMMAND_SPECS: CommandSpec[] = [
   ...FILE_SPECS,
 ];
 
+/** A command's former id → its id now (D274): `note.rename` → `file.rename`. */
+export const FORMER_IDS: ReadonlyMap<string, string> = new Map(
+  COMMAND_SPECS.flatMap((c) => (c.formerly ?? []).map((old): [string, string] => [old, c.id])),
+);
+
+/** A command spec (`id` or `id argument`) under its id now: a former id, as a config or a script may still name it,
+ *  read as the command's current one (D274); anything else as it is. */
+export function currentCommand(spec: string): string {
+  const space = spec.indexOf(" ");
+  const id = space < 0 ? spec : spec.slice(0, space);
+  const now = FORMER_IDS.get(id);
+  return now ? now + spec.slice(id.length) : spec;
+}
+
 /**
  * The groups commands are listed under in help and the palette: the sections of
  * docs/manual/keys.md, in its order. The first group whose pattern matches an id wins.
@@ -39,19 +53,19 @@ export const COMMAND_GROUPS: { title: string; ids: RegExp }[] = [
   { title: "Outline", ids: /^(outline\.(cycle|toggle)$|footnotes?\.)/ },
   {
     title: "Find",
-    ids: /^(find\.|switcher\.|list\.|search\.|tag\.list$|type\.|outline\.pick$|breadcrumb\.path$|palette\.|note\.open(_path)?$)/,
+    ids: /^(find\.|list\.|search\.|tag\.list$|type\.|outline\.pick$|breadcrumb\.path$)/,
   },
   {
     title: "Editing",
-    ids: /^(task\.|edit\.|spell\.|shell\.|visual\.(delete|change|indent|outdent|comment|reflow|unwrap)$|view\.(source|live|mode_read|mode_lens|mode_source)$|lens\.|note\.(save|save_all|save_force|revert|resolve)$|app\.(save_quit|quit_force)$)/,
+    ids: /^(task\.|edit\.|spell\.|shell\.|visual\.(delete|change|indent|outdent|comment|reflow|unwrap)$|view\.(source|live|mode_read|mode_lens|mode_source)$|lens\.|file\.(save|save_all|save_force|revert)$|note\.resolve$|app\.(save_quit|quit_force)$)/,
   },
   { title: "UI", ids: /^(ui\.|theme\.|glyphs\.|background\.|html\.)/ },
   { title: "Scratch", ids: /^(scratch\.|context\.copy$)/ },
   { title: "Code cells", ids: /^cell\./ },
   { title: "Git", ids: /^git\./ },
   {
-    title: "Note, folder, app",
-    ids: /^(note\.|folder\.|folders\.|root\.|heading\.|rename\.|trash\.|problems?\.|info\.|vault\.|config\.|messages\.|help\.|app\.)/,
+    title: "Note, file, folder, app",
+    ids: /^(note\.|file\.|switcher\.|folder\.|root\.|heading\.|rename\.|trash\.|problems?\.|info\.|vault\.|config\.|messages\.|help\.|palette\.|app\.)/,
   },
 ];
 

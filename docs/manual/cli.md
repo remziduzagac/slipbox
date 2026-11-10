@@ -367,7 +367,7 @@ With `--json`, the data is `{path, abs, sha, bom, crlf, invalidUtf8, content}`:
 
 ### `stat`
 
-Gives a note's facts in one call, as the screen's Info view (`space n i`) shows them:
+Gives a note's facts in one call, as the screen's Info view (`space f i`) shows them:
 
 - its path and vault
 - its size and last change
@@ -1612,7 +1612,7 @@ from, reason}], chars, text}`:
 
 ### `send`
 
-Opens a note at a line, in an editor that's already running, as `space n s` does in the screen. By default the editor is
+Opens a note at a line, in an editor that's already running, as `space f s` does in the screen. By default the editor is
 a running nvim (0.9 or later). It's the first of these:
 
 - the one you last picked in the screen, while it answers
@@ -1762,7 +1762,8 @@ sense in the screen shows `(interaction)` instead.
 slipbox commands
 ```
 
-With `--json`, the data is `[{id, title, cli, desc}]`. `cli` is `null` for an interaction.
+With `--json`, the data is `[{id, title, cli, desc, formerly?}]`. `cli` is `null` for an interaction. `formerly` lists
+the IDs a renamed command had, which your configuration may still name.
 
 ### `upgrade`
 

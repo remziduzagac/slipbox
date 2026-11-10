@@ -9,7 +9,7 @@ export const VAULTS: Check[] = [
     name: "vault switch choices: stay keeps edits, discard goes; vault list includes destinations",
     covers: {
       cases: ["vault", "editing"],
-      commands: ["folders.open", "vault.switch_stay", "vault.switch_discard", "vault.switch_save"],
+      commands: ["vault.open", "vault.switch_stay", "vault.switch_discard", "vault.switch_save"],
     },
     options: { home: true, startAt: "home/notes/index.md" },
     run: async (s) => {

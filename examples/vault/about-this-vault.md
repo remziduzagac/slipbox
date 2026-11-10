@@ -28,7 +28,7 @@ some deliberately break the house style that [writing-guide](handbook/writing-gu
 | `projects/variable-star-survey.md` | long prose with code, tables, quotes and a block id: the ordinary case |
 | `projects/dome-refit.md` | TOML frontmatter, every callout kind (GitHub's capitals, nested), numbered tasks |
 | `projects/dome-refit.md` (again) | `*` and `+` bullets, a `www.` autolink, an image that exists (`attachments/`) |
-| `projects/*.md` (tags) | `#tags` in the text beside frontmatter `tags`, nested ones (`#dome/shutter`): `space f t` |
+| `projects/*.md` (tags) | `#tags` in the text beside frontmatter `tags`, nested ones (`#dome/shutter`): `space / t` |
 | `people/partners-and-names.md` | every link form, broken links, footnotes; CJK, emoji, ZWJ, RTL widths |
 | `home.md`, `people/`, `meetings/` | a linked graph: backlinks, tasks, heading references, two notes of one name |
 | `logs/observing-log-2026.md` (again) | repeated `### Weather` headings, an in-note `#anchor` link |
@@ -66,7 +66,7 @@ with a heading (`#o2-night-assistant-owns-the-night-2025-02`), and to a folder t
 - the explorer shows `outreach` with a vault's icon; `enter` goes into it;
 - the outreach link at the end of [home](home.md) goes there too, and `ctrl+o` comes back;
 - `space l b` on `home.md` lists the backlinks from `outreach` and `school-visits`;
-- `space v v` lists the vaults; `space n m` renames a note and fixes the links in all three.
+- `space v v` lists the vaults; `space f m` renames a note and fixes the links in all three.
 
 `scripts/sample-metrics.ts` measures what each note exercises (lines, longest line, tables and
 rows, fences and their languages, headings, links, wide and right-to-left characters), so a change

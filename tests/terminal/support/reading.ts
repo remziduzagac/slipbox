@@ -36,7 +36,7 @@ export async function line(s: Session, n: number): Promise<void> {
 export async function outlinePicker(s: Session, name: string): Promise<void> {
   const title = `Headings — ${name}`;
   for (let i = 0; i < 20 && s.rowOf(title) < 0; i++) {
-    await leader(s, "f", "o");
+    await leader(s, "/", "o");
     await s.until(() => s.rowOf(title) >= 0 || s.rowOf("no headings") >= 0, 3000, "the picker, or no headings yet");
     if (s.rowOf(title) < 0) await s.notSee("no headings", 6000); // the message gone, asked again
   }

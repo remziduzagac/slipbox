@@ -72,7 +72,7 @@ on one entry whole.
 An entry's **At:** is a link. `enter` on it, or a click, opens that file at those lines.
 
 The scratch keeps checking each place against its file, when the entry holds the lines you selected. If the file has
-changed since, the **At:**'s line number turns to a warning, and the Problems panel (`space n q`) says what happened:
+changed since, the **At:**'s line number turns to a warning, and the Problems panel (`space f q`) says what happened:
 
 | Problem | What it means |
 | --- | --- |

@@ -280,7 +280,7 @@ describe("the explorer's view (VV-D5)", () => {
     const h = await harness({ root: join(P, "notes"), open: null, folder: join(P, "notes", "sub"), config: asListed });
     expect(h.app.explorer.top).toBe(join(P, "notes", "sub"));
     h.app.explorer.expanded.add("elsewhere"); // unfolded once, out of sight: folded by the zoom
-    await h.app.run("note.open other/c.md");
+    await h.app.run("file.open other/c.md");
     expect(h.app.view!.buf.rel).toBe("other/c.md");
     expect(h.app.explorer.top).toBe(join(P, "notes"));
     expect([...h.app.explorer.expanded].sort()).toEqual(["other", "sub"]);
@@ -289,7 +289,7 @@ describe("the explorer's view (VV-D5)", () => {
     // The breadcrumb leads back where you went.
     expect(h.app.explorer.crumbs().at(-1)).toMatchObject({ abs: join(P, "notes", "other"), past: true });
     // Inside the view, nothing zooms.
-    await h.app.run("note.open sub/b.md");
+    await h.app.run("file.open sub/b.md");
     expect(h.app.explorer.top).toBe(join(P, "notes"));
   });
 

@@ -16,6 +16,7 @@ import {
   type CursorAnchor,
   loadSession,
   PositionStore,
+  recentCommands,
   type SessionTab,
 } from "../../../core/workspace/session/position.ts";
 import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
@@ -333,9 +334,7 @@ export class Vaults {
     if (process.env.NO_COLOR) this.app.ui.theme = "mono";
     this.app.settings.uiOverrides = {};
     const session = loadSession(target);
-    this.app.recentCommands = (session?.recent_commands ?? [])
-      .filter((id) => typeof id === "string")
-      .slice(0, RECENT_MAX);
+    this.app.recentCommands = recentCommands(session, RECENT_MAX);
     this.app.handoff.remoteServer = session?.remote_server;
     this.app.history.recentNotes = (session?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
     this.app.session.restoreUiOverrides();

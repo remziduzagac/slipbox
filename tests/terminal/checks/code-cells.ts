@@ -12,7 +12,7 @@ export const CODE_CELLS: Check[] = [
     run: async (s) => {
       await s.status("SOURCE");
       await s.see("public class GpxParser {");
-      await leader(s, "f", "o");
+      await leader(s, "/", "o");
       await s.see(/no headings/);
       await s.restart({ startAt: "home/work/kestrel/Dockerfile" });
       await s.see("FROM rust:latest AS engine");

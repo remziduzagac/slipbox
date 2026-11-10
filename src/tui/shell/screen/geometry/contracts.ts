@@ -50,7 +50,7 @@ export interface Geometry {
   /** The which-key popup, with its margin: clicks there never reach what's under it. */
   popup: Rect | null;
   /** Where each window's breadcrumb hangs its path from (its `…`, else its icon), by the window's index: kept when a
-   *  popup over it takes its clicks — `space f b` with the which-key popup drawn after `space f` (#40). */
+   *  popup over it takes its clicks — `space / b` with the which-key popup drawn after `space /` (#40). */
   crumbAnchors: Record<number, { x: number; y: number }>;
   /** Horizontal rules (row `y`, columns [x0, x1)) and the vertical borders they may meet. */
   rules: { y: number; x0: number; x1: number }[];

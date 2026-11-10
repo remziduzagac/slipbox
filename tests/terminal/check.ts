@@ -194,7 +194,7 @@ export const signed = (source: string): RegExp =>
  * 1.7): the panel opened, `needle` waited for there, the panel closed again.
  */
 export async function problemListed(s: Session, needle: string | RegExp, timeout = 3000): Promise<void> {
-  await s.keys("space", "n", "q");
+  await s.keys("space", "f", "q");
   await s.status("PROBLEMS");
   await s.see(needle, timeout);
   await s.keys("q");

@@ -55,11 +55,11 @@ export function paneActions(): Record<string, Run> {
     // :vs <note> and :sp <note> (vim's): the split, then that note in it.
     "window.split_side": async (a, arg) => {
       a.windows.split("side");
-      if (arg) await a.run(`note.open ${arg}`);
+      if (arg) await a.run(`file.open ${arg}`);
     },
     "window.split_stacked": async (a, arg) => {
       a.windows.split("stacked");
-      if (arg) await a.run(`note.open ${arg}`);
+      if (arg) await a.run(`file.open ${arg}`);
     },
     "window.focus_left": (a) => a.windows.focus("left"),
     "window.focus_down": (a) => a.windows.focus("down"),
@@ -132,7 +132,7 @@ export function paneActions(): Record<string, Run> {
           ratio: a.config.ui.split_ratio,
         });
         a.activeTab += 1;
-        if (arg) await a.run(`note.open ${arg}`);
+        if (arg) await a.run(`file.open ${arg}`);
       }),
     "tab.list": (a) =>
       a.overlays.openList({

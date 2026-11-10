@@ -250,7 +250,7 @@ export class Search {
   /** A type's notes (22.3), by number then path, each its status — what supersedes it too: pick one to open. */
   openTypeNotes(name: string): void {
     const t = rootTypes(this.app.graph).find((x) => x.name === name);
-    if (!t) return this.app.message("info", `no document type "${name}" here: space f d lists them`);
+    if (!t) return this.app.message("info", `no document type "${name}" here: space / d lists them`);
     const list = this.typedNotes(t.name);
     if (!list.length) return this.app.message("info", `no ${t.name} notes here (${t.paths.join(", ")})`);
     this.app.overlays.openList({
@@ -278,9 +278,9 @@ export class Search {
   /** `] t` / `[ t` (22.3): the next or previous note of this note's document type, in the type's order. */
   typeStep(dir: 1 | -1): void {
     const rel = this.app.view?.buf.rel;
-    if (!rel) return this.app.message("info", "open a note of a document type: space f d lists them");
+    if (!rel) return this.app.message("info", "open a note of a document type: space / d lists them");
     const t = rootTypes(this.app.graph).find((x) => ofType(rel, x));
-    if (!t) return this.app.message("info", `${rel} is of no document type: space f d lists them`);
+    if (!t) return this.app.message("info", `${rel} is of no document type: space / d lists them`);
     const list = this.typedNotes(t.name);
     const i = list.findIndex((n) => n.path === rel);
     const next = list[i + dir];

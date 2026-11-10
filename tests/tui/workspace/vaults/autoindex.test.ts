@@ -944,7 +944,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     const root = makeVault();
     writeFileSync(join(root, ".draft.md"), "# Draft\n");
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open .draft.md");
+    await h.app.run("file.open .draft.md");
     const draft = h.app.view!.buf;
     expect(draft.rel).toBe(".draft.md");
     writeFileSync(join(root, ".draft.md"), "# Draft\n\nTo [the index](index.md).\n");
@@ -959,7 +959,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
     const h = await harness({ root, open: "index.md", watch: true });
     try {
-      await h.app.run("note.open .stash/h.md");
+      await h.app.run("file.open .stash/h.md");
       const heard = spyOn(h.app.watcher!, "heard");
       writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nRewritten.\n");
       expect(h.app.watch.poll()).toBe(true);
@@ -1013,7 +1013,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     mkdirSync(join(root, ".stash"));
     writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open .stash/h.md");
+    await h.app.run("file.open .stash/h.md");
     expect(h.app.view!.buf.rel).toBe(".stash/h.md");
     writeFileSync(join(root, ".git", "index.lock"), "");
     writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nTo [the index](../index.md).\n");
@@ -1032,9 +1032,9 @@ describe("the background auto-index in the TUI (20.9)", () => {
       writeFileSync(join(root, d, "h.md"), "# Hidden\n");
     }
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open .stash/h.md");
+    await h.app.run("file.open .stash/h.md");
     const stash = h.app.view!.buf;
-    await h.app.run("note.open .locked/h.md");
+    await h.app.run("file.open .locked/h.md");
     const locked = h.app.view!.buf;
     expect([stash.rel, locked.rel]).toEqual([".stash/h.md", ".locked/h.md"]);
     rmSync(join(root, ".stash"), { recursive: true });
@@ -1057,7 +1057,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     mkdirSync(join(root, ".stash"));
     writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n\nTo [the index](../index.md).\n");
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open .stash/h.md");
+    await h.app.run("file.open .stash/h.md");
     const buf = h.app.view!.buf;
     rmSync(join(root, ".stash", "h.md"));
     h.app.watch.poll();
@@ -1077,7 +1077,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     mkdirSync(join(root, ".stash"));
     writeFileSync(join(root, ".stash", "h.md"), "# Hidden\n");
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open .stash/h.md");
+    await h.app.run("file.open .stash/h.md");
     await h.keys("shift+g", "o");
     await h.keys(..."typed".split(""));
     await h.keys("escape");
@@ -1167,14 +1167,14 @@ describe("the background auto-index in the TUI (20.9)", () => {
     mkdirSync(join(root, ".stash"));
     writeFileSync(join(root, ".stash", "x.txt"), "plain\n");
     const h = await harness({ root, open: "index.md" });
-    await h.app.run("note.open .stash/x.txt");
+    await h.app.run("file.open .stash/x.txt");
     const x = h.app.view!.buf;
     expect(h.app.graph.notes.has(".stash/x.txt")).toBe(false);
     // Text files are notes now (the vault's own [walk]); the file reached again, a note of the new graph.
     const own = join(root, ".slipbox", "config.toml");
     writeFileSync(own, readFileSync(own, "utf8").replace("[walk]", '[walk]\nextensions = ["md", "txt"]'));
     h.app.settings.reload("file changed");
-    await h.app.run("note.open .stash/x.txt");
+    await h.app.run("file.open .stash/x.txt");
     expect(h.app.graph.notes.has(".stash/x.txt")).toBe(true);
     writeFileSync(join(root, ".stash", "x.txt"), "plain, to [the index](../index.md)\n");
     h.app.watch.poll();
@@ -1215,7 +1215,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
     const hidden = h.app.buffer(".stash/h.md")!;
     expect([d.rel, hidden.rel]).toEqual([null, null]);
     // :e reaching one in a hidden folder (20.8): the same buffer, the vault's.
-    await h.app.run("note.open .stash/h.md");
+    await h.app.run("file.open .stash/h.md");
     expect(h.app.view!.buf).toBe(hidden);
     expect(hidden.rel).toBe(".stash/h.md");
     // No watcher looks in .stash: the poll still does, its change read, and the graph told.

@@ -235,12 +235,30 @@ describe("review cycle 3 (config)", () => {
     mkdirSync(join(dir, "v", ".slipbox"), { recursive: true });
     writeFileSync(
       join(dir, "v", ".slipbox", "config.toml"),
-      '[aliases]\nwq = "app.quit_force"\n[keys]\n"ctrl+s" = "note.revert"\n"g z" = "ui.zen"\n',
+      '[aliases]\nwq = "app.quit_force"\nw = "note.save_force"\n[keys]\n"ctrl+s" = "note.revert"\n"ctrl+r" = "file.revert"\n"g z" = "ui.zen"\n',
     );
     const r = loadConfig({ configFile: join(dir, "none.toml"), vaultRoot: join(dir, "v") });
     expect(r.config.aliases.wq).toBeUndefined();
+    // By its id now or the one it had (D274): `note.revert` is `file.revert`, `note.save_force` `file.save_force`.
+    expect(r.config.aliases.w).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["ctrl+s"]).toBeUndefined();
+    expect((r.config.keys as Record<string, string>)["ctrl+r"]).toBeUndefined();
     expect((r.config.keys as Record<string, string>)["g z"]).toBe("ui.zen"); // a harmless one applies
+  });
+  test("a command's former id in [keys], a mode's keys and [aliases] is read as its id now, its argument kept (D274)", () => {
+    const { f } = write(
+      '[keys]\n"g q" = "note.info"\n"g o" = "note.open notes/a.md"\n[keys.visual]\nz = "note.save"\n[keys.explorer]\nz = "rename_vault"\n[aliases]\nvv = "folders.open"\n',
+    );
+    const r = loadConfig({ configFile: f });
+    const keys = r.config.keys as Record<string, string>;
+    expect([keys["g q"], keys["g o"], r.config.keys.visual?.z, r.config.aliases.vv]).toEqual([
+      "file.info",
+      "file.open notes/a.md",
+      "file.save",
+      "vault.open",
+    ]);
+    expect(r.config.keys.explorer?.z).toBe("rename_root"); // the explorer's own words, renewed as before
+    expect(r.warnings).toEqual([]);
   });
   test("a vault's keys and aliases can't run a program (25.7): your own config's can", () => {
     const { dir, f } = write('[keys]\n"g !" = "shell.run make"\n[aliases]\nmk = "shell.run make"\n');

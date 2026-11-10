@@ -40,7 +40,7 @@ describe("data files render as documents (16.11–16.14)", () => {
     const f = h.frame();
     expect(f).toMatch(/│ name\s+│ role\s+│/);
     expect(f).toMatch(/│ Rosa\s+│ ops\s+│/);
-    await h.app.run("note.open to-config.md");
+    await h.app.run("file.open to-config.md");
     const v = h.app.view!;
     const l = h.app.currentLayout(v).links[0]!;
     h.app.moveCursor(v, { row: l.line, col: l.col });
@@ -104,7 +104,7 @@ describe("YAML and JSON as a tree (16.12)", () => {
     await h.keys("j", "j", "j");
     expect(lens()).toBe("7"); // the second container
     await h.keys("escape", "escape");
-    await h.app.run("note.open api.json");
+    await h.app.run("file.open api.json");
     const l = h.app.currentLayout(v).links.find((x) => x.target.startsWith("#/"))!;
     h.app.moveCursor(v, { row: l.line, col: l.col });
     await h.keys("enter");
@@ -122,9 +122,9 @@ describe("a data file that doesn't parse, opened (16.14)", () => {
     const v = h.app.view!;
     expect(v.source).toBe(true);
     expect(said(h)).toBe(1);
-    await h.app.run("note.open to-bad.md");
+    await h.app.run("file.open to-bad.md");
     expect(v.source).toBe(false); // a note renders again
-    await h.app.run("note.open bad.json"); // :e takes a file's path too
+    await h.app.run("file.open bad.json"); // :e takes a file's path too
     expect([v.buf.rel, v.source, said(h)]).toEqual(["bad.json", true, 2]);
     await h.app.run("history.back");
     const l = h.app.currentLayout(v).links[0]!;

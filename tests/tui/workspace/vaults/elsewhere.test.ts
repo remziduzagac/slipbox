@@ -81,7 +81,7 @@ describe("Elsewhere: no-vault (VV-D3)", () => {
     const root = makeVault();
     const h = await harness({ root, open: "index.md" });
     // Chosen (:e), a file of Elsewhere's goes into Elsewhere, as into a vault (VV-D4): its own tabs.
-    await h.app.run(`note.open ${join(dir, "a.md")}`);
+    await h.app.run(`file.open ${join(dir, "a.md")}`);
     await answerSwitch(h);
     expect(h.app.loc).toMatchObject({ mode: "folder", root: dir });
     expect(h.app.tabs.map((t) => t.views[0]!.buf.key)).toContain(join(dir, "a.md"));

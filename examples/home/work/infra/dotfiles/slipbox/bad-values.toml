@@ -41,7 +41,7 @@ edit_in = "both"
 lens_max = 3
 
 [keys]
-"hyper+x" = "note.save"
+"hyper+x" = "file.save"
 "leader z" = "no.such.command"
 
 [keys.source]
