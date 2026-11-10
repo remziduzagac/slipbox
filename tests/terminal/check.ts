@@ -309,9 +309,9 @@ export async function explorerClosed(s: Session): Promise<void> {
 }
 
 /**
- * Select the explorer's row named `name` (it has focus, the row on screen): once it's shown, from the top, down to it —
- * the `j`s counted from the rows on screen, and counted again when those rows moved before the keys were handled (a
- * folder's `listing…` row gone, its listing come): a `j` counted past a row that went lands a row too far.
+ * Select the explorer's row named `name` (it has focus): gone to the top, and once the row's shown, from the top down
+ * to it — the `j`s counted from the rows on screen, and counted again when those rows moved before the keys were
+ * handled (a folder's `listing…` row gone, its listing come): a `j` counted past a row that went lands a row too far.
  */
 export async function explorerRow(s: Session, name: string): Promise<void> {
   // Its rows: left of its border (in code points: the Nerd glyphs are two units), past the left rail. Read once the
@@ -331,6 +331,8 @@ export async function explorerRow(s: Session, name: string): Promise<void> {
     await s.until(() => find() !== null, undefined, `the explorer to show ${name}`);
     return find()!;
   };
+  // To the top first: the row may be above those shown, the rows scrolled to a selection further down.
+  await s.keys("g", "g");
   await shown();
   for (let tries = 1; ; tries++) {
     await s.keys("g", "g");

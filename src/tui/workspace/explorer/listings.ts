@@ -43,6 +43,10 @@ interface Kept {
   /** The keys waiting for it (`relist`): settled once a listing of it is taken, whichever read takes it — the one they
    *  asked, or one asked since (the settings changed, `reread`), their deadline its — failed by one with no answer. */
   waits: { taken: () => void; failed: (err: Error) => void }[];
+  /** The watcher saw its entries change since its read began (`changed`): read again once its second has passed. */
+  changed: boolean;
+  /** The tree's build for that asked for (`due`), while it waits. */
+  due: boolean;
 }
 
 /** Why a listing's thread gave no answer, as its row says it — of the folder (`walkFailure` says it of the walk). */
@@ -130,7 +134,20 @@ export class Listings {
       this.kept.delete(key);
       this.kept.set(key, k);
     } else {
-      k = { dir, own, listing: null, reading: null, asked: Date.now(), at: 0, settings, tree: this.tree, waits: [] };
+      const asked = Date.now();
+      k = {
+        dir,
+        own,
+        listing: null,
+        reading: null,
+        asked,
+        at: 0,
+        settings,
+        tree: this.tree,
+        waits: [],
+        changed: false,
+        due: false,
+      };
       this.kept.set(key, k);
       // Still not listed then: its rows say it's being listed.
       const t = setTimeout(() => {
@@ -183,6 +200,42 @@ export class Listings {
    *  them changed (a file operation). A read under way is dropped: it may have read them before the change. */
   stale(dir: string): void {
     for (const [, k] of this.under(dir, true)) this.reread(k);
+  }
+
+  /**
+   * The watcher saw the entries of `dirs` change (`Watch.applyChanges`; `within`, of every folder in them too: a
+   * rescan): their kept listings read again once a second has passed since each was last read (`REREAD_MS`, the
+   * throttle), the tree built again then to ask them — nothing else may build it, and a row would stay as the listing
+   * from before had it: a file gone, or one come not shown. A read under way may have read before the change: once it's
+   * answered.
+   */
+  changed(dirs: readonly string[], within = false): void {
+    if (!this.offThread) return;
+    for (const d of dirs)
+      for (const [key, k] of this.under(d, within)) {
+        k.changed = true;
+        if (k.reading === null) this.due(key, k);
+      }
+  }
+
+  /** `fn` after `ms`, not holding the process open (a test's App fires it by hand). */
+  after = (ms: number, fn: () => void): void => {
+    const t = setTimeout(fn, ms);
+    (t as { unref?: () => void }).unref?.();
+  };
+
+  /** `k`, changed since it was read, read again as the tree is built a second after that read: that build asked for
+   *  then. Not if a read of it has begun meanwhile (it reads the change), or it's let go of. */
+  private due(key: string, k: Kept): void {
+    if (k.due) return;
+    k.due = true;
+    this.after(Math.max(0, k.at + REREAD_MS + 1 - Date.now()), () => {
+      k.due = false;
+      if (this.kept.get(key) !== k || !k.changed || k.reading !== null || this.app.quitting) return;
+      k.at = 0;
+      this.app.explorer.invalidateTree();
+      this.app.host.requestRender();
+    });
   }
 
   /** The listing of `dir` alone read again when next shown, never the folders in it (`stale` reads them too): what an
@@ -263,6 +316,8 @@ export class Listings {
   private read(key: string, k: Kept, settings: string): void {
     const n = ++this.serial;
     k.reading = n;
+    // Reads the folder as it is now: what the watcher saw before, too.
+    k.changed = false;
     const dir = k.dir;
     const empty = { dir, entries: [], notes: false, scope: null };
     const own = k.own ? { ...this.judge(), walked: this.walkedIn(dir) } : undefined;
@@ -281,6 +336,7 @@ export class Listings {
           if (was.listing && was.listing.error === null) {
             was.reading = null;
             was.at = Date.now();
+            if (was.changed) this.due(key, was);
           } else this.answered(key, n, settings, { ...empty, error: noAnswer(err) });
         },
       );
@@ -301,6 +357,8 @@ export class Listings {
       !k.listing || k.settings !== settings || k.listing.error !== listing.error || k.listing.digest !== listing.digest;
     k.listing = listing;
     k.settings = settings;
+    // The watcher saw a change while it was read: maybe after it looked.
+    if (k.changed) this.due(key, k);
     if (changed) this.redraw();
     this.settle(k);
   }
