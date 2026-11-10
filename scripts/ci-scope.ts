@@ -171,6 +171,13 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // list, other vaults' notes for a link's completion.
   [/^src\/core\/workspace\/walk\/own-jobs\.ts$/, ["slow disk", ...VAULT_CHECKS, "roots", "where", "links"]],
   [/^src\/tui\/documents\/editing\/completion\/items\.ts$/, ["slow disk", "links"]],
+  // What drawing asks of the disk, kept and asked of those threads (SD-T11): a picture's file, a link's path, an embedded
+  // note's text, the scratch's places', the Problems panel's notes, the named folders. Not path-probe.ts: every link
+  // resolved, the command line's too, asks it.
+  [
+    /^src\/(?:core\/workspace\/walk\/draw-jobs|tui\/app\/runtime\/drawn)\.ts$/,
+    ["slow disk", "pictures", "embed", "links", "scratch", "problems", "named folders"],
+  ],
   // The vault open built again on a disk thread (SD-T8): a reindex, a setting of the walk, a vault or a folder of home
   // gone into, a branch's tabs, a rename's and a folder operation's build. Its walk and index read through the disk
   // threads, which run every check: this entry for a change to it alone.

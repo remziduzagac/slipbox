@@ -444,12 +444,12 @@ export class DiskThreads {
     return { stats: answered.stats, ...judged, listings: listed.map((l) => l.listing), jobs: answered.jobs ?? [] };
   }
 
-  /** A request on a thread that's free, once one is, with what this thread knows (`walkContext`) as it's sent; its
-   *  deadline its asker's, counted from then — a walk's from when it was asked. One of a batch that fails gives the
-   *  batch up (`batch`) before its thread is free for the next: the rest of it still waiting for one withdrawn, never
-   *  sent, and what of it was sent given up, its thread started afresh, as past a deadline. A background request
-   *  (`background`) waits while another holds a thread. `withdraw` gives it up only while it waits for one. */
-  private async ask<A>(
+  /** A request (the methods above's, and drawing's `draw`: tui/app/runtime/drawn.ts) on a thread free once one is, with
+   *  what this thread knows (`walkContext`); its deadline its asker's, from then — a walk's from when asked. One of a
+   *  batch that fails gives the batch up (`batch`) before its thread is free: the rest still waiting withdrawn, never
+   *  sent, what was sent given up, its thread started afresh, as past a deadline. A background request (`background`)
+   *  waits while another holds a thread. `withdraw` gives it up only while it waits for one. */
+  async ask<A>(
     request: DiskAsk,
     by: Asker,
     batch?: AbortController,

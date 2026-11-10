@@ -3,9 +3,9 @@
 // a named folder (21.7); a hosting URL of this repository. And the evidence of a move (17.12, 20.2): where a broken
 // path's file went, for the relink — never a way to resolve one. A graph's own (`Graph.resolveLink` asks it).
 
-import { existsSync } from "node:fs";
 import { isAbsolute, join, posix, relative, sep } from "node:path";
 import { formatPointer, isPointer } from "../links/pointer.ts";
+import { probe } from "../links/path-probe.ts";
 import { lookupFolder, pointerName } from "../vaults/folders.ts";
 import {
   extensionless,
@@ -295,7 +295,7 @@ export class LinkResolver {
     if (
       decoded.startsWith("/") &&
       decoded.slice(1).includes("/") &&
-      !existsSync(join(this.g.root, decoded.slice(1).split("/")[0]!))
+      !probe().exists(join(this.g.root, decoded.slice(1).split("/")[0]!))
     )
       return null;
     const rel = decoded.startsWith("/")

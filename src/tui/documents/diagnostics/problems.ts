@@ -22,7 +22,6 @@ import { match } from "../../shell/overlays/match.ts";
 import { keyChar } from "../../shell/input/keys.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { andThen } from "../../app/runtime/key-reads.ts";
-import { readText } from "../../../core/foundation/platform/fsutil.ts";
 
 import type { ProblemRow, ProblemsPanel, PanelList } from "./problems/contracts.ts";
 import { problemRows } from "./problems/rows.ts";
@@ -79,15 +78,17 @@ export class Problems {
     }
     for (const [file, list] of files) {
       if (!this.vaultParses.has(file)) {
+        // Read on a disk thread as it's drawn (SD-T11): its findings unfiltered until its parse is in.
+        const text = this.app.drawn.text(file, Number.MAX_SAFE_INTEGER);
         let parsed: ParsedNote | null = null;
         try {
-          parsed = parseMarkdown(readText(file).text);
+          if (typeof text === "string") parsed = parseMarkdown(text);
         } catch {
           /* Unreadable files keep their findings. */
         }
-        this.vaultParses.set(file, parsed);
+        if (text !== undefined) this.vaultParses.set(file, parsed);
       }
-      const result = this.lintVisibility(list, this.vaultParses.get(file)!);
+      const result = this.lintVisibility(list, this.vaultParses.get(file) ?? null);
       shown.push(...result.shown);
       for (const [reason, count] of result.hidden) hidden.set(reason, (hidden.get(reason) ?? 0) + count);
     }
@@ -143,10 +144,15 @@ export class Problems {
     // Its linters' (19.19), likewise: one reading the file, until it's saved and run again.
     for (const p of buf.linterProblems.values()) if (any || p.version === buf.version) out.push(...p.list);
     if (buf.rel && this.app.graph.notes.has(buf.rel) && (any || !buf.dirty)) {
-      const key = `${this.app.graph.generation}:${buf.version}`;
+      // Its links checked as they're drawn (SD-T11): from what's kept, asked of a disk thread.
+      const key = `${this.app.graph.generation}:${buf.version}:${this.app.drawn.epoch}`;
       let hit = this.noteCache.get(buf);
       if (hit?.key !== key) {
-        hit = { key, list: noteProblems(this.app.graph, buf.rel) };
+        const rel = buf.rel;
+        hit = {
+          key,
+          list: this.app.drawn.during(() => noteProblems(this.app.graph, rel, buf.dirty ? undefined : buf.source)),
+        };
         this.noteCache.set(buf, hit);
       }
       out.push(...hit.list);

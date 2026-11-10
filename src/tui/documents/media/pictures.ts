@@ -2,7 +2,7 @@ import { copyImage } from "../../../core/foundation/platform/clipboard.ts";
 // Pictures in the TUI (12.x): what a note's images, diagrams and maths are drawn as for the terminal, the ones on
 // the internet fetched, and when they're drawn — held back while a view scrolls quickly (12.7).
 
-import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { basename, join, relative } from "node:path";
 import { extentOf, type Layout, type Picture } from "../../../core/rendering/layout/ir.ts";
@@ -11,7 +11,7 @@ import { type Rasterizer, rasterizer } from "../../../core/rendering/media/image
 import { pictureLocator } from "../../../core/documents/model/note.ts";
 import { cacheHome, ensureCacheHome } from "../../../core/foundation/platform/paths.ts";
 import { colorHex, type Role } from "../../../core/rendering/theme/index.ts";
-import { fitPicture, pictureSizes, RemoteImages, svgText } from "./images.ts";
+import { fitPicture, MAX_SVG_BYTES, mayBeSvg, pictureSizes, RemoteImages, svgIn, svgText } from "./images.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { codeBlocks } from "../views/code.ts";
 
@@ -60,6 +60,8 @@ export class Pictures {
         this.later();
       }
       p.sizes = sizes;
+      // Their files as drawing knows them (SD-T11), asked again two seconds on: one changed on disk is drawn anew.
+      if (this.app.drawn.offThread) for (const f of shownFiles(view, layout)) this.app.drawn.fileAt(f);
     }
     p.size = size;
     if (now - (p.sizedAt ?? -Infinity) < PICTURES_REST_MS) return false;
@@ -285,11 +287,16 @@ export class Pictures {
           path = cached;
           file = url;
         }
+        // Its file as drawing knows it (SD-T11): kept, read on a disk thread — until then its place said (`▣ alt`), and
+        // the note laid out again once it's read.
+        const at = this.app.drawn.fileAt(path);
+        if (at === undefined || at === null) return null;
         // An SVG (12.15): rasterised at its own size; read once per change of its file, not at every layout.
-        const read = this.svgOf(path);
+        const read = this.svgOf(path, at);
+        if (read === undefined) return null;
         const svg = read?.text ?? null;
         const r = svg ? rasterizer() : null;
-        const size = svg ? (r?.size(svg) ?? null) : images.size(path);
+        const size = svg ? (r?.size(svg) ?? null) : images.size(path, at);
         if (!size || size.width <= 0 || size.height <= 0) return null;
         // Obsidian's size, `|300` its width and `|240x180` the box it fits in, in place of its own; proportions kept.
         const given = from.size
@@ -376,22 +383,27 @@ export class Pictures {
   /** SVG files read, by path: their text (null, not an SVG) and its hash, while the file isn't changed. */
   private readonly svgs = new Map<string, { at: number; text: string | null; hash: string }>();
 
-  /** A file's SVG text and its hash (12.15), read once per change of the file; null where it isn't an SVG. */
-  private svgOf(path: string): { text: string; hash: string } | null {
-    let at: number;
-    try {
-      at = statSync(path).mtimeMs;
-    } catch {
-      return null;
-    }
+  /** A file's SVG text and its hash (12.15), its file changed at `at`: read once per change of the file, here — or, off
+   *  the screen's thread (SD-T11), what a disk thread last read of it, undefined till it has; null where it isn't an
+   *  SVG. */
+  private svgOf(path: string, at: number): { text: string; hash: string } | null | undefined {
     let hit = this.svgs.get(path);
-    if (hit?.at !== at) {
-      const text = svgText(path);
-      hit = { at, text, hash: text ? svgHash(text) : "" };
-      if (this.svgs.size >= 64) this.svgs.delete(this.svgs.keys().next().value!);
-      this.svgs.set(path, hit);
+    const drawn = this.app.drawn;
+    let text: string | null;
+    if (drawn.offThread) {
+      if (!mayBeSvg(path)) return null;
+      const read = drawn.text(path, MAX_SVG_BYTES);
+      if (read === undefined) return undefined;
+      text = read === null ? null : svgIn(path, read);
+      if (hit?.text === text) return text ? { text, hash: hit.hash } : null;
+    } else {
+      if (hit?.at === at) return hit.text ? { text: hit.text, hash: hit.hash } : null;
+      text = svgText(path);
     }
-    return hit.text ? { text: hit.text, hash: hit.hash } : null;
+    hit = { at, text, hash: text ? svgHash(text) : "" };
+    if (this.svgs.size >= 64) this.svgs.delete(this.svgs.keys().next().value!);
+    this.svgs.set(path, hit);
+    return text ? { text, hash: hit.hash } : null;
   }
 
   /** An SVG rasterised `px` wide (12.15), kept in the cache by its text and width: the PNG's path, or null. */
@@ -455,6 +467,18 @@ function shownSizes(view: View, layout: Layout): Map<string, string> {
   for (let row = Math.max(0, view.top); row < end; row++) {
     const p = layout.lines[row]?.pic?.p;
     if (p) out.set(p.file ?? p.src, `${p.cols}x${p.rows}`);
+  }
+  return out;
+}
+
+/** The files of the pictures in sight in a view, as their pictures were read: a file's own; one fetched, its copy in the
+ *  cache. What slipbox drew itself (a diagram, maths) has none. */
+function shownFiles(view: View, layout: Layout): Set<string> {
+  const out = new Set<string>();
+  const end = Math.min(layout.lines.length, view.top + Math.max(1, view.height));
+  for (let row = Math.max(0, view.top); row < end; row++) {
+    const p = layout.lines[row]?.pic?.p;
+    if (p?.file) out.add(/^https?:/.test(p.file) ? p.src : p.file);
   }
   return out;
 }

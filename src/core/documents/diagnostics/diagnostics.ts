@@ -75,9 +75,10 @@ function onUnplugged(g: Graph, rel: string, target: string): boolean {
 /**
  * A note's own problems (11.5): a link that reaches nothing — a note not written yet is information, a
  * missing file or an unknown folder a warning — or several notes; a heading or block a link names that
- * its note hasn't; git's conflict markers, an error.
+ * its note hasn't; git's conflict markers, an error. `source`: its text as saved, where the caller has it (the TUI's
+ * buffer: SD-T11), else read.
  */
-export function noteProblems(g: Graph, rel: string): Problem[] {
+export function noteProblems(g: Graph, rel: string, source?: string): Problem[] {
   const out: Problem[] = [];
   const add = (l: LinkRef, severity: Severity, code: string, message: string) =>
     out.push({
@@ -89,7 +90,7 @@ export function noteProblems(g: Graph, rel: string): Problem[] {
       message,
       target: l.target,
     });
-  const text = g.textOf(rel) ?? "";
+  const text = source ?? g.textOf(rel) ?? "";
   const lines = text.split("\n");
   for (const l of g.linksOf(rel)) {
     const wiki = l.kind === "wiki" || l.kind === "embed";

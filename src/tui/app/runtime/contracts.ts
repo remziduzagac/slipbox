@@ -31,11 +31,12 @@ export interface Host {
   /** Start `argv` detached and don't wait; the promise settles with its exit code or an error. */
   runDetached?(argv: string[]): Promise<number | string>;
   /** Pictures (12.x), as the renderer finds them: whether the terminal draws images (Kitty graphics, sixel), an image
-   *  file's size in pixels (null when it isn't one), and a cell's size in pixels (null until the terminal says).
-   *  Absent: no pictures, `▣ alt` the floor. */
+   *  file's size in pixels (null when it isn't one; `at`, its mtime as the drawing knows it, SD-T11, read by nothing
+   *  as it's drawn), and a cell's size in pixels (null until the terminal says). Absent: no pictures, `▣ alt` the
+   *  floor. */
   images?: {
     supported(): boolean;
-    size(path: string): { width: number; height: number } | null;
+    size(path: string, at?: number): { width: number; height: number } | null;
     cell(): { width: number; height: number } | null;
     /** Whether pictures are drawn as Unicode placeholders (12.7): text that scrolls — then never held back. */
     placeholders?(): boolean;

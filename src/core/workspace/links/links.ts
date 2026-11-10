@@ -4,9 +4,9 @@
 // candidate list, and disambiguation is exact-case → same directory → deepest shared directory →
 // shortest path. Still tied means ambiguous, and the caller shows a picker.
 
-import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, posix, relative, resolve } from "node:path";
+import { probe } from "./path-probe.ts";
 
 /**
  * How a link landed (said for every link, D86): by its path — a markdown link's, in any of its forms, or
@@ -266,12 +266,8 @@ export function onDisk(root: string, rel: string, folds = CASE_FOLDS): string {
   let dir = root;
   const out: string[] = [];
   for (const part of rel.split("/")) {
-    let names: string[];
-    try {
-      names = readdirSync(dir);
-    } catch {
-      return rel;
-    }
+    const names = probe().names(dir);
+    if (!names) return rel;
     const key = part.normalize("NFC").toLowerCase();
     const name = names.includes(part) ? part : (names.find((n) => n.normalize("NFC").toLowerCase() === key) ?? part);
     out.push(name);
@@ -361,13 +357,7 @@ export function pathLink(
   // else the note without its extension (21.2) — and, asked (`dirs`), a folder.
   const bare = !/\.[A-Za-z0-9]+$/.test(p);
   const candidates = wiki ? wikiPathCandidates(p) : bare && !p.endsWith("/") ? [p, `${p}.md`, `${p}.markdown`] : [p];
-  const hit = candidates.find((c) => {
-    try {
-      return statSync(c).isFile();
-    } catch {
-      return false;
-    }
-  });
+  const hit = candidates.find((c) => probe().isFile(c));
   if (hit) return { form, abs: hit };
   if (dirs && !wiki && dirExistsAt(p)) return { form, abs: p.replace(/\/+$/, "") || "/", folder: true };
   return null;
@@ -421,11 +411,7 @@ export function isNotePath(p: string): boolean {
 }
 
 function dirExistsAt(abs: string): boolean {
-  try {
-    return statSync(abs).isDirectory();
-  } catch {
-    return false;
-  }
+  return probe().isFolder(abs);
 }
 
 function dirExists(root: string, rel: string): boolean {
@@ -433,11 +419,7 @@ function dirExists(root: string, rel: string): boolean {
 }
 
 function fileExists(root: string, rel: string): boolean {
-  try {
-    return statSync(posix.join(root, rel)).isFile();
-  } catch {
-    return existsSync(posix.join(root, rel));
-  }
+  return probe().isFile(posix.join(root, rel));
 }
 
 function decodeSafe(s: string): string {

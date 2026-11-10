@@ -93,6 +93,8 @@ export class Watch {
     this.stopEmbedFeed = g.onChange((c) => {
       const paths = c.kind === "moved" ? [c.from, c.to] : [c.path];
       const abs = new Set(paths.map((p) => g.abs(p)));
+      // What drawing kept of them asked again as they're next drawn, however lately read (SD-T11).
+      this.app.drawn.stale(abs);
       let again = false;
       for (const b of this.app.buffers.values()) {
         if (![...b.embedded].some((p) => abs.has(p))) continue;

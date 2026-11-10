@@ -6,7 +6,9 @@
 // whichever thread lists it — and, given a fourth part, each stat and read of what's in it so long on a disk thread.
 // Each check builds a small home of its own.
 
-import { chmodSync, existsSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { placeholderCell } from "../../../src/tui/shell/terminal/placeholders.ts";
 import { type Check, explorerOpen, explorerRow, follow, goInto, leader, open, switcherListed } from "../check.ts";
 import type { Session } from "../session.ts";
 import { crumbs, git, lastMessage, listed } from "../support/links.ts";
@@ -95,6 +97,14 @@ export async function selectedPath(s: Session): Promise<string> {
 }
 
 const BACKGROUND = "[index]\nbackground = true\nidle_seconds = 1\n";
+
+/** A picture of the reference set's, copied onto a check's slow disk. */
+const WHITEBOARD = fileURLToPath(
+  new URL("../../../examples/home/notes/attachments/whiteboard-2026-08-26.png", import.meta.url),
+);
+
+/** Whether a picture is drawn on screen: Kitty's placeholder cells, a terminal's that draws its graphics. */
+const pictured = (s: Session): boolean => s.term.cells().some((line) => line.some((c) => !!placeholderCell(c.text)));
 
 export const SLOW_DISK: Check[] = [
   {
@@ -708,6 +718,43 @@ export const SLOW_DISK: Check[] = [
       }
       s.expect(Math.max(...waits) < 1000, `every key answered within a second meanwhile: ${waits.join(", ")} ms`);
       await backlinkFrom(s, /near\.md/);
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: a note whose picture is on a slow disk — drawn at once with its place said, the picture once read",
+    covers: { cases: ["notes"], commands: [] },
+    options: {
+      startAt: "home/notes/index.md",
+      size: { cols: 100, rows: 40 },
+      graphics: true,
+      // Each stat and read of what's in it three seconds on a disk thread: the picture's file, read as it's drawn
+      // (SD-T11), and its bytes, decoded.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:1::3000` },
+      setup: (s) => {
+        smallHome(s, {
+          "~/notes/board.md": "# Board\n\nThe whiteboard:\n\n![the whiteboard](slowdisk/board.png)\n\nAfter it.\n",
+        });
+        mkdirSync(s.path(`~/notes/${SLOW}`), { recursive: true });
+        copyFileSync(WHITEBOARD, s.path(`~/notes/${SLOW}/board.png`));
+      },
+    },
+    run: async (s) => {
+      await s.where(/^~\/notes(?: │|$)/, /index\.md/, 30_000);
+      const asked = performance.now();
+      await s.ex(`e ${s.path("~/notes/board.md")}`);
+      // The note drawn at once, around the picture's place: said, while its file is read on a disk thread.
+      await s.see("After it.", 2500);
+      s.expect(
+        s.rowOf(/▣.*the whiteboard/) >= 0 && !pictured(s),
+        "the picture's place said, the picture not drawn yet",
+      );
+      const ms = await answered(s);
+      s.expect(ms < 1000, `a key answered within a second meanwhile: ${ms} ms`);
+      // Once read: drawn.
+      await s.until(() => pictured(s), 30_000, "the picture drawn once its file is read");
+      const took = Math.round(performance.now() - asked);
+      s.expect(took >= 2500, `drawn once its file was read on a disk thread, not before: ${took} ms`);
     },
   },
 ];

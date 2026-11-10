@@ -127,6 +127,11 @@ When slipbox starts, it takes the screen first and reads the vault after, in the
 the tabs it brings back, say `reading the vault…` in their window until the vault is read, then show with their links
 and backlinks. If the vault gave up, the note shows as its text meanwhile, its links not checked yet.
 
+Drawing a note never waits for the disk either. What it needs from there, such as whether a link's file is there, a
+picture's file, a note it embeds or the places in the [scratch](scratch-and-context.md#the-scratch), is read in the
+background and kept. On a slow disk, a picture shows its `▣` line until its file is read, an embedded note shows once
+it's read, and a link is drawn as found until it's checked. The note is drawn again, where you were, when they come.
+
 The index is a copy, never the truth. Deleting the cache is always safe, and slipbox makes it again.
 
 While you aren't working, the TUI also looks through your home folder a little at a time. It indexes home's own notes,

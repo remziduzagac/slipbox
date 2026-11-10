@@ -278,7 +278,7 @@ export async function runTui(argv: string[]): Promise<number> {
       setTitle: (t) => renderer.setTerminalTitle(t),
       images: {
         supported: () => pictures.protocol() !== null,
-        size: (path) => pictures.size(path),
+        size: (path, at) => pictures.size(path, at),
         cell,
         placeholders: () => pictures.usesPlaceholders(),
       },

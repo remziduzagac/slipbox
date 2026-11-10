@@ -17,14 +17,14 @@ left open were decided with the recommendation, by the maintainer's instruction 
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
 decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, SD-T2, the disk threads, SD-T3, the watcher's
 look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T6, a note's text, SD-T7, the explorer's own tree, SD-T8, the
-vault built again, SD-T9, slipbox's own folders, and SD-T10, the start, are done (2026-11-10); the other tasks are
-`todo`. SD-T10's choices are SD-D15, SD-T6's SD-D16.
+vault built again, SD-T9, slipbox's own folders, SD-T10, the start, and SD-T11, what's drawn, are done (2026-11-10);
+the other tasks are `todo`. SD-T10's choices are SD-D15, SD-T6's SD-D16, SD-T11's SD-D17.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
-- [decisions.md](decisions.md): SD-D1 to SD-D16, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T10 `done`, the rest `todo`.
+- [decisions.md](decisions.md): SD-D1 to SD-D17, agreed on 2026-11-09 and 2026-11-10.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T11 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -337,7 +337,8 @@ merges (SD-D14), its design text.
 - [SD-T9](tasks/archive/own-folders.md): slipbox's own state, cache and config folders read off the thread.
   `done`
 - [SD-T10](tasks/archive/start.md): the start takes the screen first, then reads the vault. `done`
-- [SD-T11](tasks/drawing.md): what drawing reads: links' targets, pictures, the scratch's places, the Problems'. `todo`
+- [SD-T11](tasks/archive/drawing.md): what drawing reads: links' targets, pictures, the scratch's places, the
+  Problems'. `done`
 - [SD-T12](tasks/docs.md): the user docs, the design consolidated, the workstream closed. `todo`
 
 ## Decisions
@@ -392,6 +393,12 @@ As SD-T6 was built, on 2026-11-10, the same way:
 - **SD-D16**, a note's text: the look's jobs carry it; a slice of 50 notes of one folder, one out; one batch's texts
   out at a time, read again a minute after a give-up; a rename's preview, the tags' and the backlinks lists wait for
   every note, what's drawn uses those parsed so far, marked `…`.
+
+As SD-T11 was built, on 2026-11-10, the same way:
+
+- **SD-D17**, what's drawn, asked: one batch request in the background with a look's minute; kept answers asked again
+  two seconds on, or when the watcher sees the file change; the walk's answers used for the vault open's paths; the
+  named folders none until their first answer; a scratch place not read yet said nothing of.
 
 ## Test strategy
 

@@ -59,6 +59,8 @@ export class Pictures {
   );
   private readonly sizes = new Map<string, { at: number; size: { width: number; height: number } | null }>();
   private readonly images = new Map<string, { at: number; image: NativeImage | null }>();
+  /** Each file's mtime as the drawing last gave it (`size`): a picture drawn by it, never statted as it's drawn. */
+  private readonly known = new Map<string, number>();
   /** The pictures sent as Unicode placeholders (12.7), by id, the oldest first. */
   private readonly sent = new Set<number>();
   constructor(
@@ -77,9 +79,16 @@ export class Pictures {
     return !!this.placeholders && this.protocol() === "kitty";
   }
 
-  size(path: string): { width: number; height: number } | null {
-    const at = modified(path);
+  /** An image file's size: `at`, its mtime as the drawing knows it (SD-T11: read on a disk thread), kept for drawing it
+   *  too, so a frame stats nothing; without it, statted here. */
+  size(path: string, given?: number): { width: number; height: number } | null {
+    const at = given ?? modified(path);
     if (at === null) return null;
+    if (given !== undefined) {
+      this.known.delete(path);
+      if (this.known.size >= 500) this.known.delete(this.known.keys().next().value!);
+      this.known.set(path, given);
+    }
     const hit = this.sizes.get(path);
     if (hit?.at === at) return hit.size;
     let size: { width: number; height: number } | null = null;
@@ -170,7 +179,8 @@ export class Pictures {
   }
 
   private image(src: string): NativeImage | null {
-    const at = modified(src);
+    // A picture's file by its mtime as the drawing gave it; an SVG's rasterised PNG, in the cache folder, statted.
+    const at = this.known.get(src) ?? modified(src);
     if (at === null) return null;
     const hit = this.images.get(src);
     if (hit?.at === at) {

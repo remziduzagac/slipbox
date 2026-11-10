@@ -43,9 +43,14 @@ const span = (from: number, lines: number) => (lines > 1 ? `lines ${from}–${fr
 
 /**
  * The scratch's places whose lines aren't what was captured. `read` gives a file's text now, or null when there's
- * none; paths are from `project`, the vault's top, or absolute.
+ * none — undefined while it's being read (SD-T11), its places said nothing of; paths are from `project`, the vault's
+ * top, or absolute.
  */
-export function stalePlaces(scratch: string, project: string, read: (abs: string) => string | null): StalePlace[] {
+export function stalePlaces(
+  scratch: string,
+  project: string,
+  read: (abs: string) => string | null | undefined,
+): StalePlace[] {
   const out: StalePlace[] = [];
   const nodes = parseMarkdown(scratch).tree.children;
   nodes.forEach((n: RootContent, i) => {
@@ -68,6 +73,7 @@ export function stalePlaces(scratch: string, project: string, read: (abs: string
       ...(fix ? { fix } : {}),
     });
     const text = read(isAbsolute(ref.path) ? ref.path : join(project, ref.path));
+    if (text === undefined) return;
     if (text === null) {
       out.push({ problem: problem("place-missing", `${ref.path}: no such file`), target: code.value, now: null });
       return;

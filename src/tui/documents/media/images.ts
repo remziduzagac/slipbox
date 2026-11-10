@@ -3,25 +3,15 @@
 // is an image's or nothing: a timeout, a size cap, an image's content type.
 
 import { randomUUID } from "node:crypto";
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  readSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeSync,
-} from "node:fs";
+import { closeSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
 import { extname, join } from "node:path";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 import { remoteImageName } from "../../../core/rendering/media/images/imagecache.ts";
 import { cacheHome, ensureCacheHome } from "../../../core/foundation/platform/paths.ts";
 import { looksLikeSvg } from "../../../core/rendering/media/images/svg.ts";
 
 /** An SVG read for drawing is at most this big (12.15). */
-const MAX_SVG_BYTES = 8 * 1024 * 1024;
+export const MAX_SVG_BYTES = 8 * 1024 * 1024;
 
 /** The most of a picture the screen shows (PIC-D2): what's decoded for it, a megapixel and 2,048 pixels a side. */
 export const SCREEN_PIXELS = 1_000_000;
@@ -84,24 +74,27 @@ export function fitPicture(
 
 /**
  * A file's text where it's an SVG (12.15) — by its name (`.svg`), or, a picture fetched and kept by its address (no
- * name of its own, 12.12), by how it starts — else null; null too where it's larger than 8 MB.
+ * name of its own, 12.12), by how it starts — else null; null too where it's larger than 8 MB. Read here, through the
+ * seam: a test's App's; the TUI's drawing reads it on a disk thread (SD-T11), and asks `svgIn` of what it read.
  */
 export function svgText(path: string): string | null {
-  const ext = extname(path).toLowerCase();
-  if (ext && ext !== ".svg") return null;
+  if (!mayBeSvg(path)) return null;
   try {
-    if (statSync(path).size > MAX_SVG_BYTES) return null;
-    if (!ext) {
-      const head = Buffer.alloc(512);
-      const fd = openSync(path, "r");
-      const n = readSync(fd, head, 0, 512, 0);
-      closeSync(fd);
-      if (!looksLikeSvg(head.subarray(0, n).toString("utf8"))) return null;
-    }
-    return readFileSync(path, "utf8");
+    return svgIn(path, disk.readRegular(path, MAX_SVG_BYTES).toString("utf8"));
   } catch {
     return null;
   }
+}
+
+/** Whether a file may be an SVG by its name: `.svg`, or none (a picture fetched and kept by its address). */
+export function mayBeSvg(path: string): boolean {
+  const ext = extname(path).toLowerCase();
+  return !ext || ext === ".svg";
+}
+
+/** A file's text, read, where it's an SVG's: by its name, or, with none, by how it starts. */
+export function svgIn(path: string, text: string): string | null {
+  return extname(path) || looksLikeSvg(text.slice(0, 512)) ? text : null;
 }
 
 /** The most an image may weigh, how many fetches run at once and wait their turn, and how long one may take. */
@@ -148,10 +141,11 @@ export class RemoteImages {
     return join(this.dir, remoteImageName(url));
   }
 
-  /** The image fetched for an address, or null when it hasn't been. */
+  /** The image fetched for an address, or null when it hasn't been: looked for in the cache folder, here (local by
+   *  default, as the parse cache: design/tui.md § Known limits). */
   cached(url: string): string | null {
     const f = this.file(url);
-    return existsSync(f) ? f : null;
+    return disk.exists(f) ? f : null;
   }
 
   /** The site an address is on (`https://example.org`), or null when it isn't a web address. */

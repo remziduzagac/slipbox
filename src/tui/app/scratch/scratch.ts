@@ -1,7 +1,7 @@
 // The scratch (4.10, #43): a note of your own outside the vault for what you capture, floating over the windows or
 // in the window on the right.
 
-import { statSync } from "node:fs";
+import * as disk from "../../../core/foundation/platform/disk.ts";
 import { relative } from "node:path";
 import { readRegular } from "../../../core/foundation/platform/fsutil.ts";
 import { type StalePlace, stalePlaces } from "../../../core/workspace/mutations/scratch-places.ts";
@@ -28,19 +28,25 @@ const PLACE_FILE = 16 << 20;
 export class Scratch {
   constructor(readonly app: App) {}
 
-  /** Its places checked, for its text's version, again at most every two seconds; the files read, by when changed. */
-  private checked: { version: number; at: number; list: StalePlace[] } | null = null;
+  /** Its places checked, for its text's version and the drawing's answers (`Drawn.epoch`), again at most every two
+   *  seconds; the files read, by when changed. */
+  private checked: { version: number; epoch: number; at: number; list: StalePlace[] } | null = null;
   private readonly files = new Map<string, { stamp: string; text: string | null }>();
 
-  /** Its places whose lines aren't what was captured (D229): moved, changed, or their file gone. */
+  /** Its places whose lines aren't what was captured (D229): moved, changed, or their file gone. Off the screen's
+   *  thread (SD-T11), each file's text is what a disk thread last read, asked again two seconds on; a place whose file
+   *  isn't read yet is said nothing of, and the scratch is drawn again when it is. */
   places(buf: NoteBuffer): StalePlace[] {
     const now = Date.now();
     const c = this.checked;
-    if (c && c.version === buf.version && now - c.at < 2000) return c.list;
+    const epoch = this.app.drawn.epoch;
+    if (c && c.version === buf.version && c.epoch === epoch && now - c.at < 2000) return c.list;
+    const drawn = this.app.drawn;
+    const kept = (abs: string) => drawn.text(abs, PLACE_FILE);
     const read = (abs: string): string | null => {
       let stamp: string;
       try {
-        const st = statSync(abs);
+        const st = disk.stat(abs);
         stamp = `${st.mtimeMs}:${st.size}`;
       } catch {
         return null;
@@ -54,8 +60,8 @@ export class Scratch {
       this.files.set(abs, { stamp, text });
       return text;
     };
-    const list = stalePlaces(buf.source, this.app.loc.root, read);
-    this.checked = { version: buf.version, at: now, list };
+    const list = stalePlaces(buf.source, this.app.loc.root, drawn.offThread ? kept : read);
+    this.checked = { version: buf.version, epoch, at: now, list };
     return list;
   }
 
