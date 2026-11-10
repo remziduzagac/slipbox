@@ -55,6 +55,23 @@ function columns(row: string): { g: string; col: number }[] {
 }
 
 /**
+ * The display column `needle` first starts at on screen row `y`, counted from just past the left panel's border (the
+ * `┬` it meets the top bar's rule at): the note's pane's own, whatever the explorer beside it holds — a name of more
+ * code points than cells (`Café.md` decomposed), rows that move as its folders are listed. The whole row when no panel
+ * is open on the left; -1 when it isn't there.
+ */
+export function paneColumn(s: Session, y: number, needle: string): number {
+  const rows = s.screen();
+  const edge = columns(rows[1] ?? "").find((c) => c.g === "┬")?.col ?? -1;
+  const pane = columns(rows[y] ?? "")
+    .filter((c) => c.col > edge)
+    .map((c) => c.g)
+    .join("");
+  const at = pane.indexOf(needle);
+  return at < 0 ? -1 : Bun.stringWidth(pane.slice(0, at));
+}
+
+/**
  * Every table on screen lines up: each row from a table's `┌` to its `└` has a border at the column the top row's `┐`
  * is at, and no row is wider than the terminal. A character slipbox measured otherwise than the terminal shifts the
  * rest of its row, and its border with it.

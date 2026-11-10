@@ -58,9 +58,11 @@ async function catchUp(app: App, asked: Graph, answer: BacklinksAnswer, holder: 
   const others = answer.wrote || answer.others.length > 0;
   // This vault's backlinks from others read again, every view laid out with them, whatever becomes of the graph there:
   // an index just written may hold some (that vault's notes deleted, a vault nested in it built for the first time).
-  // The explorer's rows too: a vault's says whether it has an index.
+  // The explorer's rows too: a vault's says whether it has an index — as the listing of the folder holding it read it,
+  // read again for it now (SD-T7), however lately it was read.
   if (others) {
     app.graph.othersChanged();
+    app.explorer.listings.indexed(answer.wrote ? [asked.loc.key, ...answer.others] : answer.others);
     app.explorer.invalidateTree();
   }
   let laidOut = false;

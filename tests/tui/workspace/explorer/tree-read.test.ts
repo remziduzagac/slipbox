@@ -10,13 +10,17 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, w
 import { dirname, join } from "node:path";
 import type { Config } from "../../../../src/core/application/config/config.ts";
 import { setReadWait } from "../../../../src/core/foundation/platform/disk.ts";
+import { vaultKey } from "../../../../src/core/foundation/platform/paths.ts";
+import { configSignature, vaultSignature } from "../../../../src/core/workspace/graph/backlinks-jobs.ts";
+import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
 import { setMountTable } from "../../../../src/core/workspace/vaults/mounts.ts";
 import { tildePath } from "../../../../src/core/workspace/vaults/names.ts";
 import { probe, setLinkAnswer } from "../../../../src/core/workspace/vaults/symlinks.ts";
-import { homeAt } from "../../../../src/core/workspace/vaults/vault.ts";
+import { homeAt, locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { listFolder } from "../../../../src/core/workspace/walk/listing.ts";
 import { DiskThreads } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { setFolderReader } from "../../../../src/core/workspace/walk/walk.ts";
+import { caughtUp } from "../../../../src/tui/documents/navigation/peek/synchronization.ts";
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
 import { Listings } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { HELD_MS, type Hold, slowFolders } from "../../../fixtures/walk/slow.ts";
@@ -530,6 +534,39 @@ describe("the explorer's own tree listed off the screen's thread (SD-T7)", () =>
       expect(hold.gaveUpHere).toEqual([]);
     } finally {
       list.mockRestore();
+    }
+  });
+
+  test("a vault nested in the vault open, its index written by a peek's thread: its row says so once that's caught up with, however lately its folder was listed", async () => {
+    const h = await vaultWith({
+      "nest/.slipbox/config.toml": "",
+      "nest/n.md": "# N\n\nBack to [the index](../index.md).\n",
+    });
+    const ex = h.app.explorer;
+    const nest = join(h.root, "nest");
+    const mark = () => ex.marks.of(row(h, "nest")!).index;
+    // The clock stopped, and the folder listed again under it: no listing grows old meanwhile, read again by its age.
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    try {
+      ex.listings.again(h.root);
+      await listed(h);
+      expect(row(h, "nest")).toMatchObject({ kind: "root", listed: { vault: { indexed: false } } });
+      expect(mark()).toBeUndefined();
+      // Its index written, as its thread writes it, and the answer saying so caught up with.
+      openGraph(locateVault({ root: nest }), h.app.config, true);
+      const answer = {
+        indexed: true as const,
+        wrote: false,
+        others: [vaultKey(nest)],
+        signature: vaultSignature(h.app.graph),
+        config: configSignature(h.app.config),
+        rows: null,
+      };
+      await caughtUp(h.app, h.app.graph, answer);
+      await listed(h);
+      expect(mark()).toBe("indexed");
+    } finally {
+      clock.mockRestore();
     }
   });
 });
