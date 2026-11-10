@@ -422,6 +422,24 @@ describe("a note opened reads on a disk thread (SD-T5)", () => {
     expect(held.gaveUp).toBe(0);
   });
 
+  test("held: z pressed while a peek's file is read — the peek fills the screen once its text comes, z not undone", async () => {
+    const h = await vaultWith({});
+    const dir = join(sandbox, "peeked-filled", "held");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "far.md"), "# Far\n\nfar away\n");
+    const held = holding();
+    peekAt(h.app, join(dir, "far.md"), elsewhereAt(dir));
+    await untilHeld(held);
+    press(h, "z");
+    expect(peekOf(h.app)?.full).toBe(true);
+    held.release();
+    const end = performance.now() + 10_000;
+    while (!h.frame().includes("far away") && performance.now() < end) await Bun.sleep(5);
+    expect(h.frame()).toContain("far away");
+    expect(peekOf(h.app)?.full).toBe(true);
+    expect(held.gaveUp).toBe(0);
+  });
+
   test("held: a peek read while another's read is out: the first isn't given up, its answer dropped; one not sent yet is withdrawn", async () => {
     const h = await vaultWith({});
     const dir = join(sandbox, "peeked-twice", "held");
