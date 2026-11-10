@@ -16,14 +16,14 @@ option recommended (§ Questions answered), and agreed its other decisions as pr
 left open were decided with the recommendation, by the maintainer's instruction to take the recommended answer
 (§ Decisions). Reviewed on 2026-11-10: the inventory grew, and the review's choices are recorded as notes under the
 decisions they change and as SD-D13 and SD-D14. SD-T1, the seam, SD-T2, the disk threads, SD-T3, the watcher's
-look, SD-T4, the TUI's look, SD-T5, a note opened, and SD-T7, the explorer's own tree, are done (2026-11-10); the
-other tasks are `todo`.
+look, SD-T4, the TUI's look, SD-T5, a note opened, SD-T7, the explorer's own tree, and SD-T9, slipbox's own folders,
+are done (2026-11-10); the other tasks are `todo`.
 
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its change to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design.
 - [decisions.md](decisions.md): SD-D1 to SD-D14, agreed on 2026-11-09 and 2026-11-10.
-- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5 and SD-T7 `done`, the rest `todo`.
+- [tasks/](tasks/README.md): SD-T1 to SD-T12, in order: SD-T1 to SD-T5, SD-T7 and SD-T9 `done`, the rest `todo`.
 - [notes.md](notes.md): how it was drafted, and what was checked against the code.
 - [research.md](research.md): what's known of slow disks and of the ways round them, with provenance.
 
@@ -296,7 +296,8 @@ By area:
   it was meanwhile; the answer taken only while `builds` and the vault open haven't moved, the watcher's changes since
   applied again over it.
 - **§ 6, slipbox's own folders** (SD-T9): what's read of them on a timer or at a switch, and completion's other
-  vaults, on a disk thread; their writes stay (SD-D7, question 4). The upgrade check stays, a known limit.
+  vaults, on a disk thread; their writes stay (SD-D7, question 4). The upgrade check stays, a known limit; so does
+  the search index, which the measurement found.
 - **§ 7, the start** (SD-T10): SD-D9.
 - **§ 8, what's drawn** (SD-T11; git's state SD-T4's, the counts SD-T6's): the answers a layout needs, and the
   scratch's places, kept and asked of a disk thread; in this workstream as its last code task, measured first
@@ -326,7 +327,8 @@ merges (SD-D14), its design text.
 - [SD-T7](tasks/archive/explorer-tree.md): the explorer's own tree of the vault open listed and marked off the
   thread. `done`
 - [SD-T8](tasks/rebuilds.md): the vault open built again from a walk and an index read on a disk thread. `todo`
-- [SD-T9](tasks/own-folders.md): slipbox's own state, cache and config folders read off the thread. `todo`
+- [SD-T9](tasks/archive/own-folders.md): slipbox's own state, cache and config folders read off the thread.
+  `done`
 - [SD-T10](tasks/start.md): the start takes the screen first, then reads the vault. `todo`
 - [SD-T11](tasks/drawing.md): what drawing reads: links' targets, pictures, the scratch's places, the Problems'. `todo`
 - [SD-T12](tasks/docs.md): the user docs, the design consolidated, the workstream closed. `todo`

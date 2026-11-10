@@ -183,9 +183,22 @@ the second is let go of.
   stays as it was meanwhile, `reading the vault…` among the background tasks. The index crosses as its text, parsed
   here as it is now. After a rename or a folder operation (SD-D11), the build is read there too, but the keys after it
   wait their turn, as after an open, and `esc` doesn't give it up: the write is made, and the graph must follow it.
-- **slipbox's own folders** (SD-T9). What's read of them on a timer or at a vault gone into — the positions, the
-  session, the machine's lists, the background index's place, the answers kept for links — is read there, and link
-  completion's other vaults (the machine's list, each one's index), kept from the last read meanwhile.
+- **slipbox's own folders** (SD-T9). What's read of them at a vault gone into, as the Vaults window opens and as a
+  link's completion asks is read there (`own`), what was read last used meanwhile. Going into a vault, its session and
+  the vault's positions of before 21.8 are a key's read no key waits for: the keys go on in the vault gone into, and its
+  tabs open where they were left once it answers — not over a tab opened meanwhile, though the note the switch was for
+  opens and is shown all the same, unless you opened it yourself meanwhile; the recents of the moment first, a UI
+  override set meanwhile kept; its session isn't saved until then. The machine's positions are carried over from the
+  vault left — moved along with a vault moved by hand, as the file's are — and your config is what the TUI's look last
+  read by its stamp, neither read again. The Vaults window lists the vaults last read (`Vaults — reading the list…` the
+  first time), then what the disk says, its filter and pick kept; a link's completion offers this vault's notes and the
+  other vaults' last read, then theirs as read — in the background, one read out at a time, a list opened meanwhile
+  taking its answer and then one more read, and built only for a list still open. The answers kept for links followed
+  (`links.json`) are statted by the TUI's look and read there when they moved, a read older than an answer written here
+  dropped; a write reads the file first and keeps what it wrote. Measured on a home answering in 100 ms an op (SD-T9's
+  log), a vault gone into holds the screen about 5 s less, the Vaults window opened again not at all; what still holds
+  it there is the writes with the reads that merge them (below), the search index (§ Known limits) and the vault's index
+  (SD-T8).
 - **The start** (SD-D9, SD-T10). The screen is taken first; the vault's walk and index are read on a disk thread, the
   note waiting for its graph (`reading the vault…`), `q` and `ctrl+c` quitting meanwhile. Your config, the path named
   and `--base` are read before, as they say what the screen is. A vault that doesn't answer in time: its note shown as
@@ -199,7 +212,9 @@ the second is let go of.
 **What stays on the screen's thread** (SD-D7). A note's save (`App.writeBuffer`: its check that the file is as read,
 its atomic write, its write through a link, D220, its stamp told to the watcher), a file operation with the checks its
 guards make before writing, the scratch, an export and slipbox's own state are written here: their order against the
-watcher's next look and against quitting is what keeps a note safe. So does registering a folder's watch, and the
+watcher's next look and against quitting is what keeps a note safe. So is what slipbox's own state reads to merge
+with another slipbox's before it's written: the positions and the session saved, the machine's lists, the background
+index's place. So does registering a folder's watch, and the
 CLI's every read. Another vault's graph, built for a peek or the reach, is built here (root ideas.md § Roots and
 vaults). Parsing stays here, and with it the parse cache (`parsed.db`).
 
@@ -282,6 +297,8 @@ Added, after "A big note's first open reads for a moment":
   slipbox's own state are written on the main thread, where their order against the watcher and quitting is kept.
 - **The parse cache is read on the main thread** (SD-D12): it's in the cache folder, local by default, and goes with
   the parse, which stays.
+- **The search index is opened on the main thread** (SD-T9): a vault gone into opens its own (`search.db`) and keeps
+  it current with SQLite's calls, which wait; it's in the cache folder, local by default.
 - **The upgrade check reads on the main thread** (SD-D1's note): every ten seconds, a `readlink` in slipbox's data
   folder, where its versions are; never the vault's disk.
 

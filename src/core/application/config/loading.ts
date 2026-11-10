@@ -26,21 +26,25 @@ export function loadConfig(opts: LoadConfigOptions = {}): LoadedConfig {
   for (const file of files) {
     // Named in its warnings as it's read best, `~/…`: a row of the messages list is cut where the window ends (#40).
     const shown = tildePath(file);
-    if (!existsSync(file)) {
+    const kept = opts.kept?.get(file);
+    if (kept === null) continue;
+    if (!kept && !existsSync(file)) {
       if (file === opts.configFile) warnings.push(`config: ${shown} does not exist`);
       continue;
     }
     let data: Record<string, unknown>;
     try {
-      data = parseToml(readRegular(file, SMALL_FILE).toString("utf8")) as Record<string, unknown>;
+      data = kept
+        ? structuredClone(kept)
+        : (parseToml(readRegular(file, SMALL_FILE).toString("utf8")) as Record<string, unknown>);
       opts.lastGood?.set(file, structuredClone(data));
     } catch (err) {
-      const kept = opts.lastGood?.get(file);
+      const good = opts.lastGood?.get(file);
       warnings.push(
-        `config: ${shown}: ${(err as Error).message.split("\n")[0]}${kept ? " — keeping what it said before" : ""}`,
+        `config: ${shown}: ${(err as Error).message.split("\n")[0]}${good ? " — keeping what it said before" : ""}`,
       );
-      if (!kept) continue;
-      data = structuredClone(kept);
+      if (!good) continue;
+      data = structuredClone(good);
     }
     // The vault's identity (17.4) isn't a setting: read by core/workspace/vaults/registry.ts, never merged.
     if ("vault" in data) {

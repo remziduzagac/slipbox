@@ -128,6 +128,7 @@ export const SEAM_READERS = [
   "src/core/workspace/walk/key-jobs.ts",
   "src/core/workspace/walk/listing.ts",
   "src/core/workspace/walk/look-jobs.ts",
+  "src/core/workspace/walk/own-jobs.ts",
   "src/core/workspace/walk/traversal/symlinks.ts",
   "src/tui/actions/documents/actions-edit.ts",
   "src/tui/actions/documents/actions-links.ts",
@@ -141,6 +142,7 @@ export const SEAM_READERS = [
   "src/tui/documents/buffers/opening.ts",
   "src/tui/documents/diagnostics/draw-problems.ts",
   "src/tui/documents/diagnostics/problems.ts",
+  "src/tui/documents/editing/completion/items.ts",
   "src/tui/documents/navigation/peek/history.ts",
   "src/tui/documents/navigation/peek/opening.ts",
   "src/tui/documents/tools/info/info.ts",
@@ -175,7 +177,8 @@ export const SEAM_READERS = [
  */
 export const DISK_READERS: Record<string, string> = {
   "src/core/application/distribution/install.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
-  "src/core/foundation/platform/fsutil.ts": "`readJson`'s callers (SD-T8, SD-T9); a write's own reads (SD-D7)",
+  "src/core/foundation/platform/fsutil.ts":
+    "a write's own reads and its guards' (`landsInside`, `entryAt`): kept (SD-D7); `readJson` reads through the seam",
   "src/core/workspace/graph/graph-lookup.ts": "a link into a nested vault, as it's drawn (SD-T11)",
   "src/core/workspace/graph/graph-resolve.ts": "a `/…` link's first folder, as it's drawn (SD-T11)",
   "src/core/workspace/graph/refresh.ts":
@@ -183,16 +186,18 @@ export const DISK_READERS: Record<string, string> = {
   "src/core/workspace/links/links.ts": "a name's case on a disk that folds it (`onDisk`), as it's drawn (SD-T11)",
   "src/core/workspace/mutations/files.ts": "a file operation's guards before it writes: kept (SD-D7)",
   "src/core/workspace/mutations/rename/rename-apply.ts": "a rename's guards before it writes: kept (SD-D7)",
-  "src/core/workspace/session/position.ts": "the positions at a vault gone into (SD-T9)",
-  "src/core/workspace/vaults/folders.ts": "the machine's named folders (SD-T9)",
+  "src/core/workspace/session/position.ts":
+    "a root's positions of before 21.8, looked for at the start: kept (SD-D9); at a vault gone into, a disk thread's (SD-T9)",
+  "src/core/workspace/vaults/folders.ts":
+    "a named folder's copies, read with a write or as a key names one: kept (SD-D7); the Vaults window's, a disk thread's (SD-T9)",
   "src/core/workspace/vaults/home/cache.ts": "home's walk kept, brought up to now by a disk thread's `walk` (SD-T8)",
-  "src/core/workspace/vaults/registry.ts": "the machine's list of vaults (SD-T9)",
+  "src/core/workspace/vaults/registry.ts":
+    "the machine's list moved once and recorded, with its write: kept (SD-D7); the Vaults window's, a disk thread's (SD-T9)",
   "src/core/workspace/vaults/symlinks.ts":
-    "the answers kept (SD-T9); a link's own read as a rename moves it: kept (SD-D7)",
+    "a link's own read as it's answered or a rename moves it: kept (SD-D7); the answers kept, the TUI's look's (SD-T9)",
   "src/tui/app/distribution/update-observation.ts": "the upgrade check, in slipbox's data folder: kept (SD-D1's note)",
   "src/tui/app/runtime/watch.ts": "an open note the watcher's batch names, checked with a disk thread's `read` (SD-T6)",
   "src/tui/app/scratch/scratch.ts": "the scratch's places, kept and asked of a disk thread (SD-T11)",
-  "src/tui/documents/editing/completion/items.ts": "link completion's other vaults (SD-T9)",
   "src/tui/documents/media/images.ts": "a picture's file, as it's drawn (SD-T11)",
   "src/tui/documents/saving/saving.ts": "a save's own checks: kept (SD-D7)",
   "src/tui/shell/terminal/run.ts": "what's read before the screen is taken: kept (SD-D9)",

@@ -27,6 +27,7 @@ import type {
 import type { FolderListing } from "./listing.ts";
 import type { LookJob, LookJobAnswer } from "./look-jobs.ts";
 import type { GitAnswer, GitAsk, OpenAnswer, OpenAsk } from "./key-jobs.ts";
+import type { OwnAnswer, OwnJob } from "./own-jobs.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
 import { walkContext } from "../../foundation/workers/worker-context.ts";
@@ -396,6 +397,11 @@ export class DiskThreads {
   /** What a git read is read against (key-jobs.ts), a key's own (SD-T5); `giveUp` and `background` as `open`'s. */
   async gitRead(ask: GitAsk, giveUp?: AbortController, background = false): Promise<GitAnswer> {
     return (await this.ask<{ gitRead: GitAnswer }>({ op: "gitRead", ask }, "key", giveUp, background)).gitRead;
+  }
+
+  /** A read of slipbox's own folders (own-jobs.ts, SD-T9), `by` whom; `background` as `open`'s. */
+  async own(job: OwnJob, by: Asker, background = false): Promise<OwnAnswer> {
+    return (await this.ask<{ own: OwnAnswer }>({ op: "own", job }, by, undefined, background)).own;
   }
 
   /** Why the folder `dir` can't be listed and gone into, in `folderUnreadable`'s words; null when it can. `giveUp` as

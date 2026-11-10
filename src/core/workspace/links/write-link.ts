@@ -153,20 +153,27 @@ function folderNaming(root: string, there: string, memo?: PointerMemo): PointerN
 
 /**
  * A link's ends in a graph: `to` in its root when the root's walk has it (a nested root's file isn't). `memo`, for many
- * links at once: what their pointers share, worked out once.
+ * links at once: what their pointers share, worked out once; `at`, the pointer to `to` worked out already (`pointerAt`,
+ * on a disk thread: SD-T9), for one outside the root.
  */
-export function linkEnds(g: Graph, fromAbs: string, toAbs: string, memo?: PointerMemo): LinkEnds {
+export function linkEnds(
+  g: Graph,
+  fromAbs: string,
+  toAbs: string,
+  memo?: PointerMemo,
+  at?: ReturnType<typeof pointerAt>,
+): LinkEnds {
   const inRoot = (abs: string) => {
     const r = relative(g.root, abs).split(sep).join("/");
     return r && !r.startsWith("../") && !isAbsolute(r) && g.known(r) ? r : null;
   };
   const fromRel = inRoot(fromAbs) ?? relative(g.root, fromAbs).split(sep).join("/");
   const rel = inRoot(toAbs);
-  const at = rel === null ? pointerAt(g.root, toAbs, memo) : null;
+  const to = rel === null ? (at === undefined ? pointerAt(g.root, toAbs, memo) : at) : null;
   return {
     fromAbs,
-    pointer: at?.pointer ?? null,
-    naming: at?.naming ?? null,
+    pointer: to?.pointer ?? null,
+    naming: to?.naming ?? null,
     to: { abs: toAbs, rel, note: NOTE_EXT.test(toAbs) },
     reachesByName: (name) => {
       const r = g.resolveLink({ kind: NOTE_EXT.test(toAbs) ? "wiki" : "embed", target: name }, fromRel);

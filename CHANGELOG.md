@@ -136,6 +136,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   opened. The window says `reading <note>…`, the keys typed meanwhile act on the note once it's there, and `esc` gives
   the read up. A list's preview, a peek, `:e!` and the git panel's keys read the same way.
 
+- A home folder on a slow disk, where slipbox keeps its state, cache and config, no longer freezes the screen while
+  you go into a vault, open the Vaults window (`space v v`) or complete a link to another vault's note. The vault's
+  tabs come back once its workspace is read, the keys answering meanwhile; the Vaults window shows the vaults it
+  listed last, then the list as it is now, and says `reading the list…` the first time; a link's list offers this
+  vault's notes at once and other vaults' as soon as they're read.
+
 - **Breaking:** the `space` groups are named for what they act on, and their keys moved with them. `space f` (+file)
   acts on any file, a note or not; `space n` (+note) keeps what only a note has; finding is `space /` (+find);
   `space d` reads +directory and `space v` +vault. Each key kept its letter, so only the group's key is new.

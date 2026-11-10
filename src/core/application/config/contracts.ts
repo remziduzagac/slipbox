@@ -327,4 +327,9 @@ export interface LoadConfigOptions {
    * it's being edited) then keeps what it said before instead of dropping to the defaults.
    */
   lastGood?: Map<string, Record<string, unknown>>;
+  /**
+   * Files whose contents are kept already, as last read — none for one that wasn't there — and so never read here (your
+   * config as a vault is gone into: the TUI's look reads it again when it changes, SD-T9).
+   */
+  kept?: ReadonlyMap<string, Record<string, unknown> | null>;
 }
