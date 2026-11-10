@@ -269,11 +269,20 @@ export interface LookAnswer {
 }
 
 type Timers = Pick<typeof globalThis, "setTimeout" | "clearTimeout">;
-type DiskThread = { requests: WorkerRequests; busy: boolean; idle: ReturnType<typeof setTimeout> | null };
-type Waiting = { walk: boolean; resolve: (t: DiskThread) => void; reject: (err: Error) => void };
+type Timer = ReturnType<typeof setTimeout>;
+type DiskThread = { requests: WorkerRequests; busy: boolean; walking: boolean; idle: Timer | null };
+/** A request waiting for a thread; a walk's, once it has waited a look's deadline, `urgent`, and its timers. */
+type Waiting = {
+  walk: boolean;
+  urgent: boolean;
+  timers: Timer[];
+  resolve: (t: DiskThread) => void;
+  reject: (err: Error) => void;
+};
 type DiskAsk = DiskRequest extends infer R ? (R extends unknown ? Omit<R, "context"> : never) : never;
 
 const stopped = () => new WorkerRequestError("worker request cancelled", "stopped");
+const pastDeadline = () => new WorkerRequestError("worker request deadline exceeded", "deadline");
 
 /**
  * The disk threads (SD-D2): the explorer's listing threads (T12) grown into what every read of the vault open asks of
@@ -281,7 +290,9 @@ const stopped = () => new WorkerRequestError("worker request cancelled", "stoppe
  * walked (list-worker.ts, disk-jobs.ts). Two, apart from the walk's, each started on its first request. One request at a
  * time on each: the others wait in one line, each going, in the order asked, to the first thread free — never behind
  * one that doesn't answer while the other is free. A walk takes a thread only while the other is left free for the
- * rest; until then it waits, and those asked after it go past it, a second walk waiting behind it.
+ * rest; until then it waits, and those asked after it go past it, a second walk waiting behind it. Once it has waited a
+ * look's deadline it's passed no more: it takes the next thread free, unless the other is walking. Its deadline counts
+ * from when it was asked, waiting included, so it's answered or fails `deadline`, never left waiting.
  */
 export class DiskThreads {
   private readonly pool: DiskThread[];
@@ -290,18 +301,28 @@ export class DiskThreads {
   private closed = false;
   readonly deadlines: Readonly<Record<Asker, number>>;
   private readonly timers: Timers;
+  private readonly now: () => number;
   private readonly idleMs: number;
 
+  /** `timers` and `now`: the clock a thread's idle minute and a walk's wait are counted on, a test's own. */
   constructor(
     factory: () => Worker = () => new Worker(workerUrl("workspace/walk/list-worker.ts")),
-    opts: { deadlines?: Readonly<Record<Asker, number>>; size?: number; timers?: Timers; idleMs?: number } = {},
+    opts: {
+      deadlines?: Readonly<Record<Asker, number>>;
+      size?: number;
+      timers?: Timers;
+      now?: () => number;
+      idleMs?: number;
+    } = {},
   ) {
     this.deadlines = opts.deadlines ?? DISK_DEADLINES;
     this.timers = opts.timers ?? globalThis;
+    this.now = opts.now ?? (() => performance.now());
     this.idleMs = opts.idleMs ?? IDLE_MS;
     this.pool = Array.from({ length: opts.size ?? 2 }, () => ({
       requests: new WorkerRequests(factory, { result: Infinity }),
       busy: false,
+      walking: false,
       idle: null,
     }));
   }
@@ -356,14 +377,19 @@ export class DiskThreads {
   }
 
   /** A request on a thread that's free, once one is, with what this thread knows (`walkContext`) as it's sent; its
-   *  deadline its asker's, counted from then. One of a batch that fails gives the batch up (`batch`) before its thread
-   *  is free for the next: the rest of it still waiting for one withdrawn, never sent. */
+   *  deadline its asker's, counted from then — a walk's from when it was asked. One of a batch that fails gives the
+   *  batch up (`batch`) before its thread is free for the next: the rest of it still waiting for one withdrawn, never
+   *  sent, and what of it was sent given up, its thread started afresh, as past a deadline. */
   private async ask<A>(request: DiskAsk, by: Asker, batch?: AbortController): Promise<A> {
-    const on = await this.take(request.op === "walk", batch?.signal);
+    const walk = request.op === "walk";
+    const asked = this.now();
+    const on = await this.take(walk, batch?.signal);
     try {
+      const deadline = this.deadlines[by] - (walk ? this.now() - asked : 0);
+      if (deadline <= 0) throw pastDeadline();
       return await on.requests.request<A>(
         { ...request, context: walkContext() },
-        { deadline: this.deadlines[by], bytes: 0 },
+        { deadline, bytes: 0, ...(batch ? { signal: batch.signal } : {}) },
       );
     } catch (err) {
       batch?.abort();
@@ -373,41 +399,62 @@ export class DiskThreads {
     }
   }
 
-  /** A thread that's free, taken; or a place in the line, until one is — withdrawn when `signal` gives up first. */
+  /** A thread that's free, taken; or a place in the line, until one is — withdrawn when `signal` gives up first. A
+   *  walk's place: passed no more once it has waited a look's deadline, and given up at its own. */
   private take(walk: boolean, signal?: AbortSignal): Promise<DiskThread> {
     if (this.closed) return Promise.reject(stopped());
     return new Promise((resolve, reject) => {
-      const waiting: Waiting = { walk, resolve, reject };
+      const waiting: Waiting = { walk, urgent: false, timers: [], resolve, reject };
       this.line.push(waiting);
       signal?.addEventListener(
         "abort",
-        () => {
-          const at = this.line.indexOf(waiting);
-          if (at < 0) return;
-          this.line.splice(at, 1);
-          reject(new WorkerRequestError("worker request cancelled", "cancelled"));
-        },
+        () => this.leave(waiting) && reject(new WorkerRequestError("worker request cancelled", "cancelled")),
         { once: true },
       );
+      if (walk) {
+        const urgent = () => {
+          waiting.urgent = true;
+          this.dispatch();
+        };
+        const giveUp = () => this.leave(waiting) && reject(pastDeadline());
+        waiting.timers = [this.after(this.deadlines.look, urgent), this.after(this.deadlines.walk, giveUp)];
+      }
       this.dispatch();
     });
   }
 
+  /** `run` after `ms` on this pool's clock, keeping no process alive. */
+  private after(ms: number, run: () => void): Timer {
+    const timer = this.timers.setTimeout(run, ms);
+    (timer as { unref?: () => void }).unref?.();
+    return timer;
+  }
+
+  /** `waiting` out of the line, its timers cleared; whether it was in it. */
+  private leave(waiting: Waiting): boolean {
+    for (const t of waiting.timers.splice(0)) this.timers.clearTimeout(t);
+    const at = this.line.indexOf(waiting);
+    if (at >= 0) this.line.splice(at, 1);
+    return at >= 0;
+  }
+
   /** Each request in the line, in order, to the first thread free: a walk only while another is left free, the rest
-   *  going past it meanwhile. */
+   *  going past it meanwhile — or, once it has waited a look's deadline, while the other isn't walking. */
   private dispatch(): void {
     const keep = Math.min(2, this.pool.length);
     for (let i = 0; i < this.line.length; ) {
       const free = this.pool.filter((t) => !t.busy);
       if (!free.length) return;
       const next = this.line[i]!;
-      if (next.walk && free.length < keep) {
+      const passed = next.walk && free.length < keep && !(next.urgent && !this.pool.some((t) => t.walking));
+      if (passed) {
         i++;
         continue;
       }
-      this.line.splice(i, 1);
+      this.leave(next);
       const t = free[0]!;
       t.busy = true;
+      t.walking = next.walk;
       if (t.idle) this.timers.clearTimeout(t.idle);
       t.idle = null;
       next.resolve(t);
@@ -417,15 +464,15 @@ export class DiskThreads {
   /** A thread's request settled: the thread to the next in line, or free — let go of after `idleMs` if none asks. */
   private free(t: DiskThread): void {
     t.busy = false;
+    t.walking = false;
     if (this.closed) return;
     this.dispatch();
     if (t.busy) return;
-    const idle = this.timers.setTimeout(() => {
+    const idle = this.after(this.idleMs, () => {
       if (t.idle !== idle) return;
       t.idle = null;
       if (!t.busy) t.requests.stop();
-    }, this.idleMs);
-    (idle as { unref?: () => void }).unref?.();
+    });
     t.idle = idle;
   }
 
@@ -438,7 +485,7 @@ export class DiskThreads {
       t.idle = null;
       t.requests.dispose();
     }
-    for (const w of this.line.splice(0)) w.reject(stopped());
+    for (const w of [...this.line]) if (this.leave(w)) w.reject(stopped());
   }
 }
 

@@ -6,7 +6,7 @@
 
 import type { Config } from "../../application/config/config.ts";
 import * as disk from "../../foundation/platform/disk.ts";
-import { type DecodedFile, folderUnreadable, readText, type Stamp, stamp } from "../../foundation/platform/fsutil.ts";
+import { type DecodedFile, folderUnreadable, readTextStamped, type Stamp } from "../../foundation/platform/fsutil.ts";
 import { enterContext, type WalkContext } from "../../foundation/workers/worker-context.ts";
 import { homeWalk } from "../vaults/home.ts";
 import type { HomeWalk } from "../vaults/home/contracts.ts";
@@ -20,8 +20,8 @@ export type PathStat =
   | { kind: "file" | "dir" | "link" | "other"; mtimeMs: number; ctimeMs: number; size: number }
   | { error: string };
 
-/** A file read: its text decoded as `readText` decodes it, and its stamp as `stamp` reads it after; or its error's
- *  code — `ENOTREG` for a FIFO, a device or a folder, refused as `readRegular` refuses them. */
+/** A file read: its text decoded as `readText` decodes it, and the stamp of the file that text was read from (one
+ *  open); or its error's code — `ENOTREG` for a FIFO, a device or a folder, refused as `readRegular` refuses them. */
 export type ReadAnswer = (DecodedFile & { stamp: Stamp | null }) | { error: string };
 
 /** The vault open's walk for a build (SD-T8): walked whole (`walkVault`), its top listed (`listDirectory`, Elsewhere),
@@ -75,9 +75,10 @@ function statOf(path: string, own: boolean): PathStat {
   }
 }
 
+/** A file's text and its stamp, both of the one file opened: a save renamed over it meanwhile is neither's. */
 function readOf(path: string): ReadAnswer {
   try {
-    return { ...readText(path), stamp: stamp(path) };
+    return readTextStamped(path);
   } catch (err) {
     return { error: codeOf(err) };
   }

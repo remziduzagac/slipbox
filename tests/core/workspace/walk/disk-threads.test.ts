@@ -10,18 +10,21 @@ import {
   mkdirSync,
   mkdtempSync,
   realpathSync,
+  renameSync,
   statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
+import { setReadWait } from "../../../../src/core/foundation/platform/disk.ts";
 import { folderUnreadable, readText, stamp } from "../../../../src/core/foundation/platform/fsutil.ts";
+import { walkContext } from "../../../../src/core/foundation/workers/worker-context.ts";
 import { WorkerRequestError, WorkerRequests } from "../../../../src/core/foundation/workers/worker-requests.ts";
 import { type HomeWalk, homeWalk } from "../../../../src/core/workspace/vaults/home.ts";
 import { homeFilter } from "../../../../src/core/workspace/vaults/home/filter.ts";
 import { homeAt } from "../../../../src/core/workspace/vaults/vault.ts";
-import type { PathStat, ReadAnswer } from "../../../../src/core/workspace/walk/disk-jobs.ts";
+import { answerDisk, type PathStat, type ReadAnswer } from "../../../../src/core/workspace/walk/disk-jobs.ts";
 import { listFolder } from "../../../../src/core/workspace/walk/listing.ts";
 import { listDirectory, WalkFilter, type WalkResult, walkVault } from "../../../../src/core/workspace/walk/walk.ts";
 import { DiskThreads, IDLE_MS } from "../../../../src/core/workspace/walk/walk-thread.ts";
@@ -93,19 +96,23 @@ afterEach(() => {
 });
 
 /** Disk threads whose `held` folders — a listing, a walk's, a stat or a read under one — wait on a hold: their workers
- *  made, those let go of, and what each was sent. */
+ *  made, those let go of, what each was sent, and to which. */
 function held(opts: ConstructorParameters<typeof DiskThreads>[1] = {}) {
   const h = new Hold();
   hold = h;
   const made: Worker[] = [];
   const ended: Worker[] = [];
   const sent: { op: string; dir?: string }[] = [];
+  const sentTo: Worker[] = [];
   const threads = new DiskThreads(() => {
     const w = h.worker();
     w.postMessage({ holdReads: true });
     const post = w.postMessage.bind(w);
     w.postMessage = (m: { op?: string; dir?: string }) => {
-      if (m?.op) sent.push({ op: m.op, ...(m.dir ? { dir: m.dir } : {}) });
+      if (m?.op) {
+        sent.push({ op: m.op, ...(m.dir ? { dir: m.dir } : {}) });
+        sentTo.push(w);
+      }
       post(m);
     };
     const end = w.terminate.bind(w);
@@ -117,7 +124,26 @@ function held(opts: ConstructorParameters<typeof DiskThreads>[1] = {}) {
     return w;
   }, opts);
   open.push(threads);
-  return { hold: h, threads, made, ended, sent };
+  return { hold: h, threads, made, ended, sent, sentTo };
+}
+
+/** The test's own clock for a pool's timers (`timers`, `now`): `advance` runs what's due, in order. */
+function fakeClock() {
+  let now = 0;
+  const due = new Map<number, { at: number; run: () => void }>();
+  let serial = 0;
+  const timers = {
+    setTimeout: (run: () => void, ms: number) => {
+      due.set(++serial, { at: now + ms, run });
+      return serial;
+    },
+    clearTimeout: (id: number) => void due.delete(id),
+  } as unknown as typeof globalThis;
+  const advance = (ms: number) => {
+    now += ms;
+    for (const [id, t] of [...due].sort(([, x], [, y]) => x.at - y.at)) if (t.at <= now && due.delete(id)) t.run();
+  };
+  return { timers, now: () => now, advance };
 }
 
 /** Awaited until `n` readers wait on the hold — said, and thrown, by HELD_MS, short of the test's timeout. */
@@ -246,6 +272,44 @@ describe("the disk threads (SD-D2)", () => {
     }
   });
 
+  test("a read's text and stamp are the one file's it opened: a save renamed over the note as it's read is neither's", () => {
+    const root = tree({});
+    const note = join(root, "note.md");
+    const OLD = "# Old\n";
+    const NEW = "# New, and longer\n";
+    // An editor's save: written aside, renamed over the note; longer, so its stamp differs whatever the clock.
+    const save = () => {
+      writeFileSync(join(root, ".note.md~"), NEW);
+      renameSync(join(root, ".note.md~"), note);
+    };
+    // Stamped here, past the seam.
+    const stampHere = () => {
+      const st = statSync(note);
+      return { mtimeMs: st.mtimeMs, size: st.size };
+    };
+    // The save made as the read waits before its first lookup, then before its second, if it has one.
+    for (const at of [1, 2]) {
+      writeFileSync(note, OLD);
+      const old = stampHere();
+      let waits = 0;
+      let saved: ReturnType<typeof stampHere> | null = null;
+      setReadWait((p) => {
+        if (p !== note || ++waits !== at) return;
+        save();
+        saved = stampHere();
+      });
+      let answer: ReadAnswer;
+      try {
+        answer = (answerDisk({ op: "read", path: note, context: walkContext() }) as { read: ReadAnswer }).read;
+      } finally {
+        setReadWait(null);
+      }
+      if ("error" in answer) throw new Error(`read failed: ${answer.error}`);
+      expect(answer.stamp).toEqual(answer.text === OLD ? old : saved);
+      if (at === 1) expect([answer.text, waits]).toEqual([NEW, 1]);
+    }
+  });
+
   test("held: a stat under `held` holds one thread; a stat elsewhere asked meanwhile is answered by the other", async () => {
     const { threads, hold: h } = held();
     const { a, b } = heldAndFree();
@@ -280,6 +344,49 @@ describe("the disk threads (SD-D2)", () => {
     expect(h.gaveUp).toBe(0);
   });
 
+  test("a walk passed by steady requests for a look's deadline is passed no more, its deadline counted from when it was asked: answered, or failed `deadline`, never left waiting", async () => {
+    const clock = fakeClock();
+    const deadlines = { look: 60_000, key: 60_000, explorer: 600_000, walk: 600_000 };
+    const { threads, hold: h } = held({ timers: clock.timers, now: clock.now, deadlines });
+    const { held: heldDir, a, b } = heldAndFree();
+    const vault = tree({ "v.md": "# V\n" });
+    const settings = new WalkFilter(vault, WALK).settings;
+    const asked = spyOn(WorkerRequests.prototype, "request");
+    const walksSent = () => asked.mock.calls.filter(([r]) => (r as { op: string }).op === "walk");
+    try {
+      // One thread held by a listing that doesn't answer; the walk waits for the other to be left free.
+      void failure(threads.list(heldDir, WALK, false));
+      await untilWaiting(h);
+      const order: string[] = [];
+      const walked = threads.walk({ how: "vault", filter: settings }).finally(() => order.push("walk"));
+      // Steady requests on the other, each asked as the last is answered: each goes past the walk.
+      for (let i = 0; i < 3; i++) expect(await threads.stat([b], "look")).toEqual([statHere(b)]);
+      expect([threads.waiting, order]).toEqual([1, []]);
+      // A minute on, a request on the other: the walk takes that thread once it's free; one asked after it waits.
+      const during = threads.stat([b], "look").finally(() => order.push("during"));
+      clock.advance(deadlines.look);
+      const after = threads.stat([b], "look").finally(() => order.push("after"));
+      await Promise.all([during, after]);
+      expect(order).toEqual(["during", "walk", "after"]);
+      expect((await walked).walk).toEqual(walkVault(vault, new WalkFilter(vault, WALK)));
+      // Its deadline counted from when it was asked: what was left of it when it was sent.
+      expect(walksSent().map(([, o]) => o?.deadline)).toEqual([deadlines.walk - deadlines.look]);
+      // Both threads held now: a walk asked fails at its deadline from when it was asked, never sent.
+      void failure(threads.stat([a], "key"));
+      await untilWaiting(h, 2);
+      const stuck = failure(threads.walk({ how: "vault", filter: settings }));
+      clock.advance(deadlines.look);
+      expect(threads.waiting).toBe(1);
+      clock.advance(deadlines.walk - deadlines.look);
+      // Out of the line as its deadline comes, not once a thread is free.
+      expect(threads.waiting).toBe(0);
+      expect(await stuck).toBe("deadline");
+      expect([walksSent().length, h.gaveUp]).toEqual([1, 0]);
+    } finally {
+      asked.mockRestore();
+    }
+  });
+
   test("past a shortened deadline: the request fails `deadline`, its thread started afresh, the next request answered", async () => {
     const { threads, made, ended } = held({ deadlines: { look: 300, key: 300, explorer: 300, walk: 300 } });
     const { a, b } = heldAndFree();
@@ -302,7 +409,8 @@ describe("the disk threads (SD-D2)", () => {
 
   test("each request carries the deadline of what asked it, not of its kind", async () => {
     const deadlines = { look: 60_001, key: 60_002, explorer: 60_003, walk: 60_004 };
-    const threads = new DiskThreads(undefined, { deadlines });
+    // The clock stands still: a walk's deadline, counted from when it's asked, is all of it when it's sent.
+    const threads = new DiskThreads(undefined, { deadlines, now: () => 0 });
     open.push(threads);
     const { root, b, free } = heldAndFree();
     const asked = spyOn(WorkerRequests.prototype, "request");
@@ -371,6 +479,30 @@ describe("the disk threads (SD-D2)", () => {
     expect(sent).toEqual([{ op: "stat" }, { op: "list", dir: heldDir }]);
   });
 
+  test("a look's batch given up gives up what of it was sent: their threads started afresh, free at once for the next", async () => {
+    const { threads, hold: h, sent, sentTo, made, ended } = held({ size: 3 });
+    const { a, b, held: heldDir } = heldAndFree();
+    const other = join(tree({ "held/c.md": "# C\n" }), "held");
+    const batch = threads.look({
+      stat: { paths: [a] },
+      list: [
+        { dir: heldDir, walk: WALK, hidden: false },
+        { dir: other, walk: WALK, hidden: false },
+      ],
+    });
+    // Each of the three held on a thread of its own; then the stat's thread stops (a crash).
+    await untilWaiting(h, 3);
+    sentTo[sent.findIndex((s) => s.op === "stat")]!.dispatchEvent(new ErrorEvent("error", { message: "gone" }));
+    expect(await failure(batch)).toBe("crashed");
+    await Bun.sleep(0);
+    // The two listings given up with it, their threads let go of; three requests answered at once, none waiting.
+    expect(letGo(made, ended).sort()).toEqual([0, 1, 2]);
+    const next = [threads.stat([b], "look"), threads.stat([b], "look"), threads.stat([b], "look")];
+    expect(threads.waiting).toBe(0);
+    expect(await Promise.all(next)).toEqual([[statHere(b)], [statHere(b)], [statHere(b)]]);
+    expect(made.length).toBe(6);
+  });
+
   test("stopped (quitting): a request asked or waiting is refused, no thread started again for it", async () => {
     const { threads, hold: h, made } = held();
     const { root, a, b } = heldAndFree();
@@ -389,20 +521,7 @@ describe("the disk threads (SD-D2)", () => {
   });
 
   test("a thread asked nothing for a minute is let go of, on the test's clock — the second while the first is asked — and started again by the next request", async () => {
-    let now = 0;
-    const due = new Map<number, { at: number; run: () => void }>();
-    let serial = 0;
-    const timers = {
-      setTimeout: (run: () => void, ms: number) => {
-        due.set(++serial, { at: now + ms, run });
-        return serial;
-      },
-      clearTimeout: (id: number) => void due.delete(id),
-    } as unknown as typeof globalThis;
-    const advance = (ms: number) => {
-      now += ms;
-      for (const [id, t] of [...due].sort(([, x], [, y]) => x.at - y.at)) if (t.at <= now && due.delete(id)) t.run();
-    };
+    const { timers, advance } = fakeClock();
     const made: Worker[] = [];
     const ended: Worker[] = [];
     const threads = new DiskThreads(

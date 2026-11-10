@@ -261,6 +261,13 @@ export function readText(path: string): DecodedFile {
   return decodeText(disk.readRegular(path));
 }
 
+/** `readText`'s text and the stamp of the file it read, from the one open (`readRegularStat`): a save renamed over the
+ *  path meanwhile never pairs the old text with the new stamp, which would hide that save from `changedOnDisk`. */
+export function readTextStamped(path: string): DecodedFile & { stamp: Stamp } {
+  const { bytes, stat } = disk.readRegularStat(path);
+  return { ...decodeText(bytes), stamp: { mtimeMs: stat.mtimeMs, size: stat.size } };
+}
+
 /** The small files a vault controls (config, .gitignore, version): 1 MB is far more than any needs. */
 export const SMALL_FILE = 1 << 20;
 

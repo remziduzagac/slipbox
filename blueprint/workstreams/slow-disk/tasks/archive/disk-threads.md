@@ -72,15 +72,24 @@ how.
   walk's, as the stand-in's are.
 - A path's own error is its answer, by its code; a request fails only when its thread does. `stat` follows links, or
   takes a link's own (`own`), for the ways the TUI's look and an open check for a link not followed (SD-T4, SD-T5).
-  `read`'s stamp is `stamp` after `readText`, as a note's load reads it.
+  `read`'s stamp is the fstat of the file it opened (`readTextStamped`, `disk.readRegularStat`), not a second lookup:
+  a save renamed over the note between the two would pair the old text with the new stamp, and `changedOnDisk` would
+  then miss it (the review, 2026-11-10).
 - `access` reads through the seam: `folderUnreadable` stats and checks access through `disk.stat` and a new
   `disk.access`, so the stand-in and a test's hold reach it on a disk thread; on the screen's thread it goes at once,
   as before, until SD-T7 asks it there. `fsutil.ts`'s `DISK_READERS` entry no longer names it.
 - A walk that can't take a thread yet waits, and those asked after it go past it: a short read never waits behind a
-  walk, running or waiting. It waits for as long as the other thread is never free; each request answered frees it.
+  walk running, or one waiting less than a minute. The review (2026-11-10) found that steady requests could keep it
+  waiting with no end, its deadline not yet started, and the recommended answer was taken, by the maintainer's
+  standing instruction: a walk's deadline counts from when it was asked, so waiting past it fails it `deadline`; once
+  it has waited a look's deadline (a minute), those asked after it no longer go past it, and it takes the next thread
+  free while the other is busy. It doesn't while the other is walking: two walks would leave no thread for the rest,
+  so those asked after it go past it until the first walk ends and its thread comes free.
 - A look's batch (`look`): one of it that fails gives the batch up before its thread is free for the next, so what of
-  it still waits for a thread is withdrawn, never sent. Its `list` carries what the explorer's does (`walk`, `hidden`);
-  each entry's verdict with the walk's filter and the links' rules is SD-T3's, with the watcher's look.
+  it still waits for a thread is withdrawn, never sent; and what of it was sent is given up (the batch's signal, as
+  the review asked), each thread started afresh as past a deadline and free at once. Its `list` carries what the
+  explorer's does (`walk`, `hidden`); each entry's verdict with the walk's filter and the links' rules is SD-T3's, with
+  the watcher's look.
 - `walk` answers `walkVault`, `listDirectory` (Elsewhere) or `homeWalk` (what changed handed back unkept, as the walk's
   thread's `home`), with the index's stamp and then its text when it's named. Nothing asks it yet (SD-T8). A hold
   reaches a walk's listings and its `.gitignore`'s read, not its stats, and Elsewhere's `listDirectory` still lists

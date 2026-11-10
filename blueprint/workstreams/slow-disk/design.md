@@ -18,7 +18,8 @@ screen (SD-D1). T12 moved the walks it makes by itself and the listings of folde
 they answer in `disk-jobs.ts`): two, light — no index, no parser — each started on its first request. A request goes to
 the first thread free, in the order asked, so never behind one that doesn't answer while the other is free; a walk
 takes a thread only while the other is left for the rest, and until then waits, the requests asked after it going past
-it and a second walk waiting behind it. They answer, the same code as the thread that asks would run, through the seam
+it and a second walk waiting behind it. Once it has waited a look's deadline it's passed no more: it takes the next
+thread free, unless the other is walking. They answer, the same code as the thread that asks would run, through the seam
 below, with what that thread knows and they can't see for themselves (`walkContext`); a path's own error is its answer,
 and a request fails only when its thread does:
 
@@ -26,8 +27,9 @@ and a request fails only when its thread does:
   entry with the walk's filter's verdict on it (`exclusion`), made there;
 - `stat`: a batch of paths, each one's kind, mtime, ctime and size, or its error's code; its links followed, or a
   link's own (`lstat`);
-- `read`: a file's text, decoded as `readText` decodes it (its BOM, line endings, invalid UTF-8), with its stamp;
-  refused, as `readRegular` refuses, when it isn't a regular file;
+- `read`: a file's text, decoded as `readText` decodes it (its BOM, line endings, invalid UTF-8), with the stamp of the
+  file it opened (`readTextStamped`), so a save renamed over it meanwhile is neither's; refused, as `readRegular`
+  refuses, when it isn't a regular file;
 - `access`: whether a folder can be listed and gone into, in `folderUnreadable`'s words;
 - `walk`: the vault open's walk for a build (`walkVault`; `listDirectory` in Elsewhere; home's walk kept brought up to
   now, `homeWalk`), with its index's text and stamp.
@@ -68,14 +70,16 @@ meanwhile (`noteOwnWrite`) decides.
 
 **Deadlines** (SD-D6). A deadline is set by what asked, not by the request's kind: whatever a look asks (a `stat` or a
 `list`), a key's read and a folder's check have a minute; the explorer's listings ten (T12's), a walk ten;
-`SLIPBOX_SLOW_DISK`'s third part shortens them all. A request past its deadline is failed and its thread started afresh
-for the rest; it's never read on the screen's thread instead. The watcher's look given up on says `⚠ disk not answering`
-once and is asked again a minute later; a key's read is said; a build says `reading the vault gave up: a folder didn't
-answer in time` and the graph stays as it was. A look's batch — one `stat` of every path it stats and a `list` of each
-folder it lists, asked together — is answered once all have; once one gives up, it's failed, and what of it still
-waits for a thread is withdrawn, never sent. A disk thread with nothing asked of it for a minute is let go of, and
-started again on the next request: a request takes the first thread free, so while a vault is watched only the second
-is let go of.
+`SLIPBOX_SLOW_DISK`'s third part shortens them all. Each counts from when a thread is handed the request; a walk's from
+when it was asked, its wait for a thread included, so it's answered or failed, never left waiting. A request past its
+deadline is failed and its thread started afresh for the rest; it's never read on the screen's thread instead. The
+watcher's look given up on says `⚠ disk not answering` once and is asked again a minute later; a key's read is said; a
+build says `reading the vault gave up: a folder didn't answer in time` and the graph stays as it was. A look's batch —
+one `stat` of every path it stats and a `list` of each folder it lists, asked together — is answered once all have;
+once one gives up, it's failed: what of it still waits for a thread is withdrawn, never sent, and what of it was sent
+is given up, its thread started afresh. A disk thread with nothing asked of it for a minute is let go of, and started
+again on the next request: a request takes the first thread free, so while a vault is watched only the second is let
+go of.
 
 **What's read where:**
 

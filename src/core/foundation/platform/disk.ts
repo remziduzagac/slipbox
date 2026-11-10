@@ -170,13 +170,19 @@ export function readFile(path: string): Buffer {
  * Opened without blocking, so a FIFO is refused rather than waited on.
  */
 export function readRegular(path: string, max = Number.POSITIVE_INFINITY): Buffer {
+  return readRegularStat(path, max).bytes;
+}
+
+/** `readRegular`'s bytes and the stat it checked them by, both of the one file it opened: a file renamed over the path
+ *  meanwhile (a save written aside) is neither's. */
+export function readRegularStat(path: string, max = Number.POSITIVE_INFINITY): { bytes: Buffer; stat: Stats } {
   readWait(path);
   const fd = openSync(path, constants.O_RDONLY | constants.O_NONBLOCK);
   try {
-    const st = fstatSync(fd);
-    if (!st.isFile()) throw Object.assign(new Error(`${path}: not a regular file`), { code: "ENOTREG" });
-    if (st.size > max) throw Object.assign(new Error(`${path}: larger than ${max} bytes`), { code: "EFBIG" });
-    return readFileSync(fd);
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw Object.assign(new Error(`${path}: not a regular file`), { code: "ENOTREG" });
+    if (stat.size > max) throw Object.assign(new Error(`${path}: larger than ${max} bytes`), { code: "EFBIG" });
+    return { bytes: readFileSync(fd), stat };
   } finally {
     closeSync(fd);
   }
