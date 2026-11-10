@@ -4,8 +4,10 @@
 // disk thread answered before — and, when it isn't, asked of a disk thread in the background, one batch a request,
 // meanwhile a link drawn as resolved (SD-D12), a picture's or an embed's place said, a place or a finding as if read;
 // the layouts drawn again when an answer changes what was drawn, from their anchors (D98). A kept answer drawn two
-// seconds after it was read is asked again, drawn as it was until the new one comes; a batch given up on (SD-D6) is
-// asked again a minute later. A test's App reads at once, here, through the seam, unless it asks (`offThread`).
+// seconds after it was read is asked again, drawn as it was until the new one comes; one drawn sooner is asked again
+// once it's two seconds old, though nothing draws it then — a file come where nothing watches drawn so within two
+// seconds. A batch given up on (SD-D6) is asked again a minute later. A test's App reads at once, here, through the
+// seam, unless it asks (`offThread`).
 
 import { dirname, isAbsolute, relative } from "node:path";
 import { type ParsedNote, parseMarkdown } from "../../../core/documents/markdown/parse.ts";
@@ -35,6 +37,8 @@ type Asked = { stat: Set<string>; names: Set<string>; texts: Map<string, number>
 export interface DrawnApp {
   readonly graph: Graph;
   readonly buffers: ReadonlyMap<string, { invalidateLayouts(): void }>;
+  /** Every view here: the tabs', and the peek's, whose buffer isn't among `buffers`. */
+  allViews(): readonly { readonly buf: { invalidateLayouts(): void } }[];
   readonly explorer: { readonly listings: { readonly offThread: boolean } };
   readonly host: { requestRender(): void };
   now(): number;
@@ -75,6 +79,11 @@ export class Drawn implements PathProbe {
   /** Set to ask the next batch: once this draw is done, or, given up on, a minute on. */
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pausedUntil = 0;
+  /** Kept answers drawn before they were two seconds old, by kind and key: each asked again once it is. */
+  private readonly later = new Map<string, { map: Map<string, Kept<unknown>>; key: string; ask: () => void }>();
+  /** Set for the soonest of them, and when that is. */
+  private laterTimer: ReturnType<typeof setTimeout> | null = null;
+  private laterAt = Number.POSITIVE_INFINITY;
 
   /** `run`, a layout or what's drawn of a note, its links' questions of the disk answered here: off the thread, from
    *  what's kept; else by the disk, at once. */
@@ -175,14 +184,50 @@ export class Drawn implements PathProbe {
     return this.folderSet.set;
   }
 
-  /** What's kept of `key`, asked again (`ask`) when there's none or it's two seconds old. */
+  /** What's kept of `key`, asked again (`ask`) when there's none or it's two seconds old; younger, once it is. */
   private kept<T>(map: Map<string, Kept<T>>, key: string, ask: () => void): T | undefined {
     const k = map.get(key);
-    if (!k || this.app.now() - k.at >= DRAWN_AGAIN_MS) {
+    const age = k ? this.app.now() - k.at : Number.POSITIVE_INFINITY;
+    if (age >= DRAWN_AGAIN_MS) {
       ask();
       this.soon(0);
-    }
+    } else this.askLater(map as Map<string, Kept<unknown>>, key, ask, DRAWN_AGAIN_MS - age);
     return k?.value;
+  }
+
+  /** `key`, drawn from an answer `ms` short of two seconds old, asked again then. */
+  private askLater(map: Map<string, Kept<unknown>>, key: string, ask: () => void, ms: number): void {
+    const kind = map === this.stats ? "s" : map === this.listings ? "n" : "t";
+    this.later.set(`${kind}${key}`, { map, key, ask });
+    const at = this.app.now() + ms;
+    if (this.laterTimer && this.laterAt <= at) return;
+    if (this.laterTimer) clearTimeout(this.laterTimer);
+    this.laterAt = at;
+    this.laterTimer = setTimeout(() => this.due(), ms);
+    (this.laterTimer as { unref?: () => void }).unref?.();
+  }
+
+  /** The answers drawn young that are two seconds old now asked again, in the next batch; the rest when they are. */
+  private due(): void {
+    this.laterTimer = null;
+    this.laterAt = Number.POSITIVE_INFINITY;
+    const now = this.app.now();
+    let next = Number.POSITIVE_INFINITY;
+    for (const [id, l] of this.later) {
+      const k = l.map.get(l.key);
+      const age = k ? now - k.at : Number.POSITIVE_INFINITY;
+      if (age < DRAWN_AGAIN_MS) next = Math.min(next, DRAWN_AGAIN_MS - age);
+      else {
+        l.ask();
+        this.later.delete(id);
+      }
+    }
+    if (next < Number.POSITIVE_INFINITY) {
+      this.laterAt = now + next;
+      this.laterTimer = setTimeout(() => this.due(), next);
+      (this.laterTimer as { unref?: () => void }).unref?.();
+    }
+    if (this.any(this.asked)) this.soon(0);
   }
 
   private none(): Asked {
@@ -257,9 +302,16 @@ export class Drawn implements PathProbe {
     }
     if (!changed) return;
     this.epoch++;
-    for (const b of this.app.buffers.values()) b.invalidateLayouts();
+    // The peek's too: a link in another vault's note asks of the disk as much as one here.
+    for (const b of new Set([...this.app.buffers.values(), ...this.app.allViews().map((v) => v.buf)]))
+      b.invalidateLayouts();
     this.app.relayoutAll();
     this.app.host.requestRender();
+  }
+
+  /** Once nothing's asked or out (tests): what's drawn is drawn from what's kept, till an answer drawn young is old. */
+  async settled(): Promise<void> {
+    while (this.out || this.timer || this.any(this.asked)) await new Promise((r) => setTimeout(r, 5));
   }
 
   /** Files seen to change (the watcher's): what's kept of each asked again as it's next drawn, drawn as it was till

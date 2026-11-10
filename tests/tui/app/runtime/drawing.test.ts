@@ -192,6 +192,50 @@ describe("what drawing reads, off the screen's thread (SD-T11)", () => {
     h.app.quit();
   });
 
+  test("a file come where nothing watches, just after its link was drawn broken: asked again once the answer is two seconds old, though nothing draws it then", async () => {
+    // Outside the vault: no walk and no watcher says it came.
+    const far = mkdtempSync(join(sandbox, "far-"));
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), `# P\n\n[the chart](${far}/chart.csv)\n`);
+    // The clock moved by the test alone: drawn again at once, the answer it's drawn from is never old enough to ask.
+    let now = 1_000_000;
+    const h = await drawing(root, { now: () => now });
+    await h.app.open(join(root, "p.md"));
+    const status = () => layoutOf(h).links.find((l) => l.text === "the chart")?.status;
+    await until(() => status() === "unresolved", "the missing file's link drawn broken");
+    // Its resolution's every question answered: nothing out to draw it again.
+    await h.app.drawn.settled();
+    writeFileSync(join(far, "chart.csv"), "a,b\n1,2\n");
+    h.app.relayoutAll();
+    expect(status()).toBe("unresolved");
+    now += 2000;
+    await until(() => status() === "resolved", "the file's link drawn resolved, nothing drawing it meanwhile");
+    h.app.quit();
+  });
+
+  test("a file come to another vault since its last peek, nothing watching it: drawn resolved in the next peek, the peek's buffer none of the tabs'", async () => {
+    const other = makeVault();
+    writeFileSync(join(other, "a.md"), "# A\n\n[the chart](chart.csv)\n");
+    const root = makeVault();
+    writeFileSync(join(root, "out.md"), `# Out\n\n[a](${join(other, "a.md")})\n`);
+    // The clock moved by the test alone, as in the test above.
+    let now = 1_000_000;
+    const h = await drawing(root, { open: "out.md", now: () => now });
+    const status = () => layoutOf(h).links.find((l) => l.text === "the chart")?.status;
+    await h.keys("tab", "enter");
+    expect(h.app.floating?.kind).toBe("peek");
+    await until(() => status() === "unresolved", "the missing file's link drawn broken in the peek");
+    await h.app.drawn.settled();
+    await h.keys("escape");
+    writeFileSync(join(other, "chart.csv"), "a,b\n1,2\n");
+    await h.keys("enter");
+    expect(h.app.floating?.kind).toBe("peek");
+    expect(status()).toBe("unresolved");
+    now += 2000;
+    await until(() => status() === "resolved", "the file's link drawn resolved in the peek");
+    h.app.quit();
+  });
+
   test("held: a link to a note not written yet, in a folder the walk listed — drawn broken at once, as the walk says, its disk's answer still asked", async () => {
     const root = makeVault();
     mkdirSync(join(root, "held"), { recursive: true });
