@@ -90,10 +90,14 @@ function indexKestrel(s: Session): void {
   });
 }
 
-/** The Info view's count of the note's backlinks, once it shows one. */
+/** The Info view's count of `n` backlinks (any count, none given), whole: not one of the notes read so far while the
+ *  rest are read on a disk thread, marked `…` (SD-D13). */
+const whole = (n?: number) => new RegExp(`backlinks +(${n ?? "\\d+"})(?![\\d…])`);
+
+/** The Info view's count of the note's backlinks, once it shows one of every note. */
 async function infoCount(s: Session): Promise<number> {
-  await s.see(/backlinks +\d+/, 5000);
-  return Number(/backlinks +(\d+)/.exec(s.text())![1]);
+  await s.see(whole(), SLOW);
+  return Number(whole().exec(s.text())![1]);
 }
 
 /** Run with this check's folders as slipbox's (its state, its cache, its home): what `setup` writes there, it reads. */
@@ -696,7 +700,7 @@ export const PEEK_BACKLINKS: Check[] = [
       // here, its index behind its walk — nothing to parse, a note gone.
       s.write("~/notes/by-name.md", "# By name\n\nSee [[kestrel:Architecture]].\n");
       // No key from here: the thread's catch-up lays the screen out again.
-      await s.until(() => /backlinks +0\b/.test(s.text()), SLOW, "the count without the note gone");
+      await s.until(() => whole(0).test(s.text()), SLOW, "the count without the note gone");
       s.expect(!readFileSync(index, "utf8").includes("docs/to-notes.md"), "kestrel's index caught up on the thread");
     },
   },
@@ -726,7 +730,7 @@ export const PEEK_BACKLINKS: Check[] = [
       s.expect(existsSync(indexOf(s, lab)), "the nested vault's index built by the peek's thread");
       await s.keys("escape");
       await s.until(
-        () => new RegExp(`backlinks +${before + 1}\\b`).test(s.text()),
+        () => whole(before + 1).test(s.text()),
         SLOW,
         `the count with the nested vault's link: ${before + 1}`,
       );
