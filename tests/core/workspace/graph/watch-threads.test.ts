@@ -129,6 +129,15 @@ async function watching(root: string, dirs: string[], notes: string[], more: Par
   return { w, state, said, known };
 }
 
+/**
+ * The folders' own watches closed, and what they reported already let go of, so what's pending is the test's alone:
+ * macOS's watch can report the tree the test made just before it began (FSEvents), a path pending before the test's.
+ */
+function unwatched(state: ReturnType<typeof watcherState>): void {
+  for (const fw of state.watchers.values()) fw.close();
+  state.pending.clear();
+}
+
 /** Awaited till nothing the watcher asked is out. */
 const quiet = (w: VaultWatcher) => until("the watcher's looks answered", () => !watcherBusy(w));
 
@@ -304,7 +313,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
     const root = tree({ "a.md": "# A\n" });
     const { w, state, said } = await watching(root, [""], ["a.md"]);
     try {
-      for (const fw of state.watchers.values()) fw.close(); // what's pending, the test's alone
+      unwatched(state);
       const first = Array.from({ length: SLICE }, (_, i) => `n${i}.md`);
       const rest = [...Array.from({ length: 20 }, (_, i) => `m${i}.md`), "held/y.md"];
       for (const rel of [...first, ...rest]) {
@@ -334,7 +343,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
     let clock = Date.now();
     const { w, state, said } = await watching(root, [""], ["a.md"], { now: () => clock });
     try {
-      for (const fw of state.watchers.values()) fw.close();
+      unwatched(state);
       // Nearest first: `t`, then `t/a` and `t/b`, then `t/a/held`.
       const notes = ["t/n.md", "t/a/n.md", "t/b/n.md", "t/a/held/n.md"];
       for (const rel of notes) {
@@ -457,7 +466,7 @@ describe("the watcher's looks on the disk threads (SD-T3)", () => {
     const root = tree({ "a.md": "# A\n", ".gitignore": "" });
     const { w, state, said } = await watching(root, [""], ["a.md"]);
     try {
-      for (const fw of state.watchers.values()) fw.close();
+      unwatched(state);
       // Judged on a disk thread with the `.gitignore` as it was.
       writeFileSync(join(root, "b.md"), "# B\n");
       state.pending.add("b.md");
