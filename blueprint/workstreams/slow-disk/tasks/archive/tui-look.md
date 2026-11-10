@@ -121,6 +121,14 @@ the maintainer's standing instruction; design.md's sections it delivers say how.
   runner one such read, not made on Linux, held the thread test's thread three times ten seconds, past its timeout.
   So a test of the disk threads alone holds them alone (`held.again()`), and the hold names each read given up on the
   test's thread with what asked for it (`Hold.gaveUpHere`), which the tests check is empty.
+- On macOS's runner again, the activity file's test, its first look held, said the look never reached `held` thirty
+  seconds in, its wait allowing ten: the test's thread was busy twenty seconds and more before it could look at the
+  clock. That test's first disk thread starts as its look is asked, after the wait's clock began; a start made slow on
+  either thread fails it the same way, here. So nothing a test awaits counts against a clock of its own: a thread
+  waiting in `held` is awaited while what asked for it is out, and failed once that has answered instead; a test that
+  holds one thread while a key's read takes the other starts both first; the look given up on is the disk threads'
+  error, not a 300 ms deadline that counted a thread's restarts. The activity file's test holds the disk threads alone.
+  A wait that never ends is the test's timeout, which names what it awaited and the reads given up on.
 - `CHECKS_FOR`: `look.ts` and `look-jobs.ts` name the slow disk's checks and the look's (`LOOK_CHECKS`: watching,
   configuration, git, source control, symlinks, links); `walk-thread.ts` and `disk-jobs.ts` add the look's;
   `operation.ts` joins git's. The other files this task changes (`watch.ts`, `settings.ts`, `app.ts`, `vault-feed.ts`,

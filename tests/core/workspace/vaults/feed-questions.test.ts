@@ -1,11 +1,22 @@
 // The feed's questions of git's state off the screen's thread (SD-T4): one out at a time, its batches applied once it
 // answers. An answer for a vault left meanwhile is dropped and leaves the question out now alone: no second question,
 // no second flush. The disk thread's answers are handed out here by the test, in the order it says (one hold can't
-// order two answers), never by a clock.
-import { describe, expect, test } from "bun:test";
+// order two answers), never by a clock: what the test awaits it awaits however long it takes, a wait that never ends
+// the test's timeout, which says what it waited for.
+import { afterEach, describe, expect, test } from "bun:test";
 import type { WatchBatch } from "../../../../src/core/workspace/graph/watch.ts";
 import { type GitAsker, type GitSeen, VaultFeed } from "../../../../src/core/workspace/vaults/vault-feed.ts";
-import { HELD_MS } from "../../../fixtures/walk/slow.ts";
+
+/** What the test awaits now (`until`): the test ended first, said, and the wait let go of. */
+let awaiting: { what: string; over: boolean } | null = null;
+
+afterEach(() => {
+  if (!awaiting) return;
+  const { what } = awaiting;
+  awaiting.over = true;
+  awaiting = null;
+  throw new Error(`the test ended waiting for ${what}`);
+});
 
 /** Git's state as a thread answers it: no checkout, its lock as said. */
 const seen = (locked = false): GitSeen => ({
@@ -41,13 +52,16 @@ function feedAsking() {
   return { feed, git, locked, applied };
 }
 
-/** Awaited till `cond` holds, or thrown by HELD_MS. */
+/** Awaited till `cond` holds, however long that takes. Never: the test's timeout ends it, and says `what` it waited
+ *  for; the rest of the test never runs. */
 async function until(cond: () => boolean, what: string): Promise<void> {
-  const end = performance.now() + HELD_MS;
+  const w = { what, over: false };
+  awaiting = w;
   while (!cond()) {
-    if (performance.now() > end) throw new Error(`never: ${what}`);
+    if (w.over) return new Promise<void>(() => {});
     await Bun.sleep(1);
   }
+  if (awaiting === w) awaiting = null;
 }
 
 describe("the feed's questions of git's state, one out at a time (SD-T4)", () => {

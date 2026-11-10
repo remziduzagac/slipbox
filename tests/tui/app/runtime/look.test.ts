@@ -4,7 +4,9 @@
 // what's there then. What waits is told by the hold (`Hold`), never by a clock (#75): a `held` folder holds the disk
 // threads' reads under it, and this thread's too, so a read of it left here holds the test's key until it gives up
 // (`gaveUp`), named with what asked for it (`gaveUpHere`). A test of the disk threads alone holds them alone: a read
-// here, whoever's, isn't what it's about.
+// here, whoever's, isn't what it's about. Nor is anything a test awaits counted against a clock of its own — a thread
+// waiting in `held`, the look answered, what git or the feed leaves: a thread's start, slow on a busy machine, is never
+// taken for an answer that didn't come. A wait that never ends is the test's timeout, which says what it waited for.
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import {
   mkdirSync,
@@ -25,7 +27,7 @@ import { linkKey } from "../../../../src/core/workspace/vaults/symlinks.ts";
 import { locateVault } from "../../../../src/core/workspace/vaults/vault.ts";
 import { diskThreads, setWalkWorker } from "../../../../src/core/workspace/walk/walk-thread.ts";
 import { LOOK_AGAIN_MS, type Look } from "../../../../src/tui/app/runtime/look.ts";
-import { HELD_MS, Hold, heldReads } from "../../../fixtures/walk/slow.ts";
+import { Hold, heldReads } from "../../../fixtures/walk/slow.ts";
 import { answerSwitch, type Harness, harness, makeSandbox, statusRow, whereNow } from "../../../tui-harness.ts";
 
 const sandbox = makeSandbox();
@@ -34,9 +36,12 @@ const sandbox = makeSandbox();
 let hold: Hold | null = null;
 /** slipbox's state folder as the test found it, when it moved it (`stateHeld`). */
 let stateWas: { value: string | undefined } | null = null;
+/** What the test awaits now (`until`): the test ended first, said, and the wait let go of. */
+let awaiting: { what: string; over: boolean } | null = null;
 
 afterEach(() => {
   setReadWait(null);
+  const gaveUp = hold && { gaveUp: hold.gaveUp, here: hold.gaveUpHere };
   hold?.release();
   hold = null;
   setWalkWorker(null);
@@ -44,6 +49,12 @@ afterEach(() => {
     if (stateWas.value === undefined) delete process.env.XDG_STATE_HOME;
     else process.env.XDG_STATE_HOME = stateWas.value;
     stateWas = null;
+  }
+  if (awaiting) {
+    const { what } = awaiting;
+    awaiting.over = true;
+    awaiting = null;
+    throw new Error(`the test ended waiting for ${what}; given up on: ${JSON.stringify(gaveUp)}`);
   }
 });
 
@@ -53,9 +64,9 @@ function stateHeld(): void {
   process.env.XDG_STATE_HOME = join(folder("look-state"), "held");
 }
 
-/** The disk threads' reads under a `held` folder held by a hold of the test's (`deadline`: each look's, short), let go
- *  of to start with: what the App reads as it starts is its start's. */
-function holding(deadline?: number): Hold {
+/** The disk threads' reads under a `held` folder held by a hold of the test's, let go of to start with: what the App
+ *  reads as it starts is its start's. */
+function holding(): Hold {
   const h = new Hold();
   hold = h;
   const worker = () => {
@@ -63,9 +74,16 @@ function holding(deadline?: number): Hold {
     w.postMessage({ holdReads: true });
     return w;
   };
-  setWalkWorker(worker, deadline === undefined ? undefined : { step: deadline, whole: deadline });
+  setWalkWorker(worker);
   h.release();
   return h;
+}
+
+/** Both disk threads started, as a running TUI's are: a test that holds one while a key's read takes the other never
+ *  counts the other's start in the hold's wait. */
+async function threadsStarted(): Promise<void> {
+  const free = folder("look-start");
+  await Promise.all([diskThreads().stat([free], "key"), diskThreads().stat([free], "key")]);
 }
 
 /** Held from now on: the disk threads' reads under `held`, and this thread's. */
@@ -79,14 +97,18 @@ function noneGaveUp(h: Hold): void {
   expect({ gaveUp: h.gaveUp, here: h.gaveUpHere }).toEqual({ gaveUp: 0, here: [] });
 }
 
-/** Awaited till a disk thread waits in a `held` folder; thrown by HELD_MS, the look never reaching it. A test holds
- *  once a look has answered (`looked`), the thread started: a busy machine's slow start isn't counted in it. */
-async function untilHeld(h: Hold): Promise<void> {
-  const end = performance.now() + HELD_MS;
-  while (!h.waiting) {
-    if (performance.now() > end) throw new Error("the look never reached `held`");
-    await Bun.sleep(5);
-  }
+/** Awaited till a disk thread waits in a `held` folder, while what was asked (`asked`: a look, the feed's question) is
+ *  out — its thread's start, however slow, counted against nothing. Answered first, it never waited there: thrown, with
+ *  the reads given up on. */
+async function untilHeld(h: Hold, asked: Promise<unknown>): Promise<void> {
+  let answered = false;
+  const over = () => {
+    answered = true;
+  };
+  asked.then(over, over);
+  await until(() => h.waiting > 0 || answered, "a disk thread waiting in `held`");
+  if (!h.waiting)
+    throw new Error(`answered, never waiting in \`held\`: ${JSON.stringify({ gaveUp: h.gaveUp, here: h.gaveUpHere })}`);
 }
 
 /** A key handled and its frame drawn while the look is out: the leader's keys shown, and closed. The frame it drew. (Not
@@ -165,14 +187,16 @@ function openScratch(h: Harness): string {
   return scratch;
 }
 
-/** Awaited till `cond` holds — what another thread, git or the feed does, told by what it leaves — or thrown by
- *  HELD_MS. */
+/** Awaited till `cond` holds — what another thread, git or the feed does, told by what it leaves — however long that
+ *  takes. Never: the test's timeout ends it, and says `what` it waited for; the rest of the test never runs. */
 async function until(cond: () => boolean, what: string): Promise<void> {
-  const end = performance.now() + HELD_MS;
+  const w = { what, over: false };
+  awaiting = w;
   while (!cond()) {
-    if (performance.now() > end) throw new Error(`never: ${what}`);
+    if (w.over) return new Promise<void>(() => {});
     await Bun.sleep(5);
   }
+  if (awaiting === w) awaiting = null;
 }
 
 /** The messages said so far that start with `start`. */
@@ -195,8 +219,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     const { h, look, buf, scratch } = await scratchOpen();
     await looked(look);
     holdNow(held);
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     rewrite(scratch, "# Scratch\n\nAn agent's line.\n");
     await keyMeanwhile(h);
     expect(buf.source).toBe("# Scratch\n");
@@ -215,8 +238,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     expect(whereNow(h)).toContain("main");
     holdNow(held);
     expect(git(r.root, "checkout", "-q", "-b", "feat").exitCode).toBe(0);
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     await keyMeanwhile(h);
     // What's drawn is what was kept: HEAD isn't read as it's drawn.
     expect(whereNow(h)).toContain("main");
@@ -230,8 +252,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     writeFileSync(join(r.gitDir, "rebase-merge", "head-name"), "refs/heads/feat\n");
     writeFileSync(join(r.gitDir, "rebase-merge", "msgnum"), "1\n");
     writeFileSync(join(r.gitDir, "rebase-merge", "end"), "2\n");
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     await keyMeanwhile(h);
     // The top bar's branch as drawn, whatever room the vault's path leaves it.
     expect(whereNow(h)).not.toContain("rebasing");
@@ -266,8 +287,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     h.app.following.looking.delete(linkKey(link));
     holdNow(held);
     rewrite(join(out, "far.md"), "# Far\n\nChanged out there.\n");
-    look.request(true);
-    await untilHeld(held);
+    await untilHeld(held, look.request(true));
     await keyMeanwhile(h);
     held.release();
     await look.settled();
@@ -286,8 +306,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     await looked(look);
     holdNow(held);
     rewrite(file, "[ui]\nline_numbers = true\n");
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     await keyMeanwhile(h);
     expect(h.app.ui.line_numbers).toBe(false);
     held.release();
@@ -355,19 +374,18 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     holdNow(held);
     writeFileSync(join(r.gitDir, "index.lock"), "");
     writeFileSync(join(r.root, "new.md"), "# New\n");
+    const asked = spyOn(diskThreads(), "look");
     h.app.feed.receive({ changes: [{ rel: "new.md", kind: "created", isNote: true }], rescan: false });
-    await untilHeld(held);
+    expect(asked).toHaveBeenCalledTimes(1);
+    await untilHeld(held, asked.mock.results[0]!.value as Promise<unknown>);
     await keyMeanwhile(h);
     expect(h.app.graph.notes.has("new.md")).toBe(false);
     held.release();
     // Git's state answered, the lock still there: held until it goes.
-    const end = performance.now() + HELD_MS;
-    while (!h.app.feed.seen?.locked && performance.now() < end) await Bun.sleep(5);
-    expect(h.app.feed.seen?.locked).toBe(true);
+    await until(() => h.app.feed.seen?.locked === true, "git's state answered, its lock seen");
     expect(h.app.graph.notes.has("new.md")).toBe(false);
     rmSync(join(r.gitDir, "index.lock"));
-    while (!h.app.graph.notes.has("new.md") && performance.now() < end) await Bun.sleep(5);
-    expect(h.app.graph.notes.has("new.md")).toBe(true);
+    await until(() => h.app.graph.notes.has("new.md"), "the batch applied, the lock gone");
     noneGaveUp(held);
   });
 });
@@ -384,8 +402,7 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
     await looked(look);
     holdNow(held);
     expect(git(r.root, "checkout", "-q", "-b", "feat").exitCode).toBe(0);
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     // The look held on its thread; the switch's own reads of the vault left (SD-T9's) go here at once.
     setReadWait(null);
     h.app.vaults.switchVault(locateVault({ root: other }), null);
@@ -404,8 +421,7 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
     const { h, look, buf, scratch } = await scratchOpen();
     await looked(look);
     holdNow(held);
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     rewrite(scratch, "# Scratch\n\nAn agent's line.\n");
     // Gone from the open buffers, as a rename leaves the one it replaces.
     h.app.buffers.delete(buf.key);
@@ -418,12 +434,17 @@ describe("what a look finds, taken against what's there when it answers (SD-D5)"
 
 describe("a look given up on (SD-D6)", () => {
   test("said once; nothing asked for a minute, then asked again; said no more until one answers", async () => {
-    const held = holding(300);
+    holding();
     let now = 1_000_000;
     const { h, look } = await scratchOpen({ now: () => now });
+    await looked(look);
+    // Each look given up on as the disk threads give up on one, past its deadline — a deadline of its own here would
+    // count a thread's start, restarted once it's given up on, as the disk not answering.
     const asked = spyOn(diskThreads(), "look");
+    const givesUp = () =>
+      asked.mockRejectedValueOnce(new WorkerRequestError("worker request deadline exceeded", "deadline"));
     const said = () => h.app.messages.filter((m) => m.text.startsWith("disk not answering")).length;
-    held.again();
+    givesUp();
     look.tick();
     await look.settled();
     expect([asked.mock.calls.length, said()]).toEqual([1, 1]);
@@ -437,20 +458,20 @@ describe("a look given up on (SD-D6)", () => {
     expect(asked.mock.calls.length).toBe(1);
     // A minute on: asked again, given up on again, not said again.
     now += 1;
+    givesUp();
     look.tick();
     await look.settled();
     expect([asked.mock.calls.length, said()]).toEqual([2, 1]);
     // Answered: the next given up on is said again.
-    held.release();
     now += LOOK_AGAIN_MS;
     look.tick();
     await look.settled();
-    expect(asked.mock.calls.length).toBeGreaterThan(2);
-    held.again();
+    expect([asked.mock.calls.length, look.notAnswering]).toEqual([3, false]);
+    givesUp();
     now += 1000;
     look.tick();
     await look.settled();
-    expect(said()).toBe(2);
+    expect([asked.mock.calls.length, said()]).toEqual([4, 2]);
   });
 
   test("nothing asked for a minute, however it's asked for — a look wanted, a build's look of every file, one asked for while the last was out, the feed's question — and what was wanted asked once it's over", async () => {
@@ -555,8 +576,7 @@ describe("git's state taken in the order it was asked, whatever order the answer
     // The top bar's branch as drawn, whatever room the vault's path leaves it.
     expect(whereNow(h)).toContain("main rebasing 1/2");
     holdNow(held);
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     // The rebase aborted, and the key that did it reads what's under way at once.
     rmSync(join(r.gitDir, "rebase-merge"), { recursive: true });
     expect(operationAgain(h.app, h.app.git.checkout!)).toBeNull();
@@ -585,7 +605,7 @@ describe("a slow disk under a key that runs git", () => {
     holdNow(held);
     await h.keys(..."feat".split(""), "enter");
     await until(() => checked.mock.calls.length > 0, "the switch done by git");
-    await untilHeld(held);
+    await untilHeld(held, checked.mock.results[0]!.value as Promise<void>);
     await keyMeanwhile(h);
     expect(order).toEqual([]);
     held.release();
@@ -604,11 +624,11 @@ describe("what a look holds and stamps", () => {
     const look = offThread(h);
     openScratch(h);
     await looked(look);
+    await threadsStarted();
     // The disk threads alone held: what this test asks is of them, and a read of a `held` folder here — another
     // feature's — would hold its key too.
     held.again();
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     const free = folder("look-free");
     const [s] = await diskThreads().stat([free], "key");
     expect([held.letGo, s && "kind" in s ? s.kind : s]).toEqual([false, "dir"]);
@@ -624,10 +644,11 @@ describe("what a look holds and stamps", () => {
     await looked(look);
     const slow = join(folder("look-watcher"), "held");
     mkdirSync(slow);
+    await threadsStarted();
     held.again();
     // The watcher's look, its stat held.
     const watcher = diskThreads().look({ stat: { paths: [slow] }, background: true });
-    await untilHeld(held);
+    await untilHeld(held, watcher);
     let answered = false;
     const wanted = look.request().then(() => {
       answered = true;
@@ -670,10 +691,12 @@ describe("what a look holds and stamps", () => {
     writeFileSync(activityFile(), "");
     const h = await harness({ now: () => now, config: (c) => (c.index.idle_seconds = 1) });
     const look = offThread(h);
-    holdNow(held);
+    // The disk threads alone held, as the look's reads are theirs. Whether someone may be working is answered here, and
+    // the activity file statted here would say nobody is (the CLI's activity file's test holds this thread for it); a
+    // read of a `held` folder here, whoever's, would hold this thread a while, not the look.
+    held.again();
     h.app.lastInputAt = 0;
-    look.request();
-    await untilHeld(held);
+    await untilHeld(held, look.request());
     expect(h.app.watch.nobodyWorking(now)).toBe(false);
     held.release();
     await look.settled();
