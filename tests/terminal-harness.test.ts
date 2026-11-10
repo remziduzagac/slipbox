@@ -740,6 +740,21 @@ frame a 2
     }
   });
 
+  test("no keys sent, none waited for: `keys()` before slipbox has handled any returns at once", async () => {
+    const { s, done } = faked(
+      String.raw`printf 'frame a 1\n' >> "$T"; printf 'listening\033]${FRAME_SHOWN};a;1\007'; exec sleep 30`,
+    );
+    try {
+      await s.start();
+      await until(() => s.screen()[0] === "listening", "the program to listen");
+      const sent = performance.now();
+      await s.keys();
+      expect(performance.now() - sent).toBeLessThan(WAIT / 2);
+    } finally {
+      done();
+    }
+  });
+
   test("a restart in place — the same process, a slipbox numbering its frames from 1 again — its frames waited for as its own", async () => {
     // The first slipbox has written 5 frames; the key it handles last restarts it in place (exec), and the next
     // slipbox's first frame shows the key.

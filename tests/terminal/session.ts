@@ -324,9 +324,11 @@ export class Session {
    * Wait until slipbox has handled `n` more keys than `before`, written a frame painted after the last of them, and
    * this terminal has read it — slipbox's mark after it (trace.ts) — or WAIT has gone by, or it has exited. On a loaded
    * machine slipbox reads keys late, draws late, and the terminal reads what it wrote later still: a frame written
-   * isn't on the screen yet, and what a check reads next must show the keys.
+   * isn't on the screen yet, and what a check reads next must show the keys. No keys sent (`keys()`, `type("")`): none
+   * to wait for.
    */
   private async taken(before: number, n: number): Promise<void> {
+    if (n === 0) return;
     const shown = () => {
       let keys = 0;
       let key: Traced | null = null;
