@@ -122,20 +122,32 @@ runs only once it passed, whatever the event (D273). Jobs call package.json scri
   whether the macOS jobs run (`macos`, D273): always, but for a pull request that changes no file of what differs on
   macOS (below) and has no `macos` label, which it reads from the event's file as data; a diff or labels it can't read
   run them.
-- **`test`**, on `ubuntu-24.04` for every event: the typecheck, boundary, supply chain's gates and reached unit tests
-  (`bun run test:changed`; everything in the full run). **`test-macos`**, `test (macos-15)` (arm64), the same steps
-  once `test` passed, when `changes` says `macos` (D273). On macOS SQLite is Apple's; its FTS5 and ranking run when a
-  change reaches them and in the full run (`tests/core/`, `tests/cli/`; `14.13`).
+- **`test`**, on `ubuntu-24.04` for every event, in three parts, a runner each (`test (ubuntu-24.04, 1/3)` to `3/3`,
+  D275): the typecheck, boundary, supply chain's gates and the part's share of the reached unit tests (`bun run
+  test:changed`; of every one in the full run). **`test-macos`**, `test (macos-15)` (arm64), the same steps, whole,
+  once every part passed, when `changes` says `macos` (D273). On macOS SQLite is Apple's; its FTS5 and ranking run when
+  a change reaches them and in the full run (`tests/core/`, `tests/cli/`; `14.13`).
 - **`terminal`**, skipped entirely for pull requests. Pushes, merge groups and full runs keep `ubuntu-24.04` and
-  `ubuntu-24.04-arm` in it, and `macos-15` in **`terminal-macos`**, `terminal (macos-15)`, once both passed (D273):
-  the terminal checks a change's files reach (`bun run test:terminal:changed`; every one in the full run, TT-D6). A
-  test holds each macOS job to its Linux job's steps, and no other job runs on macOS. No job runs on an Intel Mac, for
-  which nothing is built after 0.3.0 (D238); a test holds every workflow to it.
+  `ubuntu-24.04-arm` in it, each in three parts (D275), and `macos-15` in **`terminal-macos`**, `terminal
+  (macos-15)`, whole, once every part passed on both (D273): the terminal checks a change's files reach (`bun run
+  test:terminal:changed`; every one in the full run, TT-D6). A test holds each macOS job to its Linux job's steps but
+  the part, and no other job runs on macOS. No job runs on an Intel Mac, for which nothing is built after 0.3.0
+  (D238); a test holds every workflow to it.
+- **The parts** (D275, `scripts/ci-shard.ts`): the matrix's `shard` (`1/3`…), handed to the scripts as `SCOPE_SHARD`.
+  `test` splits the tests it would run by test file, or, in a run of everything, every test file under `tests/` (a
+  test holds every file `bun test` would find to be there); `terminal` splits the checks its filters chose by check
+  file (the runner's `--shard i/n`), so a feature's checks, and the release builds the checks of upgrading share, stay
+  on one runner. The heaviest first, each into the part with the least so far, the lowest on a tie, files of the same
+  weight in their paths' order: the same files make the same parts. A test file weighs its seconds on a runner if a run
+  measured it slow (`SLOW_TESTS`, eight seconds or more; a test holds each name to a file there is), else one; a check
+  file, its checks, one run alone counting a runner's four cores. A part with nothing to run passes at once. Tests
+  hold every file and every check, of the whole suite and of a change's scope, to exactly one part.
 - **`site`**, on `ubuntu-24.04` for every event: the docs' site built (`bun run site`), every link within it landing
   (DS). Lint separately checks Markdown, spelling and links between files on every PR.
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
   each passed or was skipped. A job skipped by its `if:` counts as passed — a macOS job a pull request doesn't need, or
-  one whose Linux job failed, which fails `ci` itself; one that failed, was cancelled or never started doesn't. A test
+  one whose Linux job failed, which fails `ci` itself; one that failed, was cancelled or never started doesn't. A job
+  in parts is one result to it, GitHub's for them all, a success only when every part passed (D275). A test
   holds it to waiting for every job but `status`, so a job added can't be left out of the required check. Run by hand,
   its name is `full` (D251): `dev`'s and `test`'s rulesets require `ci`, `main`'s requires `full`, and a release
   refuses a tag whose commit didn't pass it.

@@ -583,3 +583,12 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
 - The maintainer settled that point in its comment: only `space d`'s label. The pull request chose the rest: the
   palette's key goes, the keys keep their letters, and the old ids are kept on each command (`formerly`). Recorded
   as D274.
+
+## The Linux jobs in parts (2026-11-10)
+
+- Issue #65's item 1 asked for the Linux `test` and `terminal` jobs in two or three parts, by test file and by check
+  area, so a scoped pull request's checks take about five minutes there; macOS one job each.
+- The job logs of the day's runs gave each test file's time and each check's. By area the terminal checks couldn't be
+  split evenly (five areas, one two fifths of the time), so they're split by check file, the area's own files; and the
+  parts are weighed by the slowest test files' recorded seconds, which by count alone landed together. Three parts, as
+  two would have left the tests five to six minutes. Recorded as D275 (CIW-T5).

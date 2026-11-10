@@ -733,8 +733,8 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
 
 - [x] **[CIW-T8: macOS starts after Linux passes](tasks/archive/ciw-macos-after-linux.md)**: done (D273).
 - [x] **[CIW-T7: macOS kept for what needs it](tasks/archive/ciw-macos-for-what-needs-it.md)**: done (D273).
+- [x] **[CIW-T5: The Linux jobs split across runners](tasks/archive/ciw-shard-linux.md)**: done (D275).
 - [ ] **[CIW-T6: More of the app's files mapped in `CHECKS_FOR`](tasks/ciw-map-more-files.md)**.
-- [ ] **[CIW-T5: The Linux jobs split across runners](tasks/ciw-shard-linux.md)**.
 - [ ] **[CIW-T9: The slowest tests found and kept in check](tasks/ciw-slowest-tests.md)**.
 
 ## What LazyVim and Helix users reach for

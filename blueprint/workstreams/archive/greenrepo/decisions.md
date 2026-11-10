@@ -95,6 +95,9 @@ accepted deviation until then, with a review date.
 
 ## GR-D9: Hardened CI, on Linux and macOS (2026-10-12)
 
+> **Amended by D275 (2026-11-10):** Linux's tests run in three parts by test file, and its terminal checks in three
+> parts by check file on each runner, a runner each; macOS's jobs stay whole; `ci` fails when any part does.
+
 > **Amended by D273 (2026-11-09):** a pull request runs macOS only when it changes what differs there or carries the
 > `macos` label, after Linux passed; every push and the full run still run it.
 

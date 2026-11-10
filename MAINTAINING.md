@@ -54,6 +54,13 @@ dependency gates and reached unit tests on Ubuntu. Only the terminal job is skip
 Docs-only pull requests still skip the unit job (D230). No ruleset changes are needed: `ci` accepts successful or
 skipped jobs. Lint checks Markdown, spelling and links between files on every PR.
 
+On Linux the unit tests run in three parts, a runner each, `test (ubuntu-24.04, 1/3)` to `3/3`, by test file; a push's
+terminal checks too, by check file, three parts on each Linux runner (D275, `scripts/ci-shard.ts`). Every test and
+check a run takes is in exactly one part, so a part's log holds only its share: a failure is in the part that ran it.
+`ci` fails when any part failed or was cancelled; re-running a failed part alone re-runs only its share. To run a part
+here: `SCOPE_SHARD=2/3 bun run test:changed`, or `bun run test:terminal --shard 2/3 [filters…]`. macOS runs each
+whole. A test file found slow (eight seconds or more on a runner) belongs in `SLOW_TESTS`, so the parts stay even.
+
 macOS runs after Linux (D273): each macOS job, `test (macos-15)` and `terminal (macos-15)`, waits for its Linux job and
 runs only once it passed. A pull request runs `test (macos-15)` only when it changes what differs on macOS (`MACOS` in
 `scripts/ci-scope.ts`: the terminal's input and output, spawning processes, SQLite, the file system's paths, times and
@@ -105,9 +112,9 @@ fast-forward: nothing is committed to them directly, and their rulesets forbid d
   ```
 
 - **The full run**, to know where things stand: `ci` run by hand on `test` runs everything — every unit test on Linux
-  and macOS, every terminal check on all three runners — and reports `full` on the commit: as a check, and once it
-  passed, as a commit status, the one `main`'s ruleset sees (D257). Run it whenever you want, and always before a
-  release; a failure is fixed through `dev` as above.
+  (in its three parts) and macOS, every terminal check on all three systems (Linux's in parts) — and reports `full` on
+  the commit: as a check, and once it passed, as a commit status, the one `main`'s ruleset sees (D257). Run it
+  whenever you want, and always before a release; a failure is fixed through `dev` as above.
 
   ```bash
   gh workflow run ci --ref test

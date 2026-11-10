@@ -11,6 +11,8 @@ name: ci
 # `main`'s ruleset sees (D257).
 # macOS after Linux (D273): each macOS job waits for its Linux job and runs only once that passed. A pull request runs
 # them only when it changes what differs on macOS, or carries the `macos` label; every other run, whatever changed.
+# Linux's `test` and `terminal` each run in three parts, a runner each, by test file and by check file (D275,
+# scripts/ci-shard.ts); macOS's whole, as a part would only wait longer for the account's five macOS runners.
 # One job, `ci` (`full` by hand), is the required check: it always runs and fails unless every job it waits for passed
 # or was skipped. Each job calls package.json's scripts, never commands of its own.
 on:
@@ -112,7 +114,9 @@ jobs:
           GH_TOKEN: ${{ github.event_name == 'push' && github.token || '' }}
         run: bun run ci:scope
 
-  # On Linux; on macOS, `test-macos`, once this passed (D273).
+  # On Linux, in three parts by test file (D275): `test (ubuntu-24.04, 2/3)` runs the second third of the tests a change
+  # reaches, or of every one, each part about a third of the time; each part runs the typecheck and the gates too, a few
+  # seconds. On macOS, `test-macos`, whole, once every part passed (D273).
   test:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
@@ -120,8 +124,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
+        shard: [1/3, 2/3, 3/3]
     runs-on: ${{ matrix.os }}
-    # The suite takes about ten minutes on a 10-core machine; a runner has 3 or 4.
+    # The suite takes about ten minutes on a runner, a part about four.
     timeout-minutes: 45
     permissions:
       contents: read # to check out the code
@@ -146,15 +151,17 @@ jobs:
       - name: dependencies
         run: bun run check:deps
       # A pull request's or a push's: the tests its files reach (D239), a push's over the range `changes` worked out
-      # (CIW-D1); a run by hand's, every one.
+      # (CIW-D1); a run by hand's, every one. This part's of them (D275).
       - name: tests
         env:
           SCOPE_RANGE: ${{ needs.changes.outputs.range }}
+          SCOPE_SHARD: ${{ matrix.shard }}
         run: bun run test:changed
 
   # D273: `test` on macOS (arm64, its SQLite Apple's: 14.13), once it passed on Linux: a change that fails there holds
   # none of the five macOS runners the account has at once. A pull request runs it only when `changes` says `macos`;
-  # every other run, always. Named as the matrix named it; its steps are `test`'s, which a test holds them to.
+  # every other run, always. Named as the matrix named it; its steps are `test`'s but the part, which a test holds them
+  # to: it runs every test of its scope.
   test-macos:
     name: test (macos-15)
     needs: [changes, test]
@@ -185,8 +192,9 @@ jobs:
         run: bun run test:changed
 
   # TT-D6: the terminal tests — slipbox driven by keys in a headless terminal, read off the screen — on each system
-  # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log. On Linux;
-  # on macOS, `terminal-macos`, once this passed (D273).
+  # slipbox ships for, each runner running a check per core. A failing check's screen is in the job's log. On Linux,
+  # in three parts on each runner, by check file (D275); on macOS, `terminal-macos`, whole, once every part passed
+  # (D273).
   terminal:
     needs: changes
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.checks == 'true' }}
@@ -194,8 +202,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
+        shard: [1/3, 2/3, 3/3]
     runs-on: ${{ matrix.os }}
-    # About five minutes on a 10-core machine, a check per core; a runner has 3 or 4.
+    # Every check takes about fifteen minutes on a runner, a check per core, a part about six.
     timeout-minutes: 45
     permissions:
       contents: read # to check out the code
@@ -211,16 +220,17 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: terminal tests
         # A pull request's or a push's: the checks its files reach (D239), a push's over the range `changes` worked out
-        # (CIW-D1); a run by hand's, every one. A runner is slower than the machine a check was written on: each wait
-        # gets at least 30 s (a wait that passes returns at once).
+        # (CIW-D1); a run by hand's, every one. This part's of them (D275). A runner is slower than the machine a check
+        # was written on: each wait gets at least 30 s (a wait that passes returns at once).
         env:
           SCOPE_RANGE: ${{ needs.changes.outputs.range }}
+          SCOPE_SHARD: ${{ matrix.shard }}
           SLIPBOX_TERMINAL_WAIT: "30000"
         run: bun run test:terminal:changed
 
-  # D273: `terminal` on macOS, once it passed on both Linux runners. Never for a pull request (D266), and only when
-  # `changes` says `macos`, which every other run does. Named as the matrix named it; its steps are `terminal`'s, which a
-  # test holds them to.
+  # D273: `terminal` on macOS, once every part passed on both Linux runners. Never for a pull request (D266), and only
+  # when `changes` says `macos`, which every other run does. Named as the matrix named it; its steps are `terminal`'s
+  # but the part, which a test holds them to.
   terminal-macos:
     name: terminal (macos-15)
     needs: [changes, terminal]
@@ -268,8 +278,10 @@ jobs:
 
   # The required check (GR-D9): one name, whichever jobs ran. A job skipped by its `if:` counts as passed — a macOS job
   # a pull request doesn't need, or one whose Linux job failed, which fails this itself (D273); one that failed, was
-  # cancelled or never started fails this. Run by hand, everything ran: it's `full`, which `main`'s ruleset requires of
-  # a commit before it takes it (D251), as `status` reports it; otherwise `ci`, which `dev`'s and `test`'s require.
+  # cancelled or never started fails this. A job in parts (D275) is one result here, GitHub's for them all: a success
+  # only when every part passed, so a part failed or cancelled fails this. Run by hand, everything ran: it's `full`,
+  # which `main`'s ruleset requires of a commit before it takes it (D251), as `status` reports it; otherwise `ci`, which
+  # `dev`'s and `test`'s require.
   ci:
     name: ${{ github.event_name == 'workflow_dispatch' && 'full' || 'ci' }}
     if: ${{ always() }}

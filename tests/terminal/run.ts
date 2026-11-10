@@ -1,6 +1,7 @@
 // The terminal tests: slipbox in headless terminals of its own (terminal.ts), driven by keys and checked by what the
-// screen shows, many at once (TT-D6). `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [area, check
-// file or name…]`.
+// screen shows, many at once (TT-D6). `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [--shard i/n]
+// [area, check file or name…]`. `--shard i/n`: the `i`th of `n` parts of the checks chosen, whole check files each, as
+// CI's Linux jobs split them across runners (D275, `scripts/ci-shard.ts`).
 //
 // Every check gets a fresh copy of the sample folders and its own config, state, cache and home, so nothing in the
 // repository or your own setup is touched. A run goes to its end: every failure is reported there, with its screen,
@@ -9,6 +10,7 @@
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseShard, shardChecks } from "../../scripts/ci-shard.ts";
 import { COMMAND_SPECS } from "../../src/core/application/commands/catalog.ts";
 import { type Check, notRun } from "./check.ts";
 import { CHECK_FILES, CHECKS } from "./checks/index.ts";
@@ -29,14 +31,19 @@ const keep = bool("--keep");
 /** Each chosen check this many times, all in the same pool: a flaky one shows. */
 const repeat = Math.max(1, Number(flag("--repeat") ?? 1));
 const list = bool("--list");
+const shard = args.includes("--shard") ? parseShard(flag("--shard") ?? "") : null;
 const filters = args.map((f) => f.toLowerCase());
 
 /** A filter names an area, a check file (`checks/<name>.ts`), or a piece of a check's name. */
-const chosen = CHECKS.filter(
+const filtered = CHECKS.filter(
   (c) =>
     !filters.length ||
     filters.some((f) => c.area === f || CHECK_FILES[f]?.includes(c) || c.name.toLowerCase().includes(f)),
 );
+/** Of those, a part's (D275): its check files' checks. */
+const chosen = shard ? shardChecks(filtered, CHECK_FILES, shard) : filtered;
+if (shard && !list)
+  console.log(`part ${shard.index}/${shard.count}: ${chosen.length} of the ${filtered.length} checks chosen`);
 
 if (list) {
   for (const c of chosen) {
