@@ -27,9 +27,15 @@ import type { Anchor } from "../../../core/workspace/session/position.ts";
 import type { ExplorerItem } from "../explorer/contracts.ts";
 import type { Explorer } from "../explorer/explorer.ts";
 import type { Renaming } from "../explorer/renaming.ts";
-import type { Overlays } from "../../shell/overlays/overlays.ts";
-import type { ListItem } from "../../shell/overlays/list-types.ts";
+import type { VaultEntry } from "../../../core/workspace/vaults/vault-list.ts";
+import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
+import { type Overlays, refilter, selectable } from "../../shell/overlays/overlays.ts";
+import type { ListItem, ListOverlay } from "../../shell/overlays/list-types.ts";
 import { vaultChoices } from "./vault-list.ts";
+
+/** The Vaults window's title; while it has nothing listed yet, read on a disk thread (SD-T9). */
+const VAULTS = "Vaults — enter goes into one; / filters";
+const VAULTS_READING = "Vaults — reading the list…";
 
 /** Live workspace access and only the interactions these prompts use. */
 interface VaultPromptContext {
@@ -37,6 +43,8 @@ interface VaultPromptContext {
   readonly graph: Graph;
   readonly view: { readonly buf: { readonly abs: string } } | null;
   readonly overlay: { kind: string; text?: string } | null;
+  readonly reads: { readonly offThread: boolean };
+  readonly host: { requestRender(): void };
   readonly explorer: Pick<Explorer, "folderTarget" | "focused" | "item">;
   readonly overlays: Pick<Overlays, "prompt" | "openList">;
   readonly renaming: Pick<Renaming, "preview">;
@@ -229,11 +237,19 @@ export class VaultPrompts {
     );
   }
 
-  /** The named folders (`:folders`, `space v v`): enter goes into one (17.10). */
+  /** The vaults the window last listed (SD-T9): what it opens with, its list read again meanwhile. */
+  private known: VaultEntry[] | null = null;
+
+  /**
+   * The named folders (`:folders`, `space v v`): enter goes into one (17.10). Off the screen's thread (SD-T9), drawn
+   * from the list it last read — none yet, said — the list read on a disk thread and put in its place once it answers,
+   * while the window is the one open (SD-D5), the row selected kept.
+   */
   openFolders(): void {
-    const choices = vaultChoices();
+    const off = this.app.reads.offThread;
+    const choices = off ? (this.known ?? []) : vaultChoices();
     this.app.overlays.openList({
-      title: "Vaults — enter goes into one; / filters",
+      title: off && !this.known ? VAULTS_READING : VAULTS,
       slashFilter: true,
       items: choices,
       keepGroups: true,
@@ -242,6 +258,38 @@ export class VaultPrompts {
         this.switchVault(vaultAt(choice.root), null, undefined, { folder: choice.folder });
       },
     });
+    if (off) this.readVaults(this.app.overlay);
+  }
+
+  /** The vaults' list read on a disk thread, kept, and put in the window `o` while it's the one open. */
+  private readVaults(o: VaultPromptContext["overlay"]): void {
+    const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    diskThreads()
+      .own({ op: "vaults" }, "key")
+      .then(
+        (a) => {
+          if (!("vaults" in a)) return;
+          this.known = a.vaults;
+          if (this.app.overlay !== o || o?.kind !== "list") return;
+          const list = o as unknown as ListOverlay;
+          const was = list.filtered[list.selected]?.item.data;
+          list.title = VAULTS;
+          list.items = a.vaults;
+          refilter(list);
+          list.selected = selectable(
+            list,
+            Math.max(
+              0,
+              list.filtered.findIndex((f) => same(f.item.data, was)),
+            ),
+            1,
+          );
+          this.app.host.requestRender();
+        },
+        (err: Error) => {
+          if (this.app.overlay === o) this.app.message("warn", `the vaults' list couldn't be read: ${err.message}`);
+        },
+      );
   }
 
   /** Which copy a named folder's links open here (`:folders-default`; `slipbox folders default`). */

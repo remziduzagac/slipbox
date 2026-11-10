@@ -12,7 +12,6 @@ import {
   mkdirSync,
   openSync,
   readdirSync,
-  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -285,9 +284,11 @@ export function decodeText(bytes: Uint8Array): DecodedFile {
   return { text, bom, crlf: text.includes("\r\n"), invalidUtf8 };
 }
 
+/** A JSON file read and parsed, through the seam (SD-T9: a test's hold reaches slipbox's own files); `fallback` when
+ *  it isn't there or isn't JSON. */
 export function readJson<T>(path: string, fallback: T): T {
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as T;
+    return JSON.parse(disk.readFile(path).toString("utf8")) as T;
   } catch {
     return fallback;
   }

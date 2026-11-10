@@ -32,23 +32,65 @@ export function linksFile(): string {
   return join(stateHome(), "links.json");
 }
 
-let cache: { file: string; mtime: number; list: KeptLink[] } | null = null;
+/** The answers as `links.json` held them, and its mtime then (-1: none; NaN: written here since). */
+export interface LinksRead {
+  file: string;
+  mtime: number;
+  list: KeptLink[];
+}
 
-/** The answers kept, read again when the file changed (another slipbox answered). */
+let cache: LinksRead | null = null;
+
+/** The answers' file the TUI's look stats each second (SD-T9): while it does, the answers kept are never statted as
+ *  they're asked — read again once the look finds the file changed, on a disk thread (`tookLinks`). */
+let looked: string | null = null;
+
+/** The answers kept, read again when the file changed (another slipbox answered): statted as they're asked, unless the
+ *  look stats the file (`looked`). */
 function kept(): KeptLink[] {
   const file = linksFile();
+  if (looked === file && cache?.file === file) return cache.list;
   let mtime = -1;
   try {
-    mtime = statSync(file).mtimeMs;
+    mtime = disk.stat(file).mtimeMs;
   } catch {}
   if (cache?.file === file && cache.mtime === mtime) return cache.list;
+  cache = { file, mtime, list: answersIn(file) };
+  return cache.list;
+}
+
+/** The answers `file` holds, anything malformed dropped. */
+function answersIn(file: string): KeptLink[] {
   const raw = readJson<{ links?: unknown } | null>(file, null);
-  const list = (Array.isArray(raw?.links) ? (raw.links as Partial<KeptLink>[]) : []).filter(
+  return (Array.isArray(raw?.links) ? (raw.links as Partial<KeptLink>[]) : []).filter(
     (e): e is KeptLink =>
       !!e && typeof e.link === "string" && typeof e.target === "string" && (e.answer === "follow" || e.answer === "no"),
   );
-  cache = { file, mtime, list };
-  return list;
+}
+
+/** The answers' file read as a disk thread reads it for the look: stamped, then read. */
+export function readLinks(): LinksRead {
+  const file = linksFile();
+  let mtime = -1;
+  try {
+    mtime = disk.stat(file).mtimeMs;
+  } catch {}
+  return { file, mtime, list: answersIn(file) };
+}
+
+/** The answers' file and its mtime as kept (NaN: not known) — what the TUI's look compares with its stat (SD-T9). From
+ *  then on, the file's stamp is the look's to keep; `null`, its own again (a test). */
+export function lookAfterLinks(on = true): { file: string; mtime: number } {
+  const file = linksFile();
+  looked = on ? file : null;
+  return { file, mtime: cache?.file === file ? cache.mtime : Number.NaN };
+}
+
+/** The answers as a disk thread read them for the look, kept — unless they were kept anew here after the look compared
+ *  the stamp `was` (written here meanwhile: SD-D5). */
+export function tookLinks(read: LinksRead, was: number): void {
+  const now = cache?.file === read.file ? cache.mtime : Number.NaN;
+  if (Object.is(now, was)) cache = read;
 }
 
 function real(path: string): string {
@@ -122,11 +164,10 @@ export function setLinkAnswer(link: string, answer: LinkAnswer | null): void {
 /** The answers kept, written: `links.json` in the state folder (VV-D6). */
 function keep(links: KeptLink[]): void {
   ensureDir(stateHome());
-  try {
-    writeJson(linksFile(), { version: 1, links });
-  } finally {
-    cache = null;
-  }
+  cache = null;
+  writeJson(linksFile(), { version: 1, links });
+  // What was written kept, its stamp not known: the look reads it again (SD-T9), anyone else stats it as it's asked.
+  cache = { file: linksFile(), mtime: Number.NaN, list: links };
 }
 
 /** An answer kept (VV-D6), as it's listed: and where the link leads now, the answer holding only while it's `target`. */

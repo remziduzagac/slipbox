@@ -129,10 +129,17 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
     /^src\/tui\/workspace\/explorer\/(?:listings|explorer-disk)\.ts$/,
     ["slow disk", "view", "Elsewhere", "marks", "explorer-marks", "roots", "symlinks", "home", "files", "new-file"],
   ],
+  // slipbox's own folders read on those threads (SD-T9): a vault's workspace as it's gone into, the Vaults window's
+  // list, other vaults' notes for a link's completion.
+  [/^src\/core\/workspace\/walk\/own-jobs\.ts$/, ["slow disk", ...VAULT_CHECKS, "roots", "where", "links"]],
+  [/^src\/tui\/documents\/editing\/completion\/items\.ts$/, ["slow disk", "links"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
-  [/^src\/tui\/workspace\/vaults\/vaults\.ts$/, [...VAULT_CHECKS, "roots", "named folders"]],
-  [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename"]],
+  [
+    /^src\/tui\/workspace\/vaults\/(?:vaults|vault-prompts)\.ts$/,
+    [...VAULT_CHECKS, "roots", "named folders", "slow disk"],
+  ],
+  [/^src\/core\/workspace\/vaults\/symlinks\.ts$/, ["links", "rename", "symlinks", "slow disk"]],
   [
     /^src\/tui\/documents\/navigation\/peek(?:\/(?:contracts|state|paths|presentation|probe|synchronization|opening|history))?\.ts$/,
     ["peek"],

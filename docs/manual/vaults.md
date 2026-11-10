@@ -427,6 +427,11 @@ marked as home's workspaces. `/` filters; `enter` goes into the selected vault o
 The outgoing workspace is saved on disk; its notes, parses and index are released from memory. Returning loads its
 files again. `slipbox vaults` lists known vaults; `slipbox folders` remains the named pointers and their copies.
 
+By default slipbox keeps its state, cache and config under your home folder. On a slow disk, such as a network share
+or a drive that's asleep, they're read away from the screen. Vaults shows the list it read last, then the list as it
+is now; the first time, it says `reading the list…` until the list comes. A vault you go into opens its tabs once its
+workspace is read, and the keys answer meanwhile.
+
 ### A named folder moved
 
 Moving or renaming a named folder on disk needs no link edited. Its pointers name it, and slipbox finds it again.

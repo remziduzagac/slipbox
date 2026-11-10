@@ -140,7 +140,11 @@ export function positionsFile(): string {
 }
 
 function readPositions(file: string): PositionMap {
-  const raw = readJson<unknown>(file, {});
+  return positionsOf(readJson<unknown>(file, {}));
+}
+
+/** Positions as a file holds them, anything malformed dropped. */
+function positionsOf(raw: unknown): PositionMap {
   const out: PositionMap = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
@@ -196,18 +200,32 @@ export function carryPositions(from: string, to: string): void {
 export class PositionStore {
   private data: PositionMap;
 
-  constructor(private readonly place: StatePlace) {
+  /** `kept`: the machine's positions as another root's store just saved them (a vault gone into, SD-T9): none read
+   *  here — the root's own of before taken in once a disk thread has read them (`takeIn`). */
+  constructor(
+    private readonly place: StatePlace,
+    kept?: PositionStore,
+  ) {
+    if (kept) {
+      this.data = { ...kept.data };
+      return;
+    }
     this.data = readPositions(positionsFile());
     // Today's, moved once: the root's own positions.json (before 21.8), by its paths.
     const own = join(stateDir(place), "positions.json");
-    if (existsSync(own)) {
-      const before: PositionMap = {};
-      for (const [k, v] of Object.entries(readPositions(own)))
-        before[isAbsolute(k) ? k : join(place.root, k)] = { ...v, root: place.root };
-      this.data = merged(this.data, before);
-      writePositions(this.data);
-      rmSync(own, { force: true });
-    }
+    if (existsSync(own)) this.takeIn(readJson<unknown>(own, {}));
+  }
+
+  /** The positions the root kept itself before 21.8 (`raw`, as its file held them; null: none), by its paths: merged
+   *  with the machine's, written, and the root's file removed. */
+  takeIn(raw: unknown): void {
+    if (raw === null || raw === undefined) return;
+    const before: PositionMap = {};
+    for (const [k, v] of Object.entries(positionsOf(raw)))
+      before[isAbsolute(k) ? k : join(this.place.root, k)] = { ...v, root: this.place.root };
+    this.data = merged(this.data, before);
+    writePositions(this.data);
+    rmSync(join(stateDir(this.place), "positions.json"), { force: true });
   }
 
   /** The stored key for a buffer's key: a root path, or absolute (a file outside it). */

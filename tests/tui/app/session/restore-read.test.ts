@@ -36,8 +36,10 @@ async function offThread(root = makeVault()): Promise<Harness> {
   return h;
 }
 
-/** Once every tab coming back is in, each read behind the one shown, and what opens after them. */
+/** Once the session is read (SD-T9) and every tab coming back is in, each read behind the one shown, and what opens
+ *  after them. */
 async function settled(h: Harness): Promise<void> {
+  await h.app.session.entering;
   let behind: Promise<void> | null = null;
   while (behind !== h.app.session.behind) {
     behind = h.app.session.behind;

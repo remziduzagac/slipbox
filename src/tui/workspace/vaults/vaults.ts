@@ -14,9 +14,7 @@ import { slipboxOwn } from "../../../core/foundation/platform/paths.ts";
 import {
   type Anchor,
   type CursorAnchor,
-  loadSession,
   PositionStore,
-  recentCommands,
   type SessionTab,
 } from "../../../core/workspace/session/position.ts";
 import { stopBacklinkJobs } from "../../../core/workspace/graph/backlinks-jobs.ts";
@@ -34,7 +32,7 @@ import {
   type VaultLocation,
 } from "../../../core/workspace/vaults/vault.ts";
 import type { App } from "../../app/runtime/app.ts";
-import { uiDefaults, RECENT_MAX, RECENT_NOTES_MAX } from "../../app/runtime/app.ts";
+import { uiDefaults } from "../../app/runtime/app.ts";
 import { type ExplorerItem, listedDown, type TreeRow } from "../explorer/explorer.ts";
 
 /** How a switch goes: `back` along the trail, into home's `folder` by name, `asked` already (a question answered),
@@ -250,11 +248,14 @@ export class Vaults {
     this.visits++;
     this.app.feed.reset();
     const { carriedFrom } = recordLocation(target);
+    // Your config as the look last read it, not read again (SD-T9); the vault's read.
+    const yours = this.app.settings.yoursKept();
     this.app.settings.lastGood.clear();
     const loaded = loadConfig({
       ...configFilesFor(target),
       configFile: this.app.configFile,
       lastGood: this.app.settings.lastGood,
+      ...(yours ? { kept: yours } : {}),
     });
     this.app.config = loaded.config;
     this.app.settings.origins = loaded.origins;
@@ -274,10 +275,12 @@ export class Vaults {
     this.app.graph.reach = this.app.reach;
     // Built as what's asked for is (VV-D2): a folder of home gone into, by name or a file's, and the tabs brought back,
     // their notes there at once, as when slipbox starts there.
-    this.ask(how.folder ?? null, open, this.app.config.ui.restore_session);
+    // Off the screen's thread, the tabs' folders are asked for as they come (`openTabs`): the session isn't read yet.
+    this.ask(how.folder ?? null, open, this.app.config.ui.restore_session && !this.app.reads.offThread);
     if (this.app.live) this.app.loadCodeGrammars();
     for (const e of this.app.graph.errors) this.app.message("warn", e);
-    this.app.positions = new PositionStore(target);
+    // The machine's positions, as the vault left just saved them: none read (SD-T9).
+    this.app.positions = new PositionStore(target, this.app.positions);
     for (const b of this.app.buffers.values()) this.app.languages.servers?.close(b.abs);
     for (const buffer of this.app.buffers.values()) buffer.cancelParse();
     this.app.languages.stopSyntax(); // its code files' passes too: the thread's for the next vault's
@@ -333,33 +336,8 @@ export class Vaults {
     this.app.ui = uiDefaults(this.app.config);
     if (process.env.NO_COLOR) this.app.ui.theme = "mono";
     this.app.settings.uiOverrides = {};
-    const session = loadSession(target);
-    this.app.recentCommands = recentCommands(session, RECENT_MAX);
-    this.app.handoff.remoteServer = session?.remote_server;
-    this.app.history.recentNotes = (session?.recent_notes ?? []).slice(0, RECENT_NOTES_MAX);
-    this.app.session.restoreUiOverrides();
-    if (this.app.explicitTheme) this.app.ui.theme = this.app.explicitTheme;
-    this.app.settings.applyKeys();
-    this.app.settings.applyTheme();
-    this.app.glyphs = this.app.settings.glyphSet(this.app.ui.glyphs);
-    this.app.host.setMouse?.(this.app.ui.mouse);
-    // Read on the disk threads (SD-T5): the default note once none of the tabs could be, as when none was kept.
-    const none = open ? undefined : () => this.app.session.openDefault();
-    const restored = this.app.config.ui.restore_session && this.app.session.restore({ open, none });
-    // The file asked for once the tab shown is back — the keys waiting for both, the rest coming in the background.
-    const coming = restored ? this.app.session.restoring : null;
-    const opened = () => {
-      if (!open) return;
-      const i = this.app.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === open));
-      if (i < 0) return this.app.openInNewTab(open, anchor);
-      this.app.activeTab = i;
-      const t = this.app.tabs[i]!;
-      t.active = t.views.findIndex((x) => x.buf.abs === open);
-      if (anchor) this.app.history.jumpTo(t.views[t.active]!, anchor);
-    };
-    if (coming && open) void this.app.reads.hold(coming.then(opened));
-    else if (open) void opened();
-    else if (!restored) this.app.session.openDefault();
+    // Its session read on a disk thread (SD-T9): its tabs, recents and settings changed here come once it is.
+    this.app.session.enter(open, anchor);
     if (from && !how.back) this.trail.push(from);
     this.app.region = "content";
     if (carriedFrom) {
@@ -369,7 +347,7 @@ export class Vaults {
     this.askDefaultCopy();
     this.app.relayoutAll();
     this.app.session.publishState();
-    this.app.settings.recordStamps();
+    this.app.settings.recordStamps(undefined, yours);
     if (this.app.live) {
       this.app.languages.startServers();
       if (this.app.config.watch.enabled) this.app.watch.startWatcher();

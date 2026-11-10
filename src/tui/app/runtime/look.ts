@@ -14,6 +14,7 @@ import { askGit, keepOperation } from "../../../core/workspace/git/branches/oper
 import { headOf } from "../../../core/workspace/git/git.ts";
 import { activityFile } from "../../../core/workspace/graph/autoindex.ts";
 import { toolFiles, toolSaid } from "../../../core/workspace/links/convention.ts";
+import { lookAfterLinks, tookLinks } from "../../../core/workspace/vaults/symlinks.ts";
 import { isInside } from "../../../core/workspace/vaults/vault.ts";
 import type { GitAsker, GitSeen, Head } from "../../../core/workspace/vaults/vault-feed.ts";
 import type { PathStat } from "../../../core/workspace/walk/io/stamps.ts";
@@ -53,6 +54,8 @@ interface Asked {
   /** The config files statted, as last loaded; the tool's settings' files (none in Elsewhere). */
   config: string[];
   tool: { path: string; folder: boolean }[];
+  /** The answers kept for links followed: their file, and its mtime as kept (SD-T9). */
+  answers: { file: string; mtime: number };
 }
 
 /** A look asked for and not yet taken by one: of every open file (`all`), and what waits for its answer. */
@@ -204,8 +207,8 @@ export class Look {
     }
   }
 
-  /** One look: its stats and git's state, the open files' ways; then, the config's stamps or the tool's moved, those
-   *  read and parsed there. True when something changed. */
+  /** One look: its stats and git's state, the open files' ways; then, the config's stamps, the tool's or the answers'
+   *  kept for links moved, those read and parsed there. True when something changed. */
   private async lookOnce(all: boolean): Promise<boolean> {
     const app = this.app;
     if (app.loc !== this.lastLoc) {
@@ -222,13 +225,15 @@ export class Look {
     let changed = this.taken(a, first, asked) || cleared;
     const stats = first.stats.slice(a.plain.length);
     const config = stats.slice(0, a.config.length);
-    const tool = stats.slice(a.config.length + 1);
+    const answersAt = mtime(stats[a.config.length + 1]);
+    const tool = stats.slice(a.config.length + 2);
     const known = app.settings.stamped;
     const moved = a.config.some((f, k) => mtime(config[k]) !== known.get(f));
     const stamps = tool.map((s, k) => (a.tool[k]?.folder ? there(s) : mtime(s)));
     const toolAt = a.tool.length ? `${a.loc.root}:${stamps.join(":")}` : "";
     const toolMoved = toolAt !== this.toolAt;
-    if (!moved && !toolMoved) return changed;
+    const answersMoved = !Object.is(answersAt, a.answers.mtime);
+    if (!moved && !toolMoved && !answersMoved) return changed;
     const loads = app.settings.loads;
     const jobs: LookJob[] = [];
     if (moved) {
@@ -236,12 +241,14 @@ export class Look {
       jobs.push({ op: "config", loc: place(a.loc), ...configFile, lastGood: [...app.settings.lastGood] });
     }
     if (toolMoved && a.tool.length) jobs.push({ op: "tool", root: a.loc.root });
+    if (answersMoved) jobs.push({ op: "links" });
     const second = jobs.length ? await diskThreads().look({ jobs, background: true }) : { jobs: [] };
     if (!this.current(a)) return changed;
     this.toolAt = toolAt;
     for (const j of second.jobs) {
       if ("config" in j && app.settings.loads === loads) app.settings.reload("file changed", j.config);
       else if ("tool" in j) app.settings.keepTool(a.loc.root, toolSaid(j.tool));
+      else if ("links" in j) tookLinks(j.links, a.answers.mtime);
       changed = true;
     }
     return changed;
@@ -259,7 +266,7 @@ export class Look {
     }
     const config = [...this.app.settings.stamped.keys()];
     const tool = loc.mode === "folder" ? [] : toolFiles(loc.root);
-    return { loc, plain, ways, links: this.app.following.changes, config, tool };
+    return { loc, plain, ways, links: this.app.following.changes, config, tool, answers: lookAfterLinks() };
   }
 
   /** One batch, one request: git's state, the ways, and a stat of every path (the files, the config's, the activity
@@ -272,7 +279,13 @@ export class Look {
       const looking = [...this.app.following.looking];
       jobs.push({ op: "way", place: at, looking, paths: a.ways.map((w) => w.buf.abs) });
     }
-    const paths = [...a.plain.map((p) => p.buf.abs), ...a.config, activityFile(), ...a.tool.map((t) => t.path)];
+    const paths = [
+      ...a.plain.map((p) => p.buf.abs),
+      ...a.config,
+      activityFile(),
+      a.answers.file,
+      ...a.tool.map((t) => t.path),
+    ];
     return { stat: { paths }, jobs, background: true };
   }
 

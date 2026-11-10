@@ -6,17 +6,22 @@
 import { resolve } from "node:path";
 import { writeDirty } from "../../../core/workspace/git/merge/stale.ts";
 import {
+  type Anchor,
   SESSION_BRANCHES,
   SESSION_FOLDERS,
   type SessionTab,
   loadSession,
+  recentCommands,
   SESSION_HISTORY,
   saveSession,
   type SessionState,
   type TabSet,
 } from "../../../core/workspace/session/position.ts";
+import { type SessionRead, sessionRead } from "../../../core/workspace/walk/own-jobs.ts";
+import { diskThreads } from "../../../core/workspace/walk/walk-thread.ts";
 import { listThemes } from "../../../core/rendering/theme/index.ts";
 import type { App, Tab, View, UiState } from "../../app/runtime/app.ts";
+import { RECENT_MAX, RECENT_NOTES_MAX } from "../../app/runtime/startup.ts";
 import type { NoteBuffer } from "../../documents/buffers/buffer.ts";
 import { defaultNote } from "../../documents/navigation/opening.ts";
 import { uiDefaults } from "../../app/runtime/app.ts";
@@ -80,11 +85,13 @@ export class Session {
    * UI settings changed in the TUI, on every start (with a path too, and with restore_session
    * off): a session value is kept only while the config value it overrode is unchanged.
    */
-  restoreUiOverrides(): void {
-    const s = loadSession(this.app.loc);
+  restoreUiOverrides(s = loadSession(this.app.loc)): boolean {
     const defaults = uiDefaults(this.app.config);
+    let any = false;
     for (const [k, o] of Object.entries(s?.ui ?? {})) {
       if (!(k in defaults) || !o || typeof o !== "object") continue;
+      // Changed here while the session was read (a vault gone into, SD-T9): yours.
+      if (k in this.app.settings.uiOverrides) continue;
       if (JSON.stringify(defaults[k as keyof UiState]) !== JSON.stringify(o.base)) continue;
       if (typeof o.value !== typeof defaults[k as keyof UiState]) continue;
       // A value that isn't one any more (a glyph set that doesn't exist, a theme file since deleted)
@@ -95,19 +102,109 @@ export class Session {
       if (k === "code_wrap" && o.value !== "scroll" && o.value !== "wrap") continue;
       (this.app.ui as unknown as Record<string, unknown>)[k] = o.value;
       this.app.settings.uiOverrides[k] = o;
+      any = true;
     }
+    return any;
+  }
+
+  /** The UI's settings as they are now put to use: the keys, the theme (one named on the command line over the
+   *  session's), the glyphs, the mouse. */
+  private applyUi(): void {
+    const app = this.app;
+    if (app.explicitTheme) app.ui.theme = app.explicitTheme;
+    app.settings.applyKeys();
+    app.settings.applyTheme();
+    app.glyphs = app.settings.glyphSet(app.ui.glyphs);
+    app.host.setMouse?.(app.ui.mouse);
   }
 
   /**
    * The session's tabs brought back here: whether they are, or come (read on the disk threads, SD-T5) — then `how.none`
    * once none of them could be read, the window left empty; the tab with `how.open` (absolute) shown first.
    */
-  restore(how: TabsHow = {}): boolean {
-    const s = loadSession(this.app.loc);
+  restore(how: TabsHow = {}, s = loadSession(this.app.loc)): boolean {
     if (!s) return false;
     const set = this.tabsOf(s);
     if (!set) return false;
     return this.apply(s, set, how);
+  }
+
+  /** The vault gone into's session not read yet, or given up on (SD-T9): none saved over it this visit. */
+  unread = false;
+  /** The vault gone into's session being read, settled once it's applied or given up on (tests). */
+  entering: Promise<void> = Promise.resolve();
+
+  /**
+   * A vault gone into (17.10), the rest of it entered: its session read — on a disk thread, the keys answering
+   * meanwhile, what the vault left kept nothing of (SD-T9); a test's App reads it here, at once — and what it keeps
+   * then applied (`entered`). An answer for a vault since left is dropped (SD-D5); one given up on is said, the vault
+   * open without its tabs and its own never saved over.
+   */
+  enter(open: string | null, anchor?: Anchor): void {
+    const app = this.app;
+    app.recentCommands = [];
+    app.history.recentNotes = [];
+    app.handoff.remoteServer = undefined;
+    const loc = app.loc;
+    if (!app.reads.offThread) return this.entered(sessionRead(loc), open, anchor, true);
+    // The config's meanwhile.
+    this.applyUi();
+    this.unread = true;
+    const visit = app.vaults.visits;
+    const here = () => app.loc === loc && app.vaults.visits === visit && !app.quitting;
+    this.entering = diskThreads()
+      .own({ op: "session", place: { key: loc.key, mode: loc.mode, root: loc.root } }, "key")
+      .then(
+        (a) => {
+          if (!here() || !("session" in a)) return;
+          this.unread = false;
+          this.entered(a.session, open, anchor);
+          app.relayoutAll();
+          app.host.requestRender();
+        },
+        (err: Error) => {
+          if (!here()) return;
+          app.message(
+            "warn",
+            `${loc.root}: its workspace couldn't be read (${err.message}): its tabs aren't brought back`,
+          );
+          if (open && !app.tabs.length) void app.openInNewTab(open, anchor);
+          else if (!app.tabs.length) this.openDefault();
+          app.host.requestRender();
+        },
+      );
+  }
+
+  /** What a vault's session keeps, applied as it's gone into: the positions it kept itself before taken in, the recents
+   *  (those of the moment it was read first), the UI's settings changed here, and its tabs — none over tabs opened
+   *  meanwhile — with `open` shown, or the default note; the UI's settings put to use when they changed, or `apply`. */
+  private entered(read: SessionRead, open: string | null, anchor?: Anchor, apply = false): void {
+    const app = this.app;
+    const session = read.session;
+    app.positions.takeIn(read.positions);
+    const first = <T>(meanwhile: T[], kept: T[], n: number) => [...new Set([...meanwhile, ...kept])].slice(0, n);
+    app.recentCommands = first(app.recentCommands, recentCommands(session, RECENT_MAX), RECENT_MAX);
+    app.history.recentNotes = first(app.history.recentNotes, session?.recent_notes ?? [], RECENT_NOTES_MAX);
+    app.handoff.remoteServer ??= session?.remote_server;
+    if (this.restoreUiOverrides(session) || apply) this.applyUi();
+    if (app.tabs.length) return;
+    // Read on the disk threads (SD-T5): the default note once none of the tabs could be, as when none was kept.
+    const none = open ? undefined : () => this.openDefault();
+    const restored = app.config.ui.restore_session && this.restore({ open, none }, session);
+    // The file asked for once the tab shown is back — the keys waiting for both, the rest coming in the background.
+    const coming = restored ? this.restoring : null;
+    const opened = () => {
+      if (!open) return;
+      const i = app.tabs.findIndex((t) => t.views.some((x) => x.buf.abs === open));
+      if (i < 0) return app.openInNewTab(open, anchor);
+      app.activeTab = i;
+      const t = app.tabs[i]!;
+      t.active = t.views.findIndex((x) => x.buf.abs === open);
+      if (anchor) app.history.jumpTo(t.views[t.active]!, anchor);
+    };
+    if (coming && open) void app.reads.hold(coming.then(opened));
+    else if (open) void opened();
+    else if (!restored) this.openDefault();
   }
 
   /** The note opened when none is named or brought back (`defaultNote`), in a tab of its own. */
@@ -142,8 +239,7 @@ export class Session {
   }
 
   /** The tabs `restore` brings back here: none, without a session or with nothing kept for here. */
-  toRestore(): SessionTab[] {
-    const s = loadSession(this.app.loc);
+  toRestore(s = loadSession(this.app.loc)): SessionTab[] {
     return (s && this.tabsOf(s)?.tabs) || [];
   }
 
@@ -268,10 +364,12 @@ export class Session {
     };
   }
 
-  /** The session saved: the tabs, as the last ones and as `branch`'s (by default, HEAD's as last seen). */
+  /** The session saved: the tabs, as the last ones and as `branch`'s (by default, HEAD's as last seen). The positions
+   *  alone while the vault's own isn't read (`unread`): nothing saved over what it couldn't read yet. */
   save(branch: string | null = this.app.git.head?.branch ?? null): void {
     const s = this.snapshot();
     this.app.positions.save();
+    if (this.unread) return;
     const before = loadSession(this.app.loc);
     const at = new Date(this.app.now()).toISOString();
     const set = { tabs: s.tabs, activeTab: s.activeTab, at };

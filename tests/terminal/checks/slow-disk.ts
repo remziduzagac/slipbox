@@ -1,6 +1,7 @@
 // A slow disk (T12, #9): what reads one off the main thread — home's walk and the background index's, the explorer's
-// listings, the vault open's own folders' too (SD-T7), the watcher's looks (SD-T3), the TUI's look each second (SD-T4)
-// — never holds up the keys or the screen, and still does what it did. The disk a check can't mount is slipbox's own stand-in
+// listings, the vault open's own folders' too (SD-T7), the watcher's looks (SD-T3), the TUI's look each second (SD-T4),
+// a vault's session as it's gone into (SD-T9) — never holds up the keys or the screen, and still does what it did. The
+// disk a check can't mount is slipbox's own stand-in
 // (`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]`): a folder of that name takes so long to list, on
 // whichever thread lists it — and, given a fourth part, each stat and read of what's in it so long on a disk thread.
 // Each check builds a small home of its own.
@@ -561,6 +562,47 @@ export const SLOW_DISK: Check[] = [
       await Bun.sleep(4000);
       s.expect(s.rowOf(/\beta line/) >= 0 && !s.text().includes("# Near"), "far.md still shown, near.md not opened");
       await s.status("far.md");
+    },
+  },
+  {
+    area: "links-and-files",
+    name: "slow disk: home on a slow disk — slipbox's own state read while the keys answer; going into a vault, its notes back where they were",
+    covers: { cases: ["vault", "notes"], commands: ["vault.open"] },
+    alone: true,
+    options: {
+      startAt: "home/notes/index.md",
+      // slipbox's state folder on the slow disk: each stat and read of it a second, on a disk thread — the vaults'
+      // list, a vault's workspace as it's gone into.
+      env: { SLIPBOX_SLOW_DISK: `${SLOW}:1::1000`, XDG_STATE_HOME: `{dir}/${SLOW}/state` },
+      setup: (s) =>
+        smallHome(s, {
+          "~/other/.slipbox/config.toml": "",
+          "~/other/long.md": `# Long\n\n${Array.from({ length: 80 }, (_, i) => `Line ${i + 1}.`).join("\n\n")}\n`,
+        }),
+    },
+    run: async (s) => {
+      // Into the other vault, its long note read to its end; and back.
+      await s.ex(`e ${s.path("~/other/long.md")}`);
+      await goInto(s);
+      await s.where(/^~\/other(?: │|$)/, /long\.md/, 30_000);
+      await s.keys("G");
+      await s.see("Line 80.", 5000);
+      await s.ex(`e ${s.path("~/notes/index.md")}`);
+      await goInto(s);
+      await s.where(/^~\/notes(?: │|$)/, /index\.md/, 30_000);
+      // The Vaults window drawn as it's asked for, its list read meanwhile: the other vault, gone into.
+      await leader(s, "v", "v");
+      await s.see("Vaults —", 1000);
+      await s.see("~/other", 30_000);
+      await s.type("/other");
+      await s.keys("enter");
+      await goInto(s);
+      // Its workspace read on a disk thread: a key answered before its tabs come, then its note where it was left.
+      const ms = await answered(s);
+      s.expect(!s.text().includes("Line 80."), "the key answered before the vault's tabs came back");
+      s.expect(ms < 1000, `the key answered within a second: ${ms} ms`);
+      await s.where(/^~\/other(?: │|$)/, /long\.md/, 30_000);
+      await s.see("Line 80.", 30_000);
     },
   },
 ];

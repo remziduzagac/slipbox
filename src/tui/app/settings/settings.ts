@@ -172,8 +172,25 @@ export class Settings {
 
   /** Each config file's mtime as last loaded (-1: none): yours, the enclosing roots' (20.7) and the root's own — a
    *  change to any is a reload. `given`: as a disk thread stamped them before reading them (the TUI's look, SD-T4). */
-  recordStamps(given?: [string, number][]): void {
-    this.stamps = new Map(given ?? configFiles(this.app.loc, this.app.configFile).map((f) => [f, mtimeOf(f)]));
+  recordStamps(given?: [string, number][], kept?: ReadonlyMap<string, unknown>): void {
+    const was = this.stamps;
+    // A file whose contents were kept (`yoursKept`) keeps its stamp: never statted here (SD-T9).
+    const at = (f: string): number => (kept?.has(f) && was.has(f) ? was.get(f)! : mtimeOf(f));
+    this.stamps = new Map(given ?? configFiles(this.app.loc, this.app.configFile).map((f) => [f, at(f)]));
+  }
+
+  /**
+   * Your config as last read here, for a vault gone into (SD-T9): its contents (none: null, it wasn't there), never read
+   * again then — the TUI's look reads it once it changes. Undefined where the look is on the screen's thread (a test's
+   * App), or there's nothing kept to go by.
+   */
+  yoursKept(): Map<string, Record<string, unknown> | null> | undefined {
+    if (!this.app.watch.look.offThread) return undefined;
+    const file = configFiles(this.app.loc, this.app.configFile)[0]!;
+    const at = this.stamps.get(file);
+    if (at === -1) return new Map([[file, null]]);
+    const good = this.lastGood.get(file);
+    return good && at !== undefined ? new Map([[file, good]]) : undefined;
   }
 
   /** The config files and their stamps as last loaded: what the TUI's look stats and compares (SD-T4). */
