@@ -128,8 +128,8 @@ const git = (cwd: string, ...args: string[]) =>
     ...args,
   ]);
 
-/** A vault on `main` (named short, so the top bar has room for what's under way), its repository's own folder
- *  (`--separate-git-dir`) under `held`: git's state read there, the notes not. Or, `free`, not under it. */
+/** A vault on `main`, its repository's own folder (`--separate-git-dir`) under `held`: git's state read there, the
+ *  notes not. Or, `free`, not under it. */
 function repo(free = false): { root: string; gitDir: string } {
   const top = folder("look-git");
   const root = join(top, "vault");
@@ -148,9 +148,6 @@ function repo(free = false): { root: string; gitDir: string } {
   }
   return { root, gitDir };
 }
-
-/** A screen wide enough for the top bar to say what's under way after the vault's path, however long the sandbox's. */
-const WIDE = 200;
 
 /** The vault's scratch, as an agent has written it, opened: outside the vault, in slipbox's state folder — under
  *  `held` once `stateHeld`, where a look reads git's state, then stats it, and waits. */
@@ -206,7 +203,7 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
   test("git's folder held: a key handled and drawn, the top bar the branch kept, while HEAD is asked; let go, a branch switched meanwhile seen and drawn, then a rebase started meanwhile", async () => {
     const held = holding();
     const r = repo();
-    const h = await harness({ root: r.root, open: "index.md", width: WIDE });
+    const h = await harness({ root: r.root, open: "index.md" });
     const look = offThread(h);
     await looked(look);
     expect(whereNow(h)).toContain("main");
@@ -229,10 +226,12 @@ describe("the TUI's look each second, off the screen's thread (SD-T4)", () => {
     writeFileSync(join(r.gitDir, "rebase-merge", "end"), "2\n");
     look.request();
     await untilHeld(held);
-    expect(await keyMeanwhile(h)).not.toContain("rebasing");
+    await keyMeanwhile(h);
+    // The top bar's branch as drawn, whatever room the vault's path leaves it.
+    expect(whereNow(h)).not.toContain("rebasing");
     held.release();
     await look.settled();
-    expect(h.frame().split("\n")[0]).toContain("rebasing 1/2");
+    expect(whereNow(h)).toContain("feat rebasing 1/2");
     expect(held.gaveUp).toBe(0);
   });
 
@@ -539,7 +538,7 @@ describe("git's state taken in the order it was asked, whatever order the answer
     const held = holding();
     const r = repo(true);
     stateHeld();
-    const h = await harness({ root: r.root, open: "index.md", width: WIDE });
+    const h = await harness({ root: r.root, open: "index.md" });
     const look = offThread(h);
     openScratch(h);
     mkdirSync(join(r.gitDir, "rebase-merge"));
@@ -547,7 +546,8 @@ describe("git's state taken in the order it was asked, whatever order the answer
     writeFileSync(join(r.gitDir, "rebase-merge", "msgnum"), "1\n");
     writeFileSync(join(r.gitDir, "rebase-merge", "end"), "2\n");
     await looked(look);
-    expect(h.frame().split("\n")[0]).toContain("rebasing 1/2");
+    // The top bar's branch as drawn, whatever room the vault's path leaves it.
+    expect(whereNow(h)).toContain("main rebasing 1/2");
     holdNow(held);
     look.request();
     await untilHeld(held);
@@ -556,7 +556,7 @@ describe("git's state taken in the order it was asked, whatever order the answer
     expect(operationAgain(h.app, h.app.git.checkout!)).toBeNull();
     held.release();
     await look.settled();
-    expect(h.frame().split("\n")[0]).not.toContain("rebasing");
+    expect(whereNow(h)).not.toContain("rebasing");
     expect(held.gaveUp).toBe(0);
   });
 });
