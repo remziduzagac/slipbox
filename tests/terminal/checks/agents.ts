@@ -1,4 +1,5 @@
 import { type Check, leader, MEETING, open, opened, SCRATCH_FLOATING } from "../check.ts";
+import { CheckFailed } from "../session.ts";
 import { KENJI, typedAtEnd } from "../support/outside-and-code.ts";
 
 export const AGENTS: Check[] = [
@@ -39,26 +40,48 @@ export const AGENTS: Check[] = [
       await s.keys("ctrl+t", "c");
       await s.see(/2 home/);
       await open(s, "operations-handbook");
+      // Each read kept, so a wait that times out says why: the tabs never saved, saved short of the second, or the
+      // CLI's own trouble — how many reads, the slowest, and the last one's answer.
+      const reads = { count: 0, slowest: 0, last: null as { code: number; out: string; err: string } | null };
       const history = () => {
+        const started = performance.now();
+        const r = s.cli("history", "--json");
+        reads.count++;
+        reads.slowest = Math.max(reads.slowest, Math.round(performance.now() - started));
+        reads.last = r;
         try {
-          return JSON.parse(s.cli("history", "--json").out).data;
+          return JSON.parse(r.out).data;
         } catch {
           return null;
         }
       };
-      await s.until(
-        () => {
-          const h = history();
-          return (
-            !!h &&
-            JSON.stringify(h.open) === JSON.stringify([["home.md"], ["handbook/operations-handbook.md"]]) &&
-            h.activeTab === 1 &&
-            h.current === "handbook/operations-handbook.md"
-          );
-        },
-        5000,
-        "history --json to list the two tabs, the handbook current",
-      );
+      try {
+        await s.until(
+          () => {
+            const h = history();
+            return (
+              !!h &&
+              JSON.stringify(h.open) === JSON.stringify([["home.md"], ["handbook/operations-handbook.md"]]) &&
+              h.activeTab === 1 &&
+              h.current === "handbook/operations-handbook.md"
+            );
+          },
+          5000,
+          "history --json to list the two tabs, the handbook current",
+        );
+      } catch (err) {
+        if (!(err instanceof CheckFailed)) throw err;
+        const last = reads.last;
+        let out = last?.out.slice(0, 1500) ?? "";
+        try {
+          const d = JSON.parse(last?.out ?? "").data;
+          out = JSON.stringify({ open: d.open, activeTab: d.activeTab, current: d.current, read: d.read?.length });
+        } catch {}
+        const said = last ? `exit ${last.code}; out: ${out}; err: ${last.err.slice(0, 800)}` : "none read";
+        throw new CheckFailed(
+          `${err.message}\n${reads.count} reads, the slowest ${reads.slowest} ms; the last: ${said}`,
+        );
+      }
     },
   },
   {
