@@ -137,6 +137,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   why. Homebrew's install copies `brew upgrade slipbox`, one put by hand the releases' address. `:restart` starts
   slipbox again, asking first about notes with unsaved changes; `:upgrade` asks for a newer version at once. A version
   installed while slipbox runs, from another terminal or by `brew upgrade`, is offered as a restart.
+- [How slipbox works](docs/manual/how-it-works.md#on-a-slow-disk) says what you see on a slow disk, such as a network
+  share or a drive that's asleep, while slipbox waits for it, and what still holds the screen there: a save, a file
+  operation, the start, the search index and a few small reads.
 
 ### Changed
 

@@ -114,8 +114,9 @@ that order:
   `.slipbox/`, `.obsidian/`, `.zk/`), else home (`~`, a vault without one), else Elsewhere, which has no index (D69,
   VV-D1–VV-D4). The vault says what is indexed and searched first, what a leading `/` means, which link convention is
   followed, its settings, and where its state is kept. Nothing is written into a folder by opening it (D58). One walk
-  lists its files for the index and the watcher alike (D40); the TUI makes its own walks, and lists the explorer's
-  folders, on threads of their own (T12). A link out of the vault or home is followed only when you say so (VV-D6).
+  lists its files for the index and the watcher alike (D40); the TUI makes its own walks on a thread of their own
+  (T12), and reads everything else of the vault open on the disk threads (§ A slow disk in [tui.md](tui.md)). A link
+  out of the vault or home is followed only when you say so (VV-D6).
   Walk contracts, filtering, IO and traversal live below the public entry. Home cache admission and containment live
   in `vaults/home/`; `graph/watch.ts` keeps lifecycle over directory and reconciliation owners sharing one state.
   Code: `core/workspace/vaults/vault.ts`, `core/workspace/vaults/home.ts`, `core/workspace/walk/walk.ts`,
@@ -190,14 +191,17 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | --- | --- | --- |
 | `core/foundation/text/width.ts` | 0.7 | the one width function: graphemes, East Asian width, emoji |
 | [fsutil.ts][o1] | 4.6, 7.5 | atomic writes keeping the mode; `writeNote` (never out of the vault); reads |
+| `core/foundation/platform/disk.ts` | SD-D10 | the seam every read goes through: the slow disk stood in, the hold |
 | `core/foundation/text/sanitize.ts` | 2.9 | strips terminal escapes on the way into layout |
 | `core/foundation/platform/paths.ts` | 0.10, 21.8 | config, cache and state directories; a vault's key, by its path |
 | [config.ts][o2] | 0.9, 20.7 | TOML: defaults ← yours ← each enclosing vault's ← its own; warnings, never crashes |
 | [vault.ts][o17] | 1.1, 1.10, 0.12, 17.1, 20.3, 21.8 | a file's vault, home or Elsewhere; recorded; state moved |
 | [home.ts][o18] | VV-D2 | home's walk, made in slices and kept (`walk.json`); its graph built from it; the cap |
 | `core/workspace/walk/walkers.ts` | T12 | where a walk is made: here (the CLI's), or on the walk's thread (the TUI's) |
-| [walk-thread.ts][o19] | T12 | the walk's thread and the listings' two (`walk-worker.ts`, `list-worker.ts`): asked |
+| [walk-thread.ts][o19] | T12, SD-D2 | the walk's thread and the two disk threads (`walk-worker.ts`, `list-worker.ts`) |
 | [walk-jobs.ts][o20] | T12 | what the walk's thread does: the same walks and indexes as here, slice by slice |
+| `core/workspace/walk/disk-jobs.ts` | SD-D2 | what the disk threads answer: listed, statted, read, walked, as here |
+| `core/workspace/walk/draw-jobs.ts` | SD-D17 | what drawing asks of a disk thread, one batch at a time |
 | [worker-context.ts][o3] | T12 | what those threads can't see for themselves: the environment, markers, probe |
 | [listing.ts][o21] | T12, VV-D5 | a folder listed for the explorer: its entries, what its rows and marks say of each |
 | [mounts.ts][o22] | VV-D2 | the mount table, read without touching a mount: home's walk never goes into another disk |
@@ -236,6 +240,7 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | [url.ts][o4] | 15.1, 25.6 | where a worker's script is, from the source or in the compiled binary (D232) |
 | [worker-requests.ts][o5] | 15.1, 25.6 | a worker's requests one at a time: a bounded mailbox, a line, deadlines |
 | `core/workspace/links/links.ts` | 1.4 | `LinkIndex`: case policy, collisions, markdown URLs |
+| `core/workspace/links/path-probe.ts` | SD-D17 | what a link's resolution asks of the disk; kept answers while drawn |
 | [search.ts][o65] | 6.x | search: the query, a file read for it, the index kept, the index or a scan, hits located |
 | [regex-jobs.ts][o66] | 25.4 | a regex matched in a worker (`regex-worker.ts`), stopped at its deadline |
 | `core/workspace/search/search-index.ts` | 6.6 | the search index: SQLite FTS5 in the cache, a row per file, BM25 |
@@ -433,7 +438,12 @@ Existing `Vaults` entry methods remain; App retains shared state and the sole no
 and conflict-aware reload. Its `GraphRefresh` collaborator in `graph-refresh.ts` owns background parse coordination,
 auto-index instances and home refresh generation/promise. It reads live graph/location capabilities and calls back to
 Watch to remember selections and deliver a rebuild; existing entry methods and the parseInSlices export remain.
-App retains shared indexing/input state, buffers and the sole note-write gate.
+Its `Builds` collaborator in `builds.ts` builds the vault open again from a walk and an index read on a disk thread:
+what's asked, the answer checked and taken, a key's build holding the keys after it (SD-D5, SD-D11). App retains
+shared indexing/input state, buffers and the sole note-write gate.
+
+`app/runtime/drawn.ts`'s `Drawn` (`app.drawn`) keeps what drawing asks of the disk, asks a disk thread for what it
+doesn't keep, and draws the layouts again when an answer changes them (SD-D13, SD-D17).
 
 Document diagnostics keep `Problems` and `Languages` as their existing controllers. Under
 `src/tui/documents/diagnostics/`, `problems/` holds row presentation and panel records; `languages/` holds server-edit

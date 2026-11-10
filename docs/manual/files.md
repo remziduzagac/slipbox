@@ -137,6 +137,11 @@ with `l` before it's listed, wait for the disk as opening a note does: the keys 
 `esc` gives the wait up, leaving the explorer as it was. A folder that doesn't answer within a minute says so:
 `~/notes/far didn't answer: not zoomed into`.
 
+Making, renaming, moving, copying and deleting are written as you make them, so on a slow disk the screen waits until
+each is written. After a rename, or a folder moved, copied or restored, the keys you type then wait for the vault to be
+read again, `reading the vault…` on the status line, so the next one acts on the vault as the change left it.
+[On a slow disk](how-it-works.md#on-a-slow-disk) gathers what slipbox does while a disk is slow.
+
 [Working across folders and vaults](../guides/vaults.md) shows the zoom at work, with examples.
 
 ### A row's marks

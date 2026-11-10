@@ -398,15 +398,33 @@ answer would open a question or a menu) holds git itself, never counting on the 
 on its own, and a busy machine can hand slipbox the last after git has answered. The repository, trusted, runs an
 fsmonitor that waits while a file the check writes is there (`heldGit` in `tests/terminal/checks/git-branches.ts`).
 
-**A slow disk, stood in for** (T12): `SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>]` makes a folder of that
-name take so long to list, on whichever thread lists it (`slowDisk` in `core/workspace/walk/walk.ts`), and shortens the
-walk's and
-the listings' threads' deadlines to the third: the disk a check can't mount. `tests/terminal/checks/slow-disk.ts`
-drives the TUI with it; the unit tests hold a folder up on a thread of their own (`setFolderReader`, a worker of
-their own: `tests/fixtures/walk/`). A unit test that says what goes on while a folder is read holds one named `held`
-until it lets it go (`Hold`, on every thread at once): what went on is told by what's still held, never by a clock,
-which a busy machine stretches (#75). What a terminal check says comes at once is timed by the check itself, against a
-bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`, whatever it's asked.
+**A slow disk, stood in for** (T12, SD-D10):
+`SLIPBOX_SLOW_DISK=<folder name>:<ms>[:<deadline ms>[:<stat ms>]]` makes a folder of that name take so long to list
+(`slowDisk`, in the seam every read goes through: `core/foundation/platform/disk.ts`, each thread taking it once as it
+starts) — a walk's listing on whichever thread lists it, the main one too, so a walk put back there is slowed; the
+seam's other listing (`entries`: the watcher's, the explorer's tree) on every thread but the main one — and shortens the
+walk's and the disk threads' deadlines to the third; a fourth part, when given, makes each stat and read of a path with
+that folder on its way take so long too, on every thread but the main one (`<name>:<ms>::<stat ms>` gives one without a
+deadline). The main thread's reads but a walk's go at once: what stays there (tui.md § A slow disk), and a test's App.
+`tests/terminal/checks/slow-disk.ts` drives the TUI with it, a check per feature moved; the unit tests hold a folder up
+on a thread that takes the hold, theirs or the main thread (`setFolderReader` for a walk's listing, `setReadWait` for
+`entries` and a stat or a read through the seam of a path under it, each set on the thread that asks; a worker of
+their own: `tests/fixtures/walk/`, which holds a stat or a read only once its test asks); `setSlowDisk` sets a
+thread's slow disks, the seam's and the walk's, and a test sees what it sleeps by recording the sleep, never by timing
+it. A unit test that says what goes on while a folder is read holds one named `held` until it lets it go (`Hold`, a
+listing, a stat or a read alike, on every thread that takes it at once): what went on is told by what's still held,
+never by a clock, which a busy machine stretches (#75). What a terminal check says comes at once is timed by the check
+itself, against a bound short of the slow folder's time: `Session.until` waits at least `SLIPBOX_TERMINAL_WAIT`,
+whatever it's asked.
+
+`check:boundary` keeps the files whose reads a slow disk would hold up to the seam (SD-D12): those that read through it
+alone (`SEAM_READERS`, `scripts/disk-inventory.ts`), and those still allowed to read the disk themselves, each with why
+(`DISK_READERS`). It fails on a file of the list that reads and isn't allowed to, on one allowed that no longer does,
+and on one, or the seam, that isn't there; only a test's small tree written for the other rules asks to be left out
+(`--no-inventory`). It sees what a file imports or loads of `node:fs` and Bun's files, not a read through a helper
+(`readText`, `stamp`, `readJson`) or a call to the seam made on the main thread. Those the held tests find: each
+feature's held test takes the hold on the main thread too (`tests/support/tui/held-keys.ts`), so a read of it put back
+there holds the test's key past the hold's deadline (`gaveUp`), and the test fails.
 
 
 **The runner** (`tests/terminal/run.ts`, `bun run test:terminal [--jobs N] [--repeat N] [--keep] [--list] [--shard
