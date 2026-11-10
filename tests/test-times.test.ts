@@ -13,6 +13,8 @@ import {
   check,
   EMPTY_REPORT,
   factorFor,
+  failsOn,
+  HEADROOM,
   judge,
   longest,
   MACOS_FACTOR,
@@ -23,6 +25,7 @@ import {
   rewriteSlowTests,
   slowTests,
   summary,
+  systemOf,
 } from "../scripts/test-times.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -115,7 +118,7 @@ describe("the report: each test file's time and each test's, as bun test's JUnit
   });
 });
 
-describe("the budget: a test file over its own fails the job", () => {
+describe("the budget: a test file over its own fails a Linux job, and is a warning on macOS", () => {
   const own = { "tests/slow.test.ts": { seconds: 50, why: "slow on purpose" } };
 
   test("over: a file past BUDGET fails, the message naming it, its time and the budget; at it, it passes", () => {
@@ -124,6 +127,7 @@ describe("the budget: a test file over its own fails the job", () => {
       `test-times: tests/a.test.ts took ${(BUDGET + 0.1).toFixed(1)} s, over its budget of ${BUDGET} s (BUDGET, ` +
         "scripts/test-times.ts): make it faster or split it; or, slow for a reason, give it a budget of its own, with why",
     ]);
+    expect([r.warnings, r.summary.includes("Over budget")]).toEqual([[], false]);
   });
 
   test("under: files within their budgets pass; one past it over MARGIN is said, not failed", () => {
@@ -152,15 +156,32 @@ describe("the budget: a test file over its own fails the job", () => {
     }
   });
 
-  test("on macOS each budget is MACOS_FACTOR times Linux's", () => {
+  test("on macOS each budget is MACOS_FACTOR times Linux's, and a file past it a warning, in the summary too: it passes", () => {
     expect([factorFor("darwin"), factorFor("linux")]).toEqual([MACOS_FACTOR, 1]);
+    expect([failsOn("darwin"), failsOn("linux")]).toEqual([false, true]);
     const times = { "tests/a.test.ts": BUDGET * 2, "tests/slow.test.ts": 5 };
     expect(check(reportFile(times), "linux", own).errors).toHaveLength(1);
     const mac = check(reportFile(times), "darwin", own);
-    expect([mac.errors, mac.notes]).toEqual([[], []]);
-    const over = check(reportFile({ "tests/a.test.ts": BUDGET * MACOS_FACTOR + 1 }), "darwin", own);
-    expect(over.errors).toEqual([expect.stringContaining(`over its budget of ${BUDGET * MACOS_FACTOR} s (BUDGET`)]);
+    expect([mac.errors, mac.warnings, mac.notes]).toEqual([[], [], []]);
+    const seconds = BUDGET * MACOS_FACTOR + 1;
+    const over = check(reportFile({ "tests/a.test.ts": seconds }), "darwin", own);
+    const warning =
+      `test-times: tests/a.test.ts took ${seconds.toFixed(1)} s, over its budget of ${BUDGET * MACOS_FACTOR} s (BUDGET, ` +
+      "scripts/test-times.ts): a warning, as a file's time on macOS moves too much to fail on; if Linux's grew too, " +
+      "make it faster or split it";
+    expect([over.errors, over.warnings]).toEqual([[], [warning]]);
+    expect(over.summary).toEndWith(`|\n\nOver budget, a warning on macOS, not a failure:\n\n- ${warning}\n`);
+    // The same time on Linux fails, with no warning; on macOS, a report missing still fails.
+    const linux = check(reportFile({ "tests/a.test.ts": seconds }), "linux", own);
+    expect([linux.errors.length, linux.warnings, linux.summary.includes("Over budget")]).toEqual([1, [], false]);
+    expect(check(join(sandbox, "none.xml"), "darwin").errors).toEqual([expect.stringContaining("no report at")]);
     expect(budgetOf("tests/slow.test.ts", MACOS_FACTOR, own)).toBe(50 * MACOS_FACTOR);
+  });
+
+  test("the system judged is the runner's, as GitHub names it (RUNNER_OS), or else this machine's", () => {
+    expect(systemOf({ RUNNER_OS: "macOS" }, "linux")).toBe("darwin");
+    expect(systemOf({ RUNNER_OS: "Linux" }, "darwin")).toBe("linux");
+    expect([systemOf({}, "darwin"), systemOf({ RUNNER_OS: "Windows" }, "linux")]).toEqual(["darwin", "linux"]);
   });
 
   test("a missing report fails, as does a file that isn't one, or none named; the empty one passes", () => {
@@ -188,11 +209,21 @@ describe("the budget: a test file over its own fails the job", () => {
   });
 
   test("the budgets kept: each a test file there is, past BUDGET, a whole five seconds, with why; macOS's above Linux's", () => {
-    expect([BUDGET, MACOS_FACTOR, MARGIN]).toEqual([30, 4, 1.5]);
+    expect([BUDGET, HEADROOM, MACOS_FACTOR, MARGIN]).toEqual([30, 2, 4, 1.5]);
     for (const [f, { seconds, why }] of Object.entries(BUDGETS))
       expect([f, TEST_FILE.test(f), existsSync(join(ROOT, f)), seconds > BUDGET, seconds % 5, why.length > 20]).toEqual(
         [f, true, true, true, 0, true],
       );
+  });
+
+  test("each budget of its own HEADROOM times the file's longest on Linux, its why's, up to the next five seconds", () => {
+    for (const [f, { seconds, why }] of Object.entries(BUDGETS)) {
+      const longest = Number(/\((\d+\.\d) s; [\d.]+ on macOS\)$/.exec(why)?.[1]);
+      // Over BUDGET's share: a file that would fit BUDGET has no budget of its own.
+      expect([f, longest > BUDGET / HEADROOM, seconds >= longest * HEADROOM, seconds - longest * HEADROOM < 5]).toEqual(
+        [f, true, true, true],
+      );
+    }
   });
 });
 
@@ -228,28 +259,42 @@ describe("the summary: the slowest files and tests, in the log and the step summ
     expect(mac).toContain(`| tests/slow.test.ts | 1 | 3.0 | ${50 * MACOS_FACTOR} |`);
   });
 
-  test("bun run test:times: the summary in the log and the step summary; a file over, an error GitHub shows, and exit 1", () => {
+  test("bun run test:times: the summary in the log and the step summary; a file over, on Linux an error GitHub shows and exit 1, on macOS a warning and exit 0", () => {
     const out = file("summary.md", "before\n");
-    const run = (times: Record<string, number>) => {
+    // The runner's system as GitHub names it, whichever this runs on.
+    const run = (times: Record<string, number>, system: "Linux" | "macOS") => {
       const p = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "test-times.ts"), reportFile(times)], {
-        env: { ...process.env, GITHUB_STEP_SUMMARY: out, GITHUB_ACTIONS: "true" },
+        env: { ...process.env, GITHUB_STEP_SUMMARY: out, GITHUB_ACTIONS: "true", RUNNER_OS: system },
       });
       return { code: p.exitCode, stdout: p.stdout.toString(), stderr: p.stderr.toString() };
     };
-    // The command judges the system it runs on: 30 s here, 120 on macOS.
-    const budget = budgetOf("tests/a.test.ts", factorFor(process.platform));
-    const fine = run({ "tests/a.test.ts": 2 });
+    const fine = run({ "tests/a.test.ts": 2 }, "Linux");
     expect([fine.code, fine.stderr]).toEqual([0, ""]);
-    expect(fine.stdout).toContain(`| tests/a.test.ts | 1 | 2.0 | ${budget} |`);
+    expect(fine.stdout).toContain(`| tests/a.test.ts | 1 | 2.0 | ${BUDGET} |`);
     expect(readFileSync(out, "utf8")).toStartWith("before\n### Test times\n");
-    const slow = run({ "tests/a.test.ts": budget + 9 });
+    const slow = run({ "tests/a.test.ts": 99 }, "Linux");
     expect(slow.code).toBe(1);
-    expect(slow.stderr).toStartWith(
-      `::error::test-times: tests/a.test.ts took ${budget + 9}.0 s, over its budget of ${budget} s`,
-    );
+    expect(slow.stderr).toStartWith(`::error::test-times: tests/a.test.ts took 99.0 s, over its budget of ${BUDGET} s`);
     expect(readFileSync(out, "utf8").match(/### Test times/g)).toHaveLength(2);
-    const none = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "test-times.ts"), join(sandbox, "no.xml")]);
-    expect(none.exitCode).toBe(1);
+    // On macOS, the same time within its budget; past it, a warning, in the step summary too, and the job passes.
+    const mac = run({ "tests/a.test.ts": 99 }, "macOS");
+    expect([mac.code, mac.stderr]).toEqual([0, ""]);
+    const past = run({ "tests/a.test.ts": 999 }, "macOS");
+    expect(past.code).toBe(0);
+    expect(past.stderr).toStartWith(
+      `::warning::test-times: tests/a.test.ts took 999.0 s, over its budget of ${BUDGET * MACOS_FACTOR} s`,
+    );
+    const written = readFileSync(out, "utf8");
+    expect(written.match(/### Test times/g)).toHaveLength(4);
+    expect(written).toContain(
+      "Over budget, a warning on macOS, not a failure:\n\n- test-times: tests/a.test.ts took 999.0",
+    );
+    for (const system of ["Linux", "macOS"]) {
+      const none = Bun.spawnSync([process.execPath, join(ROOT, "scripts", "test-times.ts"), join(sandbox, "no.xml")], {
+        env: { ...process.env, RUNNER_OS: system },
+      });
+      expect([system, none.exitCode]).toEqual([system, 1]);
+    }
   });
 });
 
@@ -291,7 +336,7 @@ describe("ci:scope writes the report where SCOPE_REPORT says, and the job reads 
 
   test("each test job, Linux's parts and macOS's: the report asked for, read once the tests ran, and uploaded", () => {
     type Step = { id?: string; name?: string; if?: string; run?: string; uses?: string; env?: Record<string, string> };
-    type Job = { steps?: (Step & { with?: Record<string, string | number> })[] };
+    type Job = { steps?: (Step & { with?: Record<string, string | number | boolean> })[] };
     const ci = Bun.YAML.parse(readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8")) as {
       jobs: Record<string, Job>;
     };
@@ -319,8 +364,13 @@ describe("ci:scope writes the report where SCOPE_REPORT says, and the job reads 
         true,
         true,
       ]);
-      // Named by the system and the part, as `slow` downloads Linux's: `test-times-Linux-*`.
-      expect(upload?.with?.name).toBe("test-times-${{ runner.os }}-${{ strategy.job-index }}");
+      // Named by the system and the part, as `slow` downloads Linux's: `test-times-Linux-*`. A job run again replaces
+      // its own, as upload-artifact refuses a second under a name the run has: re-running a failed job passes.
+      expect([job, upload?.with?.name, upload?.with?.overwrite]).toEqual([
+        job,
+        "test-times-${{ runner.os }}-${{ strategy.job-index }}",
+        true,
+      ]);
     }
     expect(source).toContain('"--pattern", "test-times-Linux-*"');
   });

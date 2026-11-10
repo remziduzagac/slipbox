@@ -155,9 +155,10 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - The slowest tests kept in check (issue #65's item 6): a budget per test, per test file, or per file from its own
   recorded time; one for Linux alone, or macOS's a factor of Linux's; Bun's `--timings` to balance `bun test --shard`;
   `SLOW_TESTS` rewritten by hand from a run's reports, or by the weekly health job. (2026-11-10) A budget per test file,
-  30 seconds, a few files with their own and why, macOS's four times Linux's, `SLOW_TESTS` by hand (D276): the timeout
-  is a test's budget already; a file's own times move too much to hold each to; the parts are a change's own files;
-  the health job would need a token that writes.
+  30 seconds, ten files with their own and why, each twice the file's longest, failing on Linux; macOS's four times
+  Linux's, a warning; `SLOW_TESTS` by hand (D276): the timeout is a test's budget already; a file's own times move too
+  much to hold each to, macOS's most; the parts are a change's own files; the health job would need a token that
+  writes.
 
 ## Roots and vaults
 

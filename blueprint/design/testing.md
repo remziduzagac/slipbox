@@ -177,14 +177,17 @@ or unexplained retry conceals an assertion, fixture or deadline failure.
 
 **A test file's time has a budget in CI** (D276, `scripts/test-times.ts`), apart from the timeouts, which stop a test
 stuck: one that says a file grown slow. Each `test` job has `bun test` write its JUnit report and reads it once the
-tests ran: the slowest files and tests in its log and step summary, and a failure for each test file over its budget,
-naming the file, its time and the budget. A file's budget is `BUDGET`, 30 seconds on a Linux runner, as long as one
-test may take; or, for a file known to be slow, its own in `BUDGETS` with why, as `check:size` caps a file past its
-limit; on macOS, four times either (`MACOS_FACTOR`), as a file's time there moves far more from run to run. Each is at
-least one and a half times (`MARGIN`) the longest its file was seen to take, so a slower runner doesn't fail it. A file
-over is made faster or split, or, slow for a reason, given a budget of its own with why, in the same pull request. The
-log says a file within its budget but not by the margin, without failing. A unit test holds the budgets to files there
-are, each past `BUDGET`.
+tests ran: the slowest files and tests in its log and step summary, and for each test file over its budget, naming the
+file, its time and the budget, a failure on Linux and a warning on macOS, said in the step summary too. A file's
+budget is `BUDGET`, 30 seconds on a Linux runner, as long as one test may take; or, for a file known to be slow, its
+own in `BUDGETS` with why, as `check:size` caps a file past its limit. Each is at least twice (`HEADROOM`) the longest
+its file was seen to take on Linux, up to the next five seconds, so a slower runner doesn't fail it: a file's time
+there moves up to twice from run to run. On macOS each is four times Linux's (`MACOS_FACTOR`), and only warns: a
+file's time there moves too much, up to eight times, to tell a change that made it slower from a slow runner. A file
+over on Linux is made faster or split, or, slow for a reason, given a budget of its own with why, in the same pull
+request. The log says a file within its budget but not by one and a half times (`MARGIN`), without failing: the early
+sign. A report missing fails on either system. A unit test holds the budgets to files there are, each past `BUDGET`
+and twice the longest its why gives.
 
 ### Waiting and measurement
 
@@ -235,12 +238,12 @@ last passing run, on Linux and macOS whatever changed: nothing for `dev` moved t
 (`full`), which a commit needs before `main` takes it and a release builds it (D251). On Linux each job runs in three
 parts, a runner each: the tests by test file, the terminal checks by check file, every one in exactly one part, so a
 scoped pull request's tests take about five minutes; macOS runs each whole (D275; [repository.md](repository.md) §
-CI). Each test job reports its tests' times, the slowest in its step summary, and fails on a test file over its
-budget (D276; § Timeout policy). A pull request whose change might behave otherwise on macOS, outside the list, takes
-the `macos` label. The scripts `bun run check` runs, split into jobs ([repository.md](repository.md) § CI). While
-working: your change's own tests and its feature's terminal check (`bun run test:terminal <its name>`), then `bun run
-test:changed` for what else it reaches — never the whole suite. A failure the full run finds is fixed by a pull
-request of its own, into `dev`.
+CI). Each test job reports its tests' times, the slowest in its step summary; a test file over its budget fails
+Linux's and is a warning on macOS (D276; § Timeout policy). A pull request whose change might behave otherwise on
+macOS, outside the list, takes the `macos` label. The scripts `bun run check` runs, split into jobs
+([repository.md](repository.md) § CI). While working: your change's own tests and its feature's terminal check (`bun
+run test:terminal <its name>`), then `bun run test:changed` for what else it reaches — never the whole suite. A
+failure the full run finds is fixed by a pull request of its own, into `dev`.
 
 **Biome formats and lints the code** (`biome.jsonc`: 120 columns, the recommended rules but the code's idioms, each
 turned off with its reason); `bun run lint` fails on a warning, `bun run format` writes (GR-D7).

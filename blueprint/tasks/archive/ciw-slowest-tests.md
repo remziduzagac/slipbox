@@ -66,3 +66,15 @@ process's 20-second deadline. JUnit reporting and file-level budgets remain this
 - 2026-11-10: that run's macOS job showed its summary with budgets four times Linux's, its report uploaded, no file
   over (the samples' 100.5 s of 200, the parse threads' 35.5 of 120). One test of this change's own failed there: the
   command's, run on macOS, expected Linux's budget; it now reads the budget of the system it runs on.
+- 2026-11-10: the second run, 42780336665, passed every job, each summary shown, no file over or near its budget.
+- 2026-11-10: review. A job run again would fail its upload, as upload-artifact refuses a second under a name the run
+  has: both uploads now replace their own (`overwrite`). The budgets could turn `ci` red with nothing changed: 30
+  seconds was only one and a half times the terminal harness's 19.9 and the parse threads' 19.2, a file's Linux time
+  moved up to twice between runs, and macOS's up to eight times. Now every budget is at least twice (`HEADROOM`) its
+  file's longest on Linux, up to the next five seconds, from the logs and both runs' reports: the five over 15 seconds
+  (the terminal harness, the parse threads, writing, servers, file operations) have their own, 35 or 40 s, the first
+  five raised to 60 to 70 s, and every other file took 10.7 s or less. On macOS a file over its budget is a
+  `::warning::`, said in the step summary too, not a failure; a report missing still fails on either system. The
+  command takes its system from `RUNNER_OS`, so its test runs both on either runner. Tests: macOS over warns and
+  passes, Linux over fails, each budget twice its why's longest, both uploads overwrite; mutation-checked, the twenty
+  before and thirteen more, each killed.

@@ -1,14 +1,16 @@
 // Each test's time in CI, and a budget for a test file's (CIW-T9, D276). `bun test`'s JUnit report, which `ci:scope`
 // asks for when `SCOPE_REPORT` names a file, has every test file's time, from loading it to its last hook, and every
 // test's. Each `test` job reads it with `bun run test:times <report>`: the slowest files and tests, in the job's log
-// and its step summary, and a failure for each test file over its budget, naming the file, its time and the budget.
-// The job uploads the report as `test-times-<system>-<part>`.
+// and its step summary, and for each test file over its budget, naming the file, its time and the budget, a failure on
+// Linux and a warning on macOS. The job uploads the report as `test-times-<system>-<part>`.
 //
 // A test file's budget is BUDGET seconds on a GitHub Linux runner, or its own in BUDGETS: a file known to be slow, with
-// why, so it doesn't fail, and can't grow unnoticed past its own. On macOS, each is MACOS_FACTOR times that. Each
-// budget is MARGIN times the longest the file was seen to take, or more, so a runner slower than usual doesn't fail it.
-// A file within its budget but not by MARGIN is said in the log, not failed. Whether a file still needs a budget of its
-// own is a question for both systems' times, a run's of one can't answer it.
+// why, so it doesn't fail, and can't grow unnoticed past its own. Each is HEADROOM times the longest the file was seen
+// to take on Linux, or more, so a runner slower than usual doesn't fail it. On macOS, each is MACOS_FACTOR times
+// Linux's, and a file past it is a warning, not a failure: a file's time there moves too much from one run to the next
+// to tell a change that made it slower from a slow runner. A file within its budget but not by MARGIN is said in the
+// log: the early sign. Whether a file still needs a budget of its own is a question for both systems' times, a run's of
+// one can't answer it.
 //
 // `bun scripts/test-times.ts slow <run>…` rewrites `SLOW_TESTS` (scripts/ci-shard.ts), which weighs the Linux parts,
 // from those runs' Linux reports: by hand, so the parts stay the tree's, the same from one run of it to the next.
@@ -31,45 +33,72 @@ const ROOT = join(import.meta.dir, "..");
 
 /**
  * The seconds a test file may take on a GitHub Linux runner (`ubuntu-24.04`): as long as one test may (the tests'
- * timeout). Every file without a budget of its own took 19.9 s or less in the runs it was chosen from (D276).
+ * timeout). Every file without a budget of its own took 10.7 s or less in the runs it was chosen from (D276); one that
+ * took more than BUDGET over HEADROOM has its own.
  */
 export const BUDGET = 30;
 
 /**
- * A budget on macOS (`macos-15`) is this many times Linux's. Its runner is slower, and moves far more from one run to the
- * next: a file took from 15 to 121 seconds there (the samples' rows), another from 6 to 36 (the header's), up to five
- * times its longest on Linux.
+ * How many times the longest a file was seen to take on Linux its budget is, at least: a file's time there moved up to
+ * twice from one run to the next (the worker requests', 12.8 to 29.2 s).
+ */
+export const HEADROOM = 2;
+
+/**
+ * A budget on macOS (`macos-15`) is this many times Linux's, and a file past it is a warning, not a failure. Its runner
+ * is slower, and moves far more from one run to the next: a file took from 15 to 121 seconds there (the samples' rows),
+ * another from 6 to 36 (the header's), up to five times its longest on Linux.
  */
 export const MACOS_FACTOR = 4;
 
-/** How much longer than the longest a file was seen to take its budget is, at least. */
+/** A file within its budget, but not by this much, is said in the log: the early sign it's growing toward it. */
 export const MARGIN = 1.5;
 
 /**
- * The test files that took more than BUDGET over MARGIN on Linux, each with its own budget and why it's slow: its
- * longest on Linux times MARGIN, or on macOS times MARGIN over MACOS_FACTOR, whichever is more, up to the next five
- * seconds. Their longest, on Linux and on macOS, in the runs of 2026-11-09 and 2026-11-10 (D276).
+ * The test files that took more than BUDGET over HEADROOM on Linux, each with its own budget and why it's slow: its
+ * longest on Linux times HEADROOM, up to the next five seconds. Their longest, on Linux and on macOS, in the runs of
+ * 2026-11-09 and 2026-11-10 (D276).
  */
 export const BUDGETS: Record<string, { seconds: number; why: string }> = {
   "tests/tui/workspace/explorer/walk-thread.test.ts": {
-    seconds: 50,
+    seconds: 70,
     why: "44 tests, each starting the walks' and the listings' threads and waiting on them (32.8 s; 50.5 on macOS)",
   },
   "tests/distribution/release.test.ts": {
-    seconds: 50,
-    why: "builds this machine's release once, compiled, for its tests to read (31.4 s; 35.6 on macOS)",
+    seconds: 65,
+    why: "builds this machine's release once, compiled, for its tests to read (31.4 s; 39.9 on macOS)",
   },
   "tests/cli/agents/skill.test.ts": {
-    seconds: 50,
-    why: "runs every command the agents' skill shows, each a process of its own (31.4 s; 32.5 on macOS)",
+    seconds: 65,
+    why: "runs every command the agents' skill shows, each a process of its own (31.4 s; 36.8 on macOS)",
   },
   "tests/worker-requests.test.ts": {
-    seconds: 45,
-    why: "parses the biggest note a vault takes, and bursts of big ones, on the parse workers (29.2 s; 35.1 on macOS)",
+    seconds: 60,
+    why: "parses the biggest note a vault takes, and bursts of big ones, on the parse workers (29.2 s; 37.6 on macOS)",
   },
   "tests/core/rendering/layout/markdown/samples.test.ts": {
-    seconds: 50,
+    seconds: 60,
     why: "renders every sample and reference-set note at several widths and glyphs (28.5 s; 121.4 on macOS)",
+  },
+  "tests/terminal-harness.test.ts": {
+    seconds: 40,
+    why: "starts programs in headless terminals and waits for what each draws (19.9 s; 23.2 on macOS)",
+  },
+  "tests/tui/documents/views/parse-threads.test.ts": {
+    seconds: 40,
+    why: "parses big notes on the parse threads, nine at once, and waits for the index (19.2 s; 35.5 on macOS)",
+  },
+  "tests/cli/editing/writing.test.ts": {
+    seconds: 35,
+    why: "runs the CLI's writing commands some sixty times, a process each (17.2 s; 19.2 on macOS)",
+  },
+  "tests/cli/diagnostics/servers.test.ts": {
+    seconds: 35,
+    why: "runs doctor and diagnostics with stand-in language servers, a process each (16.1 s; 17.3 on macOS)",
+  },
+  "tests/cli/files/operations.test.ts": {
+    seconds: 35,
+    why: "runs the CLI's file commands (cp, mv, rm, trash) some sixty times, a process each (15.5 s; 15.5 on macOS)",
   },
 };
 
@@ -141,6 +170,13 @@ export function readReport(xml: string): Report {
 /** How many times Linux's a system's budgets are: `darwin`'s MACOS_FACTOR. */
 export const factorFor = (platform: string): number => (platform === "darwin" ? MACOS_FACTOR : 1);
 
+/** Whether a file over its budget fails the job on a system, or is a warning: on macOS (`darwin`), a warning. */
+export const failsOn = (platform: string): boolean => platform !== "darwin";
+
+/** The system whose budgets apply: the runner's, as GitHub names it (`RUNNER_OS`), or else this machine's. */
+export const systemOf = (env: Record<string, string | undefined>, platform: string): string =>
+  env.RUNNER_OS === "macOS" ? "darwin" : env.RUNNER_OS === "Linux" ? "linux" : platform;
+
 /** A test file's budget, in seconds, on a runner whose budgets are `factor` times Linux's. */
 export const budgetOf = (file: string, factor = 1, budgets = BUDGETS, budget = BUDGET): number =>
   (budgets[file]?.seconds ?? budget) * factor;
@@ -202,16 +238,17 @@ export function summary(report: Report, factor = 1, n = 10, budgets = BUDGETS, b
 }
 
 /**
- * What `bun run test:times <report>` says of the report at `path`: its summary, a failure for each file over its
- * budget (and for a report missing, or not one), and a note for each within it but not by MARGIN.
+ * What `bun run test:times <report>` says of the report at `path` on `platform`: its summary; for each file over its
+ * budget a failure, or on macOS a warning, which the summary says too; a failure for a report missing, or not one; and
+ * a note for each file within its budget but not by MARGIN.
  */
 export function check(
   path: string | undefined,
   platform: string = process.platform,
   budgets = BUDGETS,
   budget = BUDGET,
-): { summary: string; errors: string[]; notes: string[] } {
-  const none = { summary: "", notes: [] };
+): { summary: string; errors: string[]; warnings: string[]; notes: string[] } {
+  const none = { summary: "", warnings: [], notes: [] };
   if (!path) return { ...none, errors: ["test-times: which report? bun run test:times <report.xml>"] };
   if (!existsSync(path))
     return { ...none, errors: [`test-times: no report at ${path}: the tests wrote none (SCOPE_REPORT, D276)`] };
@@ -224,13 +261,23 @@ export function check(
   const factor = factorFor(platform);
   const { over, near } = judge(report, factor, budgets, budget);
   const whose = (file: string) => (file in budgets ? "its own in BUDGETS" : "BUDGET");
+  const fails = failsOn(platform);
+  const past = over.map(
+    (o) =>
+      `test-times: ${o.file} took ${sec(o.seconds)} s, over its budget of ${o.budget} s (${whose(o.file)}, ` +
+      (fails
+        ? "scripts/test-times.ts): make it faster or split it; or, slow for a reason, give it a budget of its own, with why"
+        : "scripts/test-times.ts): a warning, as a file's time on macOS moves too much to fail on; if Linux's grew too, " +
+          "make it faster or split it"),
+  );
+  const warnings = fails ? [] : past;
+  const warned = warnings.length
+    ? ["", "Over budget, a warning on macOS, not a failure:", "", ...warnings.map((w) => `- ${cell(w)}`), ""]
+    : [];
   return {
-    summary: summary(report, factor, 10, budgets, budget),
-    errors: over.map(
-      (o) =>
-        `test-times: ${o.file} took ${sec(o.seconds)} s, over its budget of ${o.budget} s (${whose(o.file)}, ` +
-        "scripts/test-times.ts): make it faster or split it; or, slow for a reason, give it a budget of its own, with why",
-    ),
+    summary: summary(report, factor, 10, budgets, budget) + warned.join("\n"),
+    errors: fails ? past : [],
+    warnings,
     notes: near.map(
       (n) => `test-times: ${n.file} took ${sec(n.seconds)} s, within its budget of ${n.budget} s, but not by ${MARGIN}`,
     ),
@@ -303,13 +350,14 @@ const command = (text: string): string => text.replace(/%/g, "%25").replace(/\r/
 if (import.meta.main) {
   const [first, ...rest] = process.argv.slice(2);
   if (first === "slow") process.exit(slow(rest));
-  const r = check(first);
+  const r = check(first, systemOf(process.env, process.platform));
   if (r.summary) {
     console.log(r.summary);
     const out = process.env.GITHUB_STEP_SUMMARY;
     if (out) appendFileSync(out, `${r.summary}\n`);
   }
   for (const n of r.notes) console.log(n);
+  for (const w of r.warnings) console.error(process.env.GITHUB_ACTIONS ? `::warning::${command(w)}` : w);
   for (const e of r.errors) console.error(process.env.GITHUB_ACTIONS ? `::error::${command(e)}` : e);
   process.exit(r.errors.length ? 1 : 0);
 }

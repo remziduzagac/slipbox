@@ -148,9 +148,11 @@ runs only once it passed, whatever the event (D273). Jobs call package.json scri
 - **The tests' times** (D276, `scripts/test-times.ts`), in each `test` job, Linux's parts and macOS's: `SCOPE_REPORT`
   (the runner's temporary folder) has `ci:scope` hand `bun test` its JUnit reporter, or write an empty report for a
   part with nothing to run. Once the tests ran, passed or failed, `bun run test:times` reads it: the ten slowest files
-  and tests, in the log and the step summary; a test file over its budget fails the job (design/testing.md § Timeout
-  policy), as does a report missing. The report is uploaded as `test-times-<system>-<part>` (`Linux-0` to `-2`,
-  `macOS-0`), kept 30 days; the upload needs no permission of the job's token. A test holds both jobs to these steps.
+  and tests, in the log and the step summary; a test file over its budget fails a Linux job and is a warning on macOS,
+  in the step summary too (design/testing.md § Timeout policy); a report missing fails either. The report is uploaded
+  as `test-times-<system>-<part>` (`Linux-0` to `-2`, `macOS-0`), kept 30 days, a job run again replacing its own
+  (`overwrite`: upload-artifact refuses a second under a name the run has); the upload needs no permission of the
+  job's token. A test holds both jobs to these steps.
 - **`site`**, on `ubuntu-24.04` for every event: the docs' site built (`bun run site`), every link within it landing
   (DS). Lint separately checks Markdown, spelling and links between files on every PR.
 - **`ci`**, the aggregator and the one required check: it always runs, waits for every other job, and fails unless
