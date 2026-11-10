@@ -198,11 +198,12 @@ the second is let go of.
   graph anew, takes the place of the one out, and what a build of the graph as it was follows (`Watch.rebuilt`) still
   follows when one was asked of it too. Given up on (SD-D6): `reading the vault gave up: …; it's read again in a
   minute`, the graph as it was, and asked again a minute later, while the vault and its graph are the same, with all
-  it was asked, what waited for it too, as one build. An answer that can't be taken, a step of building from it
-  failing, is said (`reading the vault failed: …; :reindex tries again`), every key let go. A vault gone into has a
-  graph never built until its first answer: the keys wait for it as for a key's build, whether a note was named, the
-  tabs brought back or neither, `reading the vault…` in the status line, `esc` not letting them go, and the
-  background tasks can't stop it — they'd act on an empty graph, a rename rewriting none of the links to what it
+  it was asked, what waited for it too, as one build — and, for a graph never built, what's asked to follow it in that
+  minute: a vault gone into whose session answers then opens its own note once it's read. An answer that can't be taken,
+  a step of building from it failing, is said (`reading the vault failed: …; :reindex tries again`), every key let go. A
+  vault gone into has a graph never built until its first answer: the keys wait for it as for a key's build, whether a
+  note was named, the tabs brought back or neither, `reading the vault…` in the status line, `esc` not letting them go,
+  and the background tasks can't stop it — they'd act on an empty graph, a rename rewriting none of the links to what it
   moves. Its note opens once it's built. A key's build's walk takes a disk thread at once, as a key's read does, not
   waiting for the other to be free: the thread SD-D2 keeps free is the keys', and every key is waiting on this walk —
   going into a vault, slipbox's own folders on a slow disk (SD-T9) would otherwise hold it, and the keys, behind them.

@@ -69,6 +69,14 @@ interface Out {
   readAgain: boolean;
 }
 
+/** A build given up on, read again a minute later (SD-D6) with all it was asked — what follows it asked meanwhile too —
+ *  while the vault and its graph are the same. */
+interface Later {
+  loc: VaultLocation;
+  base: Graph;
+  asked: Asked[];
+}
+
 /** The files `since` that changed in `graph` while its walk was read elsewhere, taken in again over what that read —
  *  as the watcher takes a change in — and one reached (20.8) reached again; whether each is there asked of the disk
  *  once. A file the walk leaves out, reached by a link or by being opened, that the build didn't keep, is reached as
@@ -107,6 +115,8 @@ export class Builds {
   /** How long after a build given up on it's asked again (SD-D6); a test's, sooner. */
   againMs = BUILD_AGAIN_MS;
   private out: Out | null = null;
+  /** The latest build given up on, till it's asked again. */
+  private later: Later | null = null;
   /** Inside `forKey`: the builds asked are a key's. */
   private keyDepth = 0;
   /** The latest build asked of a disk thread, once it's taken, dropped or given up. */
@@ -167,11 +177,18 @@ export class Builds {
   }
 
   /** `run` once the build out for the vault open is taken — a vault gone into: its note, what its walk said — or at once
-   *  when none is (null); given up, once it's read again. `hold`: the keys wait for it too. A promise settled once it's
-   *  run or dropped, or the build given up. */
+   *  when none is (null); given up, once it's read again — asked after it's given up too, while its graph has never
+   *  been built: run at once, it would find none of the vault's notes. `hold`: the keys wait for it too. A promise
+   *  settled once it's run or dropped, or the build given up. */
   after(run: () => void, hold = false): Promise<void> | null {
     const out = this.out;
-    if (!out || out.loc !== this.app.loc || out.base !== this.app.graph) {
+    const app = this.app;
+    if (!out || out.loc !== app.loc || out.base !== app.graph) {
+      const later = this.later;
+      if (!out && later && later.loc === app.loc && later.base === app.graph && app.graph.builds === 0) {
+        later.asked.push({ ask: { andThen: run }, settle: () => {}, only: true });
+        return Promise.resolve();
+      }
       run();
       return null;
     }
@@ -329,9 +346,9 @@ export class Builds {
     }
   }
 
-  /** `out` given up on (SD-D6): said, the graph as it was, and asked again a minute later with all it was asked — no
-   *  longer a key's but for a graph never built — while the vault and its graph are the same: one build, joining the
-   *  one out then, if any. */
+  /** `out` given up on (SD-D6): said, the graph as it was, and asked again a minute later with all it was asked, and
+   *  what follows it asked meanwhile of a graph never built (`after`) — no longer a key's but for a graph never built —
+   *  while the vault and its graph are the same: one build, joining the one out then, if any. */
   private failed(out: Out, err: Error): void {
     const app = this.app;
     const why = walkFailure(err);
@@ -339,9 +356,12 @@ export class Builds {
     this.retire(out, "failed", undefined, why);
     app.message("warn", `reading the vault gave up: ${why}; it's read again in a minute`);
     app.host.requestRender();
-    const again = [...out.asked, ...out.again];
+    const later: Later = { loc: out.loc, base: out.base, asked: [...out.asked, ...out.again] };
+    this.later = later;
     const timer = setTimeout(() => {
+      if (this.later === later) this.later = null;
       if (app.quitting || app.loc !== out.loc || app.graph !== out.base) return;
+      const again = later.asked;
       this.askAll(again.map((a) => ({ ...this.asked({ ...a.ask, key: false }), ...(a.only ? { only: true } : {}) })));
     }, this.againMs);
     (timer as { unref?: () => void }).unref?.();

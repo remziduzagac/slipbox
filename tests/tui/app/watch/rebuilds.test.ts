@@ -22,7 +22,17 @@ import { type Harness, harness, makeSandbox, makeVault, statusRow } from "../../
 const sandbox = makeSandbox();
 const { holding, untilHeld } = makeHeldKeys();
 
-afterEach(() => setFolderReader(null));
+/** The test's slipbox and its hold: a test that fails before it quits leaves its slipbox quit all the same, once its
+ *  index has caught up, the hold let go first — else the index's slices read its `held` notes on this thread under the
+ *  next test's hold, and hold that test HELD_MS. */
+const live: { apps: Harness[]; held: Hold | null } = { apps: [], held: null };
+
+afterEach(async () => {
+  live.held?.release();
+  for (const h of live.apps.splice(0)) await quit(h);
+  live.held = null;
+  setFolderReader(null);
+});
 
 /** `files` (path → text) written in `root`. */
 function write(root: string, files: Record<string, string>): string {
@@ -39,6 +49,7 @@ function write(root: string, files: Record<string, string>): string {
 async function vaultWith(files: Record<string, string>, open = "index.md"): Promise<Harness> {
   const root = write(makeVault(), files);
   const h = await harness({ root, open, config: (c) => void (c.render.notes = false) });
+  live.apps.push(h);
   h.app.watch.builds.offThread = true;
   h.app.reads.offThread = true;
   h.app.explorer.listings = new Listings(h.app, true);
@@ -59,6 +70,7 @@ async function quit(h: Harness): Promise<void> {
  *  thread's reads through the seam it holds, every one under `held` by default), a walk made here held on them too. */
 function holdWalks(deadline?: number, here?: (path: string) => boolean): Hold {
   const held = holding(here, deadline);
+  live.held = held;
   setFolderReader(slowFolders);
   return held;
 }
@@ -111,7 +123,7 @@ describe("the vault open built again on a disk thread (SD-T8)", () => {
     await quit(h);
   });
 
-  test("held: a vault gone into — the one left let go of as now, the new one's notes once its walk answers, its note opened then, the keys waiting for it", async () => {
+  test("held: a vault gone into — the one left let go of as now, the new one's notes once its walk answers, the keys waiting for it; its note opened then, once its session is read too", async () => {
     const other = write(makeVault(), { "held/x.md": "# X\n" });
     const h = await vaultWith({});
     const left = h.app.graph;
@@ -127,6 +139,8 @@ describe("the vault open built again on a disk thread (SD-T8)", () => {
     expect(statusRow(h.frame())).toContain("reading the vault…");
     held.release();
     await h.app.watch.builds.idle();
+    // Its session read on a disk thread too, no key waiting for it (SD-T9): it may answer after the walk.
+    await h.app.session.entering;
     await h.app.reads.settled();
     expect(h.app.graph.notes.has("held/x.md")).toBe(true);
     expect(h.app.tabs.length).toBe(1);
@@ -148,6 +162,7 @@ describe("the vault open built again on a disk thread (SD-T8)", () => {
     const taken = h.app.graph;
     held.release();
     await h.app.watch.builds.idle();
+    await h.app.session.entering;
     await h.app.reads.settled();
     expect(h.app.graph).toBe(taken);
     expect(taken.notes.has("z.md")).toBe(true);
@@ -439,6 +454,23 @@ describe("a vault's first build (SD-T8)", () => {
     await quit(h);
   });
 
+  test("held: a vault gone into with nothing named — what follows the switch waits for its first build, then its own note", async () => {
+    const other = write(makeVault(), { "index.md": "# Index\n", "held/x.md": "# X\n" });
+    const h = await vaultWith({});
+    const held = holdWalks();
+    let ran: string | null | undefined;
+    const after = () => void (ran = h.app.view?.buf.abs ?? null);
+    expect(h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true, after })).toBe(true);
+    await untilHeld(held);
+    await h.app.session.entering;
+    expect(ran).toBeUndefined();
+    held.release();
+    await h.app.watch.builds.idle();
+    await h.app.reads.settled();
+    expect(ran).toBe(join(other, "index.md"));
+    await quit(h);
+  });
+
   test("held: a vault gone into while a disk thread is busy with a read no key waits for — its first build, the keys waiting for it, takes the other at once", async () => {
     const other = write(makeVault(), { "x.md": "# X\n" });
     const h = await vaultWith({ "held/a.md": "# A\n" });
@@ -472,21 +504,46 @@ describe("a build that goes wrong (SD-T8)", () => {
     const starts = spyOn(h.app.watch.builds as unknown as { start: () => void }, "start");
     const held = holdWalks(300);
     h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true });
-    await untilHeld(held);
+    // The reindex asked as the vault's first build is: while it's out, however slow the machine is to reach the hold.
+    const first = h.app.watch.builds.built;
     await h.app.run("vault.reindex");
-    await h.app.watch.builds.built;
+    await first;
     expect(said(h)).toContain("reading the vault gave up: a folder didn't answer in time; it's read again in a minute");
     expect(h.app.tabs.length).toBe(0);
-    // The disk answering again, the vault's read again — nobody asked.
+    // The disk answering again before the vault's read again (`againMs`: at the next turn) — nobody asked.
     held.release();
     setWalkWorker(null);
     await until(() => h.app.graph.builds > 0, "the build asked again");
     await h.app.watch.builds.idle();
+    await h.app.session.entering;
     await h.app.reads.settled();
     expect(h.app.graph.notes.has("held/x.md")).toBe(true);
     expect(h.app.tabs.length).toBe(1);
     expect(said(h).some((t) => t.startsWith("reindexed "))).toBe(true);
     expect(starts).toHaveBeenCalledTimes(2);
+    await quit(h);
+  });
+
+  test("held: a vault's first build given up — what follows it, asked before it's read again (its own note, its session read then), follows that read, never the graph not built", async () => {
+    const other = write(makeVault(), { "held/x.md": "# X\n" });
+    const h = await vaultWith({});
+    h.app.watch.builds.againMs = 0;
+    const held = holdWalks(300);
+    h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true });
+    await h.app.watch.builds.built;
+    expect(h.app.graph.builds).toBe(0);
+    // Before it's read again (a minute in the TUI; here, at the next turn): not run on the vault's notes not read yet,
+    // the keys let go, as the build's given up.
+    let found: boolean | undefined;
+    const followed = h.app.watch.builds.after(() => void (found = h.app.graph.notes.has("held/x.md")), true);
+    expect(found).toBeUndefined();
+    expect(h.app.reads.busy).toBe(false);
+    await followed;
+    held.release();
+    setWalkWorker(null);
+    await until(() => h.app.graph.builds > 0, "the build asked again");
+    await h.app.watch.builds.idle();
+    expect(found).toBe(true);
     await quit(h);
   });
 

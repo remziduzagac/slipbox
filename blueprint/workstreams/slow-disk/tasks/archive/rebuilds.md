@@ -112,7 +112,10 @@ What the description left open, settled here for the maintainer to confirm; desi
 - Given up on: `reading the vault gave up: <why>; it's read again in a minute`, and asked again a minute later
   (`BUILD_AGAIN_MS`) while the vault and its graph are the same: everything it was asked, what only waited for it
   (`after`: the graph's errors, the offer to relink what moved, home's walk asked again, the default note) too, as one
-  build — joining the one out then, if there is one. No longer a key's, but for a graph never built.
+  build — joining the one out then, if there is one. No longer a key's, but for a graph never built. For a graph never
+  built, what's asked to follow it in that minute joins them (`Builds.later`): run at once, it would find none of the
+  vault's notes. Found under load: a vault gone into whose session read answered, or was given up, after its first
+  walk was, opened no note, then or once it was read.
 - An answer is taken while the vault open and its graph are the ones it was asked under (`current`). When something
   else built that graph meanwhile (`Graph.builds` moved: home's refresh from the background index's walk), it's read
   once more, with what it was asked, then taken whatever was built meanwhile (`readAgain`): SD-D5's ask again,
