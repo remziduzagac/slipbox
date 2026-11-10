@@ -333,7 +333,11 @@ function acceptPointer(app: App, c: CompletionState, to: string, style: LinkStyl
   app.linking.writeLinkAsked(view.buf.abs, to, (ends) => {
     if (view.buf.version !== version)
       return app.message("warn", "the note changed while you picked: complete the link again");
-    const text = linkDestination(conventionOf(app.graph, app.config, app.settings.origins, style), style, ends);
+    const text = linkDestination(
+      conventionOf(app.graph, app.config, app.settings.origins, style, app.settings.tool()),
+      style,
+      ends,
+    );
     const s = app.vim;
     if (s.inInsert && !s.replaying) {
       if (now) {

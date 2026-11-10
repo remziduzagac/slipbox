@@ -22,6 +22,7 @@ function readHost(root: string) {
       now: () => clock,
       host: { requestRender: () => void events.push("render") },
       explorer: { invalidateTree: () => void events.push("invalidate") },
+      watch: { look: { offThread: false } },
     },
     states: new Map([["old.md", "modified"]]),
     folders: new Map([["old", "modified"]]),

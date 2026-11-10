@@ -9,18 +9,10 @@
 // Elsewhere, what the file system allows. A followed target is asked whether it answers before it's walked, off the
 // main thread: one on a disk that doesn't answer is given up on (`probe`).
 
-import {
-  lstatSync,
-  promises,
-  readlinkSync,
-  realpathSync,
-  renameSync,
-  statSync,
-  symlinkSync,
-  unlinkSync,
-} from "node:fs";
+import { lstatSync, promises, readlinkSync, renameSync, statSync, symlinkSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import * as disk from "../../foundation/platform/disk.ts";
 import { climbsOut, ensureDir, readJson, realTarget, writeJson } from "../../foundation/platform/fsutil.ts";
 import { stateHome, tildePath } from "../../foundation/platform/paths.ts";
 
@@ -61,7 +53,7 @@ function kept(): KeptLink[] {
 
 function real(path: string): string {
   try {
-    return realpathSync(path);
+    return disk.realpath(path);
   } catch {
     return resolve(path);
   }
@@ -81,7 +73,7 @@ export function linkKey(link: string): string {
 /** Where a link leads now, by its real path; null when it's broken (nothing there, or a loop). */
 export function linkTarget(link: string): string | null {
   try {
-    return realpathSync(link);
+    return disk.realpath(link);
   } catch {
     return null;
   }
@@ -307,7 +299,7 @@ export function unfollowedLink(
     at = join(at, part);
     let link: boolean;
     try {
-      link = lstatSync(at).isSymbolicLink();
+      link = disk.lstat(at).isSymbolicLink();
     } catch {
       return null;
     }

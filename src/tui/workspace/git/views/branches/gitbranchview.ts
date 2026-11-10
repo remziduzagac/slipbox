@@ -182,9 +182,10 @@ export class BranchView {
       case "checkout":
         return app.git.beforeCheckout(() => {
           app.message("info", `checking out ${b.name}…`);
-          void switchLater(c.root, b.name).then((why) => {
+          void switchLater(c.root, b.name).then(async (why) => {
             if (why) app.message("warn", `git: ${why}`);
-            app.git.checkHead();
+            // The switch seen and done (its tabs back) before the list is shown again, however slow the disk.
+            await app.git.checkHead();
             this.relisted();
           });
         });
@@ -449,7 +450,7 @@ export class BranchView {
     const app = this.app;
     const go = () => {
       app.message("info", `merging ${branch} into ${into}…`);
-      void mergeLater(where, branch).then((r) => {
+      void mergeLater(where, branch).then(async (r) => {
         if (r.ok) app.message("info", `merged ${branch} into ${into}`);
         else if (r.conflict)
           app.message(
@@ -457,7 +458,7 @@ export class BranchView {
             `merging ${branch} into ${into} stopped on conflicts${here ? ": Conflicts lists them" : ` in ${tildePath(where)}`} — git merge --abort undoes it`,
           );
         else app.message("warn", `git: ${sanitize(r.why)}`);
-        if (here) app.git.checkHead();
+        if (here) await app.git.checkHead();
         this.relisted();
       });
     };

@@ -12,8 +12,19 @@ import type { Config } from "../../application/config/config.ts";
 import type { HomeWalk } from "../vaults/home.ts";
 import type { IndexAnswer, Opened } from "../graph/index-job.ts";
 import type { JudgedListing, PathVerdict } from "../graph/watch/judging.ts";
-import type { DiskRequest, ListAsk, PathStat, ReadAnswer, StatAsk, WalkAnswer, WalkAsk } from "./disk-jobs.ts";
+import type {
+  DiskRequest,
+  ListAsk,
+  LookRequestAnswer,
+  PathStat,
+  ReadAnswer,
+  StatAnswer,
+  StatAsk,
+  WalkAnswer,
+  WalkAsk,
+} from "./disk-jobs.ts";
 import type { FolderListing } from "./listing.ts";
+import type { LookJob, LookJobAnswer } from "./look-jobs.ts";
 import { type FilterSettings, slowDisk, type WalkCap, type WalkLimits } from "./walk.ts";
 import type { StepAnswer, WalkRequest } from "./walk-jobs.ts";
 import { walkContext } from "../../foundation/workers/worker-context.ts";
@@ -257,21 +268,25 @@ export const DISK_DEADLINES: Readonly<Record<Asker, number>> = {
 export const IDLE_MS = 60_000;
 
 /** A look's batch (SD-D8, its note of 2026-11-10): every path it stats (links followed, or their own: `own`), and each
- *  folder it lists; the watcher's judged with the walk's filter as they're read (`judge`, SD-T3). Asked in the
- *  background (`background`: the watcher's), its requests go one at a time, with any other background request's, so
- *  they never hold both threads: what a key asks finds the other (SD-D2's note of 2026-11-10). */
+ *  folder it lists; the watcher's judged with the walk's filter as they're read (`judge`, SD-T3); and the TUI's look's
+ *  own jobs (SD-T4, look-jobs.ts): a way checked, git's state, the config — asked with its stats as one request, so a
+ *  look holds one thread. Asked in the background (`background`: the watcher's look, the TUI's), its requests go one at
+ *  a time, with any other background request's, so they never hold both threads: what a key asks finds the other
+ *  (SD-D2's note of 2026-11-10). */
 export interface LookAsk {
   stat?: StatAsk;
   list?: ListAsk[];
+  jobs?: LookJob[];
   background?: boolean;
 }
 
-/** A look's batch answered: its stats in the order asked (each judged, when asked: `judged`), and a listing for each
- *  folder. */
+/** A look's batch answered: its stats in the order asked (each judged, when asked: `judged`), a listing for each
+ *  folder, and an answer for each job. */
 export interface LookAnswer {
   stats: PathStat[];
   judged?: PathVerdict[];
   listings: (FolderListing | JudgedListing)[];
+  jobs: LookJobAnswer[];
 }
 
 type Timers = Pick<typeof globalThis, "setTimeout" | "clearTimeout">;
@@ -377,28 +392,27 @@ export class DiskThreads {
   }
 
   /**
-   * A look's batch (SD-D8): one `stat` of every path and a `list` of each folder, asked together, each with a look's
-   * deadline — in the background, one at a time (`background`). Answered once all have; failed once one gives up, those
-   * still waiting for a thread withdrawn.
+   * A look's batch (SD-D8): one `stat` of every path — with the TUI's look's jobs, one request of both (SD-T4) — and a
+   * `list` of each folder, asked together, each with a look's deadline — in the background, one at a time
+   * (`background`). Answered once all have; failed once one gives up, those still waiting for a thread withdrawn.
    */
   async look(batch: LookAsk): Promise<LookAnswer> {
     const giveUp = new AbortController();
     const background = batch.background === true;
     const { paths = [], own = false, judge } = batch.stat ?? {};
-    const stats = paths.length
-      ? this.ask<{ stats: PathStat[]; judged?: PathVerdict[] }>(
-          { op: "stat", paths, ...(own ? { own } : {}), ...(judge ? { judge } : {}) },
-          "look",
-          giveUp,
-          background,
-        )
-      : Promise.resolve({ stats: [] });
+    const stat: StatAsk = { paths, ...(own ? { own } : {}), ...(judge ? { judge } : {}) };
+    const jobs = batch.jobs ?? [];
+    const stats: Promise<StatAnswer & { jobs?: LookJobAnswer[] }> = jobs.length
+      ? this.ask<LookRequestAnswer>({ op: "look", stat, jobs }, "look", giveUp, background)
+      : paths.length
+        ? this.ask<StatAnswer>({ op: "stat", ...stat }, "look", giveUp, background)
+        : Promise.resolve({ stats: [] });
     const lists = (batch.list ?? []).map((l) =>
       this.ask<{ listing: FolderListing | JudgedListing }>({ op: "list", ...l }, "look", giveUp, background),
     );
     const [answered, ...listed] = await Promise.all([stats, ...lists] as const);
-    const judged = "judged" in answered && answered.judged ? { judged: answered.judged } : {};
-    return { stats: answered.stats, ...judged, listings: listed.map((l) => l.listing) };
+    const judged = answered.judged ? { judged: answered.judged } : {};
+    return { stats: answered.stats, ...judged, listings: listed.map((l) => l.listing), jobs: answered.jobs ?? [] };
   }
 
   /** A request on a thread that's free, once one is, with what this thread knows (`walkContext`) as it's sent; its

@@ -718,10 +718,10 @@ describe("the background auto-index in the TUI (20.9)", () => {
       first.app.openInNewTab("notes/inbox.md");
       first.app.session.save("feat");
       const h = await harness({ loc, open: "README.md", config: on });
-      expect(h.app.git.checkHead()).toBe(false);
+      expect(h.app.feed.checkHead()).toBe(false);
       expect(h.app.graph.notes.has("notes/inbox.md")).toBe(false);
       expect(git("checkout", "-q", "feat")).toBe(0);
-      expect(h.app.git.checkHead()).toBe(true);
+      expect(h.app.feed.checkHead()).toBe(true);
       expect(h.app.messages.at(-1)!.text).toBe("switched to branch feat: its tabs are back");
       expect(h.app.tabs.map((t) => t.views[t.active]!.buf.rel)).toEqual(["README.md", "notes/inbox.md"]);
       expect(h.app.graph.linksOf("notes/inbox.md").map((l) => [l.resolvedKind, l.path])).toEqual([
@@ -765,7 +765,7 @@ describe("the background auto-index in the TUI (20.9)", () => {
       first.app.openInNewTab("notes/inbox.md");
       first.app.session.save("feat");
       const h = await harness({ loc, open: "README.md", config: on });
-      expect(h.app.git.checkHead()).toBe(false);
+      expect(h.app.feed.checkHead()).toBe(false);
       expect(git("checkout", "-q", "feat")).toBe(0);
       // The watcher's batch for what git wrote: the switch seen first, its tabs back, their folder walked, then the
       // batch — the note read again once, never before the batch and again with it.

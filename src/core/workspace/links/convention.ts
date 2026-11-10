@@ -10,7 +10,7 @@
 //
 // It decides only the links slipbox makes (21.5); a rename keeps each link's own form.
 
-import { existsSync, statSync } from "node:fs";
+import * as disk from "../../foundation/platform/disk.ts";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { parse as parseToml } from "smol-toml";
@@ -108,11 +108,43 @@ export function countForms(
   return counts;
 }
 
+/** A root's tool's settings as read (`toolRead`): whose, and its file's data, null where it has none or can't be read —
+ *  plain, so it crosses from a disk thread (SD-T4). */
+export interface ToolRead {
+  tool: "obsidian" | "zk";
+  data: Record<string, unknown> | null;
+}
+
 /** What the tool owning `root` says — Obsidian's or zk's settings, their defaults where a key is unset. */
 export function toolSays(root: string): ToolSays | null {
-  if (isDir(join(root, ".obsidian"))) {
+  return toolSaid(toolRead(root));
+}
+
+/** The tool owning `root` and its settings' data, read through the seam (SD-D10): the TUI's look reads them on a disk
+ *  thread, when their stamps moved (`toolFiles`). */
+export function toolRead(root: string): ToolRead | null {
+  if (isDir(join(root, ".obsidian"))) return { tool: "obsidian", data: readJson(join(root, ".obsidian", "app.json")) };
+  if (isDir(join(root, ".zk"))) return { tool: "zk", data: readToml(join(root, ".zk", "config.toml")) };
+  return null;
+}
+
+/** What the tools' settings are read from under `root`, Obsidian's then zk's: what the look stamps — a folder by
+ *  whether it's there (`folder`), since Obsidian rewrites what's in `.obsidian/` while it runs; a settings file by its
+ *  mtime. */
+export function toolFiles(root: string): { path: string; folder: boolean }[] {
+  return [
+    { path: join(root, ".obsidian"), folder: true },
+    { path: join(root, ".obsidian", "app.json"), folder: false },
+    { path: join(root, ".zk"), folder: true },
+    { path: join(root, ".zk", "config.toml"), folder: false },
+  ];
+}
+
+/** What a tool's settings, as read (`toolRead`), say. */
+export function toolSaid(read: ToolRead | null): ToolSays | null {
+  if (read?.tool === "obsidian") {
     const file = join(".obsidian", "app.json");
-    const app = readJson(join(root, file));
+    const app = read.data;
     // `useMarkdownLinks` (false: wikilinks); `newLinkFormat`: "shortest" (the default) a note's name
     // when it's unique, "relative" from the note, "absolute" from the vault's top. A wikilink drops
     // `.md`, a markdown link keeps it.
@@ -127,9 +159,9 @@ export function toolSays(root: string): ToolSays | null {
       extension: (style) => (style === "wiki" ? "dropped" : "kept"),
     };
   }
-  if (isDir(join(root, ".zk"))) {
+  if (read?.tool === "zk") {
     const file = join(".zk", "config.toml");
-    const config = readToml(join(root, file));
+    const config = read.data;
     const md = (config?.format as Record<string, Record<string, unknown>> | undefined)?.markdown;
     // `link-format`: "markdown" (the default) writes a path from the note, "wiki" one from the
     // notebook's top; any other is a template of the user's, which says nothing here.
@@ -149,13 +181,15 @@ export function toolSays(root: string): ToolSays | null {
 
 /**
  * A graph's root's convention: its tool's settings, its notes counted. `style`: the one a link being
- * written already has (`](` typed in a wikilink root) — the path and extension then as that style's.
+ * written already has (`](` typed in a wikilink root) — the path and extension then as that style's. `tool`: its
+ * tool's settings as kept (the TUI's, read by its look: SD-D13); left out, read here.
  */
 export function conventionOf(
   g: { root: string; loc: { mode: string }; linkForms(): FormCounts },
   config: Config,
   origins: Record<string, string>,
   style?: LinkStyle,
+  tool?: ToolSays | null,
 ): Convention {
   const hasRoot = g.loc.mode !== "folder";
   // A config file as people read it: from the root inside it (`.slipbox/config.toml`), else from home.
@@ -176,7 +210,7 @@ export function conventionOf(
     links: config.links,
     origins: shown,
     hasRoot,
-    tool: hasRoot ? toolSays(g.root) : null,
+    tool: hasRoot ? (tool === undefined ? toolSays(g.root) : tool) : null,
     counts: hasRoot ? g.linkForms() : null,
     style,
   });
@@ -286,14 +320,14 @@ function conventionSaid(c: Convention): { what: string; said: { parts: string; w
 
 function isDir(p: string): boolean {
   try {
-    return statSync(p).isDirectory();
+    return disk.stat(p).isDirectory();
   } catch {
     return false;
   }
 }
 
 function readJson(p: string): Record<string, unknown> | null {
-  if (!existsSync(p)) return null;
+  if (!disk.exists(p)) return null;
   try {
     const v = JSON.parse(stripJsonComments(readRegular(p, SMALL_FILE).toString("utf8")));
     return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
@@ -303,7 +337,7 @@ function readJson(p: string): Record<string, unknown> | null {
 }
 
 function readToml(p: string): Record<string, unknown> | null {
-  if (!existsSync(p)) return null;
+  if (!disk.exists(p)) return null;
   try {
     return parseToml(readRegular(p, SMALL_FILE).toString("utf8")) as Record<string, unknown>;
   } catch {

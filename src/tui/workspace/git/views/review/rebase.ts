@@ -9,7 +9,7 @@
 // changed asks to stash them and put them back after (`--autostash`, D247); where they conflict going back, git keeps
 // them in the stash, and the message names it.
 
-import { forgetOperation } from "../../../../../core/workspace/git/branches/operation-status.ts";
+import { operationAgain } from "../../../../../core/workspace/git/branches/operation-status.ts";
 import { type Checkout, headOf } from "../../../../../core/workspace/git/git.ts";
 import {
   abortLater,
@@ -50,10 +50,9 @@ function busy(app: App): boolean {
 async function after(app: App, r: RemoteDone, done: string): Promise<void> {
   const c = app.git.checkout;
   if (!c) return;
-  app.git.checkHead();
+  await app.git.checkHead();
   await app.git.refreshNow();
-  forgetOperation(app);
-  const op = operationOf(c);
+  const op = operationAgain(app, c);
   const trust = isTrusted(c.root) ? "" : " — this vault isn't trusted, so no hook ran";
   if (!op) {
     // Nothing under way any more: a merge screen of git's left open is of nothing.

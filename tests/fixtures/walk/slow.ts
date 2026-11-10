@@ -16,12 +16,26 @@ export const HELD_MS = 10_000;
 /** This thread's hold on the `held` folders (`Hold.cells`); none, they answer at once. */
 let cells: Int32Array | null = null;
 
-/** A read of a `held` folder: waited until the hold is let go, or HELD_MS, and then counted as given up. */
-function waitHeld(): void {
-  if (!cells) return;
+/** A read of a `held` folder: waited until the hold is let go, or HELD_MS, and then counted as given up. Whether it
+ *  was. */
+function waitHeld(): boolean {
+  if (!cells) return false;
   Atomics.add(cells, 1, 1);
-  if (Atomics.wait(cells, 0, 0, HELD_MS) === "timed-out") Atomics.add(cells, 2, 1);
+  const gaveUp = Atomics.wait(cells, 0, 0, HELD_MS) === "timed-out";
+  if (gaveUp) Atomics.add(cells, 2, 1);
   Atomics.sub(cells, 1, 1);
+  return gaveUp;
+}
+
+/** The reads through the seam this thread gave up waiting on, each with what asked for it: on the test's own thread,
+ *  what a failing test names (`Hold.gaveUpHere`). */
+const gaveUpHere: string[] = [];
+
+/** The functions that asked for a read, nearest first, the seam's own left out. */
+function askedBy(): string {
+  const frames = (new Error().stack ?? "").split("\n").slice(1);
+  const names = frames.map((f) => /at (\S+) \(/.exec(f)?.[1] ?? "?");
+  return names.filter((n) => !["askedBy", "heldReads", "readWait"].includes(n)).slice(0, 6).join(" ← ");
 }
 
 export function slowFolders(abs: string): Dirent[] {
@@ -33,9 +47,9 @@ export function slowFolders(abs: string): Dirent[] {
 }
 
 /** Before a stat or a read through the seam (`setReadWait`): one of a path with a `held` folder on its way waits as
- *  that folder's listing does. */
+ *  that folder's listing does; given up on, it's named with what asked for it (`gaveUpHere`). */
 export function heldReads(path: string): void {
-  if (onTheWay(path, "held")) waitHeld();
+  if (onTheWay(path, "held") && waitHeld()) gaveUpHere.push(`${path}: ${askedBy()}`);
 }
 
 /** The hold `shared` taken as this thread's (a worker's, sent it by `Hold.worker`). */
@@ -93,6 +107,7 @@ export class Hold {
 
   constructor() {
     cells = this.cells;
+    gaveUpHere.length = 0;
   }
 
   /** A walk's thread for a test (`setWalkWorker`), its `held` folders this hold's. */
@@ -110,6 +125,12 @@ export class Hold {
   /** Readers that waited HELD_MS, never let go. */
   get gaveUp(): number {
     return Atomics.load(this.cells, 2);
+  }
+
+  /** The reads through the seam this thread — the test's — gave up on since the hold was made, each with what asked
+   *  for it: what held the test's own thread, when it shouldn't have been. */
+  get gaveUpHere(): string[] {
+    return [...gaveUpHere];
   }
 
   /** Whether it's let go of now. */

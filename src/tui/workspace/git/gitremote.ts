@@ -182,13 +182,13 @@ export function gitPull(app: App): void {
         app,
         "pulling",
         () => pullLater(c),
-        (r) => {
+        async (r) => {
           // Both sides moved: git can't fast-forward. Asked how to bring them together instead.
           if (!r.ok && !r.login && /not possible to fast-forward/i.test(r.why))
             return askDiverged(app, c, branch, shown(up));
           if (!r.ok) return failed(app, "pull", r.why, r.login);
           // HEAD moved on its branch: seen now, as the watcher would see it, the tabs kept (no switch).
-          app.git.checkHead();
+          await app.git.checkHead();
           const now = headShort(c);
           app.message(
             "info",

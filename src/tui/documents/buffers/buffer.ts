@@ -269,8 +269,13 @@ export class NoteBuffer {
 
   /** True when the file on disk differs from what we loaded. */
   changedOnDisk(): boolean {
+    return !this.virtual && this.changedFrom(stamp(this.abs));
+  }
+
+  /** True when the file, stamped `s` on disk (null: gone, or unreadable), differs from what we loaded: a look's stat
+   *  off the screen's thread (SD-T4). */
+  changedFrom(s: Stamp | null): boolean {
     if (this.virtual) return false;
-    const s = stamp(this.abs);
     if (!s) return !this.deleted && !this.newFile;
     return !this.stamp || s.mtimeMs !== this.stamp.mtimeMs || s.size !== this.stamp.size;
   }

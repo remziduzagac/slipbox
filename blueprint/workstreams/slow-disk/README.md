@@ -279,7 +279,8 @@ By area:
 - **§ 2, the TUI's look** (SD-T4): the open files' stamps and their ways' links, the config's and git's `HEAD` and
   operation asked of a disk thread in one request a second, the config and the tool's settings read again there when
   they moved; the activity file's stamp with them, not every quarter second on its own. What's drawn of git (§ 8)
-  reads what this look last found (SD-D13). Shown: nothing.
+  reads what this look last found (SD-D13). Shown: nothing. Not answering: said once in Messages, beside the
+  watcher's, looked at again a minute later; the status line's indicator is the watcher's (§ 1).
 - **§ 4, opening a note** (SD-T5): SD-D4's rule; `vaultOf`, `lockedSaid` and the way's links answered with the read.
   A list's preview reads on the thread without holding the keys: `reading…` in the preview until it comes. Git's keys
   (§ 9) ask their stats and a file's presence the same way.
@@ -316,7 +317,8 @@ merges (SD-D14), its design text.
   `done`
 - [SD-T3](tasks/archive/watcher-look.md): the watcher's look every two seconds, and its settle, on the disk threads.
   `done`
-- [SD-T4](tasks/tui-look.md): the TUI's look every second, what's drawn of git, and the activity file. `todo`
+- [SD-T4](tasks/archive/tui-look.md): the TUI's look every second, what's drawn of git, and the activity file.
+  `done`
 - [SD-T5](tasks/opening-a-note.md): a note opened reads on a disk thread; the key waits, `esc` gives it up. `todo`
 - [SD-T6](tasks/note-text.md): a changed note's text, and the background parse's, read on the disk threads. `todo`
 - [SD-T7](tasks/explorer-tree.md): the explorer's own tree of the vault open listed and marked off the thread. `todo`

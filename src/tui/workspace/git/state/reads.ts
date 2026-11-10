@@ -15,16 +15,25 @@ export class GitReads {
   private checkoutMemo: { root: string; c: Checkout | null; at: number } | null = null;
 
   /** The git checkout the vault is in (17.19): the main one or a worktree. Read once per vault —
-   *  none, again after a second (`git init` may make one). */
+   *  none, again after a second (`git init` may make one); off the screen's thread, by the TUI's look (`took`). */
   get checkout(): Checkout | null {
     const m = this.checkoutMemo;
-    if (m?.root !== this.app.loc.root || (!m.c && this.app.now() - m.at > 1000))
+    const again = !m?.c && !this.app.watch.look.offThread && this.app.now() - (m?.at ?? 0) > 1000;
+    if (m?.root !== this.app.loc.root || again)
       this.checkoutMemo = {
         root: this.app.loc.root,
         c: checkoutAt(this.app.loc),
         at: this.app.now(),
       };
     return this.checkoutMemo!.c;
+  }
+
+  /** The checkout the TUI's look found for the vault at `root` (SD-T4): taken while it's the one open, the one known
+   *  kept while it's the same. */
+  took(root: string, c: Checkout | null): void {
+    const m = this.checkoutMemo;
+    if (root !== this.app.loc.root || (m?.root === root && JSON.stringify(m.c) === JSON.stringify(c))) return;
+    this.checkoutMemo = { root, c, at: this.app.now() };
   }
 
   private timer: ReturnType<typeof setTimeout> | null = null;

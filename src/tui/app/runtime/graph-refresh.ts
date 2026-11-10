@@ -10,6 +10,7 @@ import { homeFolder, type VaultLocation } from "../../../core/workspace/vaults/v
 import { applyToGraph } from "../../../core/workspace/vaults/vault-feed.ts";
 import type { WalkCap } from "../../../core/workspace/walk/walk.ts";
 import { walkFailure, walkThread } from "../../../core/workspace/walk/walk-thread.ts";
+import { mtimeOf } from "../../../core/workspace/walk/look-jobs.ts";
 import { newParseCache } from "../../../core/documents/markdown/parse.ts";
 import { parseInBackground } from "../../../core/documents/markdown/parse-pool.ts";
 import { BACKGROUND_PARSE } from "../../documents/buffers/buffer.ts";
@@ -26,6 +27,7 @@ interface GraphRefreshContext {
   indexing: number;
   lastInputAt: number;
   readonly background: Pick<Background, "begin">;
+  readonly watch: { readonly look: { readonly offThread: boolean; readonly activityAt: number | null } };
   readonly explorer: { invalidateTree(): void };
   readonly buffers: ReadonlyMap<string, { invalidateLayouts(): void }>;
   readonly host: { requestRender(): void };
@@ -167,16 +169,17 @@ export class GraphRefresh {
 
   /**
    * Whether nobody is working (20.9): this vault's own index is done, and no key or click here, no CLI command from an
-   * agent, for `idle_seconds`.
+   * agent, for `idle_seconds`. The agent's last command as the TUI's look last found it (SD-T4), off the screen's
+   * thread — not known before a look has answered, nor while the look is given up on, and then someone may be working;
+   * a test's App stats the activity file here.
    */
   nobodyWorking(now = this.app.now()): boolean {
     if (this.app.indexing) return false;
     const quiet = this.app.config.index.idle_seconds * 1000;
     if (now - this.app.lastInputAt < quiet) return false;
-    try {
-      if (now - disk.stat(activityFile()).mtimeMs < quiet) return false;
-    } catch {}
-    return true;
+    const look = this.app.watch.look;
+    if (!look.offThread) return now - mtimeOf(activityFile()) >= quiet;
+    return look.activityAt !== null && now - look.activityAt >= quiet;
   }
 
   /**

@@ -51,6 +51,10 @@ const VAULT_CHECKS = [
   "repositories",
 ];
 
+// What the TUI's look each second reaches (SD-T4): an open file changed elsewhere, the config reloaded, the branch and
+// the operation drawn, a link not followed on a file's way, the links' convention.
+const LOOK_CHECKS = ["watching", "configuration", "git", "source-control", "symlinks", "links"];
+
 /**
  * The terminal checks a changed file of the app's runs, by check file or a piece of their names
  * (`bun run test:terminal <piece>…`): a feature's own files, which only its checks drive. A file of the app's none
@@ -63,7 +67,7 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // Source control: the panel and its views, the diff, the merge screen, the review, the rebase (GIT). Not git.ts,
   // gitbase.ts nor gitsigns.ts: every vault's checkout and every note's gutter read them.
   [
-    /^src\/core\/workspace\/git\/(?:branches\/(?:gitbranches|gitops|gitrebase|gitremote)|history\/gitlog|gitrepos|review\/(?:gitreview|mergereview)|staging\/gitstage|merge\/conflicts)\.ts$/,
+    /^src\/core\/workspace\/git\/(?:branches\/(?:gitbranches|gitops|gitrebase|gitremote|operation)|history\/gitlog|gitrepos|review\/(?:gitreview|mergereview)|staging\/gitstage|merge\/conflicts)\.ts$/,
     ["git"],
   ],
   [/^src\/core\/rendering\/layout\/diff\/(diff|splitdiff|blockdiff)\.ts$/, ["git", "conflict"]],
@@ -108,8 +112,11 @@ export const CHECKS_FOR: [RegExp, string[]][] = [
   // the two leave this entry to run every check, as the seam does.
   [
     /^src\/core\/workspace\/walk\/(listing|list-worker|walk-thread|disk-jobs)\.ts$/,
-    ["slow disk", "home", "view", "Elsewhere", "marks", "watching", "home-watching"],
+    ["slow disk", "home", "view", "Elsewhere", "marks", "home-watching", ...LOOK_CHECKS],
   ],
+  // The TUI's look each second (SD-T4), asked of those threads: the open files no watcher sees and their ways, the
+  // config, git's state and what's drawn of it, the root's tool's settings for the links' convention.
+  [/^src\/(?:core\/workspace\/walk\/look-jobs|tui\/app\/runtime\/look)\.ts$/, ["slow disk", ...LOOK_CHECKS]],
   [/^src\/tui\/workspace\/explorer\/listings\.ts$/, ["slow disk", "view", "Elsewhere", "marks"]],
   // Vaults, home and Elsewhere; a link followed out; the peek (VV).
   [/^src\/core\/workspace\/vaults\/(home|mounts)\.ts$/, ["home", "Elsewhere"]],
