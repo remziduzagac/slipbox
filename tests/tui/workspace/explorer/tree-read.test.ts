@@ -879,3 +879,38 @@ describe("a file operation's folders listed again before the keys after it act (
       }
     });
 });
+
+describe("a row meant to be selected once its folder is listed (T12)", () => {
+  test("held: a click on the row selected meanwhile — the same index — drops it: once the folder's listing comes, the selection stays where you clicked, never on the row revealed", async () => {
+    const h = await vaultWith({ "notes/.gitignore": "out/\n", "notes/out/x.md": "# X\n", "notes/a.md": "# A\n" });
+    const ex = h.app.explorer;
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    ex.select("notes/a.md");
+    await listed(h);
+    ex.select("notes/a.md");
+    // The clock stopped: no listing grows old meanwhile, read again by its age.
+    const clock = spyOn(Date, "now").mockReturnValue(Date.now());
+    const out = join(h.root, "notes/out");
+    const late = answerHeld(out);
+    try {
+      // A note in a folder `.gitignore` leaves out, revealed before that folder's listing comes: meant to be selected.
+      ex.reveal(join(out, "x.md"));
+      await late.read;
+      const at = h.app.sidebar.selected;
+      expect(ex.rows()[at]?.path).toBe("notes/a.md");
+      expect(ex.wanted).toMatchObject({ at });
+      h.frame();
+      const g = h.app.geometry!.sidebar!;
+      for (const type of ["down", "up"]) h.app.mouse.handle({ type, x: g.x + 2, y: g.y + at, button: 0 });
+      late.release();
+      await listed(h);
+      expect(names(h)).toContain("    x.md");
+      expect(ex.rows()[h.app.sidebar.selected]?.path).toBe("notes/a.md");
+    } finally {
+      late.restore();
+      clock.mockRestore();
+    }
+  });
+});
