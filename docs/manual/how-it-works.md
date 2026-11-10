@@ -178,9 +178,10 @@ Some things still wait for the disk, and the screen with them:
 - **Its cache.** The search index and the cache of parsed notes are read and written as they're used. They're in the
   cache folder, under your home folder unless you've moved it ([Cache](environment-and-storage.md#cache)).
 - **Another vault.** A peek into another vault, and a note reached in one, read that vault while you wait.
-- **A few small reads,** each when it's needed: a heading link followed, or a hover, on a note not read yet; whether a
-  tab's file is still there as you go into a vault; git's checkout, for a link to GitHub or GitLab; the reason the
-  status line gives for a folder the index leaves out; which version of slipbox is installed, every ten seconds.
+- **A few small reads,** each when it's needed: the file a link you follow leads to; a heading link followed, or a
+  hover, on a note not read yet; whether a tab's file is still there as you go into a vault; git's checkout, for a link
+  to GitHub or GitLab; the reason the status line gives for a folder the index leaves out; which version of slipbox is
+  installed, every ten seconds.
 
 ## What reaches the network
 

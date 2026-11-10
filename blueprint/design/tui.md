@@ -3226,15 +3226,18 @@ runs the binding.
   - a build's answer taken: whether each path changed meanwhile is there (`takeAgain`), git's renames
     (`catchUpWithGit`) and the branch it reads (`branchNow`);
   - whether a tab's file, or one a switch opens or offers a peek at, is there (`tui/workspace/vaults/vaults.ts`);
-  - a link's way checked for `t` in a peek (`peekKeep`) and for a claim through a link (`claimThroughLink`); a file
-    read for its diff from the git panel (`readForDiff`);
+  - a link a key follows, resolved through the seam at once: its file statted and, on macOS, the folders on its way
+    listed for its name's case (`onDisk`); a link's way checked for `t` in a peek (`peekKeep`) and for a claim through
+    a link (`claimThroughLink`); a file read for its diff from the git panel (`readForDiff`);
   - the explorer's words for a busy folder selected (`Marks.leftOutWords` → `busyWhy`: a folder's note looked for), and
     its breadcrumb's `isVaultRoot`, kept per folder;
   - what drawing still asks as it's drawn, measured in SD-T11's log at about 340 reads over the demo vault's and the
     reference set's 167 notes, from 4,120: git's checkout looked for and read, for a hosting link and a peek
     (`core/workspace/git/git.ts`); a folder's `.gitignore`, for what the explorer leaves out (`gitignoreFor`); a vault's
     identity and remote and the named folders, for a pointer's name (`core/workspace/vaults/folders.ts`); the status
-    line's words on a link's row (`Following.describe`); another note's text, for a block's line (`overlayText`).
+    line's words on a link's row (`Following.describe`); another note's text, for a block's line (`overlayText`). Git's
+    operation under way (`operationOf`), counted there too, is the TUI's look's to keep, and the machine's list
+    (`recordLocation`) is a write's, above.
 
 ## Parity with the CLI
 
@@ -3435,7 +3438,8 @@ the second is let go of.
   asks of a note not parsed yet reads it here, as before (§ Known limits).
 - **The explorer's own tree** (SD-T7; § Side panes). The vault's own folders the tree shows — the view's, and each
   unfolded under it — are listed as the folders outside it are (`Listings`: kept, read again once a second old as the
-  tree is built, and however old, the tree built again for it, once a vault one shows unmarked has its index said
+  tree is built — one the watcher saw change, once a second old, the tree built again then for it (`Listings.changed`)
+  — and however old, the tree built again for it, once a vault one shows unmarked has its index said
   written, its row's mark the listing's — `onIndexWritten`, said by a write on the screen's thread and where a peek's or
   the background index's thread's is recorded; `Listings.indexed` drops a read under way then, a first one too; drawn
   only when the listing's digest changed), with the walk's filter
@@ -3462,8 +3466,11 @@ the second is let go of.
   the answer says its folder is gone, only while the view and the trail are those it asked about. A zoom (`z`, `-`, the
   breadcrumb, `shift+h` out of a hidden folder), `l` on a folder whose listing hasn't come and the start's folder ask
   `access` as a key's own read (`KeyReads.folder`): `can't read …` said as before, once it answers, and what the key
-  does after the zoom done only then; the start's once what it opens is in (SD-T10). One `Listings` keeps both sides'
-  folders, 256 at most; a folder listed on both (a nested vault's, unfolded, a path in it asked) is kept once for each.
+  does after the zoom done only then; the start's once what it opens is in (SD-T10). A file operation of slipbox's
+  lists the folders it changed again as a key's own read too (`Explorer.afterOp`, `Listings.relist`), what it selects
+  selected once a listing of each is taken, by whichever read takes it: no key after it acts on a row listed from
+  before it. One `Listings` keeps both sides' folders, 256 at most; a folder listed on both (a nested vault's, unfolded,
+  a path in it asked) is kept once for each.
 - **The vault built again** (SD-T8; `Builds`, `tui/app/runtime/builds.ts`). A reindex, the watcher's rescan, a setting
   of the walk changed, a vault gone into, a branch's tabs and the folders asked for in home read the walk and the index
   on a disk thread (`walk`, a walk's ten minutes to answer); the graph stays as it was meanwhile, `reading the vault…`
@@ -3537,11 +3544,12 @@ the second is let go of.
   are answered from what's kept (`Drawn`, `tui/app/runtime/drawn.ts`): a path of the vault open from the walk, the
   rest from what a disk thread last answered. What isn't kept is asked of a disk thread in the background, one `draw`
   batch out at a time with a look's minute (`core/workspace/walk/draw-jobs.ts`), and the layouts are drawn again from
-  their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn as resolved, a pointer as not
-  found until the named folders come, a picture's or an embedded note's place is said, a scratch place is said nothing
-  of, and the vault's lint findings are shown unfiltered. A kept answer drawn two seconds after it was read is asked
-  again, drawn as it was until the new one comes; one of a file the watcher sees change, as it's next drawn. Given up
-  on, the batch is asked again a minute later (SD-D6). A link's questions go through one probe
+  their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn as resolved — but one to a path
+  the walk didn't give in a folder it listed, drawn broken as the walk says (a note not written yet) — a pointer as
+  not found until the named folders come, a picture's or an embedded note's place is said, a scratch place is said
+  nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn two seconds after it was read is
+  asked again, drawn as it was until the new one comes; one of a file the watcher sees change, as it's next drawn.
+  Given up on, the batch is asked again a minute later (SD-D6). A link's questions go through one probe
   (`core/workspace/links/path-probe.ts`), the seam's at once unless the drawing answers for the layout it makes and a
   note's own problems it checks (`Drawn.during`): the CLI, a key's follow and the vault's problems read as before. The
   host's picture takes its file's mtime from the drawing and keeps it for the picture it draws; an SVG's rasterised
