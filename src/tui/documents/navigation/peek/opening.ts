@@ -20,7 +20,8 @@ import { caughtUp, keepCaughtUp, parseHere, vaultGraph } from "./synchronization
 
 /**
  * Where a link, a backlink or a search hit leads (VV-D7): out of this vault, read in a peek — or, `go`, gone into at
- * once — and true; this vault's own, false, for its caller to open as it does, a peek closed first.
+ * once — and true; this vault's own, false, for its caller to open as it does, a peek closed first. `shown` once it's
+ * there: read in the peek, or open in its vault (never when the switch was stayed from, or its read given up).
  */
 export function peekInstead(app: App, path: string, anchor?: Anchor, go = false, shown?: () => void): boolean {
   const out = leadsOut(app, path);
@@ -28,10 +29,8 @@ export function peekInstead(app: App, path: string, anchor?: Anchor, go = false,
     if (peekOf(app)) app.overlays.closeFloating();
     return false;
   }
-  if (go) {
-    goThere(app, out.abs, out.loc, anchor);
-    shown?.();
-  } else peekAt(app, out.abs, out.loc, anchor, shown);
+  if (go) goThere(app, out.abs, out.loc, anchor, shown);
+  else peekAt(app, out.abs, out.loc, anchor, shown);
   return true;
 }
 
