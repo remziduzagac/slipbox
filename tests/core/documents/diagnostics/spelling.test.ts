@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { parseMarkdown } from "../../../../src/core/documents/markdown/parse.ts";
 import { makeCoreSandbox } from "../../../support/core-sandbox.ts";
+import { fakeWorker } from "../../../support/fake-worker.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -255,7 +256,6 @@ describe("spelling (25.6)", () => {
       ),
     ).toContain("gone.aff");
     // A thread that fails: what's waiting ends with its error, and the next request starts a real one again.
-    const real = globalThis.Worker;
     class Failing {
       onmessage: unknown = null;
       onerror: ((e: unknown) => void) | null = null;
@@ -267,13 +267,13 @@ describe("spelling (25.6)", () => {
       terminate() {}
     }
     stopSpellThread();
+    const restore = fakeWorker("documents/diagnostics/spell-worker.ts", Failing);
     try {
-      (globalThis as { Worker: unknown }).Worker = Failing;
       expect(await both.check(["receive"]).then(String, (err: Error) => err.message)).toBe(
         "the spell checker's thread stopped: crashed",
       );
     } finally {
-      (globalThis as { Worker: unknown }).Worker = real;
+      restore();
     }
     expect(await both.check(["receive"])).toEqual([true]);
     stopSpellThread();

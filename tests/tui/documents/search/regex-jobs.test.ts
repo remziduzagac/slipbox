@@ -11,6 +11,7 @@ import { computeFind } from "../../../../src/tui/workspace/search/search.ts";
 import { textMatches } from "../../../../src/tui/documents/search/replacing.ts";
 import type { PromptOverlay } from "../../../../src/tui/app/runtime/app.ts";
 import { harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
+import { fakeWorker, realWorker } from "../../../support/fake-worker.ts";
 makeSandbox();
 afterAll(stopRegexJobs);
 
@@ -99,16 +100,18 @@ test("live regex typing and escape stay responsive while its controlled worker h
   writeFileSync(join(root, "busy.md"), "ordinary text\n");
   const h = await harness({ root, open: "busy.md" });
   stopRegexJobs();
-  const original = globalThis.Worker;
   let terminated = 0;
-  globalThis.Worker = class {
-    postMessage() {}
-    terminate() {
-      terminated++;
-    }
-    ref() {}
-    unref() {}
-  } as unknown as typeof Worker;
+  fakeWorker(
+    "workspace/search/regex-worker.ts",
+    class {
+      postMessage() {}
+      terminate() {
+        terminated++;
+      }
+      ref() {}
+      unref() {}
+    },
+  );
   try {
     const entered = h.keys("/", "alt+r", "t", "e");
     expect(await Promise.race([entered.then(() => "typed"), Bun.sleep(500).then(() => "blocked")])).toBe("typed");
@@ -120,7 +123,7 @@ test("live regex typing and escape stay responsive while its controlled worker h
     expect(terminated).toBeGreaterThan(0);
   } finally {
     stopRegexJobs();
-    globalThis.Worker = original;
+    realWorker();
   }
 });
 
@@ -149,7 +152,7 @@ function gatedWorker() {
     }
   }
   stopRegexJobs();
-  globalThis.Worker = Gated as unknown as typeof Worker;
+  fakeWorker("workspace/search/regex-worker.ts", Gated);
   return {
     /** Let the worker answer, again and again, until `done` (or a second). */
     async until(done: () => boolean) {
@@ -160,7 +163,7 @@ function gatedWorker() {
     },
     restore() {
       stopRegexJobs();
-      globalThis.Worker = Real;
+      realWorker();
     },
   };
 }
@@ -281,24 +284,26 @@ test("a search that failed is tried again when it's asked for again", async () =
   const h = await harness({ root, open: "again.md" });
   const v = h.app.view!;
   stopRegexJobs();
-  const Real = globalThis.Worker;
   // The worker can't start, this once: a failure of the moment, as a deadline on a busy machine is.
-  globalThis.Worker = class {
-    constructor() {
-      throw new Error("no threads now");
-    }
-  } as unknown as typeof Worker;
+  fakeWorker(
+    "workspace/search/regex-worker.ts",
+    class {
+      constructor() {
+        throw new Error("no threads now");
+      }
+    },
+  );
   try {
     await h.keys("/", "alt+r", ..."c.t");
     for (let i = 0; i < 100 && v.find?.pending; i++) await Bun.sleep(10);
     expect(v.find).toMatchObject({ failed: true });
-    globalThis.Worker = Real;
+    realWorker();
     await h.keys("enter");
     for (let i = 0; i < 100 && (v.find?.pending || v.find?.failed); i++) await Bun.sleep(10);
     expect(v.find).toMatchObject({ query: "c.t", matches: [{ row: 0 }, { row: 0 }, { row: 0 }] });
     expect(v.find?.failed).toBeUndefined();
   } finally {
     stopRegexJobs();
-    globalThis.Worker = Real;
+    realWorker();
   }
 });

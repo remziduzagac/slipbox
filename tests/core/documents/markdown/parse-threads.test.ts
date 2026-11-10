@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { newParseCache, parseMarkdown } from "../../../../src/core/documents/markdown/parse.ts";
 import { graphemes } from "../../../../src/core/foundation/text/width.ts";
 import { makeCoreSandbox } from "../../../support/core-sandbox.ts";
+import { fakeWorker } from "../../../support/fake-worker.ts";
 
 // File-local default: tests/support/timeouts.ts.
 setDefaultTimeout(UNIT_TIMEOUT_MS);
@@ -98,7 +99,6 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
   test("threads that can't start, or a worker that fails: false with source fallback, and a failed worker starts afresh", async () => {
     const { parseInBackground, stopParsePool } = await import("../../../../src/core/documents/markdown/parse-pool.ts");
     const text = await demo();
-    const real = globalThis.Worker;
     let made = 0;
     class NoThreads {
       constructor() {
@@ -121,12 +121,12 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
       }
     }
     stopParsePool();
+    const restore = fakeWorker("documents/markdown/parse-worker.ts", NoThreads);
     try {
-      (globalThis as { Worker: unknown }).Worker = NoThreads;
       const cache = newParseCache();
       expect(await parseInBackground(text, cache)).toBe(false);
       expect(cache.chunks.size).toBe(0);
-      (globalThis as { Worker: unknown }).Worker = Failing;
+      fakeWorker("documents/markdown/parse-worker.ts", Failing);
       expect(await parseInBackground(text, cache)).toBe(false); // what was waiting ended, with nothing
       expect(cache.chunks.size).toBe(0);
       const first = made;
@@ -134,7 +134,7 @@ describe("big notes: parsed on other threads, rendered faster (15.1)", () => {
       expect(await parseInBackground(text, cache)).toBe(false);
       expect(made).toBe(first * 2); // each worker that failed was let go of: started again
     } finally {
-      (globalThis as { Worker: unknown }).Worker = real;
+      restore();
       stopParsePool();
     }
     const cache = newParseCache();
