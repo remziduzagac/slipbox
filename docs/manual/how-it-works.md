@@ -131,6 +131,9 @@ Drawing a note never waits for the disk either. What it needs from there, such a
 picture's file, a note it embeds or the places in the [scratch](scratch-and-context.md#the-scratch), is read in the
 background and kept. On a slow disk, a picture shows its `▣` line until its file is read, an embedded note shows once
 it's read, and a link is drawn as found until it's checked. The note is drawn again, where you were, when they come.
+While a note is on the screen, each of these is checked again once it's two seconds old. So a file that comes or goes
+where slipbox doesn't [watch for changes](editing.md#when-a-file-changes-on-disk), such as in a vault you peek at,
+shows in the note's links within two seconds.
 
 The index is a copy, never the truth. Deleting the cache is always safe, and slipbox makes it again.
 
