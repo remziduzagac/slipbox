@@ -22,10 +22,10 @@ describe("problems where they are (EG-D5)", () => {
     "A picture that isn't there: ![pic](nope.png) at the end.", //  9
     "",
   ].join("\n");
-  const setup = async (width = 140) => {
+  const setup = async (width = 140, text = NOTE) => {
     const root = mkdtempSync(join(tmpdir(), "slipbox-at-cursor-"));
     mkdirSync(join(root, ".slipbox"));
-    writeFileSync(join(root, "probe.md"), NOTE);
+    writeFileSync(join(root, "probe.md"), text);
     return await harness({ root, open: "probe.md", width, height: 30 });
   };
   const problem = (line: number, column: number, to: number, severity: Problem["severity"], message: string) => ({
@@ -160,6 +160,52 @@ describe("problems where they are (EG-D5)", () => {
     expect(statusRow(h.frame())).toContain("⚠ a problem in the middle");
     await h.keys("]", "d");
     expect(statusRow(h.frame())).toContain("✖ Cannot find name");
+  });
+
+  test("repeated unresolved targets on one line each have their own problem destination", async () => {
+    const h = await setup(140, "# Repeated\n\nBefore [first](missing.png) between [second](missing.png) after.\n");
+    const v = h.app.view!;
+    const links = h.app.currentLayout(v).links.filter((l) => l.target === "missing.png");
+    expect(links.map((l) => l.text)).toEqual(["first", "second"]);
+    expect(links[0]!.line).toBe(links[1]!.line);
+    expect(h.app.problems.ofView(v).filter((p) => p.target === "missing.png")).toHaveLength(2);
+    const landed = (index: number) => {
+      expect(v.cur).toEqual({ row: links[index]!.line, col: links[index]!.col });
+      expect(statusRow(h.frame())).toContain("⚠ broken link: missing.png  ");
+      expect(statusRow(h.frame())).not.toContain("broken link: missing.png +1");
+    };
+    await h.keys("]", "d");
+    landed(0);
+    await h.keys("]", "d");
+    landed(1);
+    await h.keys("]", "d");
+    landed(0);
+    await h.keys("[", "d");
+    landed(1);
+    h.app.moveCursor(v, { row: links[0]!.line, col: links[1]!.col - 2 });
+    expect(h.app.linking.linkUnderCursor(v)).toBe(-1);
+    expect(statusRow(h.frame())).not.toContain("broken link:");
+  });
+
+  test("a problem inside closed details opens its body and lands on the newly drawn diagnostic row", async () => {
+    const h = await setup(
+      140,
+      "# Hidden\n\n<details>\n<summary>More</summary>\n<p>First inside.</p>\n<p>Diagnostic body.</p>\n</details>\n\nVisible fallback.\n",
+    );
+    const v = h.app.view!;
+    serve(h, [problem(6, 4, 14, "warning", "hidden diagnostic")]);
+    const before = h.app.currentLayout(v);
+    expect(before.lines.find((l) => l.details)?.details?.open).toBe(false);
+    expect(h.frame()).not.toContain("Diagnostic body.");
+    expect(h.frame()).toContain("Visible fallback.");
+    await h.keys("]", "d");
+    const after = h.app.currentLayout(v);
+    expect(after.lines.find((l) => l.details)?.details?.open).toBe(true);
+    expect(h.frame()).toContain("Diagnostic body.");
+    const row = after.lines[v.cur.row]!;
+    expect(row.src).toBe(6);
+    expect(row.spans.map((s) => s.text).join("")).toBe("Diagnostic body.");
+    expect(statusRow(h.frame())).toContain("⚠ hidden diagnostic  ");
   });
 
   test("space c d: each problem at the cursor in full; y copies, s adds to the scratch, esc closes", async () => {

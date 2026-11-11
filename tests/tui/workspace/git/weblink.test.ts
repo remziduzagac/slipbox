@@ -75,6 +75,51 @@ describe("space g y, a line's web link copied", () => {
     expect(p.copied.length).toBe(n);
   });
 
+  test("a rendered selection keeps every source line of its last row, selected forward or backward", async () => {
+    const { root } = linked("https://github.com/ada/rendered-notes.git");
+    writeFileSync(
+      join(root, "a.md"),
+      "# A\n\nAlpha on the first line,\nbeta ends the first paragraph.\n\nGamma starts another,\ndelta continues it,\nand epsilon ends it.\n",
+    );
+    git(root, "add", "a.md");
+    git(root, "commit", "-qm", "paragraph");
+    const head = git(root, "rev-parse", "HEAD").trim();
+    git(root, "update-ref", "refs/remotes/origin/feature", "HEAD");
+    const p = await at(root, "a.md", 3);
+    try {
+      await p.app.run("view.mode_read");
+      expect(p.view.source || p.view.live).toBeFalsy();
+      const rows = p.app.currentLayout(p.view).lines;
+      const row = rows.findIndex((l) =>
+        l.spans
+          .map((s) => s.text)
+          .join("")
+          .includes("Alpha on the first line"),
+      );
+      expect(row).toBeGreaterThanOrEqual(0);
+      expect(rows[row]!.spans.some((s) => s.src === 4)).toBe(true);
+      const lastRow = rows.findIndex((l) =>
+        l.spans
+          .map((s) => s.text)
+          .join("")
+          .includes("Gamma starts another"),
+      );
+      expect(lastRow).toBeGreaterThan(row);
+      expect(rows[lastRow]!.spans.some((s) => s.src === 8)).toBe(true);
+      p.app.moveCursor(p.view, { row, col: 0 });
+      for (const keys of [
+        ["v", ...Array<string>(lastRow - row).fill("j"), "$"],
+        ["$", "v", ...Array<string>(lastRow - row).fill("k"), "0"],
+      ]) {
+        expect(await after(p, ...keys, "space", "g", "y")).toBe("copied the web link to lines 3–8 of a.md");
+        expect(p.copied.at(-1)).toBe(`https://github.com/ada/rendered-notes/blob/${head}/a.md?plain=1#L3-L8`);
+        expect(p.view.sel).toBeNull();
+      }
+    } finally {
+      p.app.quit();
+    }
+  });
+
   test("the branch's upstream's remote, GitLab's form; no remote, another host, a file not committed: said, none", async () => {
     const { root, head } = linked("https://codeberg.org/ada/trail.git");
     const p = await at(root, "run.ts", 2);
@@ -140,6 +185,32 @@ describe("space g w, a line's web link opened", () => {
       expect([o.ran.length, p.copied]).toEqual([1, [link, link]]);
     } finally {
       o.restore();
+    }
+  });
+
+  test("a browser opener failure copies the committed link instead, for a status code or startup error", async () => {
+    const { root, head } = linked("https://github.com/ada/browser-failures.git");
+    git(root, "update-ref", "refs/remotes/origin/feature", "HEAD");
+    const p = await at(root, "run.ts", 2);
+    const o = opener(p.app);
+    try {
+      for (const failure of [9, "could not start"]) {
+        p.copied.length = 0;
+        o.ran.length = 0;
+        p.app.host.runDetached = async (argv) => (o.ran.push(argv), failure);
+        const message = await after(p, "space", "g", "w");
+        const link = `https://github.com/ada/browser-failures/blob/${head}/run.ts#L2`;
+        expect(p.copied).toEqual([link]);
+        expect(o.ran).toHaveLength(1);
+        expect(o.ran[0]!.at(-1)).toBe(link);
+        const name = o.ran[0]![0]!.split("/").at(-1)!;
+        const why = typeof failure === "number" ? `${name} exited with ${failure}` : `${name}: ${failure}`;
+        expect(message).toBe(`copied the web link to line 2 of run.ts — ${why}`);
+        expect(p.app.messages.some((m) => m.text.includes("is opening in your browser"))).toBe(false);
+      }
+    } finally {
+      o.restore();
+      p.app.quit();
     }
   });
 });
