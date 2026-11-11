@@ -98,6 +98,43 @@ describe("a path, typed", () => {
 });
 
 describe("space f e: a file by its path", () => {
+  test("a completed path preserves spaces and non-ASCII names through file.open", async () => {
+    const { h, notes } = await opened();
+    const rel = "draft notes/会議 plan.md";
+    mkdirSync(join(notes, "draft notes"));
+    writeFileSync(join(notes, rel), "# A meeting plan\n");
+    await h.keys("space", "f", "e");
+    await type(h, "draft n");
+    expect(rows(h)).toEqual(["draft notes/"]);
+    await h.keys("tab");
+    expect(list(h).input).toBe("draft notes/");
+    await type(h, "会議 p");
+    expect(rows(h)).toEqual(["会議 plan.md"]);
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view!.buf.key).toBe(rel);
+    expect(h.app.view!.buf.abs).toBe(join(notes, rel));
+    expect(h.app.view!.buf.source).toBe("# A meeting plan\n");
+    expect([...h.app.buffers.keys()]).not.toContain("draft");
+  });
+
+  test("a whole spaced path submitted while its listing is pending preserves the exact file", async () => {
+    const { h, notes } = await opened();
+    const rel = "draft notes/会議 plan.md";
+    mkdirSync(join(notes, "draft notes"));
+    writeFileSync(join(notes, rel), "# The pending path\n");
+    await h.keys("ctrl+p");
+    await type(h, `./${rel}`);
+    // A pending folder has no entry to accept: Enter submits the path as typed instead of a PathPick.
+    list(h).filtered = [{ item: { label: "reading…", header: true, informational: true, data: null }, positions: [] }];
+    await h.keys("enter");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.view!.buf.key).toBe(rel);
+    expect(h.app.view!.buf.abs).toBe(join(notes, rel));
+    expect(h.app.view!.buf.source).toBe("# The pending path\n");
+    expect([...h.app.buffers.keys()]).not.toContain("draft");
+  });
+
   test("its folder's entries as typed: tab completes, enter goes into a folder, ctrl+w back; a file opens", async () => {
     const { h } = await opened();
     await h.keys("space", "f", "e");
