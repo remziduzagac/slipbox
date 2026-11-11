@@ -7,6 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { readFolders, recordFolder } from "../../../../src/core/workspace/vaults/folders.ts";
 import type { Host } from "../../../../src/tui/app/runtime/app.ts";
 import { HELD_MS, type Hold } from "../../../fixtures/walk/slow.ts";
 import { makeHeldKeys } from "../../../support/tui/held-keys.ts";
@@ -211,6 +212,34 @@ describe("what drawing reads, off the screen's thread (SD-T11)", () => {
     now += 2000;
     await until(() => status() === "resolved", "the file's link drawn resolved, nothing drawing it meanwhile");
     h.app.quit();
+  });
+
+  test("a pointer's folder learned elsewhere: its young answer refreshed after two seconds without another draw", async () => {
+    const other = mkdtempSync(join(sandbox, "named-"));
+    mkdirSync(join(other, ".slipbox"));
+    writeFileSync(join(other, ".slipbox/config.toml"), '[vault]\nname = "drawn-elsewhere"\n');
+    writeFileSync(join(other, "plan.md"), "# Plan\n");
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), "# P\n\n[the plan](slipbox://drawn-elsewhere/plan.md)\n");
+    let now = 1_000_000;
+    const h = await drawing(root, { now: () => now });
+    try {
+      await h.app.open(join(root, "p.md"));
+      expect(readFolders().some((f) => f.name === "drawn-elsewhere")).toBe(false);
+      expect(h.frame()).toMatch(/⚠ +the plan/);
+      await h.app.drawn.settled();
+      // Draw the kept answer while it is young. No frame or layout is requested after the clock advances.
+      expect(h.frame()).toMatch(/⚠ +the plan/);
+      const before = h.app.drawn.epoch;
+      // The target already exists: only the machine's named-folder list changes, outside this App.
+      expect(recordFolder(other)?.name).toBe("drawn-elsewhere");
+      now += 2000;
+      await until(() => h.app.drawn.epoch > before, "the named folder refreshed without another draw");
+      expect(h.frame()).not.toMatch(/⚠ +the plan/);
+      expect(h.app.problems.ofView(h.app.view!)).toEqual([]);
+    } finally {
+      h.app.quit();
+    }
   });
 
   test("a file come to another vault since its last peek, nothing watching it: drawn resolved in the next peek, the peek's buffer none of the tabs'", async () => {

@@ -70,7 +70,7 @@ export class Drawn implements PathProbe {
   private readonly stats = new Map<string, Kept<PathStat>>();
   private readonly listings = new Map<string, Kept<string[] | null>>();
   /** The machine's named folders, as a disk thread last read them. */
-  private named: Kept<NamedFolder[]> | null = null;
+  private readonly named = new Map<string, Kept<NamedFolder[]>>();
   private readonly texts = new Map<string, Kept<TextRead | null>>();
   private readonly parses = new Map<string, { stamp: string; parsed: ParsedNote | null }>();
   private asked: Asked = this.none();
@@ -116,11 +116,7 @@ export class Drawn implements PathProbe {
   /** The machine's named folders (21.6), as last read: none known till the first answer — a pointer drawn as not found
    *  and a hosting URL as a web link meanwhile, a moment on a disk that answers. */
   folders(): NamedFolder[] {
-    if (!this.named || this.app.now() - this.named.at >= DRAWN_AGAIN_MS) {
-      this.asked.folders = true;
-      this.soon(0);
-    }
-    return this.named?.value ?? [];
+    return this.kept(this.named, "", () => (this.asked.folders = true)) ?? [];
   }
 
   /** A picture's file's mtime (12.x): null when it isn't a file; undefined while it's read. */
@@ -197,7 +193,7 @@ export class Drawn implements PathProbe {
 
   /** `key`, drawn from an answer `ms` short of two seconds old, asked again then. */
   private askLater(map: Map<string, Kept<unknown>>, key: string, ask: () => void, ms: number): void {
-    const kind = map === this.stats ? "s" : map === this.listings ? "n" : "t";
+    const kind = map === this.stats ? "s" : map === this.listings ? "n" : map === this.named ? "f" : "t";
     this.later.set(`${kind}${key}`, { map, key, ask });
     const at = this.app.now() + ms;
     if (this.laterTimer && this.laterAt <= at) return;
@@ -296,10 +292,7 @@ export class Drawn implements PathProbe {
       put(this.listings, d, answer.names[i] ?? null, (a, b) => (a ?? []).join("\0") === (b ?? []).join("\0")),
     );
     ask.texts.forEach((t, i) => put(this.texts, t.path, answer.texts[i] ?? null, (a, b) => a?.stamp === b?.stamp));
-    if (answer.folders) {
-      if (JSON.stringify(this.named?.value) !== JSON.stringify(answer.folders)) changed = true;
-      this.named = { value: answer.folders, at };
-    }
+    if (answer.folders) put(this.named, "", answer.folders, (a, b) => JSON.stringify(a) === JSON.stringify(b));
     if (!changed) return;
     this.epoch++;
     // The peek's too: a link in another vault's note asks of the disk as much as one here.

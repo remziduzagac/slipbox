@@ -3550,7 +3550,9 @@ the second is let go of.
   a scratch place is said nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn two
   seconds after it was read is asked again, drawn as it was until the new one comes; one drawn sooner, once it's two
   seconds old, though nothing draws it then, so a file come where no watcher looks is drawn within two seconds of a
-  draw; one of a file the watcher sees change, as it's next drawn. Given up on, the batch is asked again a minute later
+  draw; one of a file the watcher sees change, as it's next drawn. The named-folder list uses the same delayed refresh:
+  a pointer's warning is redrawn when another process records its folder, without waiting for another key. Given up on,
+  the batch is asked again a minute later
   (SD-D6). A link's questions go through one probe
   (`core/workspace/links/path-probe.ts`), the seam's at once unless the drawing answers for the layout it makes and a
   note's own problems it checks (`Drawn.during`): the CLI, a key's follow and the vault's problems read as before. The

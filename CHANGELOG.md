@@ -280,6 +280,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   when its row is drawn again, as when a search's prompt pushes the note down. With `glyphs = "unicode"` its icon is
   now `✱`: the `❢` before was laid out two cells wide, and terminals draw it one.
 
+- A pointer to a folder another slipbox process has just opened or found clears its warning without another key.
+  The folder's name is checked again within two seconds of drawing the note, as a link's file is.
+
 - A note with unsaved changes no longer says it "changed on disk" and asks what to keep when nothing changed it, as
   when you had just followed a link out of the vault to it: watching the folder the link leads to, slipbox took the
   note for one that had just come. A file whose text is still what you opened or saved isn't reloaded or asked about.
