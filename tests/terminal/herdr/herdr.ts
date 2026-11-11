@@ -1,15 +1,23 @@
-// A herdr pane, driven: keys and text in, the screen out. Only what needs a real terminal uses it (tests/terminal/herdr:
-// the real-terminal checks); slipbox itself never needs herdr.
+// A herdr or Herdsman pane, driven: keys and text in, the screen out. Only what needs a real terminal uses it:
+// these are the real-terminal checks; slipbox itself never needs either multiplexer.
 
 import { spawnSync } from "node:child_process";
 
 export class HerdrError extends Error {}
 
-/** One herdr CLI call: its stdout, or an error with its stderr. */
+/** The multiplexer managing this process; neither backend may attach to an unrelated session. */
+export function multiplexer(env: NodeJS.ProcessEnv = process.env): "herdsman" | "herdr" {
+  if (env.HERDSMAN_ENV === "1") return "herdsman";
+  if (env.HERDR_ENV === "1") return "herdr";
+  throw new HerdrError("not inside herdr or Herdsman: these checks drive their own terminal pane");
+}
+
+/** One active multiplexer CLI call: its stdout, or an error with its stderr. */
 export function herdr(...args: string[]): string {
-  const r = spawnSync("herdr", args, { encoding: "utf8" });
-  if (r.error) throw new HerdrError(`herdr ${args[0]}: ${r.error.message}`);
-  if (r.status !== 0) throw new HerdrError(`herdr ${args.join(" ")}: ${(r.stderr || r.stdout).trim()}`);
+  const bin = multiplexer();
+  const r = spawnSync(bin, args, { encoding: "utf8" });
+  if (r.error) throw new HerdrError(`${bin} ${args[0]}: ${r.error.message}`);
+  if (r.status !== 0) throw new HerdrError(`${bin} ${args.join(" ")}: ${(r.stderr || r.stdout).trim()}`);
   return r.stdout;
 }
 
@@ -67,7 +75,7 @@ export class Pane {
    * tab of its own (`tab`), which is as big as the whole window.
    */
   static open(given: string | undefined, cwd: string, tab = false): Pane {
-    if (process.env.HERDR_ENV !== "1") throw new HerdrError("not inside herdr: these checks drive a herdr pane");
+    const bin = multiplexer();
     if (given) {
       herdr("pane", "get", given); // it exists
       return new Pane(given, false);
@@ -76,14 +84,14 @@ export class Pane {
       const out = JSON.parse(herdr("tab", "create", "--no-focus", "--label", "slipbox terminal", "--cwd", cwd));
       const id = out.result?.root_pane?.pane_id as string | undefined;
       const tabId = out.result?.tab?.tab_id as string | undefined;
-      if (!id || !tabId) throw new HerdrError("herdr tab create: no pane id in its reply");
+      if (!id || !tabId) throw new HerdrError(`${bin} tab create: no pane id in its reply`);
       const p = new Pane(id, true);
       p.tab = tabId;
       return p;
     }
     const out = JSON.parse(herdr("pane", "split", "--current", "--direction", "right", "--no-focus", "--cwd", cwd));
     const id = out.result?.pane?.pane_id as string | undefined;
-    if (!id) throw new HerdrError("herdr pane split: no pane id in its reply");
+    if (!id) throw new HerdrError(`${bin} pane split: no pane id in its reply`);
     herdr("pane", "rename", id, "slipbox terminal");
     return new Pane(id, true);
   }
