@@ -534,10 +534,12 @@ After § The Problems panel (EG-D9; `core/documents/diagnostics/todos.ts` finds 
   a rendered note: the before-and-after's groups (`blockDiff`), a removed block drawn before its place, a changed one
   tinted. `] c` / `[ c` step through the hunks of the diff shown. The window's, not saved. **Open:** the code view.
 - **A line's web link** (EG-D18; `git.web_copy` `space g y`, `git.web_open` `space g w`; `workspace/git/weblink.ts`,
-  `core/workspace/git/forge.ts`): the cursor's line, or a selection's lines as a range (a rendered row's, every line
-  its text came from), at the commit checked out (its hash), on the forge the remote names (the branch's upstream's
-  remote, `branch.<name>.remote`, else origin) — its URL in any of git's forms (scp's `[user@]host:path`, `ssh://`,
-  `git+ssh://`, `git://`, `http(s)://`, a user, a token or a port in it, `.git` or not) read for GitHub or GitLab by
+  `core/workspace/git/forge.ts`): the cursor's line, or a selection's lines as a range, at the commit checked out
+  (its hash), on the forge the remote names (the branch's upstream's remote, `branch.<name>.remote`, else origin).
+  A rendered row includes every source line its text came from, even without a selection; a selection includes
+  every contributing source line of both endpoint rows, in either direction. The remote's URL in any of git's forms
+  (scp's `[user@]host:path`, `ssh://`,
+  `git+ssh://`, `git://`, `http(s)://`, a user, a token or a port in it, `.git` or not) is read for GitHub or GitLab by
   its host's name (`github` or `gitlab` a label of it: an enterprise or self-managed server too; `ssh.github.com` and
   `altssh.gitlab.com`, SSH over 443, the forges' own), GitHub's project two parts, GitLab's its group's subgroups too.
   Each in its own form, as their docs give it: GitHub's `/blob/<hash>/<path>#L10-L20`, GitLab's
