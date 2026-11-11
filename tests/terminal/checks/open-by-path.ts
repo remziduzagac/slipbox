@@ -8,11 +8,25 @@ export const OPEN_BY_PATH: Check[] = [
     area: "navigating",
     name: "open by path: space f e completes ~/ folders and files (tab, enter); the switcher takes ./ and ~/",
     covers: { cases: ["switcher"], commands: ["file.open_path", "switcher.open"] },
-    options: { home: true, startAt: "home/notes/index.md" },
+    options: {
+      home: true,
+      startAt: "home/notes/index.md",
+      setup: (s) => s.write("~/notes/draft notes/会議 plan.md", "# A meeting plan\n\nThe exact path arrived.\n"),
+    },
     run: async (s) => {
       await s.status("index.md");
       await leader(s, "f", "e");
       await s.see("Open by path — tab completes, ~ is home");
+      await s.type("draft n");
+      await s.see("draft notes/");
+      await s.keys("tab");
+      await s.see("› draft notes/");
+      await s.type("会議 p");
+      await s.see("会議 plan.md");
+      await s.keys("enter");
+      await opened(s, "draft notes/会議 plan.md");
+      await s.see("The exact path arrived.");
+      await leader(s, "f", "e");
       await s.type("~/work/kes");
       await s.see("kestrel/", 5000);
       await s.keys("tab");

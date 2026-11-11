@@ -27,6 +27,7 @@ import { caughtUp } from "../../../../src/tui/documents/navigation/peek/synchron
 import type { TreeRow } from "../../../../src/tui/workspace/explorer/explorer.ts";
 import { Listings, REREAD_MS } from "../../../../src/tui/workspace/explorer/listings.ts";
 import { HELD_MS, type Hold, slowFolders } from "../../../fixtures/walk/slow.ts";
+import { answerHeld, listed } from "../../../support/tui/explorer-listings.ts";
 import { makeHeldKeys } from "../../../support/tui/held-keys.ts";
 import { type Harness, harness, makeSandbox, stepToEnd } from "../../../tui-harness.ts";
 
@@ -67,16 +68,6 @@ function held(): Hold {
   return hold;
 }
 
-/** The explorer's listings answered — the folders in those unfolded too — and the tree built again from them. */
-async function listed(h: Harness): Promise<void> {
-  for (;;) {
-    h.app.explorer.invalidateTree();
-    h.app.explorer.treeRows();
-    if (!h.app.explorer.listings.reading) return;
-    while (h.app.explorer.listings.reading) await Bun.sleep(5);
-  }
-}
-
 /** Awaited till the frame shows `text`: said and thrown by HELD_MS, no wait left behind. */
 async function untilDrawn(h: Harness, text: string): Promise<void> {
   const end = performance.now() + HELD_MS;
@@ -110,34 +101,6 @@ function writtenElsewhere(root: string): void {
   const dir = cacheDir({ key: vaultKey(root) });
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "index.json"), JSON.stringify({ version: INDEX_VERSION, entries: {}, branch: null }));
-}
-
-/** The disk threads' next listing of `dir` read there, its answer held here until `release`: what it says is what the
- *  disk said by `read`. The listings after it pass. */
-function answerHeld(dir: string): {
-  read: Promise<void>;
-  release: () => void;
-  asked: () => number;
-  restore: () => void;
-} {
-  const list = DiskThreads.prototype.list;
-  let release = () => {};
-  let read = () => {};
-  const gate = new Promise<void>((r) => (release = r));
-  const done = new Promise<void>((r) => (read = r));
-  let taken = false;
-  const spy = spyOn(DiskThreads.prototype, "list").mockImplementation(function (this: DiskThreads, ...args) {
-    const answer = list.apply(this, args);
-    if (taken || args[0] !== dir) return answer;
-    taken = true;
-    answer.then(read, read);
-    return answer.then(async (l) => {
-      await gate;
-      return l;
-    });
-  });
-  const asked = () => spy.mock.calls.filter((c) => c[0] === dir).length;
-  return { read: done, release, asked, restore: () => spy.mockRestore() };
 }
 
 describe("the explorer's own tree listed off the screen's thread (SD-T7)", () => {
