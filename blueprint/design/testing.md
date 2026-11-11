@@ -499,10 +499,19 @@ server holding the pack back three seconds, for quitting during a background upg
 `/proc/<pid>/exe` shows the process runs the new file itself, not waiting on a child. `:restart`'s question about notes
 unsaved is checked from source.
 
-**What needs a real terminal** (`tests/terminal/herdr/`) runs in a herdr pane, as the terminal tests once all did:
-two checks of the emulator's word against a real terminal's (`bun run test:herdr --pane <id>`): the keys a real one
-sends (escape then a key, ctrl, alt, a bracketed paste), and the widths a real one draws (names in their own scripts,
-every row the pane's width, the explorer's border in one column down every page). Pictures drawn by the terminal
+**What needs a real terminal** (`tests/terminal/herdr/`) runs in a herdr or Herdsman pane (TT-D2). The inherited
+`HERDSMAN_ENV=1` selects Herdsman, otherwise `HERDR_ENV=1` selects herdr; neither set, it refuses to attach. If both
+are inherited, the Herdsman context wins. The existing `test:herdr` command works with either backend. Prefer
+`bun run test:herdr --tab`: it opens its own tab without taking focus and closes that tab even after a failure.
+The runner can also split its own pane, or use an explicitly supplied `--pane <id>` already at a shell prompt.
+Backend tests use fake executables to check both command routes, input/read calls and owned tab/pane cleanup.
+
+The checks compare the emulator's word with a real terminal's: escape then a key, ctrl, alt and a bracketed paste;
+Alt+Enter's list menu, Alt+O/Alt+I's selection growth, and Ctrl+Backspace's path navigation; names in their own scripts,
+every row the pane's width, the explorer's straight border, and an important callout's cells before and after a search
+redraw. Named modifier keys exercise the multiplexer/PTY/OpenTUI route, not a desktop terminal's physical shortcut
+settings. Each start waits for its own traced `ready` event after the vault and opened note are in, then observes the
+screen; new checks wait for the state they need. Pictures drawn by the terminal
 (Kitty's graphics) aren't checked anywhere: the headless checks see what slipbox sends. The docs' screenshots are
 taken in the headless terminal (D236; `bun run shots`, the root's design/testing.md § The terminal tests).
 

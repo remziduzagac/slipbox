@@ -103,6 +103,7 @@ export class Session {
 
   /** Start slipbox and wait for its first frame (unless the scenario waits itself: `noWait`). */
   async start(): Promise<void> {
+    const traceStart = this.commands().length;
     const env = Object.entries(this.env())
       .map(([k, v]) => `${k}=${shq(v)}`)
       .join(" ");
@@ -135,8 +136,15 @@ export class Session {
       10000,
       "slipbox to start",
     );
-    // Its first frame isn't its last at start (a loaded machine is slower to finish): keys sent before
-    // it settles can be read as the terminal's answers, and lost.
+    // The screen is taken before the vault is read; only this start's ready event says its opened note is in.
+    await this.until(
+      () =>
+        this.commands()
+          .slice(traceStart)
+          .some((line) => line.startsWith("ready ")),
+      10000,
+      "the vault and opened note to be ready",
+    );
     await this.settle();
   }
 
@@ -255,10 +263,8 @@ export class Session {
 
   /** A command line at `:`: typed and entered. */
   async ex(command: string): Promise<void> {
-    await this.pane.keys(":");
-    await sleep(60);
-    this.pane.text(command);
-    await sleep(60);
+    await this.keys(":");
+    await this.type(command);
     await this.keys("enter");
   }
 

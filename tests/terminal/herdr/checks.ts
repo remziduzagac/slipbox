@@ -4,6 +4,7 @@
 
 import type { Scenario } from "./helpers.ts";
 import type { Session } from "./session.ts";
+import { FEATURE_CHECKS } from "./feature-checks.ts";
 
 /** The cursor's line and column, from the status line (`L12:3`). */
 function pos(s: Session): { line: number; col: number } {
@@ -34,6 +35,7 @@ function columnOf(row: string, re: RegExp): number {
 }
 
 export const CHECKS: Scenario[] = [
+  ...FEATURE_CHECKS,
   {
     name: "keys as a real terminal sends them: escape then a key, ctrl, alt, a bracketed paste",
     run: async (s) => {
