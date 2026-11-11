@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { View } from "../../../../src/tui/app/runtime/app.ts";
 import { harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
 
 makeSandbox();
@@ -11,6 +12,25 @@ const content = (h: Awaited<ReturnType<typeof harness>>) =>
     .currentLayout(h.app.view!)
     .lines.map((l) => l.spans.map((s) => s.text).join(""))
     .join("\n");
+
+const nested = [
+  "# Nested HTML",
+  "",
+  "[Inside](#nested-target)",
+  "",
+  "<details>",
+  "<summary>Outer section</summary>",
+  "<p>Outer body</p>",
+  "<details>",
+  "<summary>Inner section</summary>",
+  '<h2 id="nested-target">Nested target</h2>',
+  "<p>Nested body</p>",
+  "</details>",
+  "</details>",
+  "",
+  "After.",
+  "",
+].join("\n");
 
 describe("HTML in the TUI", () => {
   test("large HTML notes reveal their saved target after background parsing", async () => {
@@ -78,6 +98,112 @@ describe("HTML in the TUI", () => {
       await h.app.run("link.follow");
       expect(content(h)).toContain("Body text");
       expect(h.app.currentLayout(v).lines[v.cur.row]!.src).toBe(7);
+    } finally {
+      h.app.quit();
+    }
+  });
+
+  test("split windows share a document's disclosures while another document at the same lines stays independent", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "html.md"), source);
+    writeFileSync(join(root, "other.md"), source.replace("Body text", "Other body"));
+    const h = await harness({ root, open: "html.md", width: 160, config: (c) => (c.ui.sidebar = false) });
+    const text = (view: View) =>
+      h.app
+        .currentLayout(view)
+        .lines.map((line) => line.spans.map((s) => s.text).join(""))
+        .join("\n");
+    try {
+      await h.app.run("window.split_side");
+      h.app.tab!.ratio = 0.4;
+      h.frame();
+      const [first, second] = h.app.tab!.views as [View, View];
+      expect(first.buf).toBe(second.buf);
+      expect(first.width).not.toBe(second.width);
+      expect(text(first)).not.toContain("Body text");
+      expect(text(second)).not.toContain("Body text");
+      const view = h.app.view!;
+      const row = h.app.currentLayout(view).lines.findIndex((line) => line.details);
+      h.app.moveCursor(view, { row, col: 0 });
+      await h.app.run("html.details_toggle");
+      expect(text(first)).toContain("Body text");
+      expect(text(second)).toContain("Body text");
+      expect(h.frame().split("Body text")).toHaveLength(3);
+      await h.app.open("other.md");
+      const other = h.app.view!;
+      const original = h.app.tab!.views.find((v) => v !== other)!;
+      expect(other.buf).not.toBe(original.buf);
+      expect(other.buf.version).toBe(original.buf.version);
+      expect(text(other)).not.toContain("Other body");
+      expect(text(original)).toContain("Body text");
+      expect(h.frame()).toContain("Body text");
+      expect(h.frame()).not.toContain("Other body");
+      await h.app.run("window.other");
+      expect(h.app.view).toBe(original);
+      expect(content(h)).toContain("Body text");
+    } finally {
+      h.app.quit();
+    }
+  });
+
+  test("a fragment inside nested disclosures opens every ancestor and retains independent summary state", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "nested.md"), nested);
+    const h = await harness({ root, open: "nested.md" });
+    try {
+      const v = h.app.view!;
+      expect(content(h)).not.toContain("Outer body");
+      const link = h.app.currentLayout(v).links.find((l) => l.target === "#nested-target")!;
+      h.app.moveCursor(v, { row: link.line, col: link.col });
+      await h.app.run("link.follow");
+      let layout = h.app.currentLayout(v);
+      expect(layout.lines.filter((line) => line.details).map((line) => line.details!.open)).toEqual([true, true]);
+      expect(content(h)).toContain("Nested body");
+      expect(layout.lines[v.cur.row]!.src).toBe(10);
+      h.app.moveCursor(v, { row: layout.lines.findIndex((line) => line.details?.from === 8), col: 0 });
+      await h.app.run("html.details_toggle");
+      layout = h.app.currentLayout(v);
+      expect(layout.lines.filter((line) => line.details).map((line) => line.details!.open)).toEqual([true, false]);
+      expect(content(h)).toContain("Outer body");
+      expect(content(h)).not.toContain("Nested body");
+      h.app.moveCursor(v, { row: layout.lines.findIndex((line) => line.details?.from === 5), col: 0 });
+      await h.app.run("html.details_toggle");
+      await h.app.run("html.details_toggle");
+      expect(content(h)).toContain("Outer body");
+      expect(content(h)).not.toContain("Nested body");
+    } finally {
+      h.app.quit();
+    }
+  });
+
+  test("source edits and undo reset disclosure overrides instead of reusing a former summary's line", async () => {
+    const root = makeVault();
+    writeFileSync(join(root, "html.md"), source);
+    const h = await harness({ root, open: "html.md" });
+    try {
+      const v = h.app.view!;
+      const summary = () => h.app.currentLayout(v).lines.findIndex((line) => line.details);
+      h.app.moveCursor(v, { row: summary(), col: 0 });
+      await h.app.run("html.details_toggle");
+      expect(content(h)).toContain("Body text");
+      await h.app.run("view.mode_source");
+      const changed = source.replace("More", "Changed section").replace("Body text", "Replacement body");
+      v.buf.edit(0, v.buf.source.length, changed);
+      h.app.placeAtLine(v, 1);
+      await h.app.run("view.mode_read");
+      expect(content(h)).toContain("Changed section");
+      expect(content(h)).not.toContain("Replacement body");
+      h.app.moveCursor(v, { row: summary(), col: 0 });
+      await h.app.run("html.details_toggle");
+      expect(content(h)).toContain("Replacement body");
+      await h.app.run("view.mode_source");
+      expect(v.buf.undo()).not.toBeNull();
+      expect(v.buf.source).toBe(source);
+      h.app.placeAtLine(v, 1);
+      await h.app.run("view.mode_read");
+      expect(content(h)).toContain("More");
+      expect(content(h)).not.toContain("Body text");
+      expect(content(h)).not.toContain("Replacement body");
     } finally {
       h.app.quit();
     }

@@ -5,6 +5,34 @@ const NOTE = "home/notes/research/document-html.md";
 export const HTML: Check[] = [
   {
     area: "reading",
+    name: "document HTML: a nested fragment opens both disclosures in split windows, an inner toggle leaves the outer open",
+    covers: { cases: ["html", "windows"], commands: ["html.details_toggle", "window.split_side"] },
+    options: {
+      open: "nested-html.md",
+      config: '[ui]\nsidebar = false\n[render]\nimages = "never"\n',
+      size: { cols: 140, rows: 34 },
+      setup: (s) =>
+        s.write(
+          "nested-html.md",
+          '# Nested HTML\n\n[Inside](#nested-target)\n\n<details>\n<summary>Outer section</summary>\n<p>Outer body</p>\n<details>\n<summary>Inner section</summary>\n<h2 id="nested-target">Nested target</h2>\n<p>Nested body</p>\n</details>\n</details>\n',
+        ),
+    },
+    run: async (s) => {
+      await s.see("Outer section");
+      await s.notSee("Nested body");
+      await s.ex("Split side by side");
+      await s.ex("3");
+      await s.keys("enter");
+      await s.until(() => s.text().split("Nested body").length === 3, undefined, "nested content in both windows");
+      s.expect(pos(s).line === 10, "the fragment keeps its original heading line");
+      await s.ex("9");
+      await s.ex("Toggle HTML details");
+      await s.notSee("Nested body");
+      await s.until(() => s.text().split("Outer body").length === 3, undefined, "both outer disclosures stay open");
+    },
+  },
+  {
+    area: "reading",
     name: "document HTML: formatting, named disclosure toggle, fragment reveal and unchanged source",
     covers: { cases: ["html", "inline"], commands: ["html.details_toggle"] },
     options: { home: true, startAt: NOTE, config: '[render]\nimages = "never"\n', size: { cols: 120, rows: 45 } },

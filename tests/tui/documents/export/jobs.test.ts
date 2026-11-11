@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { PreparedExport, ExportSpool } from "../../../../src/core/rendering/export/spool.ts";
 import { ExportJob } from "../../../../src/core/rendering/export/jobs.ts";
 import { formatFor } from "../../../../src/core/rendering/export/index.ts";
+import { stateDir } from "../../../../src/core/foundation/platform/paths.ts";
+import { writeJson } from "../../../../src/core/foundation/platform/fsutil.ts";
+import { rootAt } from "../../../../src/core/workspace/vaults/vault.ts";
 import type { SaveAsOverlay } from "../../../../src/tui/documents/saving/saveas.ts";
 import { harness, makeSandbox, makeVault } from "../../../tui-harness.ts";
 
@@ -78,6 +81,91 @@ test("an export started while another runs is written too, not refused", async (
   expect(h.app.messages.filter((m) => m.level !== "info")).toEqual([]);
   expect(existsSync(join(root, "first.html"))).toBe(true);
   expect(readFileSync(join(root, "second.export.md"), "utf8")).toContain("# Export");
+});
+
+test("switching vaults cancels an export still preparing without publishing its file or remembered path", async () => {
+  const root = makeVault();
+  const other = makeVault();
+  const h = await harness({ root, open: "index.md" });
+  const state = join(stateDir(h.app.loc), "export.json");
+  const target = join(root, "cancelled.html");
+  const prepare = ExportJob.prototype.prepare;
+  let signal: AbortSignal | undefined;
+  ExportJob.prototype.prepare = (_request, options) => {
+    signal = options?.signal;
+    return new Promise((_resolve, reject) => {
+      signal?.addEventListener("abort", () => reject(new Error("export cancelled")), { once: true });
+    });
+  };
+  let pending: Promise<void> | undefined;
+  try {
+    pending = h.app.exporter.write(["index.md"], formatFor("html")!, target);
+    expect(signal?.aborted).toBe(false);
+    expect(h.app.background.tasks.size).toBe(1);
+    expect(h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true })).toBe(true);
+    expect(signal?.aborted).toBe(true);
+    await pending;
+    expect(h.app.background.tasks.size).toBe(0);
+    expect(existsSync(target)).toBe(false);
+    expect(existsSync(state)).toBe(false);
+    expect(h.app.exporter.lastPath("index.md")).toBeNull();
+    expect(h.app.exporter.lastDir()).toBeNull();
+  } finally {
+    h.app.exporter.cancel(true);
+    await pending;
+    ExportJob.prototype.prepare = prepare;
+    h.app.quit();
+  }
+});
+
+test("an export already published when vaults switch remembers only its original vault's destination", async () => {
+  const root = makeVault();
+  const other = makeVault();
+  const h = await harness({ root, open: "index.md" });
+  const state = join(stateDir(h.app.loc), "export.json");
+  const otherState = join(stateDir(rootAt(other)), "export.json");
+  const target = join(root, "index.html");
+  const otherTarget = join(other, "earlier.html");
+  const otherExport = { dir: other, paths: { "index.md": otherTarget } };
+  writeJson(otherState, otherExport);
+  const publish = PreparedExport.prototype.publish;
+  let arrived!: () => void;
+  let release!: () => void;
+  const published = new Promise<void>((resolve) => (arrived = resolve));
+  const held = new Promise<void>((resolve) => (release = resolve));
+  PreparedExport.prototype.publish = async function (this: PreparedExport, ...args) {
+    const files = await publish.apply(this, args);
+    arrived();
+    await held;
+    return files;
+  };
+  let pending: Promise<void> | undefined;
+  try {
+    pending = h.app.exporter.write(["index.md"], formatFor("html")!, target);
+    await Promise.race([
+      published,
+      pending.then(() => {
+        throw new Error(`export ended before publication: ${h.app.messages.map((m) => m.text).join("; ")}`);
+      }),
+    ]);
+    expect(readFileSync(target, "utf8")).toContain("<!doctype html>");
+    expect(h.app.exporter.cancel(true)).toBe(false);
+    expect(existsSync(state)).toBe(false);
+    expect(h.app.vaults.switchVault(rootAt(other), null, undefined, { asked: true })).toBe(true);
+    await h.app.open("index.md");
+    expect(h.app.info.rows().find((row) => row.key === "Export…")?.value).toBe(otherTarget);
+    release();
+    await pending;
+    expect(JSON.parse(readFileSync(state, "utf8"))).toEqual({ dir: root, paths: { "index.md": target } });
+    expect(JSON.parse(readFileSync(otherState, "utf8"))).toEqual(otherExport);
+    expect(h.app.info.rows().find((row) => row.key === "Export…")?.value).toBe(otherTarget);
+    expect(h.app.exporter.lastDir()).toBe(other);
+  } finally {
+    release();
+    await pending;
+    PreparedExport.prototype.publish = publish;
+    h.app.quit();
+  }
 });
 
 test("the folder exported to is remembered once the file is written: the window opened while its staging is cleared opens there", async () => {
