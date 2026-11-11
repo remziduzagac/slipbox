@@ -19,7 +19,7 @@ import { pathHere } from "./views/changes/here.ts";
 /** How long the opener is given to say it failed: past it, it's taken as opening. */
 const OPENER_WAIT = 5000;
 
-/** The source lines the cursor is on, or the selection's: from its first line to its last. */
+/** The cursor's or selection's source lines: every contributing line of each rendered endpoint row. */
 export function linesHere(app: App, view: View): { from: number; to: number } {
   const layout = app.currentLayout(view);
   const lineAt = (pos: { row: number; col: number }, last: boolean): number => {
@@ -29,10 +29,7 @@ export function linesHere(app: App, view: View): { from: number; to: number } {
     const srcs = [row?.src ?? 1, ...(row?.spans ?? []).flatMap((s) => (s.src === undefined ? [] : [s.src]))];
     return last ? Math.max(...srcs) : Math.min(...srcs);
   };
-  if (!view.sel) {
-    const line = lineAt(view.cur, false);
-    return { from: line, to: line };
-  }
+  if (!view.sel) return { from: lineAt(view.cur, false), to: lineAt(view.cur, true) };
   const [s, e] = ordered(view.sel.anchor, view.cur);
   return { from: lineAt(s, false), to: lineAt(e, true) };
 }

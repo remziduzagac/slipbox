@@ -608,6 +608,9 @@ step each time: to the files, then the commits.
 selection gives its lines, as a range. `space g w` opens the link in your browser instead. Over SSH, the browser would
 open on the wrong machine, so slipbox copies the link and says so.
 
+While reading, one displayed row can join several lines of Markdown. Its web link includes all of them. A selection
+includes every source line contributing to its first and last displayed rows, whichever direction you select.
+
 The link is to the commit checked out, so it keeps pointing at the same lines as the branch moves on. They're the
 commit's lines. A line you've added or changed since has none, and slipbox says it isn't committed yet. Lines added
 above the cursor don't shift it: the link still finds the line where the commit has it. A selection keeps its lines

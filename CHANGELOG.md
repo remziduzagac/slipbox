@@ -273,6 +273,9 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- A web link copied or opened from a rendered row includes every source line its text came from, rather than only
+  the first. Selections include every contributing source line at both ends, in either direction.
+
 - An important callout's title no longer slides a cell to the right, leaving a gap or a stray letter after its icon,
   when its row is drawn again, as when a search's prompt pushes the note down. With `glyphs = "unicode"` its icon is
   now `✱`: the `❢` before was laid out two cells wide, and terminals draw it one.
