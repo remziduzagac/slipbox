@@ -387,6 +387,8 @@ slipbox://github.com/you/website/docs/plan.md
   there.
 - If this machine doesn't know the name, or the folder isn't here, slipbox says so:
   "`notes` isn't on this machine yet: open it, or let the index find it". A pointer never offers to make a note.
+  A name shown in a note is checked again within two seconds of drawing it. Opening or finding the named folder
+  elsewhere can clear the warning without another key.
 - If two different folders have the name, slipbox lists each by its path, to open the one meant. It offers to rename
   one of them.
 

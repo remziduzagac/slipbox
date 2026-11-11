@@ -11,6 +11,28 @@ const worktreeRows = (s: Session) => s.screen().filter((r) => r.includes("kestre
 export const NAMED: Check[] = [
   {
     area: "links-and-files",
+    name: "pointers: another slipbox learns the folder, its warning clears while the note stays idle",
+    covers: { cases: ["links/named-folders", "links/forms"] },
+    options: {
+      open: "named-refresh.md",
+      setup: (s) => {
+        s.write("named-refresh.md", "# Named refresh\n\n[the plan](slipbox://idle-folder/plan.md)\n");
+        s.write(`${s.dir}/unseen/.slipbox/config.toml`, '[vault]\nname = "idle-folder"\n');
+        s.write(`${s.dir}/unseen/plan.md`, "# Plan\n");
+      },
+    },
+    run: async (s) => {
+      const marked = () => /⚠ 1\b/.test(s.statusLine());
+      await s.until(marked, 5000, "the unknown pointer's warning drawn");
+      const r = s.cliIn(`${s.dir}/unseen`, "ls");
+      s.expect(r.code === 0, `the other folder opened: ${r.code} ${r.out}`);
+      // No key after the external process records the folder: the drawing's own refresh removes the warning.
+      await s.until(() => !marked(), 5000, "the pointer's warning cleared without another key");
+      await s.see("the plan");
+    },
+  },
+  {
+    area: "links-and-files",
     name: "named folders: a second copy of notes asks once which links open; a repository named by its remote (21.6)",
     covers: { cases: ["links/named-folders", "vault"] },
     options: { home: true, startAt: "home/notes/index.md" },
