@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Line } from "../../../../src/core/rendering/layout/ir.ts";
+import { stringWidth } from "../../../../src/core/foundation/text/width.ts";
 import { cells, longWordStarts } from "../../../../src/tui/documents/editing/cursor.ts";
+import { offsetOf } from "../../../../src/tui/documents/editing/source/position.ts";
 import { ALPHABET, labelsFor, nearestFirst, type Target } from "../../../../src/tui/documents/navigation/labels.ts";
 import { harness, makeSandbox, makeVault, rowStarting, rowText } from "../../../tui-harness.ts";
 
@@ -142,6 +144,79 @@ describe("jump labels: s and g w", () => {
     expect(c.line(t.y).slice(t.x, t.x + 2)).toBe(`${t.label} `);
     expect(c.styles[t.y]![t.x + 1]!.bg).toBe(h.app.theme.roles.jump_label.bg!);
     await h.keys("escape");
+  });
+
+  test("horizontally scrolled code labels only visible text, in its drawn cells and layout columns", async () => {
+    const root = makeVault();
+    const text = `start hidden 中 visible ${"tail ".repeat(30)}`;
+    writeFileSync(join(root, "jump-scroll.md"), `# Scroll\n\n\`\`\`text\n${text}\n\`\`\`\n`);
+    const h = await harness({
+      root,
+      open: "jump-scroll.md",
+      width: 70,
+      config: (c) => (c.ui.sidebar = false),
+    });
+    const v = h.app.view!;
+    const layout = h.app.currentLayout(v);
+    const row = layout.lines.findIndex((l) => l.scroll && l.spans.some((s) => s.text.includes("hidden")));
+    expect(row).toBeGreaterThanOrEqual(0);
+    const s = layout.lines[row]!.scroll!;
+    expect(s.x).toBeGreaterThan(0);
+    const hidden = s.x + stringWidth("start ");
+    const visible = s.x + stringWidth("start hidden 中 ");
+    const off = hidden - s.x + 1;
+    h.app.code.setOffset(v, layout, row, off);
+    await h.keys("s");
+    const targets = h.app.labels.shown!.targets.filter((t) => t.pos.row === row);
+    // The hidden word would otherwise be labelled in the code block's fixed gutter.
+    expect(hidden - off).toBe(s.x - 1);
+    expect(targets.some((t) => t.pos.col === hidden)).toBe(false);
+    expect(targets.every((t) => t.pos.col >= s.x + off && t.pos.col < s.x + off + s.w)).toBe(true);
+    const t = targets.find((t) => t.pos.col === visible)!;
+    expect(t).toBeDefined();
+    const pane = h.app.geometry!.panes[0]!;
+    expect(t.x).toBe(pane.textX + visible - off);
+    expect(
+      h
+        .canvas()
+        .line(t.y)
+        .slice(t.x, t.x + t.label.length),
+    ).toBe(t.label);
+    await h.keys(...t.label);
+    expect(v.cur).toEqual({ row, col: visible });
+    expect(h.app.cursorLine(v)).toBe(4);
+    expect(cells(h.app.currentLayout(v).lines[row]).find((c) => c.x === v.cur.col)?.g).toBe("v");
+  });
+
+  test("horizontally scrolled SOURCE labels subtract the window offset and keep the target column", async () => {
+    const root = makeVault();
+    const text = `${"before ".repeat(20)}中 visible after`;
+    writeFileSync(join(root, "jump-source-scroll.md"), `${text}\n`);
+    const h = await harness({
+      root,
+      open: "jump-source-scroll.md",
+      width: 70,
+      config: (c) => ((c.ui.sidebar = false), (c.ui.wrap = false)),
+    });
+    await h.app.run("view.mode_source");
+    await h.keys("$");
+    const v = h.app.view!;
+    expect(v.left).toBeGreaterThan(0);
+    const visible = stringWidth(text.slice(0, text.indexOf("visible")));
+    await h.keys("g", "w");
+    const t = h.app.labels.shown!.targets.find((t) => t.pos.col === visible)!;
+    expect(t).toBeDefined();
+    const pane = h.app.geometry!.panes[0]!;
+    expect(t.x).toBe(pane.textX + visible - v.left);
+    expect(
+      h
+        .canvas()
+        .line(t.y)
+        .slice(t.x, t.x + t.label.length),
+    ).toBe(t.label);
+    await h.keys(...t.label);
+    expect(v.cur).toEqual({ row: 0, col: visible });
+    expect(v.buf.source.slice(offsetOf(h.app, v))).toStartWith("visible");
   });
 
   test("esc, or a key no label goes on with, leaves everything as it was: the cursor, the window, the text", async () => {
