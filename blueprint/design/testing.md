@@ -207,6 +207,10 @@ passing run, so that a main thread held until the dictionary is there fails rath
 itself, a timeout that must stop something, bounds it with a wide margin (stopped at 0.2 s, checked under 3 s).
 Timings are the benchmark's (§ Timings), read and not asserted.
 
+The merge-review terminal check waits for the cursor's broken link to say where git moved its target before asking
+for a relink. The HEAD-moved message can precede the graph's background rescan. Its fixture delays the folder that
+arrives in the merge through the slow-disk seam, so waiting for the message alone exposes an empty relink plan.
+
 **Nothing a test file leaves behind changes another's results.** `bun test` runs every file in one process, so what
 loads lazily (`16.6`), Mermaid or MathJax, is loaded by whichever file asked first. A file whose output depends on one
 loads it before it renders: the rendering owners preload Mermaid through `tests/support/render-sandbox.ts`, so the
