@@ -206,7 +206,12 @@ export const GIT: Check[] = [
     area: "links-and-files",
     name: "git: :merge-review — a merge's broken links before it, each fix said; after it, git's rename says where a file went (20.21)",
     covers: { cases: ["git", "links/git"], commands: ["git.merge_review", "link.relink"] },
-    options: { home: true, startAt: "home/work/kestrel/docs/architecture.md" },
+    options: {
+      home: true,
+      startAt: "home/work/kestrel/docs/architecture.md",
+      // This folder arrives in the merge: its new walk must finish before the relink is planned.
+      env: { SLIPBOX_SLOW_DISK: "architecture:3500" },
+    },
     run: async (s) => {
       await s.where(/^kestrel │ main\b/);
       await s.ex("merge-review");
@@ -223,6 +228,12 @@ export const GIT: Check[] = [
       // Merged: git's rename is evidence here — the link says where its file went; space l r fixes it.
       gitOk(s, "the merge", true, KESTREL, "merge", "-q", "--no-edit", "refactor/docs-layout");
       await s.message("branch main moved on: git moved 1 file", 8000);
+      // HEAD's message precedes the disk thread's rescan. Wait for the graph's moved-link evidence at the cursor.
+      await s.until(
+        () => /broken link: sync\.md — moved to docs\/architecture\/sync\.md/.test(s.statusLine()),
+        10000,
+        "the merged graph to expose the broken link's moved target",
+      );
       await leader(s, "l", "r");
       await s.see(/relink: \d+ changes? in 1 file/, 5000);
       await s.keys("enter");
