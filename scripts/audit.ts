@@ -70,15 +70,6 @@ export const ACCEPTED: Accepted[] = [
       "is published (3.0.3 is the latest, 2026-10-13).",
     until: "2027-01-12",
   },
-  {
-    package: "re2js@2.8.6",
-    advisories: ["GHSA-gg6h-894w-4m9c"],
-    why:
-      "markdownlint's (0.42.0, which markdownlint-cli2 0.24.0 pins), a dev tool the docs check runs over the " +
-      "repository's own Markdown: the input is ours, the advisory is slow-input denial of service only, and it isn't " +
-      "in the binary. markdownlint 0.42.1 (2026-11-07) takes the fixed re2js; taken once a markdownlint-cli2 takes it.",
-    until: "2026-12-08",
-  },
 ];
 
 /** The `--ignore` arguments for the advisories accepted on `today`; those past their date are `expired`. */
