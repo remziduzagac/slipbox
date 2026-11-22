@@ -94,6 +94,10 @@ describe("review cycle 5 (core, from mutation testing)", () => {
       // A flag's two letters, a family's three people (their joiners nothing), a thumb and its skin tone; a VS16 nothing.
       const clusters = ["🇩🇪", "👨\u200D👩\u200D👧", "👍🏽", "❤️", "1️⃣", "हिन्दी"];
       expect(clusters.map((g) => stringWidth(g))).toEqual([2, 6, 4, 1, 1, 3]);
+      // A format character that prepends takes its cell; a joiner and a flag's tags none.
+      expect(
+        ["\u0600١", "क\u200C", "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}"].map((g) => stringWidth(g)),
+      ).toEqual([2, 1, 2]);
     } finally {
       setWidthMethod("unicode");
     }

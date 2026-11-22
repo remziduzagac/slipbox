@@ -362,6 +362,8 @@ releases (0.9.0 first); slipbox's own licence stays Apache-2.0. What the binary 
 - Each release and preview carries FFmpeg's exact source archive beside its binaries: `release.ts finish` fetches it
   from ffmpeg.org and keeps it only when its SHA-256 is the one recorded, which `check-deps.ts` holds to what each
   native package's `FFMPEG-SOURCE.md` names; `release.ts sources` refuses the release without it, before the draft.
+- The zlib linked in with FFmpeg is recorded the same way, in `NOTICES.txt` and the SBOM, its source by address and
+  SHA-256, held to that file too; its source isn't carried, since its licence (Zlib) asks for none.
 - The README and the install guide say slipbox includes FFmpeg under the LGPL 2.1, and that its source comes with each
   release.
 

@@ -42,6 +42,18 @@ describe("widths as OpenTUI draws them", () => {
     // Clusters where the two counts part (a conjunct's parts, a flag's letters), whatever the corpus
     // holds. Not Bengali's reph (র্গা): OpenTUI's table has it 1, Bun's 2 — slipbox counts Bun's.
     for (const t of ["हिन्दी", "नमस्ते", "क्ष", "ஸ்ரீ", "ཀྱི", "각", "1️⃣", "🇩🇪", "✔️"]) for (const g of graphemes(t)) seen.add(g);
+    // A format character that prepends (Arabic's and Syriac's signs set before a number or a word) takes its cell where
+    // the terminal doesn't cluster; a joiner and a flag's tags don't.
+    for (const t of [
+      "\u0600١",
+      "\u0605١",
+      "\u06DD١",
+      "\u070F\u0710",
+      "\u08E2\u0628",
+      "क\u200C",
+      "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}",
+    ])
+      for (const g of graphemes(t)) seen.add(g);
     const fg = RGBA.fromHex("#ffffff");
     const bg = RGBA.fromHex("#000000");
     try {

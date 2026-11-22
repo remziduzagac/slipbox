@@ -17,9 +17,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { DECLARED, EMBEDDED, embeddedProblems, holds, NAMED, PERMISSIVE } from "./licences.ts";
-
-export { embeddedProblems, NAMED, sourceArchives } from "./licences.ts";
+import { DECLARED, EMBEDDED, embeddedProblems, holds, NAMED, PERMISSIVE, sourceArchives } from "./licences.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -315,11 +313,18 @@ export function notices(packages: Package[], version: string, root = ROOT): stri
     section(`${p.name} ${p.version} — ${p.licence}${p.repository ? `\n${p.repository}` : ""}`, `${source}${body}`);
   }
   for (const e of EMBEDDED) {
-    // An archive's address, its SHA-256, and the release's asset of it (release.ts' `sources`).
-    const source = e.archive
-      ? `${e.source} (SHA-256 ${e.archive.sha256}),\nand beside the binaries of each slipbox release, as ${e.source.slice(e.source.lastIndexOf("/") + 1)}`
-      : e.source;
-    const body = `${e.note ? `${e.note}\n` : ""}Its source: ${source}\n\n${standardText(root, e.licence, "the copyright holders above") ?? e.licence}`;
+    // An archive's address and SHA-256, and where a release carries it, the asset it's carried as (sources.ts).
+    const carried = sourceArchives().find((a) => a.of === e.name);
+    const source = e.archive ? `${e.source} (SHA-256 ${e.archive.sha256})` : e.source;
+    const beside = carried ? `,\nand beside the binaries of each slipbox release, as ${carried.name}` : "";
+    // Its licence's text: the standard one, or as the package it's in ships it.
+    const shipped = e.licenceFile
+      ? packages.find((p) => holds(e, p.name) && existsSync(join(p.dir, e.licenceFile!)))
+      : null;
+    const text = shipped
+      ? readFileSync(join(shipped.dir, e.licenceFile!), "utf8").trimEnd()
+      : (standardText(root, e.licence, "the copyright holders above") ?? e.licence);
+    const body = `${e.note ? `${e.note}\n` : ""}Its source: ${source}${beside}\n\n${text}`;
     const name = e.version ? `${e.name} ${e.version}` : e.name;
     section(`${name}, compiled into ${e.inside} — ${e.licence}`, `${e.copyright}\n\n${body}`);
   }

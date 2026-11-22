@@ -7,7 +7,6 @@ import { ACCEPTED, AUDITED, type Accepted, acceptedProblems, ignoreArgs } from "
 import {
   bunfigProblems,
   checkDeps,
-  embeddedProblems,
   licenceProblems,
   licenceTaken,
   notices,
@@ -22,6 +21,7 @@ import {
   workflowProblems,
   workflowShapeProblems,
 } from "../../scripts/check-deps.ts";
+import { embeddedProblems } from "../../scripts/licences.ts";
 import { codeChanged, importGraph, isDocs, scope as reaches } from "../../scripts/ci-scope.ts";
 import { VERSION } from "../../src/version.ts";
 
@@ -97,11 +97,14 @@ describe("the supply chain's gates (14.10)", () => {
     expect(licenceProblems([pkg("@opentui/core-linux-x64", "MIT AND GPL-2.0-or-later")])).toHaveLength(1);
   });
 
-  test("FFmpeg, compiled into OpenTUI's native library: each package says it holds the version and source recorded", () => {
-    const declared = (version: string, sha: string) =>
+  test("FFmpeg and zlib, compiled into OpenTUI's native library: each package says it holds the versions and sources recorded", () => {
+    const declared = (version: string, sha: string, zlib = "1.3.2", zsha = zlibSha) =>
       `# FFmpeg\n\nNative video statically links a minimal decode-only FFmpeg ${version} build.\n\n` +
-      `- Source: https://ffmpeg.org/releases/ffmpeg-${version}.tar.xz\n- SHA-256: \`${sha}\`\n`;
+      `- Source: https://ffmpeg.org/releases/ffmpeg-${version}.tar.xz\n- SHA-256: \`${sha}\`\n` +
+      `- License: LGPL-2.1-or-later (\`COPYING.LGPLv2.1\`)\n` +
+      `- zlib ${zlib}: https://zlib.net/fossils/zlib-${zlib}.tar.gz\n- zlib SHA-256: \`${zsha}\`\n`;
     const sha = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e";
+    const zlibSha = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16";
     const native = (files: Record<string, string>) => pkg("@opentui/core-linux-x64", "", { dir: tree(files) });
     expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", sha) })])).toEqual([]);
     // An upgrade linking another FFmpeg, or another archive of it: said, until what's recorded follows.
@@ -109,8 +112,16 @@ describe("the supply chain's gates (14.10)", () => {
       `@opentui/core-linux-x64@1.0.0: its FFMPEG-SOURCE.md names FFmpeg 9.0.3 (https://ffmpeg.org/releases/ffmpeg-9.0.3.tar.xz, SHA-256 ${sha}), and EMBEDDED FFmpeg 9.0.2 (https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz, SHA-256 ${sha}): update EMBEDDED`,
     ]);
     expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", "0".repeat(64)) })])).toHaveLength(1);
+    // And another zlib, by its own lines: FFmpeg's untouched.
+    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", sha, "1.3.3") })])).toEqual([
+      `@opentui/core-linux-x64@1.0.0: its FFMPEG-SOURCE.md names zlib 1.3.3 (https://zlib.net/fossils/zlib-1.3.3.tar.gz, SHA-256 ${zlibSha}), and EMBEDDED zlib 1.3.2 (https://zlib.net/fossils/zlib-1.3.2.tar.gz, SHA-256 ${zlibSha}): update EMBEDDED`,
+    ]);
+    expect(
+      embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", sha, "1.3.2", "0".repeat(64)) })]),
+    ).toHaveLength(1);
     expect(embeddedProblems([native({ LICENSE: "MIT" })])).toEqual([
       `@opentui/core-linux-x64@1.0.0: no FFMPEG-SOURCE.md to say it holds FFmpeg 9.0.2 (https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz, SHA-256 ${sha}): update EMBEDDED`,
+      `@opentui/core-linux-x64@1.0.0: no FFMPEG-SOURCE.md to say it holds zlib 1.3.2 (https://zlib.net/fossils/zlib-1.3.2.tar.gz, SHA-256 ${zlibSha}): update EMBEDDED`,
     ]);
     // OpenTUI's own package, and any other, holds none.
     expect(embeddedProblems([pkg("@opentui/core", "MIT", { dir: tree({ LICENSE: "MIT" }) })])).toEqual([]);
@@ -581,14 +592,26 @@ describe("the supply chain's gates (14.10)", () => {
       "Hunspell",
       "libwebp",
       "FFmpeg",
+      "zlib",
     ]);
     expect(bom.dependencies.find((d) => d.ref.startsWith("pkg:npm/hunspell-asm@"))?.dependsOn).toContain(
       "embedded:Hunspell",
     );
-    // FFmpeg in each of OpenTUI's native packages installed here, its source the archive a release carries (D277).
+    // FFmpeg and zlib in each of OpenTUI's native packages installed here, each source the archive recorded (D277).
     const natives = bom.dependencies.filter((d) => /^pkg:npm\/%40opentui\/core-(darwin|linux)-/.test(d.ref));
     expect(natives.length).toBeGreaterThan(0);
-    for (const d of natives) expect(d.dependsOn).toEqual(["embedded:FFmpeg"]);
+    for (const d of natives) expect(d.dependsOn).toEqual(["embedded:FFmpeg", "embedded:zlib"]);
+    expect(bom.components.find((c) => c.name === "zlib")).toMatchObject({
+      version: "1.3.2",
+      licenses: [{ license: { id: "Zlib" } }],
+      externalReferences: [
+        {
+          type: "source-distribution",
+          url: "https://zlib.net/fossils/zlib-1.3.2.tar.gz",
+          hashes: [{ alg: "SHA-256", content: "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16" }],
+        },
+      ],
+    });
     expect(bom.components.find((c) => c.name === "FFmpeg")).toMatchObject({
       version: "9.0.2",
       licenses: [{ license: { id: "LGPL-2.1-or-later" } }],
@@ -664,6 +687,7 @@ describe("the supply chain's gates (14.10)", () => {
         pkg("own", "MIT", { dir: own, repository: "https://github.com/x/own" }),
         pkg("bare", "MIT", { dir: bare, author: "Bare Author" }),
         pkg("mpl", "MPL-2.0", { dir: bare, repository: "https://github.com/x/mpl" }),
+        pkg("@opentui/core-linux-x64", "MIT", { dir: tree({ "LICENSE-ZLIB": "zlib's licence, as shipped\n" }) }),
       ],
       "9.9.9",
       ROOT,
@@ -693,6 +717,14 @@ describe("the supply chain's gates (14.10)", () => {
     );
     expect(ffmpeg).toContain("GNU LESSER GENERAL PUBLIC LICENSE\n\nVersion 2.1, February 1999");
     expect(ffmpeg).toContain("END OF TERMS AND CONDITIONS");
+    // zlib, linked in with it: its source recorded, not carried; its licence as OpenTUI's package ships it.
+    const zlib = part("zlib 1.3.2, compiled into OpenTUI's native library (@opentui/core-<platform>) — Zlib");
+    expect(zlib).toStartWith("\n(C) 1995-2026 Jean-loup Gailly and Mark Adler\n");
+    expect(zlib).toContain(
+      "Its source: https://zlib.net/fossils/zlib-1.3.2.tar.gz (SHA-256 bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16)\n",
+    );
+    expect(zlib).not.toContain("beside the binaries");
+    expect(zlib).toContain("zlib's licence, as shipped");
     expect(text).toContain(`Bun ${Bun.version}, the runtime the binary is built on`);
     expect(text).toContain("Bun statically links JavaScriptCore");
     expect(text).toContain("GNU LESSER GENERAL PUBLIC LICENSE");

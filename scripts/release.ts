@@ -3,6 +3,7 @@
 //
 //   bun scripts/release.ts build [--target <t>]… --repo <owner/name> [--tag v<version>] [--out <dir>]
 //   bun scripts/release.ts finish --repo <owner/name> [--tag v<version>] [--out <dir>]
+//   bun scripts/release.ts sources [--out <dir>]
 //   bun scripts/release.ts notes [--tag v<version>]
 //
 // build: each target — this machine's when none is named — compiled by package.json's own `build` (its autoload
@@ -14,15 +15,9 @@
 // (`.github/workflows/build.yml`), where it's there.
 // finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, its
 // tag, the repository and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew
-// formula, from `homebrew.template.rb` — Apple silicon's and glibc Linux's packs, which are Homebrew's. Then the
-// sources the binaries' licences ask to go with them (FFmpeg's, LGPL-2.1: D277), each fetched from where its project
-// publishes it and kept only as the archive whose SHA-256 `scripts/licences.ts` records.
+// formula, from `homebrew.template.rb` — Apple silicon's and glibc Linux's packs, which are Homebrew's; then the
+// sources their licences ask to go with the binaries, fetched (`sources.ts`, D277). sources: refused without them.
 // notes: the release's notes on stdout, its version's section of CHANGELOG.md; none there fails.
-//
-//   bun scripts/release.ts sources [--out <dir>]
-//
-// sources: the release in `--out` refused — before it's drafted, by the workflow that publishes it — unless each of
-// those sources is there, as recorded.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
 // `dist/release` by default. Nothing is published here: CI drafts the release, and a person publishes it.
@@ -49,7 +44,6 @@
 // repository's releases (`gh api`): the highest stable release, the newest preview; a channel with none has no file.
 // stale: the published previews beyond the newest `--keep`, a tag a line, for the workflow to delete.
 
-import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { rootPage } from "../site/scripts/root.ts";
@@ -60,7 +54,8 @@ import {
   retired,
   tagOf,
 } from "../src/core/application/distribution/release.ts";
-import { checkDeps, notices, sbom, sourceArchives } from "./check-deps.ts";
+import { checkDeps, notices, sbom } from "./check-deps.ts";
+import { checkSources, download, fetchSources, sha256 } from "./sources.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -205,7 +200,7 @@ export function buildArgs(script: string, outfile: string, target: string, repo:
 /** `SHA256SUMS`'s text for files: `<hash>  <name>` a line, by name — what `sha256sum -c` and `shasum -c` read. */
 export function sha256sums(files: string[]): string {
   return files
-    .map((f) => ({ name: basename(f), hash: createHash("sha256").update(readFileSync(f)).digest("hex") }))
+    .map((f) => ({ name: basename(f), hash: sha256(readFileSync(f)) }))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((x) => `${x.hash}  ${x.name}\n`)
     .join("");
@@ -455,47 +450,6 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
   return out;
 }
 
-/** A source archive a release carries (`sourceArchives`): its file name, address and SHA-256. */
-type SourceArchive = ReturnType<typeof sourceArchives>[number];
-
-const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
-
-/** The sources a release carries, written into `out`: each archive fetched by `download`, or kept when it's there
- *  already, as recorded. One that isn't the archive recorded (its SHA-256 another) is refused, and not written. */
-export async function fetchSources(
-  out: string,
-  download: (url: string) => Promise<Uint8Array>,
-  archives: SourceArchive[] = sourceArchives(),
-): Promise<string[]> {
-  const written: string[] = [];
-  for (const a of archives) {
-    const file = join(out, a.name);
-    if (!existsSync(file) || sha256(readFileSync(file)) !== a.sha256) {
-      const bytes = await download(a.url);
-      const got = sha256(bytes);
-      if (got !== a.sha256)
-        throw new Error(`${a.url}: its SHA-256 is ${got}, not ${a.sha256}, ${a.of}'s source recorded: not kept`);
-      writeFileSync(file, bytes);
-    }
-    written.push(file);
-  }
-  return written;
-}
-
-/** The release in `out` refused unless it carries each source as recorded (D277): the binaries link code whose
- *  licence asks for its source to go with them. The archives' paths. */
-export function checkSources(out: string, archives: SourceArchive[] = sourceArchives()): string[] {
-  return archives.map((a) => {
-    const file = join(out, a.name);
-    if (!existsSync(file))
-      throw new Error(`${a.name}, ${a.of}'s source, isn't in ${out}: a release carries it beside its binaries`);
-    const got = sha256(readFileSync(file));
-    if (got !== a.sha256)
-      throw new Error(`${a.name}'s SHA-256 is ${got}, not ${a.sha256}, ${a.of}'s source recorded: not released`);
-    return file;
-  });
-}
-
 // ------------------------------------------------------------------------------------------------------------------
 // The channels (GR-D14) and the previews kept
 
@@ -543,9 +497,7 @@ export async function channelFiles(
     if (!r) return null;
     const asset = r.assets?.find((a) => a.name === "install.sh");
     if (!asset) throw new Error(`${r.tag_name} has no install.sh: its channel can't name it`);
-    const sha = createHash("sha256")
-      .update(await download(asset.browser_download_url))
-      .digest("hex");
+    const sha = sha256(await download(asset.browser_download_url));
     if (asset.digest && asset.digest !== `sha256:${sha}`)
       throw new Error(`${r.tag_name}'s install.sh has the SHA-256 ${sha} here, and ${asset.digest} on GitHub`);
     return `${r.tag_name} ${sha}\n`;
@@ -587,12 +539,6 @@ function listReleases(repo: string): GhRelease[] {
     .map((l) => JSON.parse(l) as GhRelease);
 }
 
-async function download(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`couldn't download ${url}: ${res.status} ${res.statusText}`);
-  return new Uint8Array(await res.arrayBuffer());
-}
-
 /** The repository asked for, or origin's on GitHub. */
 function repoFrom(flag: string | undefined): string {
   if (flag) {
@@ -630,9 +576,8 @@ if (import.meta.main) {
       for (const p of buildRelease({ targets, repo: repoFrom(one("repo")), tag: one("tag"), out }))
         process.stdout.write(`${p}\n`);
     } else if (step === "finish") {
-      for (const p of finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out }))
-        process.stdout.write(`${p}\n`);
-      for (const p of await fetchSources(out, download)) process.stdout.write(`${p}\n`);
+      const made = finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out });
+      for (const p of [...made, ...(await fetchSources(out))]) process.stdout.write(`${p}\n`);
     } else if (step === "sources") {
       for (const p of checkSources(out)) process.stdout.write(`${p}\n`);
     } else if (step === "notes") {
@@ -658,9 +603,8 @@ if (import.meta.main) {
       for (const tag of stalePreviews(listReleases(repoFrom(one("repo"))), keep)) process.stdout.write(`${tag}\n`);
     } else {
       process.stderr.write(
-        "release: build [--target <t>]… [--repo owner/name] [--tag <tag>] [--out <dir>] | finish … | sources … | " +
-          "notes … | preview [--remote <r>] | stamp --version <v> | site --repo owner/name --out <dir> | " +
-          "stale [--keep <n>]\n",
+        "release: build [--target <t>]… [--repo owner/name] [--tag <tag>] [--out <dir>] | finish … | sources | notes … " +
+          "| preview [--remote <r>] | stamp --version <v> | site --repo owner/name --out <dir> | stale [--keep <n>]\n",
       );
       process.exit(2);
     }

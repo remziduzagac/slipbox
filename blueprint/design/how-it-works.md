@@ -666,12 +666,13 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
 3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names (`keyName` in
    `tui/shell/input/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth terminal's rows must not drift),
    `suspend`/`resume` (the `$EDITOR` hand-off, each awaited), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
-   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns, by
-   OpenTUI even when it's late, the rest dropped; when OpenTUI gives up, slipbox writes its teardown itself,
-   `RESTORE` in `run.ts`, which `tests/tui/shell/terminal/closing.test.ts` holds to what this version's setup and
-   teardown write). And
-   pictures: `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and
-   hands the renderer, whose `write` sends Kitty placeholders' pictures in order with the frames (12.7).
+   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns, by OpenTUI
+   even when it's late, the rest dropped, slipbox then ending the picture cut short; when OpenTUI gives up, or hasn't
+   finished by slipbox's own bound, slipbox writes its teardown itself, `restoreText` in `run.ts`, which
+   `tests/tui/shell/terminal/closing.test.ts` holds to what this version's setup and teardown write, grapheme clustering
+   by the terminal's answer to OpenTUI's question, read in `prependInputHandlers`). And pictures: `NativeImage` (decode,
+   `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and hands the renderer, whose `write`
+   sends Kitty placeholders' pictures in order with the frames (12.7).
 4. Only `tui/shell/terminal/opentui.ts` and `tui/shell/terminal/run.ts` should need changes. If anything else does, the
    boundary has leaked; fix that first. The exception is `core/foundation/text/width.ts`, which counts as OpenTUI lays
    cells out, without importing it: `tests/tui/shell/terminal/widths.test.ts` holds the two together, and a change in

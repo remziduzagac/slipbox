@@ -42,21 +42,28 @@ export const NAMED: Record<string, { licence: string; why: string }> = {
 export const DECLARED: Record<string, string> = { "png-js": "MIT", typeahead: "Apache-2.0" };
 
 /** Code compiled into a package's WebAssembly or native library, not a package of its own: its notice is owed too.
- *  `within`, the packages it's in, when `inside` names more than one. `archive`: the source a release carries beside its
- *  binaries (`source`, by its SHA-256), as the licence asks; `declared`, the file in each package it's in that names
- *  the same version, address and SHA-256 — `embeddedProblems` holds them together, so an upgrade that changes it says
- *  so. */
+ *  `within`, the packages it's in, when `inside` names more than one. `licenceFile`, its licence's text as those
+ *  packages ship it, in place of the standard text. `archive`: its source's archive (`source`), by its SHA-256;
+ *  `declared`, how the packages it's in name the same version, address and SHA-256 — a file of theirs, and its lines
+ *  for the address and the hash — which `embeddedProblems` holds to this, so an upgrade that changes it says so;
+ *  `carried`, whether each release carries the archive beside its binaries, as the licence asks. */
 export interface Embedded {
   name: string;
   version?: string;
   inside: string;
   within?: RegExp;
   licence: string;
+  licenceFile?: string;
   copyright: string;
   source: string;
-  archive?: { sha256: string; declared: string };
+  archive?: { sha256: string; declared: { file: string; source: RegExp; sha256: RegExp }; carried: boolean };
   note?: string;
 }
+
+/** What's compiled into OpenTUI's native library: a package for each platform. */
+const OPENTUI_LIBRARY = "OpenTUI's native library (@opentui/core-<platform>)";
+const OPENTUI_PACKAGES = /^@opentui\/core-(darwin|linux|win32)-/;
+
 export const EMBEDDED: Embedded[] = [
   {
     name: "Hunspell",
@@ -76,14 +83,15 @@ export const EMBEDDED: Embedded[] = [
   {
     name: "FFmpeg",
     version: "9.0.2",
-    inside: "OpenTUI's native library (@opentui/core-<platform>)",
-    within: /^@opentui\/core-(darwin|linux|win32)-/,
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
     licence: "LGPL-2.1-or-later",
     copyright: "Copyright (c) 2000-2026 the FFmpeg developers",
     source: "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
     archive: {
       sha256: "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e",
-      declared: "FFMPEG-SOURCE.md",
+      declared: { file: "FFMPEG-SOURCE.md", source: /^- Source: (\S+)$/m, sha256: /^- SHA-256: `([0-9a-f]{64})`$/m },
+      carried: true,
     },
     note:
       "A decode-only build (MP4, H.264, AAC: OpenTUI's video, which slipbox doesn't play), linked statically into\n" +
@@ -91,12 +99,41 @@ export const EMBEDDED: Embedded[] = [
       "packages/native/scripts/build-ffmpeg.ts) builds that library again with an FFmpeg you've changed, and slipbox\n" +
       "loads the one OPENTUI_LIB_PATH names in place of its own.",
   },
+  {
+    name: "zlib",
+    version: "1.3.2",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "Zlib",
+    licenceFile: "LICENSE-ZLIB",
+    copyright: "(C) 1995-2026 Jean-loup Gailly and Mark Adler",
+    source: "https://zlib.net/fossils/zlib-1.3.2.tar.gz",
+    archive: {
+      sha256: "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+      declared: {
+        file: "FFMPEG-SOURCE.md",
+        source: /^- zlib \d+(?:\.\d+)+: (\S+)$/m,
+        sha256: /^- zlib SHA-256: `([0-9a-f]{64})`$/m,
+      },
+      carried: false,
+    },
+    note: "Linked into OpenTUI's native library with FFmpeg, which uses it.",
+  },
 ];
 
-/** The source archives a release carries beside its binaries: each one's file name, address and SHA-256. */
-export function sourceArchives(): { name: string; url: string; sha256: string; of: string }[] {
+/** A source archive a release carries beside its binaries: its file name, address and SHA-256, and what it's the
+ *  source of. */
+export interface SourceArchive {
+  name: string;
+  url: string;
+  sha256: string;
+  of: string;
+}
+
+/** The source archives a release carries beside its binaries. */
+export function sourceArchives(): SourceArchive[] {
   return EMBEDDED.flatMap((e) =>
-    e.archive
+    e.archive?.carried
       ? [{ name: e.source.slice(e.source.lastIndexOf("/") + 1), url: e.source, sha256: e.archive.sha256, of: e.name }]
       : [],
   );
@@ -109,21 +146,22 @@ export const holds = (e: Embedded, name: string) => (e.within ? e.within.test(na
  *  at the version, address and SHA-256 recorded here. */
 export function embeddedProblems(packages: Package[], embedded: Embedded[] = EMBEDDED): string[] {
   const out: string[] = [];
-  for (const e of embedded.filter((x) => x.archive))
-    for (const p of packages.filter((x) => holds(e, x.name))) {
-      const file = join(p.dir, e.archive!.declared);
-      const recorded = `${e.name} ${e.version} (${e.source}, SHA-256 ${e.archive!.sha256})`;
+  for (const e of embedded)
+    for (const p of e.archive ? packages.filter((x) => holds(e, x.name)) : []) {
+      const { declared, sha256 } = e.archive!;
+      const file = join(p.dir, declared.file);
+      const recorded = `${e.name} ${e.version} (${e.source}, SHA-256 ${sha256})`;
       if (!existsSync(file)) {
-        out.push(`${p.name}@${p.version}: no ${e.archive!.declared} to say it holds ${recorded}: update EMBEDDED`);
+        out.push(`${p.name}@${p.version}: no ${declared.file} to say it holds ${recorded}: update EMBEDDED`);
         continue;
       }
       const text = readFileSync(file, "utf8");
       const version = new RegExp(`${e.name} (\\d+(?:\\.\\d+)+)`).exec(text)?.[1];
-      const url = /^- Source: (\S+)$/m.exec(text)?.[1];
-      const sha = /^- SHA-256: `([0-9a-f]{64})`$/m.exec(text)?.[1];
-      if (version !== e.version || url !== e.source || sha !== e.archive!.sha256)
+      const url = declared.source.exec(text)?.[1];
+      const sha = declared.sha256.exec(text)?.[1];
+      if (version !== e.version || url !== e.source || sha !== sha256)
         out.push(
-          `${p.name}@${p.version}: its ${e.archive!.declared} names ${e.name} ${version ?? "?"} (${url ?? "?"}, ` +
+          `${p.name}@${p.version}: its ${declared.file} names ${e.name} ${version ?? "?"} (${url ?? "?"}, ` +
             `SHA-256 ${sha ?? "?"}), and EMBEDDED ${recorded}: update EMBEDDED`,
         );
     }

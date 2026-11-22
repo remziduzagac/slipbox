@@ -40,9 +40,10 @@ search index, the parse cache or a picture — so backup tools that know the tag
   LGPL-2.1-or-later` for the FFmpeg linked in, D277). A package naming no licence fails, unless its own `LICENSE` was
   read and recorded (`DECLARED`: `png-js`, `typeahead`). Both lists, and what's compiled into packages (`EMBEDDED`),
   are `scripts/licences.ts`.
-- **What's compiled in, out of step** with the packages it's in: each of OpenTUI's native packages installed names
-  the FFmpeg it links, its version, address and SHA-256, in its `FFMPEG-SOURCE.md`, and they must be `EMBEDDED`'s. An
-  upgrade linking another FFmpeg fails here until `EMBEDDED` names it, so a release can't carry another's source.
+- **What's compiled in, out of step** with the packages it's in: each of OpenTUI's native packages installed names the
+  FFmpeg it links and the zlib linked with it, each one's version, address and SHA-256, in its `FFMPEG-SOURCE.md`, and
+  they must be `EMBEDDED`'s. An upgrade linking another fails here until `EMBEDDED` names it, so a release can't carry
+  another's source.
 - **An action not pinned** by its commit's full hash in `.github/workflows/`: a tag can be moved. A pinned action's
   version, too, is a week old before it's taken: checked when it's pinned, and kept so by Dependabot's cooldown.
 - **A workflow's shape** (GR-D9): one that doesn't start from no permission — `permissions: {}` at the top, so each
@@ -81,14 +82,16 @@ it's for). A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A 
 `slipbox-<version>-<target>.tar.gz`, a folder of that name inside. Beside each pack, `build` writes its SBOM,
 `slipbox-<version>-<target>.cdx.json` (CycloneDX 1.6, JSON), from the same walk as its notices (`check-deps.ts`'
 `sbom`): slipbox; each package bundled, with its licence, its source and the packages it depends on; the code compiled
-into packages (Hunspell, libwebp, FFmpeg); and Bun, the runtime. There's one per pack because the walk differs by
-platform: a platform's OpenTUI package is installed only there. `finish` writes `SHA256SUMS` over the packs, refusing
-another version's packs or SBOMs beside them, and the installer. Then it fetches the source of what's compiled in
-whose licence asks for it to go with the binary: FFmpeg's, LGPL-2.1, linked into OpenTUI's native library (D277),
-from ffmpeg.org, as `ffmpeg-<version>.tar.xz`, kept only when its SHA-256 is the one `scripts/licences.ts` records (and
-`check-deps.ts` holds to what OpenTUI's packages declare). The step `sources` refuses the release without it: a
-release's and a preview's publishing run it before the draft (`release.yml`, `preview.yml`), so neither is drafted
-without the source beside the binaries. It is attested with the other assets.
+into packages (Hunspell, libwebp, FFmpeg, zlib), each source archive recorded by its SHA-256; and Bun, the runtime.
+There's one per pack because the walk differs by platform: a platform's OpenTUI package is installed only there.
+`finish` writes `SHA256SUMS` over the packs, refusing another version's packs or SBOMs beside them, and the installer.
+Then it fetches the source of what's compiled in whose licence asks for it to go with the binary: FFmpeg's, LGPL-2.1,
+linked into OpenTUI's native library (D277), from ffmpeg.org, as `ffmpeg-<version>.tar.xz`, kept only when its SHA-256
+is the one `scripts/licences.ts` records (and `check-deps.ts` holds to what OpenTUI's packages declare);
+`scripts/sources.ts` fetches and checks it. The zlib linked with it is recorded too, but its licence asks for no source,
+so no release carries it. The step `sources` refuses the release without FFmpeg's: a release's and a preview's
+publishing run it before the draft (`release.yml`, `preview.yml`), so neither is drafted without the source beside the
+binaries. It is attested with the other assets.
 
 | Asset | Bun's target |
 | --- | --- |
@@ -661,15 +664,23 @@ meanwhile, else once the TUI is quiet. The question about notes unsaved, opened 
 restart, drops what arrives before it's drawn and in the half second after: a second `enter`, a double click, never
 answers it.
 
-**The screen given back first.** OpenTUI's `destroy()` returns before its native teardown (the main screen back,
-mouse reporting off, then raw mode off) is written, behind whatever output was queued before it: a picture's megabytes
-take seconds over a slow link. Its `closed` resolves once the teardown is out. When the terminal takes nothing for a
-second (`CLOSE_WAIT_MS` in `run.ts`), or the whole takes ten, OpenTUI drops what's still queued and writes its
-teardown all the same; `closed` then rejects, as late, and slipbox leaves it at that. When the terminal failed, or took
-nothing for a second again, OpenTUI gives up, the terminal not restored: slipbox then restores it itself, writing at
-once a string terminator, which ends a picture's sequence cut short, and OpenTUI's own teardown (`RESTORE`, which a
-test holds to what OpenTUI's setup turns on and its teardown turns off). slipbox waits for `closed` before it ends at
-all, and the hand-over a turn of the event loop more, before it writes a line or replaces the process.
+**The screen given back first.** OpenTUI's `destroy()` returns before its native teardown (the main screen back, mouse
+reporting off, then raw mode off) is written, behind whatever output was queued before it: a picture's megabytes take
+seconds over a slow link. Its `closed` resolves once the teardown is out. When the terminal takes nothing for OpenTUI's
+own wait (a second), or the whole takes ten, OpenTUI drops what's still queued and writes its teardown all the same;
+`closed` then rejects, as late. That teardown has no string terminator before it, so a picture's sequence cut short can
+take it in: slipbox then writes one, and the teardown again, but for the keyboard protocol's pop, which a second time
+would pop that of whatever ran slipbox. When the terminal failed, or took nothing for a second again, OpenTUI gives up,
+the terminal not restored: slipbox then writes all of it, the string terminator first, then OpenTUI's own teardown
+(`restoreText` in `run.ts`, which a test holds to what OpenTUI's setup turns on and its teardown turns off). Grapheme
+clustering goes back as the terminal had it: OpenTUI asks it at setup, and slipbox reads its answer (DECRPM 2027) as it
+comes in, turning clustering off only where it was off before, as OpenTUI does. Writing to the process's own terminal,
+OpenTUI's close can wait for ever on a terminal that stopped reading; so a quit has a bound of slipbox's own, 15 seconds
+after `destroy()` (`QUIT_BOUND_MS`): past it, slipbox stops OpenTUI's close and gives the terminal back as after a late
+one. Fifteen, so that OpenTUI's own teardown, to a terminal that still reads, comes first; and no more, so a quit is
+never taken for a hang. slipbox's writes go through the terminal opened again, not to block: one that takes nothing in
+two seconds is left be. slipbox waits for `closed` before it ends at all, and the hand-over a turn of the event loop
+more, before it writes a line or replaces the process.
 
 **The hand-over** (`core/application/distribution/restart.ts`; UPG-D2) runs in the same process, in order:
 
@@ -798,12 +809,11 @@ of its licence (`notices/licenses/`, from SPDX's list) with its author put in; f
 package of its own — Hunspell (taken under MPL-1.1) in `hunspell-asm`, libwebp in `@jsquash/webp`, FFmpeg in OpenTUI's
 native library: its version, its copyright, the LGPL-2.1's whole text, its source at ffmpeg.org by its SHA-256 and
 beside each release's binaries, and how to run slipbox with it changed (OpenTUI's source builds the library again;
-`OPENTUI_LIB_PATH` names the one to load) — and Bun's own licence page, since the
-runtime is in the binary: Bun is MIT, and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the libraries
-it lists, the LGPL's text after it. slipbox's own licence, Apache-2.0 (GR-D3), is `LICENSE`, in the repository and in
-each pack beside `NOTICES.txt`; `tests/distribution/supply-chain.test.ts` keeps it Apache-2.0's text, and
-`package.json`'s
-`license` saying so.
+`OPENTUI_LIB_PATH` names the one to load); zlib, linked in with it: its version, copyright, source by its SHA-256, and
+its licence as OpenTUI's package ships it — and Bun's own licence page, since the runtime is in the binary: Bun is MIT,
+and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the libraries it lists, the LGPL's text after it.
+slipbox's own licence, Apache-2.0 (GR-D3), is `LICENSE`, in the repository and in each pack beside `NOTICES.txt`;
+`tests/distribution/supply-chain.test.ts` keeps it Apache-2.0's text, and `package.json`'s `license` saying so.
 
 What the binary bundles, by licence (D192, D194, D277). Weak copyleft, accepted for use: `elkjs` (EPL-2.0, under
 beautiful-mermaid), `@resvg/resvg-wasm` (MPL-2.0), Hunspell, which `hunspell-asm` (MIT) compiles, taken under

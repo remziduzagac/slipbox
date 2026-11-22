@@ -14,15 +14,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { checkDeps, purl, type Sbom, sourceArchives } from "../../scripts/check-deps.ts";
+import { checkDeps, purl, type Sbom } from "../../scripts/check-deps.ts";
+import { sourceArchives } from "../../scripts/licences.ts";
 import {
   assetName,
   buildArgs,
   buildRelease,
   changelogNotes,
   channelFiles,
-  checkSources,
-  fetchSources,
   finishRelease,
   homebrewFormula,
   hostTarget,
@@ -35,6 +34,7 @@ import {
   TARGETS,
   writeSite,
 } from "../../scripts/release.ts";
+import { checkSources, fetchSources } from "../../scripts/sources.ts";
 import { bootstrapScript } from "../../scripts/bootstrap.ts";
 import { RELEASE, RETIRED, retired, tagOf } from "../../src/core/application/distribution/release.ts";
 import { VERSION } from "../../src/version.ts";
@@ -210,7 +210,8 @@ describe("a release (14.2)", () => {
         return new TextEncoder().encode(bytes);
       };
 
-    test("FFmpeg's, as each package of OpenTUI's native library says it holds it", () => {
+    test("FFmpeg's, as each package of OpenTUI's native library says it holds it; not zlib's, linked with it", () => {
+      // zlib's licence asks for no source: its archive recorded (the SBOM's, the notices'), not carried.
       expect(sourceArchives()).toEqual([
         {
           name: "ffmpeg-9.0.2.tar.xz",

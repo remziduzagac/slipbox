@@ -470,16 +470,17 @@ some row wraps. The header separator is doubled (`╞═╪═╡`).
 - **How wide any other cluster is follows the terminal** (decided 2026-10-06), as OpenTUI found it asking
   (`setWidthMethod`; the TUI lays everything out again if the answer comes after the first frame): `unicode`, the
   default — terminals that cluster graphemes (libghostty, kitty, WezTerm, tmux) — counts a cluster its own width, Bun's
-  measure and OpenTUI's (`हिन्दी` is 3, a family 2); `wcwidth` — terminals that don't (xterm, Alacritty, GNOME
-  Terminal, VS Code's) — counts each of its code points, a mark or a joiner nothing, as OpenTUI lays it out since 0.7
-  (a flag 2, a family of three 6, a thumb with its skin tone 4, `❤️` 1). OpenTUI's third method, `unicode-wide`, is
-  counted as `unicode`. A test holds slipbox to OpenTUI's own cells on every grapheme the reference set and halden hold,
-  and every glyph slipbox draws of its own; OpenTUI's table has Bengali's reph 1, which slipbox doesn't follow. A
-  terminal may still count differently from OpenTUI: libghostty gives an Indic spacing mark a column of its own. Where
-  they differ, the row is out of step on the screen: what follows the cluster is pulled a cell left, and once only that
-  is drawn again, it lands a cell further than the rest. So every glyph slipbox draws of its own is one OpenTUI, in each
-  of its methods, and the terminal count alike (a test holds them to Bun's measure, as the clustering terminals count);
-  the unicode set's important callout is `✱`.
+  measure and OpenTUI's (`हिन्दी` is 3, a family 2); `wcwidth` — terminals that don't (xterm, Alacritty, GNOME Terminal,
+  VS Code's) — counts each of its code points, a mark, a joiner (ZWJ, ZWNJ), a variation selector or a tag nothing, as
+  OpenTUI lays it out since 0.7 (a flag 2, a family of three 6, a thumb with its skin tone 4, `❤️` 1); any other format
+  character takes its cell, as one that prepends does (Arabic's number sign before its digits, 2). OpenTUI's third
+  method, `unicode-wide`, is counted as `unicode`. A test holds slipbox to OpenTUI's own cells on every grapheme the
+  reference set and halden hold, and every glyph slipbox draws of its own; OpenTUI's table has Bengali's reph 1, which
+  slipbox doesn't follow. A terminal may still count differently from OpenTUI: libghostty gives an Indic spacing mark a
+  column of its own. Where they differ, the row is out of step on the screen: what follows the cluster is pulled a cell
+  left, and once only that is drawn again, it lands a cell further than the rest. So every glyph slipbox draws of its
+  own is one OpenTUI, in each of its methods, and the terminal count alike (a test holds them to Bun's measure, as the
+  clustering terminals count); the unicode set's important callout is `✱`.
 
 `rendering/layout/wrap.ts` breaks at spaces, and between CJK characters — except that closing punctuation (`、` `。` `）`
 `」` `…`, and an ASCII `,` or `.` right after a CJK character) never starts a row, and opening punctuation (`（` `「`)

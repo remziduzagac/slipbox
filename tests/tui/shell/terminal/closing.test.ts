@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { closeSync, constants, openSync, readSync } from "node:fs";
+import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { makeSandbox } from "../../../tui-harness.ts";
 
 // The model harness applies the file-local timeout and sandbox policy.
-makeSandbox();
+const sandbox = makeSandbox();
 
-/** A terminal at the end of a link: each piece of output taken `ms` after it was sent; everything that came, kept. */
+/** A terminal at the end of a link: each piece of output taken `ms` after it was sent; everything that came, kept.
+ *  `say`: what slipbox writes to it straight, as it gives the terminal back. */
 function terminal(ms: number) {
   let text = "";
   const out = new Writable({
@@ -15,7 +18,7 @@ function terminal(ms: number) {
       setTimeout(done, ms);
     },
   });
-  return { out: out as unknown as NodeJS.WriteStream, text: () => text };
+  return { out: out as unknown as NodeJS.WriteStream, text: () => text, say: (t: string) => (text += t) };
 }
 
 /** A terminal that takes what it's sent until `stall()`, then nothing more: the piece it was given then, never taken. */
@@ -52,10 +55,14 @@ async function until(what: () => boolean): Promise<void> {
   }
 }
 
+/** A modern terminal's answers (`MODERN`), saying grapheme clustering was on (1) or off (2) before slipbox started. */
+const clustering = (on: boolean) => MODERN.replace("\x1b[?2027;2$y", `\x1b[?2027;${on ? 1 : 2}$y`);
+
 describe("the terminal given back at quit", () => {
-  test("a picture still on its way to a slow terminal when the wait runs out: OpenTUI's own teardown, and no other", async () => {
-    // Out of time, OpenTUI drops what's still queued and writes its teardown, saying it was late. A second teardown,
-    // slipbox's, would pop the keyboard protocol of whatever ran slipbox.
+  test("a picture still on its way to a slow terminal when the wait runs out: a string terminator, then the rest", async () => {
+    // Out of time, OpenTUI drops what's still queued and writes its teardown, saying it was late — with no string
+    // terminator first, so the picture cut short can take it in. slipbox ends the picture and gives the terminal back
+    // again, but for the keyboard protocol's pop: a second would pop that of whatever ran slipbox.
     const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = terminal(30);
     const restored: string[] = [];
@@ -64,7 +71,10 @@ describe("the terminal given back at quit", () => {
       stdin: keys(),
       stdout: term.out,
       closeWaitMs: 400,
-      restore: (text) => restored.push(text),
+      restore: (text) => {
+        restored.push(text);
+        term.say(text);
+      },
     });
     expect(session.write(picture)).toBe(true);
     renderer.destroy();
@@ -72,7 +82,93 @@ describe("the terminal given back at quit", () => {
     const text = term.text();
     expect(text.length).toBeLessThan(picture.length);
     expect(text.indexOf("\x1b[?1049l")).toBeGreaterThan(text.lastIndexOf("AAAA"));
-    expect(restored).toEqual([]);
+    expect(restored).toHaveLength(1);
+    const ours = text.lastIndexOf(restored[0]!);
+    expect(ours).toBeGreaterThan(text.lastIndexOf("AAAA"));
+    expect(text.slice(ours)).toStartWith("\x1b\\");
+    expect(text.split("\x1b[<u").length - 1).toBeLessThanOrEqual(1);
+    expect(restored[0]).not.toContain("\x1b[<u");
+  });
+
+  test("a terminal whose writer never finishes: given back by slipbox once the quit's bound has passed", async () => {
+    // Writing to the process's own terminal, OpenTUI's close can wait for ever on a write the terminal never takes.
+    // Here OpenTUI would give up after two seconds; the bound, a third of one, comes first.
+    const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const term = stalling();
+    const restored: string[] = [];
+    const { session, renderer, closed } = await openRenderer({
+      mouse: true,
+      stdin: keys(),
+      stdout: term.out,
+      quitBoundMs: 300,
+      restore: (text) => restored.push(text),
+    });
+    expect(session.write(picture)).toBe(true);
+    term.stall();
+    const at = Date.now();
+    renderer.destroy();
+    await closed;
+    expect(Date.now() - at).toBeGreaterThanOrEqual(290);
+    expect(Date.now() - at).toBeLessThan(1_500);
+    // As after a late close: OpenTUI's teardown may be on its way still, and its pop with it.
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toStartWith("\x1b\\");
+    expect(restored[0]).toContain("\x1b[?1049l");
+    expect(restored[0]).not.toContain("\x1b[<u");
+    // OpenTUI's close, stopped, gives nothing back a second time.
+    await renderer.closed.catch(() => {});
+    await Bun.sleep(50);
+    expect(restored).toHaveLength(1);
+  });
+
+  test("grapheme clustering given back as the terminal had it: off where it was off, left on where it was on", async () => {
+    // OpenTUI asks the terminal at setup (DECRPM 2027), turns clustering on, and its teardown turns it off only where
+    // the terminal said it was off; so does slipbox's.
+    const { clusteringOff, openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
+    // Each answer as OpenTUI 0.9.0's teardown takes it: none, set, reset, set or reset for good, not known.
+    const answers = [null, 1, 2, 3, 4, 0] as const;
+    const counting = (b: number | null) => (b === 0 || b === 4 ? "wcwidth" : "unicode");
+    expect(answers.map((b) => clusteringOff(b, counting(b)))).toEqual([true, false, true, false, false, false]);
+    for (const on of [false, true]) {
+      const term = stalling();
+      const stdin = keys();
+      const restored: string[] = [];
+      const { renderer, closed } = await openRenderer({
+        mouse: true,
+        stdin,
+        stdout: term.out,
+        quitBoundMs: 300,
+        restore: (text) => restored.push(text),
+      });
+      stdin.push(clustering(on));
+      renderer.requestRender();
+      await until(() => term.text().includes("\x1b[>5u") && term.text().endsWith("\x1b[?2026l"));
+      expect(term.text()).toContain("\x1b[?2027h");
+      term.stall();
+      renderer.destroy();
+      await closed;
+      expect(restored).toHaveLength(1);
+      expect({ on, off: restored[0]!.includes("\x1b[?2027l") }).toEqual({ on, off: !on });
+      await renderer.closed.catch(() => {});
+    }
+  });
+
+  test("written to the terminal opened again, never blocking: one that takes nothing is left within seconds", async () => {
+    // The process's own descriptor blocks: a terminal that stopped reading would hold the quit for as long. A pipe that
+    // nobody reads stands for it, its buffer filled.
+    const { toTerminal } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const pipe = join(sandbox, "terminal");
+    expect(Bun.spawnSync(["mkfifo", pipe]).exitCode).toBe(0);
+    const reader = openSync(pipe, constants.O_RDONLY | constants.O_NONBLOCK);
+    try {
+      const at = Date.now();
+      toTerminal("x".repeat(1_000_000), pipe);
+      expect(Date.now() - at).toBeLessThan(3_000);
+      const got = Buffer.alloc(16);
+      expect(readSync(reader, got)).toBeGreaterThan(0);
+    } finally {
+      closeSync(reader);
+    }
   });
 
   test("a terminal that takes nothing more at quit: given back by slipbox, within seconds", async () => {

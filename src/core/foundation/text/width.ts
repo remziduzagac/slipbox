@@ -13,9 +13,10 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 const RGI_EMOJI = /^\p{RGI_Emoji}$/v;
 const PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
 const MARK_ONLY = /^\p{M}+$/u;
-// What a terminal that doesn't cluster advances nothing for, within a cluster: a mark (a selector among them), a
-// joiner or another format character.
-const JOINS = /^[\p{M}\p{Cf}]$/u;
+// What a terminal that doesn't cluster advances nothing for, within a cluster, as OpenTUI lays it out: a mark, the
+// joiners (ZWNJ, ZWJ), a variation selector, a tag. Not every format character: one that prepends, such as Arabic's
+// number sign (U+0600), takes its cell.
+const JOINS = /^(?:[\p{M}\p{Variation_Selector}\u{E0020}-\u{E007F}]|\u200C|\u200D)$/u;
 // Zero-width format characters that survive sanitising: ZWSP, ZWNJ, ZWJ, word joiner, BOM.
 const ZERO_WIDTH = /^[​-‍⁠﻿]+$/;
 
