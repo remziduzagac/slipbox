@@ -81,7 +81,7 @@ the installer downloads.
 
 **Checking a download.** Beside its builds, a release lists:
 
-- `SHA256SUMS`, their checksums.
+- `SHA256SUMS`, the checksums of the builds and of FFmpeg's source.
 - For each build, an SBOM, `slipbox-<version>-<platform>.cdx.json`. It lists the software built into that build, with
   their licences, in CycloneDX's format.
 - `ffmpeg-<version>.tar.xz`, FFmpeg's source.

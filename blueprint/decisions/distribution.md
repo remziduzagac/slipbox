@@ -355,13 +355,15 @@ for).
 doesn't play; `@opentui/core` stays MIT. LGPL-2.1 is accepted for these packages, so slipbox keeps following OpenTUI's
 releases (0.9.0 first); slipbox's own licence stays Apache-2.0. What the binary then owes FFmpeg, it carries:
 
-- Each native package of a platform released is taken by name (`NAMED`, in `scripts/licences.ts`).
+- Each native package is taken by the pattern of their names that also finds FFmpeg in them (`named`, in
+  `scripts/licences.ts`): one list of what carries it.
 - FFmpeg is code compiled into another package (`EMBEDDED`): `NOTICES.txt` names it, its version, its copyright, the
   LGPL-2.1's whole text, its source by address and SHA-256, and how to run slipbox with a changed one; the SBOM lists
   it, its source as a `source-distribution` with that hash.
 - Each release and preview carries FFmpeg's exact source archive beside its binaries: `release.ts finish` fetches it
   from ffmpeg.org and keeps it only when its SHA-256 is the one recorded, which `check-deps.ts` holds to what each
-  native package's `FFMPEG-SOURCE.md` names; `release.ts sources` refuses the release without it, before the draft.
+  native package's `FFMPEG-SOURCE.md` names, and sums it in `SHA256SUMS` with the packs; `release.ts sources` refuses
+  the release without it, before the draft.
 - The zlib linked in with FFmpeg is recorded the same way, in `NOTICES.txt` and the SBOM, its source by address and
   SHA-256, held to that file too; its source isn't carried, since its licence (Zlib) asks for none.
 - The README and the install guide say slipbox includes FFmpeg under the LGPL 2.1, and that its source comes with each

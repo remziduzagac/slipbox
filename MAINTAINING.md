@@ -168,10 +168,10 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
 
 8. **CI drafts the release.** It checks the tag against the version and the changelog's entry, and that its commit
    passed `full`, first; the tests aren't run again. On each platform's runner it builds and packs that platform; a
-   Mac's binary has its signature checked, and a musl build is run in Alpine. Then it writes `SHA256SUMS`, the
-   installer and the formula, the SBOM, fetches FFmpeg's source, attests them all, and drafts the release with its
-   notes. Without FFmpeg's source, as `scripts/licences.ts` records it, there's no draft: the binaries link FFmpeg,
-   whose licence, the LGPL 2.1, asks for its source to go with them.
+   Mac's binary has its signature checked, and a musl build is run in Alpine. Then it fetches FFmpeg's source, writes
+   `SHA256SUMS` over it and the packs, the installer and the formula, the SBOM, attests them all, and drafts the release
+   with its notes. Without FFmpeg's source, as `scripts/licences.ts` records it, there's no draft: the binaries link
+   FFmpeg, whose licence, the LGPL 2.1, asks for its source to go with them.
 9. **Check the draft** before anyone can see it: every pack is there (`darwin-arm64`, `linux-x64`, `linux-arm64`,
    `linux-x64-musl`, `linux-arm64-musl`; none for Intel Macs, whose last was 0.3.0), with `SHA256SUMS`, `install.sh`,
    `slipbox.rb`, the SBOM and `ffmpeg-<version>.tar.xz`; the notes read right. Then, in an empty folder:

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { closeSync, constants, openSync, readSync } from "node:fs";
+import { closeSync, constants, openSync, readSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { makeSandbox } from "../../../tui-harness.ts";
@@ -110,15 +110,54 @@ describe("the terminal given back at quit", () => {
     await closed;
     expect(Date.now() - at).toBeGreaterThanOrEqual(290);
     expect(Date.now() - at).toBeLessThan(1_500);
-    // As after a late close: OpenTUI's teardown may be on its way still, and its pop with it.
+    // All of it: OpenTUI's close stopped, its teardown dropped with what was queued, the keyboard protocol's pop too.
     expect(restored).toHaveLength(1);
     expect(restored[0]).toStartWith("\x1b\\");
     expect(restored[0]).toContain("\x1b[?1049l");
-    expect(restored[0]).not.toContain("\x1b[<u");
+    expect(restored[0]!.split("\x1b[<u")).toHaveLength(2);
+    expect(term.text()).not.toContain("\x1b[<u");
     // OpenTUI's close, stopped, gives nothing back a second time.
     await renderer.closed.catch(() => {});
     await Bun.sleep(50);
     expect(restored).toHaveLength(1);
+  });
+
+  test("the terminal given back before OpenTUI says it's destroyed: no bound armed, nothing stopped", async () => {
+    // OpenTUI puts off saying it's destroyed while a renderable's cleanup runs, and its teardown may be out first. Said
+    // then, it arms nothing, to keep slipbox running and stop a session that's over. Held back here, as that cleanup
+    // would hold it.
+    const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const term = terminal(0);
+    const restored: string[] = [];
+    const { session, renderer, closed } = await openRenderer({
+      mouse: true,
+      stdin: keys(),
+      stdout: term.out,
+      quitBoundMs: 100,
+      restore: (text) => restored.push(text),
+    });
+    let stopped = 0;
+    const dispose = session.dispose.bind(session);
+    session.dispose = () => {
+      stopped++;
+      dispose();
+    };
+    const emit = renderer.emit.bind(renderer);
+    let held = false;
+    renderer.emit = ((event: string, ...args: unknown[]) => {
+      if (event !== "destroy") return emit(event, ...args);
+      held = true;
+      return true;
+    }) as typeof renderer.emit;
+    renderer.destroy();
+    await closed;
+    expect(held).toBe(true);
+    expect(term.text()).toContain("\x1b[?1049l");
+    renderer.emit = emit;
+    emit("destroy");
+    await Bun.sleep(300);
+    expect(stopped).toBe(0);
+    expect(restored).toEqual([]);
   });
 
   test("grapheme clustering given back as the terminal had it: off where it was off, left on where it was on", async () => {
@@ -144,6 +183,9 @@ describe("the terminal given back at quit", () => {
       renderer.requestRender();
       await until(() => term.text().includes("\x1b[>5u") && term.text().endsWith("\x1b[?2026l"));
       expect(term.text()).toContain("\x1b[?2027h");
+      // A later answer, the mode as OpenTUI left it, says nothing of how the terminal had it.
+      stdin.push(`\x1b[?2027;${on ? 2 : 1}$y`);
+      await Bun.sleep(50);
       term.stall();
       renderer.destroy();
       await closed;
@@ -169,6 +211,19 @@ describe("the terminal given back at quit", () => {
     } finally {
       closeSync(reader);
     }
+  });
+
+  test("stdout not a terminal: written to it as it is, where its own writes stop, never elsewhere", async () => {
+    // A file open for writing at its start, longer than what's written: opened again, it would be written over at its
+    // start, or added to at its end.
+    const out = join(sandbox, "stdout.txt");
+    writeFileSync(out, "X".repeat(20));
+    const run = join(import.meta.dir, "../../../../src/tui/shell/terminal/run.ts");
+    const script = `import { writeSync } from "node:fs"; import { toTerminal } from ${JSON.stringify(run)};
+      writeSync(1, "0123456789\\n"); toTerminal("ab");`;
+    const r = Bun.spawnSync(["sh", "-c", `"$0" -e "$1" 1<> "$2"`, process.execPath, script, out]);
+    expect(r.exitCode).toBe(0);
+    expect(await Bun.file(out).text()).toBe(`0123456789\nab${"X".repeat(7)}`);
   });
 
   test("a terminal that takes nothing more at quit: given back by slipbox, within seconds", async () => {

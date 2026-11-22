@@ -20,23 +20,35 @@ export const PERMISSIVE = new Set([
   "Unlicense",
 ]);
 
-/** OpenTUI's native library, a package for each platform slipbox is built for: MIT, and since 0.8.1 FFmpeg in it. */
-const OPENTUI_NATIVE = {
-  licence: "MIT AND LGPL-2.1-or-later",
-  why: "weak copyleft, accepted for use 2026-11-22: FFmpeg linked in, its source with each release (D277)",
-};
+/** OpenTUI's native library: a package for each platform, MIT, and since 0.8.1 FFmpeg and zlib in it. The one list
+ *  of what carries them: `named` takes these packages by it, `EMBEDDED` finds FFmpeg and zlib in them by it. */
+const OPENTUI_LIBRARY = "OpenTUI's native library (@opentui/core-<platform>)";
+const OPENTUI_PACKAGES = /^@opentui\/core-(darwin|linux|win32)-/;
 
-/** Packages taken by name under a licence that isn't in `PERMISSIVE`: each was asked about (plan 14.6). */
-export const NAMED: Record<string, { licence: string; why: string }> = {
+/** A package taken under a licence that isn't in `PERMISSIVE`, and why: each was asked about (plan 14.6). */
+interface Taken {
+  licence: string;
+  why: string;
+}
+
+/** Packages taken by name under a licence that isn't in `PERMISSIVE`. */
+const NAMED: Record<string, Taken> = {
   elkjs: { licence: "EPL-2.0", why: "weak copyleft, accepted for use 2026-10-09 (beautiful-mermaid's layout)" },
   "@resvg/resvg-wasm": { licence: "MPL-2.0", why: "weak copyleft, accepted for use 2026-10-09 (SVG drawn, 12.15)" },
   "dictionary-en": { licence: "(MIT AND BSD)", why: "SCOWL's word lists under their own permissive terms (25.6)" },
-  "@opentui/core-darwin-arm64": OPENTUI_NATIVE,
-  "@opentui/core-linux-x64": OPENTUI_NATIVE,
-  "@opentui/core-linux-arm64": OPENTUI_NATIVE,
-  "@opentui/core-linux-x64-musl": OPENTUI_NATIVE,
-  "@opentui/core-linux-arm64-musl": OPENTUI_NATIVE,
 };
+/** And by a pattern of names: OpenTUI's native packages, whatever the platform. */
+const NAMED_BY_PATTERN: (Taken & { names: RegExp })[] = [
+  {
+    names: OPENTUI_PACKAGES,
+    licence: "MIT AND LGPL-2.1-or-later",
+    why: "weak copyleft, accepted for use 2026-11-22: FFmpeg linked in, its source with each release (D277)",
+  },
+];
+
+/** How the package named `name` is taken by name, if it is. */
+export const named = (name: string): Taken | undefined =>
+  NAMED[name] ?? NAMED_BY_PATTERN.find((n) => n.names.test(name));
 
 /** Packages whose package.json names no licence: what their own LICENSE file says. */
 export const DECLARED: Record<string, string> = { "png-js": "MIT", typeahead: "Apache-2.0" };
@@ -59,10 +71,6 @@ export interface Embedded {
   archive?: { sha256: string; declared: { file: string; source: RegExp; sha256: RegExp }; carried: boolean };
   note?: string;
 }
-
-/** What's compiled into OpenTUI's native library: a package for each platform. */
-const OPENTUI_LIBRARY = "OpenTUI's native library (@opentui/core-<platform>)";
-const OPENTUI_PACKAGES = /^@opentui\/core-(darwin|linux|win32)-/;
 
 export const EMBEDDED: Embedded[] = [
   {

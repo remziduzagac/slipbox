@@ -13,10 +13,10 @@
 // (`--version`) before it's packed. Another platform's needs that platform's OpenTUI package installed
 // (`bun install --os <os> --cpu <cpu>`); CI builds each on its own platform instead
 // (`.github/workflows/build.yml`), where it's there.
-// finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, its
-// tag, the repository and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew
-// formula, from `homebrew.template.rb` — Apple silicon's and glibc Linux's packs, which are Homebrew's; then the
-// sources their licences ask to go with the binaries, fetched (`sources.ts`, D277). sources: refused without them.
+// finish: the sources the binaries' licences ask to go with them, fetched (`sources.ts`, D277); `SHA256SUMS` over
+// them and the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, its tag, the repository
+// and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew formula, from
+// `homebrew.template.rb`: Apple silicon's and glibc Linux's packs, Homebrew's. sources: refused without them.
 // notes: the release's notes on stdout, its version's section of CHANGELOG.md; none there fails.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
@@ -402,9 +402,8 @@ export function homebrewFormula(template: string, version: string, repo: string,
   return out;
 }
 
-/** The release's packs in `out` summed: `SHA256SUMS`, `install.sh` and `slipbox.rb` written; their paths. A preview
- *  has no formula: Homebrew never gets one (GR-D15). */
-export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string }): string[] {
+/** `SHA256SUMS` (the packs in `out`, and `sources`), `install.sh`, and but for a preview `slipbox.rb` (GR-D15). */
+export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string; sources?: string[] }) {
   const root = opts.root ?? ROOT;
   const version = releaseVersion(root, opts.tag);
   const packs = Object.keys(TARGETS)
@@ -415,16 +414,15 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
   const stray = readdirSync(opts.out).filter((f) => /\.(tar\.gz|cdx\.json)$/.test(f) && !ours.has(f));
   if (stray.length) throw new Error(`packs of another version in ${opts.out}: ${stray.join(", ")}`);
   const sums = join(opts.out, "SHA256SUMS");
-  const text = sha256sums(packs);
+  const text = sha256sums([...packs, ...(opts.sources ?? [])]);
   writeFileSync(sums, text);
   const byTarget = Object.fromEntries(
     text
       .trim()
       .split("\n")
-      .map((line) => {
-        const [hash, file] = line.split("  ") as [string, string];
-        return [file.slice(`slipbox-${version}-`.length, -".tar.gz".length), hash];
-      }),
+      .map((line) => line.split("  ") as [string, string])
+      .filter(([, file]) => packs.some((p) => basename(p) === file))
+      .map(([hash, file]) => [file.slice(`slipbox-${version}-`.length, -".tar.gz".length), hash]),
   );
   const installer = join(opts.out, "install.sh");
   writeFileSync(
@@ -448,6 +446,12 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
     out.push(formula);
   }
   return out;
+}
+
+/** The `finish` step: the sources fetched first (`fetch`), so `SHA256SUMS` sums them as it does the packs. */
+export async function finish(opts: { repo: string; tag?: string; out: string }, fetch = fetchSources) {
+  const sources = await fetch(opts.out);
+  return [...finishRelease({ ...opts, sources }), ...sources];
 }
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -576,8 +580,8 @@ if (import.meta.main) {
       for (const p of buildRelease({ targets, repo: repoFrom(one("repo")), tag: one("tag"), out }))
         process.stdout.write(`${p}\n`);
     } else if (step === "finish") {
-      const made = finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out });
-      for (const p of [...made, ...(await fetchSources(out))]) process.stdout.write(`${p}\n`);
+      for (const p of await finish({ repo: repoFrom(one("repo")), tag: one("tag"), out }))
+        process.stdout.write(`${p}\n`);
     } else if (step === "sources") {
       for (const p of checkSources(out)) process.stdout.write(`${p}\n`);
     } else if (step === "notes") {
@@ -603,8 +607,8 @@ if (import.meta.main) {
       for (const tag of stalePreviews(listReleases(repoFrom(one("repo"))), keep)) process.stdout.write(`${tag}\n`);
     } else {
       process.stderr.write(
-        "release: build [--target <t>]… [--repo owner/name] [--tag <tag>] [--out <dir>] | finish … | sources | notes … " +
-          "| preview [--remote <r>] | stamp --version <v> | site --repo owner/name --out <dir> | stale [--keep <n>]\n",
+        "release: build [--target <t>]… [--repo owner/name] [--tag <tag>] [--out <dir>] | finish … | sources | " +
+          "notes … | preview [--remote <r>] | stamp --version <v> | site … | stale [--keep <n>]\n",
       );
       process.exit(2);
     }

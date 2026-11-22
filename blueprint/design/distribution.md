@@ -36,10 +36,10 @@ search index, the parse cache or a picture — so backup tools that know the tag
   found as Node finds them, optional ones where installed. Taken: permissive licences (MIT, ISC, BSD, Apache-2.0, 0BSD,
   BlueOak, Zlib, CC0, Unlicense), an SPDX expression's `OR` by either side and `AND` by both (D192). Weak copyleft is
   taken only by name, each one asked about first (`NAMED`: `elkjs`, EPL-2.0; `@resvg/resvg-wasm`, MPL-2.0;
-  `dictionary-en`'s SCOWL terms; and OpenTUI's native packages, one a platform released, `MIT AND
-  LGPL-2.1-or-later` for the FFmpeg linked in, D277). A package naming no licence fails, unless its own `LICENSE` was
-  read and recorded (`DECLARED`: `png-js`, `typeahead`). Both lists, and what's compiled into packages (`EMBEDDED`),
-  are `scripts/licences.ts`.
+  `dictionary-en`'s SCOWL terms; and OpenTUI's native packages, by the pattern of their names that also finds FFmpeg and
+  zlib in them, `MIT AND LGPL-2.1-or-later` for the FFmpeg linked in, D277). A package naming no licence fails, unless
+  its own `LICENSE` was read and recorded (`DECLARED`: `png-js`, `typeahead`). Both lists, and what's compiled into
+  packages (`EMBEDDED`), are `scripts/licences.ts`.
 - **What's compiled in, out of step** with the packages it's in: each of OpenTUI's native packages installed names the
   FFmpeg it links and the zlib linked with it, each one's version, address and SHA-256, in its `FFMPEG-SOURCE.md`, and
   they must be `EMBEDDED`'s. An upgrade linking another fails here until `EMBEDDED` names it, so a release can't carry
@@ -84,14 +84,14 @@ it's for). A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A 
 `sbom`): slipbox; each package bundled, with its licence, its source and the packages it depends on; the code compiled
 into packages (Hunspell, libwebp, FFmpeg, zlib), each source archive recorded by its SHA-256; and Bun, the runtime.
 There's one per pack because the walk differs by platform: a platform's OpenTUI package is installed only there.
-`finish` writes `SHA256SUMS` over the packs, refusing another version's packs or SBOMs beside them, and the installer.
-Then it fetches the source of what's compiled in whose licence asks for it to go with the binary: FFmpeg's, LGPL-2.1,
-linked into OpenTUI's native library (D277), from ffmpeg.org, as `ffmpeg-<version>.tar.xz`, kept only when its SHA-256
-is the one `scripts/licences.ts` records (and `check-deps.ts` holds to what OpenTUI's packages declare);
-`scripts/sources.ts` fetches and checks it. The zlib linked with it is recorded too, but its licence asks for no source,
-so no release carries it. The step `sources` refuses the release without FFmpeg's: a release's and a preview's
-publishing run it before the draft (`release.yml`, `preview.yml`), so neither is drafted without the source beside the
-binaries. It is attested with the other assets.
+`finish` first fetches the source of what's compiled in whose licence asks for it to go with the binary, then writes
+`SHA256SUMS` over the packs and that source, refusing another version's packs or SBOMs beside them, and the installer,
+whose sums are the packs' alone. The source is FFmpeg's, LGPL-2.1, linked into OpenTUI's native library (D277), from
+ffmpeg.org, as `ffmpeg-<version>.tar.xz`, kept only when its SHA-256 is the one `scripts/licences.ts` records (and
+`check-deps.ts` holds to what OpenTUI's packages declare); `scripts/sources.ts` fetches and checks it. The zlib linked
+with it is recorded too, but its licence asks for no source, so no release carries it. The step `sources` refuses the
+release without FFmpeg's: a release's and a preview's publishing run it before the draft (`release.yml`, `preview.yml`),
+so neither is drafted without the source beside the binaries. It is attested with the other assets.
 
 | Asset | Bun's target |
 | --- | --- |
@@ -156,13 +156,13 @@ container pinned by digest): first shown not to start without the C++ runtime, a
 added, its version, an index and a search, and the TUI started in a terminal and still running five seconds later. Then
 each pack's SBOM is attested to it, in a job per pack that runs no dependency's code — the build's tests run every
 dependency's, so the signing token stays out of the build (`gh attestation verify <pack> --repo <owner/name>
---predicate-type https://cyclonedx.org/bom`). Last, `finish` sums the packs, writes the installer and the formula,
-and fetches FFmpeg's source; every asset — the packs, their SBOMs, `SHA256SUMS`, `install.sh`, `slipbox.rb`,
+--predicate-type https://cyclonedx.org/bom`). Last, `finish` fetches FFmpeg's source, sums it and the packs, and writes
+the installer and the formula; every asset — the packs, their SBOMs, `SHA256SUMS`, `install.sh`, `slipbox.rb`,
 `ffmpeg-<version>.tar.xz` — is attested (who built it, from which commit, by which workflow: `gh attestation verify
-<file> --repo <owner/name>`), and the set is handed back as the run's `release` artifact. `release.yml`'s last job,
-the only one that may write (`contents: write`), runs nothing built: it checks FFmpeg's source is in the set, as
-recorded (`release.ts sources`), and drafts the release with that set and its notes. Nothing is published until a
-person publishes the draft; publishing runs `homebrew.yml` (§ Homebrew) and `pages.yml` (§ Previews).
+<file> --repo <owner/name>`), and the set is handed back as the run's `release` artifact. `release.yml`'s last job, the
+only one that may write (`contents: write`), runs nothing built: it checks FFmpeg's source is in the set, as recorded
+(`release.ts sources`), and drafts the release with that set and its notes. Nothing is published until a person
+publishes the draft; publishing runs `homebrew.yml` (§ Homebrew) and `pages.yml` (§ Previews).
 
 The maintainer's steps around it are `MAINTAINING.md` § Releasing: the version chosen by the versioning policy, the
 changelog's entry written (CI takes the notes from it), `package.json` and `src/version.ts` bumped, merged through a
@@ -676,11 +676,12 @@ the terminal not restored: slipbox then writes all of it, the string terminator 
 clustering goes back as the terminal had it: OpenTUI asks it at setup, and slipbox reads its answer (DECRPM 2027) as it
 comes in, turning clustering off only where it was off before, as OpenTUI does. Writing to the process's own terminal,
 OpenTUI's close can wait for ever on a terminal that stopped reading; so a quit has a bound of slipbox's own, 15 seconds
-after `destroy()` (`QUIT_BOUND_MS`): past it, slipbox stops OpenTUI's close and gives the terminal back as after a late
-one. Fifteen, so that OpenTUI's own teardown, to a terminal that still reads, comes first; and no more, so a quit is
-never taken for a hang. slipbox's writes go through the terminal opened again, not to block: one that takes nothing in
-two seconds is left be. slipbox waits for `closed` before it ends at all, and the hand-over a turn of the event loop
-more, before it writes a line or replaces the process.
+after `destroy()` (`QUIT_BOUND_MS`): past it, slipbox stops OpenTUI's close, its teardown dropped with what was queued,
+and writes all of it, the keyboard protocol's pop too. Fifteen, so that OpenTUI's own teardown, to a terminal that still
+reads, comes first; and no more, so a quit is never taken for a hang. The bound isn't armed once the terminal is given
+back, and never keeps slipbox running. slipbox's writes go to a terminal opened again, not to block (one that takes
+nothing in two seconds is left be), and to stdout as it is where stdout isn't a terminal. slipbox waits for `closed`
+before it ends at all, and the hand-over a turn of the event loop more, before it writes a line or replaces the process.
 
 **The hand-over** (`core/application/distribution/restart.ts`; UPG-D2) runs in the same process, in order:
 

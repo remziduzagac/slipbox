@@ -10,18 +10,27 @@ import { type SourceArchive, sourceArchives } from "./licences.ts";
 /** Bytes' SHA-256, in hex. */
 export const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
-/** What's at `url`, fetched; failing unless it's there. */
-export async function download(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`couldn't download ${url}: ${res.status} ${res.statusText}`);
-  return new Uint8Array(await res.arrayBuffer());
+/** How long a download may take, whole: an FFmpeg archive's 12 MB over a slow link, with room to spare. */
+export const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
+
+/** What's at `url`, fetched within `timeoutMs`; failing, naming the address, unless it's there. */
+export async function download(url: string, timeoutMs = DOWNLOAD_TIMEOUT_MS): Promise<Uint8Array> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (err) {
+    const why =
+      (err as Error).name === "TimeoutError" ? `nothing whole in ${timeoutMs / 1000} s` : (err as Error).message;
+    throw new Error(`couldn't download ${url}: ${why}`);
+  }
 }
 
 /** The sources a release carries, written into `out`: each archive fetched (`get`), or kept when it's there
  *  already, as recorded. One that isn't the archive recorded (its SHA-256 another) is refused, and not written. */
 export async function fetchSources(
   out: string,
-  get: (url: string) => Promise<Uint8Array> = download,
+  get: (url: string) => Promise<Uint8Array> = (url) => download(url),
   archives: SourceArchive[] = sourceArchives(),
 ): Promise<string[]> {
   const written: string[] = [];

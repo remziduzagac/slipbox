@@ -21,7 +21,7 @@ import {
   workflowProblems,
   workflowShapeProblems,
 } from "../../scripts/check-deps.ts";
-import { embeddedProblems } from "../../scripts/licences.ts";
+import { EMBEDDED, embeddedProblems, holds } from "../../scripts/licences.ts";
 import { codeChanged, importGraph, isDocs, scope as reaches } from "../../scripts/ci-scope.ts";
 import { VERSION } from "../../src/version.ts";
 
@@ -89,11 +89,18 @@ describe("the supply chain's gates (14.10)", () => {
     // Taken by name for its licence, not any: a new copyleft one, or a named package's licence changing, is asked about.
     expect(licenceProblems([pkg("elkjs", "GPL-3.0-only")])).toHaveLength(1);
     expect(licenceProblems([pkg("other", "MPL-2.0")])).toHaveLength(1);
-    // OpenTUI's native library, FFmpeg linked in (D277): each platform slipbox is built for, by name; none other.
+    // OpenTUI's native library, FFmpeg linked in (D277): taken by the one pattern that finds FFmpeg in a package, so
+    // what's taken for it and what's said to carry it are the same packages; none other.
     const lgpl = "MIT AND LGPL-2.1-or-later";
-    for (const t of ["darwin-arm64", "linux-x64", "linux-arm64", "linux-x64-musl", "linux-arm64-musl"])
-      expect(licenceProblems([pkg(`@opentui/core-${t}`, lgpl)])).toEqual([]);
-    expect(licenceProblems([pkg("@opentui/core-win32-x64", lgpl)])).toHaveLength(1);
+    const ffmpeg = EMBEDDED.find((e) => e.name === "FFmpeg")!;
+    const natives = ["darwin-arm64", "linux-x64", "linux-arm64", "linux-x64-musl", "linux-arm64-musl", "win32-x64"];
+    for (const name of [...natives.map((t) => `@opentui/core-${t}`), "@opentui/core", "@opentui/core-freebsd-x64"])
+      expect({ name, taken: licenceProblems([pkg(name, lgpl)]).length === 0 }).toEqual({
+        name,
+        taken: holds(ffmpeg, name),
+      });
+    for (const t of natives) expect(licenceProblems([pkg(`@opentui/core-${t}`, lgpl)])).toEqual([]);
+    expect(licenceProblems([pkg("@opentui/core-freebsd-x64", lgpl)])).toHaveLength(1);
     expect(licenceProblems([pkg("@opentui/core-linux-x64", "MIT AND GPL-2.0-or-later")])).toHaveLength(1);
   });
 

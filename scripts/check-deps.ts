@@ -17,7 +17,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { DECLARED, EMBEDDED, embeddedProblems, holds, NAMED, PERMISSIVE, sourceArchives } from "./licences.ts";
+import { DECLARED, EMBEDDED, embeddedProblems, holds, named, PERMISSIVE, sourceArchives } from "./licences.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -161,8 +161,8 @@ export function licenceTaken(expr: string, taken: (id: string) => boolean = (id)
 export function licenceProblems(packages: Package[]): string[] {
   const out: string[] = [];
   for (const p of packages) {
-    const named = NAMED[p.name];
-    if (named && p.licence === named.licence) continue;
+    const taken = named(p.name);
+    if (taken && p.licence === taken.licence) continue;
     if (!p.licence) out.push(`${p.name}@${p.version}: names no licence`);
     else if (!licenceTaken(p.licence))
       out.push(`${p.name}@${p.version}: ${p.licence} — not a licence slipbox takes (plan 14.6, 14.10)`);
@@ -305,9 +305,8 @@ export function notices(packages: Package[], version: string, root = ROOT): stri
       : idsOf(p.licence)
           .map((id) => standardText(root, id, p.author) ?? `${id}: see https://spdx.org/licenses/${id}.html`)
           .join("\n\n");
-    const named = NAMED[p.name];
     const source =
-      named || /MPL|EPL|LGPL/.test(p.licence)
+      named(p.name) || /MPL|EPL|LGPL/.test(p.licence)
         ? `Its source: ${p.repository || `https://www.npmjs.com/package/${p.name}`}\n\n`
         : "";
     section(`${p.name} ${p.version} — ${p.licence}${p.repository ? `\n${p.repository}` : ""}`, `${source}${body}`);

@@ -10,6 +10,7 @@ import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { setWidthMethod } from "../../../core/foundation/text/width.ts";
 import { closeSync, constants, openSync, statSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isatty } from "node:tty";
 import { dataHome, stateHome } from "../../../core/foundation/platform/paths.ts";
 import { installedBy, readChannel } from "../../../core/application/distribution/install.ts";
 import { RELEASE } from "../../../core/application/distribution/release.ts";
@@ -212,12 +213,14 @@ export function toTerminal(text: string, path?: string): void {
 /**
  * Stdout's terminal opened again (or `path`), not to block: stdout's own descriptor blocks, and a terminal that stopped
  * reading would hold the quit for as long as it doesn't. Linux names stdout's own (`/proc`); elsewhere it's the
- * process's terminal, stdout's where slipbox has a screen. Stdout as it is where there's none to open.
+ * process's controlling terminal (`/dev/tty`), stdout's unless its output was sent to another terminal (macOS: then
+ * the restore goes to the controlling one). Stdout as it is where it isn't a terminal, or there's none to open.
  */
 function reopened(path?: string): number {
+  if (!path && !isatty(1)) return 1;
   for (const p of path ? [path] : ["/proc/self/fd/1", "/dev/tty"])
     try {
-      return openSync(p, constants.O_WRONLY | constants.O_NONBLOCK);
+      return openSync(p, constants.O_WRONLY | constants.O_NONBLOCK | constants.O_APPEND);
     } catch {
       // not there: the next
     }
@@ -260,7 +263,8 @@ export async function openRenderer(o: {
     prependInputHandlers: [
       (sequence) => {
         const reply = /\x1b\[\?2027;(\d)\$y/.exec(sequence);
-        if (reply) before = Number(reply[1]);
+        // The first answer only: the one to OpenTUI's question at setup, before it turned clustering on.
+        if (reply) before ??= Number(reply[1]);
         return false;
       },
     ],
@@ -271,7 +275,7 @@ export async function openRenderer(o: {
   // that teardown in. Then slipbox gives the terminal back again, all but the keyboard protocol's pop, which a second
   // time would pop that of whatever ran slipbox. It rejects too when the teardown isn't out — the terminal failed, or
   // took nothing more — and then slipbox writes all of it. And when it hasn't settled by QUIT_BOUND_MS, slipbox stops
-  // OpenTUI's close and gives the terminal back as after a late one: its teardown may be on its way still.
+  // OpenTUI's close, its teardown dropped with what was queued, and writes all of it too.
   const restore = o.restore ?? toTerminal;
   const giveBack = (late: boolean) => {
     let method = "unicode";
@@ -289,6 +293,7 @@ export async function openRenderer(o: {
   const closed = new Promise<void>((resolve) => {
     let bound: ReturnType<typeof setTimeout> | null = null;
     let settled = false;
+    // `late`: OpenTUI's teardown written, but no string terminator before it; false, not written; null, all of it out.
     const settle = (late: boolean | null) => {
       if (settled) return;
       settled = true;
@@ -300,15 +305,19 @@ export async function openRenderer(o: {
       () => settle(null),
       (err: unknown) => settle(session.isCloseInterruption(err)),
     );
+    // The bound, from `destroy()`, unless the terminal is given back already (it failed first, or hung up); never
+    // what keeps slipbox running.
     renderer.once("destroy", () => {
+      if (settled) return;
       bound = setTimeout(() => {
         try {
           session.dispose();
         } catch {
           // already closing past recall: given back all the same
         }
-        settle(true);
+        settle(false);
       }, o.quitBoundMs ?? QUIT_BOUND_MS);
+      bound.unref();
     });
   });
   return { session, renderer, closed };

@@ -22,6 +22,7 @@ import {
   buildRelease,
   changelogNotes,
   channelFiles,
+  finish,
   finishRelease,
   homebrewFormula,
   hostTarget,
@@ -34,9 +35,10 @@ import {
   TARGETS,
   writeSite,
 } from "../../scripts/release.ts";
-import { checkSources, fetchSources } from "../../scripts/sources.ts";
+import { checkSources, download, fetchSources } from "../../scripts/sources.ts";
 import { bootstrapScript } from "../../scripts/bootstrap.ts";
 import { RELEASE, RETIRED, retired, tagOf } from "../../src/core/application/distribution/release.ts";
+import { latestIn } from "../../src/core/application/distribution/updates/discovery.ts";
 import { VERSION } from "../../src/version.ts";
 
 import { makeDistributionSandbox, ROOT } from "../support/distribution-sandbox.ts";
@@ -233,6 +235,39 @@ describe("a release (14.2)", () => {
       expect(() => checkSources(tree({ [assetName(VERSION, "linux-x64")]: "x" }))).toThrow(
         "ffmpeg-9.0.2.tar.xz, FFmpeg's source, isn't in",
       );
+    });
+
+    test("finished with the sources fetched first: SHA256SUMS sums them as it does the packs", async () => {
+      const pack = assetName(VERSION, "linux-x64");
+      const out = tree({ [pack]: "x" });
+      const made = await finish({ repo: "o/r", out }, (dir) => fetchSources(dir, fetched("abc"), [archive]));
+      expect(made).toContain(join(out, "lib-1.0.tar.xz"));
+      const sums = readFileSync(join(out, "SHA256SUMS"), "utf8");
+      expect(sums).toContain(`${archive.sha256}  lib-1.0.tar.xz\n`);
+      expect(sums).toContain(`  ${pack}\n`);
+      // The updates still find the pack in it, and the installer sums the packs alone.
+      expect(latestIn(sums, "linux-x64")?.asset).toBe(pack);
+      expect(readFileSync(join(out, "install.sh"), "utf8")).not.toContain(archive.sha256);
+    });
+
+    test("a download that takes too long, or isn't there, fails naming its address", async () => {
+      const server = Bun.serve({
+        port: 0,
+        fetch: (req) =>
+          req.url.endsWith("/slow") ? new Promise<Response>(() => {}) : new Response("", { status: 404 }),
+      });
+      try {
+        const at = Date.now();
+        await expect(download(`${server.url}slow`, 200)).rejects.toThrow(
+          `couldn't download ${server.url}slow: nothing whole in 0.2 s`,
+        );
+        expect(Date.now() - at).toBeLessThan(2_000);
+        await expect(download(`${server.url}gone`)).rejects.toThrow(
+          `couldn't download ${server.url}gone: 404 Not Found`,
+        );
+      } finally {
+        server.stop(true);
+      }
     });
 
     test("fetched where its project publishes it, and kept only as recorded; one there already, not fetched again", async () => {
