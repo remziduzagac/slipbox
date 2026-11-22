@@ -19,6 +19,7 @@ import { isAbsolute, join } from "node:path";
 import { buildHome } from "../../scripts/build-home.ts";
 import { type Traced, traced } from "../../src/tui/shell/terminal/trace.ts";
 import type { Keyboard } from "./keys.ts";
+import { markFirstStepsSeen } from "./first-steps-seen.ts";
 import { releasesBuilt } from "./releases.ts";
 import { HeadlessTerminal, type StyledRun } from "./terminal.ts";
 
@@ -159,8 +160,7 @@ export class Session {
     writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), `${config}${off}`);
     // The first steps' hint is a first start's alone: the folders are new each time, so mark it seen unless asked.
     if (!opts.firstSteps) {
-      mkdirSync(join(this.dir, "state", "slipbox"), { recursive: true });
-      writeFileSync(join(this.dir, "state", "slipbox", "first-steps"), "shown\n");
+      markFirstStepsSeen(this.dir);
     }
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");

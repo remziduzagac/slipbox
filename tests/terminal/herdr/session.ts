@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { buildHome } from "../../../scripts/build-home.ts";
+import { markFirstStepsSeen } from "../first-steps-seen.ts";
 import { herdr, type Pane, sleep } from "./herdr.ts";
 
 export const REPO = join(import.meta.dir, "..", "..", "..");
@@ -70,6 +71,8 @@ export class Session {
     if (opts.home) buildHome(this.dir);
     else cpSync(DEMO, this.vault, { recursive: true });
     for (const d of ["config/slipbox", "state", "cache"]) mkdirSync(join(this.dir, d), { recursive: true });
+    // The first steps' hint is a first start's: a scenario's fresh state would show it, so it counts as seen.
+    markFirstStepsSeen(this.dir);
     // {vault} in a scenario's config is this scenario's own copy of the vault.
     // The machine's own linter stays out of the scenarios unless one asks for it (3.21).
     const config = (opts.config ?? "")

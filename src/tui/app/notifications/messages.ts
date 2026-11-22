@@ -65,10 +65,11 @@ export class Messages {
     this.saidInClick?.add(said);
     const m = this.context.listMessage(level, text);
     // The same message again (a key held down) refreshes its box rather than stacking another.
-    this.context.toasts = [m, ...this.context.toasts.filter((t) => t.text !== text || t.level !== level)].slice(
-      0,
-      TOAST_LIMIT,
-    );
+    const kept = [m, ...this.context.toasts.filter((t) => t.text !== text || t.level !== level)];
+    // The first steps' hint stays past the limit: it goes at the first key, not when four messages come after it.
+    const hint = kept.find((t) => t.sticky);
+    const rest = kept.filter((t) => !t.sticky);
+    this.context.toasts = hint ? [...rest.slice(0, TOAST_LIMIT - 1), hint] : rest.slice(0, TOAST_LIMIT);
     this.toastScheduler.scheduleToasts();
     // Drawn as it's said, wherever from: a key's command, or git answering in the background, with nothing else to
     // draw it (D263). Said while a frame is painted, it waits for the next, as before: OpenTUI draws again at once for a
@@ -77,16 +78,21 @@ export class Messages {
     if (!this.drawing) this.context.host?.requestRender();
   }
 
+  /** Whether a key or a click has come: the first steps' hint is not shown after one, and not recorded as shown. */
+  inputSeen = false;
+
   /** A box that stays until `dropHint` (the first steps' hint, FR1): not in the messages list, nor counted unseen. */
   hint(text: string): void {
+    if (this.inputSeen) return;
     const m: Message = { level: "info", text, at: this.context.now(), sticky: true };
     this.context.toasts = [m, ...this.context.toasts.filter((t) => !t.sticky)].slice(0, TOAST_LIMIT);
     this.toastScheduler.scheduleToasts();
     this.context.host?.requestRender();
   }
 
-  /** The hint away, at the first key. */
+  /** The hint away, at the first key or click (and none after it). */
   dropHint(): void {
+    this.inputSeen = true;
     if (!this.context.toasts.some((t) => t.sticky)) return;
     this.context.toasts = this.context.toasts.filter((t) => !t.sticky);
     this.toastScheduler.scheduleToasts();

@@ -91,7 +91,8 @@ slipbox carries its own Bun.
 **It says "no such directory".** The path you gave ends in `/`, which names a folder, and that folder doesn't exist.
 slipbox says so in a line, and doesn't start. A missing path without a trailing `/` isn't an error: it opens as a new
 note, and nothing is written until you save. A mistyped name then opens an empty note, so check the tab's `[new]`
-mark. See [the command line](cli.md).
+mark. A name close to a command, such as `serch`, stops and asks whether you meant the command; `slipbox ./serch`
+opens it as a note. See [the command line](cli.md).
 
 ## Keys that don't arrive
 

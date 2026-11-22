@@ -1832,7 +1832,10 @@ sticky box (`Message.sticky`, kept out of the messages list and its unseen count
 (`Messages.dropHint`, from `Input.handleKey`). Its keys are the view's: `i i` from READ (the first opens the lens),
 `i` from the lens and SOURCE, and `i` from READ when `[editor] edit_in = "source"`. Shown once: a `first-steps` file
 in the state folder is written as it shows. The terminal checks and the screenshots start with that file in place
-(`SessionOptions.firstSteps`). The "not bound" message names the same keys.
+(`SessionOptions.firstSteps`). A key or a click handled before it would show, or a note that cannot be edited, changes
+it: with input before it, the hint is neither shown nor recorded, so the next start shows it; for a note that cannot
+be edited it names no typing keys (nor does the "not bound" message). A click on the hint puts it away and opens no
+messages list. It stays past the four-box limit. The "not bound" message names the same keys.
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
 feedback all go to one place: a floating box briefly, the messages list permanently (the last

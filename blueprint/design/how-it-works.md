@@ -23,10 +23,11 @@ The core's design had a third face, `slipbox lsp`, serving notes to editors; it 
 paths (D8, D67).
 
 `src/main.ts` picks a face. A known subcommand runs the CLI. A first word that is no command, names nothing on disk
-(as it is or with `.md`), has no `/` or `.` and is within two edits of a command name (`cli/mistyped.ts`) stops with
-the usage error and a "did you mean" line; `slipbox ./name` opens it as a note. Anything else opens the TUI, but only
-when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `import()`, so a
-CLI call never loads OpenTUI's native renderer.
+(as it is or with `.md`), has no `/` or `.` and is close to a command name (`cli/mistyped.ts`: one edit, a swap
+counting as one, up to six letters, two from seven, none under three; not a word holding a command or inside one)
+stops with the usage error and a "did you mean" line; `slipbox ./name` opens it as a note. Anything else opens the
+TUI, but only when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `import()`, so a CLI call
+never loads OpenTUI's native renderer.
 
 Every user action is a named command (D11). `core/application/commands/areas/*.ts` (by area, listed by
 `core/application/commands/catalog.ts`) give each command id the CLI invocation that reaches the same state change, or

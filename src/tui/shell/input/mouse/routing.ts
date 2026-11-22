@@ -309,10 +309,13 @@ export class MouseRouting {
       case "wk":
         void this.app.input.handleKey(arg);
         break;
-      case "toast":
+      case "toast": {
+        // The first steps' hint is in no list: a click puts it away and opens nothing.
+        const hint = this.app.toasts[Number(arg)]?.sticky;
         this.app.dismissToasts();
-        void this.app.run("messages.open");
+        if (!hint) void this.app.run("messages.open");
         break;
+      }
     }
   }
 

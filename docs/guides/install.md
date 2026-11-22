@@ -54,8 +54,8 @@ a `slipbox` link in `~/.local/bin`. Nothing runs as root, and nothing else is to
 If `~/.local/bin` isn't on your PATH, the installer says how to add it. `SLIPBOX_BIN_DIR` puts the link in another
 folder.
 
-The installer's last line says what to run next: `slipbox ~/notes` opens a folder of notes (`?` lists the keys,
-`ctrl+q` quits), and `slipbox help` lists the commands.
+The installer's last line says what to run next: `cd` into a folder of notes and run `slipbox` (`?` lists the
+keys, `ctrl+q` quits), and `slipbox help` lists the commands.
 
 On Alpine, slipbox needs the C++ runtime, which a bare Alpine doesn't have. Run `apk add libstdc++ libgcc` first. The
 installer says so if they're missing.
