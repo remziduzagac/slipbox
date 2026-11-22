@@ -257,6 +257,8 @@ describe("the terminal given back at quit", () => {
       mouse: true,
       stdin: keys(),
       stdout: term.out,
+      // A wait of its own: OpenTUI counts its close wait from the close here, a stream standing in for the terminal,
+      // and from each write only on a real one, where its one-second default sees such a picture through.
       closeWaitMs: 5_000,
       restore: (text) => restored.push(text),
     });
