@@ -22,7 +22,9 @@ below; [terms.md](terms.md) defines the words, and [the decisions](../decisions)
 The core's design had a third face, `slipbox lsp`, serving notes to editors; it was removed once links became plain
 paths (D8, D67).
 
-`src/main.ts` picks a face. A known subcommand runs the CLI. Anything else opens the TUI, but only
+`src/main.ts` picks a face. A known subcommand runs the CLI. A first word that is no command, names nothing on disk
+(as it is or with `.md`), has no `/` or `.` and is within two edits of a command name (`cli/mistyped.ts`) stops with
+the usage error and a "did you mean" line; `slipbox ./name` opens it as a note. Anything else opens the TUI, but only
 when stdin and stdout are terminals (`9.3`). The TUI is loaded with a dynamic `import()`, so a
 CLI call never loads OpenTUI's native renderer.
 

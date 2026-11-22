@@ -61,6 +61,10 @@ shows a first session.
 It takes `--root`, `--config`, `--theme` (a theme for this session) and `--base`. With `--json`, `--help` or
 `--version`, it runs the command line instead. Other flags are ignored, and an unknown one is a usage error.
 
+A word that is not a command, names nothing on disk, has no `/` or extension and is within two typos of a command name
+stops with a usage error (exit code 2): `slipbox serch foo` says `did you mean search?`. `slipbox ./serch` opens a new
+note of that name anyway. Any other word is a path.
+
 A file that isn't there opens as an empty new note. Its tab shows its path and `[new]`; nothing is written until you
 save, when any missing folders are made too. `slipbox ideas/coffee` opens `ideas/coffee.md`: `.md` is added unless the
 name has a known extension, such as `.toml` or `.py`, as for [a new note](files.md#a-new-note). Quitting without typing

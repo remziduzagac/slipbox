@@ -170,6 +170,7 @@ main() {
     *":$bin_dir:"*) ;;
     *) say "$bin_dir isn't on your PATH: add it in your shell's profile, e.g. export PATH=\"$bin_dir:\$PATH\"" ;;
   esac
+  say "next: run slipbox in a folder of notes, e.g. slipbox ~/notes (? lists the keys, ctrl+q quits; slipbox help lists the commands)"
 }
 
 main "$@"

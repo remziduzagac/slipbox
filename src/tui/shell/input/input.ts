@@ -21,6 +21,7 @@ import {
   prettyKey,
 } from "./keys.ts";
 import type { App } from "../../app/runtime/app.ts";
+import { notBoundHelp } from "../../app/notifications/first-steps.ts";
 import { editable } from "../../documents/editing/editable.ts";
 import { PROBLEM_KEYMAP } from "../../documents/diagnostics/problems/at-cursor.ts";
 import { refilter } from "../overlays/overlays.ts";
@@ -137,6 +138,7 @@ export class Input {
     // When it arrived, not when its turn comes: a dialog that opens on its own drops what arrived as it opened.
     const arrived = this.app.now();
     this.app.lastInputAt = arrived;
+    this.app.notifications.dropHint(); // the first steps' hint is gone at the first key (FR1)
     const at = ++this.keysSeen;
     if (key === "escape" && this.app.reads.giveUp()) return Promise.resolve();
     if (QUITS.has(key) && this.app.watch.builds.unbuilt) return Promise.resolve(this.app.saving.requestQuit());
@@ -466,7 +468,8 @@ export class Input {
     }
     this.clearPending();
     if (hit) return hit.run(hit.spec!);
-    if (key !== "escape") this.app.message("info", `${prettyKey(seq, this.app.leader)} is not bound — ? lists keys`);
+    if (key !== "escape")
+      this.app.message("info", `${prettyKey(seq, this.app.leader)} is not bound — ${notBoundHelp(this.app)}`);
   }
 }
 

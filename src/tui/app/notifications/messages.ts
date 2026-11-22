@@ -77,6 +77,22 @@ export class Messages {
     if (!this.drawing) this.context.host?.requestRender();
   }
 
+  /** A box that stays until `dropHint` (the first steps' hint, FR1): not in the messages list, nor counted unseen. */
+  hint(text: string): void {
+    const m: Message = { level: "info", text, at: this.context.now(), sticky: true };
+    this.context.toasts = [m, ...this.context.toasts.filter((t) => !t.sticky)].slice(0, TOAST_LIMIT);
+    this.toastScheduler.scheduleToasts();
+    this.context.host?.requestRender();
+  }
+
+  /** The hint away, at the first key. */
+  dropHint(): void {
+    if (!this.context.toasts.some((t) => t.sticky)) return;
+    this.context.toasts = this.context.toasts.filter((t) => !t.sticky);
+    this.toastScheduler.scheduleToasts();
+    this.context.host?.requestRender();
+  }
+
   /** `paint` as one frame is painted: a message said in it asks for no other frame (`message`). */
   whileDrawing<T>(paint: () => T): T {
     this.drawing++;

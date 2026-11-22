@@ -74,6 +74,9 @@ export interface SessionOptions {
   preload?: string;
   /** Don't wait for the first frame: a start meant to fail, or one the check waits for itself. */
   noWait?: boolean;
+  /** Leave the first steps' hint unseen, so it shows at the start (FR1). By default the check's state already has it seen,
+   *  so no check or screenshot meets it. */
+  firstSteps?: boolean;
   /** The terminal's size (default SIZE). */
   size?: { cols: number; rows: number };
   /** Keys as Kitty's protocol has them (the default), or as a terminal without it. */
@@ -87,7 +90,7 @@ export interface SessionOptions {
 }
 
 /** What a session is made with, once: its folders and config, and its terminal. A restart can't change them. */
-const MADE_ONCE = ["home", "config", "size", "keyboard", "graphics", "frameMax", "readSize"] as const;
+const MADE_ONCE = ["home", "config", "firstSteps", "size", "keyboard", "graphics", "frameMax", "readSize"] as const;
 
 /** Read the actual zoom, workspace and git items of the grouped location block. */
 export function locationOnBar(bar: string): { zoom: string; workspace: string; git: string } {
@@ -154,6 +157,11 @@ export class Session {
     // background auto-index too (20.9): it would walk the whole home folder.
     const off = `${/^\[lint\]/m.test(config) ? "" : '\n[lint]\nenabled = "off"\n'}${/^\[lsp\]/m.test(config) ? "" : "\n[lsp]\nenabled = false\n"}${/^\[index\]/m.test(config) ? "" : "\n[index]\nbackground = false\n"}`;
     writeFileSync(join(this.dir, "config", "slipbox", "config.toml"), `${config}${off}`);
+    // The first steps' hint is a first start's alone: the folders are new each time, so mark it seen unless asked.
+    if (!opts.firstSteps) {
+      mkdirSync(join(this.dir, "state", "slipbox"), { recursive: true });
+      writeFileSync(join(this.dir, "state", "slipbox", "first-steps"), "shown\n");
+    }
     this.trace = join(this.dir, "trace");
     writeFileSync(this.trace, "");
   }

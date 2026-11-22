@@ -35,6 +35,7 @@ multline = "multline" # LaTeX's multline environment
 opf = "opf" # EPUB's package document, content.opf
 ratatui = "ratatui" # a Rust library for terminal interfaces
 sav = "sav" # the save dialog's id, as `dlg` is a dialog's (src/tui/shell/screen/draw.ts)
+serch = "serch" # a mistyped command, as the CLI's "did you mean" example (docs/manual/cli.md, its launcher test)
 viw = "viw" # Vim's keys for the word under the cursor
 
 [default.extend-identifiers]

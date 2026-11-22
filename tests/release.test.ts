@@ -268,6 +268,11 @@ describe("what a preview carries (GR-D13)", () => {
       expect(r.stderr.toString()).toBe("");
       expect(r.exitCode).toBe(0);
       expect(r.stdout.toString()).toContain(`slipbox: ${PREVIEW} installed:`);
+      // The last line says what to run next, and where help is.
+      const lines = r.stdout.toString().trimEnd().split("\n");
+      expect(lines.at(-1)).toBe(
+        "slipbox: next: run slipbox in a folder of notes, e.g. slipbox ~/notes (? lists the keys, ctrl+q quits; slipbox help lists the commands)",
+      );
       expect(existsSync(join(home, ".local", "share", "slipbox", "versions", PREVIEW, "slipbox"))).toBe(true);
     },
     TEST_BUDGETS.releaseIntegration,
