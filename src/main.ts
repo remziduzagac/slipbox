@@ -6,6 +6,7 @@
 import { crashReportsOff } from "./core/application/distribution/crash-reports.ts";
 import { parseArgs } from "./cli/args.ts";
 import { CLI_COMMANDS, defaultIo, EXIT, runCli } from "./cli/cli.ts";
+import { mistypedCommand, mistypedMessage } from "./cli/mistyped.ts";
 
 // First: Bun's own crash reports off, in the C environment its crash handler reads (D221).
 crashReportsOff();
@@ -37,6 +38,15 @@ async function main(): Promise<number> {
   const wantsCli =
     (first !== undefined && CLI_COMMANDS.has(first)) || ["help", "version", "json"].some((f) => args.flags.has(f));
   if (wantsCli) return runCli(argv, defaultIo());
+
+  // A word that is no command, names nothing on disk and is a typo of one: asked, not opened as a new note.
+  if (first !== undefined && first !== "open") {
+    const meant = mistypedCommand(first, [...CLI_COMMANDS, "open"]);
+    if (meant) {
+      process.stderr.write(mistypedMessage(first, meant));
+      return EXIT.usage;
+    }
+  }
 
   // `slipbox open [path]` is the explicit spelling of the default.
   const tuiArgs = first === "open" ? argv.filter((_, i) => i !== argv.indexOf("open")) : argv;

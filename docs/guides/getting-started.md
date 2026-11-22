@@ -85,6 +85,10 @@ link, the status chip reading READ and NORMAL](../images/getting-started-first.p
 The top bar keeps your place, background work count and running version visible. `space b` opens the work list;
 `space a` opens version and upgrade information. You can leave both for later in this tour.
 
+The first time slipbox starts on a machine, a box on the screen says how to begin: `i` to start typing (twice from the
+rendered view, where the first `i` opens the lens), `space` for the menu, `?` for the keys and `:` for a command. It
+goes at the first key and never comes back.
+
 Two discovery keys are worth trying now: `space` opens the action groups, and `?` lists bindings. Press `esc` to
 close either. There is no need to memorize the full keymap.
 

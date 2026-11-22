@@ -17,6 +17,7 @@ Code, in `src/tui/`:
 | `app/runtime/startup.ts` | initial session/UI restoration and first-window/explorer admission |
 | `app/settings/ui-state.ts` | UI defaults, including the configured URL display policy |
 | `app/notifications/messages.ts`, `toasts.ts` | message deduplication, draw guard and notification deadlines |
+| `app/notifications/first-steps.ts` | the first-steps hint (FR1) and the keys that start typing from a view |
 | `documents/buffers/opening.ts` | buffer admission, path identity, graph claims and read-only reasons |
 | `documents/navigation/opening.ts` | ordered note/tab opening, pinned/floating rules and navigation history |
 | `documents/views/policy.ts` | new views, render eligibility, cursor placement and lazy-layout invalidation |
@@ -1824,6 +1825,17 @@ explorer); `space /` **+find** (find and replace, in the note and in every note,
 tags, the types, a line); `space d` **+directory**, a folder (the label alone says "directory": `space f` and `space d`
 read as file and directory, while titles and docs keep "folder"); `space v` **+vault**. A key moved between groups kept
 its letter. The palette has no leader key: `:` and `ctrl+shift+p` open it, and About and help list it.
+
+**The first steps' hint (FR1).** The first time slipbox starts on a machine with a note open, `showFirstSteps`
+(`app/notifications/first-steps.ts`, called from `run.ts` once the start's reads are settled) says how to begin: a
+sticky box (`Message.sticky`, kept out of the messages list and its unseen count) that stays until the first key
+(`Messages.dropHint`, from `Input.handleKey`). Its keys are the view's: `i i` from READ (the first opens the lens),
+`i` from the lens and SOURCE, and `i` from READ when `[editor] edit_in = "source"`. Shown once: a `first-steps` file
+in the state folder is written as it shows. The terminal checks and the screenshots start with that file in place
+(`SessionOptions.firstSteps`). A key or a click handled before it would show, or a note that cannot be edited, changes
+it: with input before it, the hint is neither shown nor recorded, so the next start shows it; for a note that cannot
+be edited it names no typing keys (nor does the "not bound" message). A click on the hint puts it away and opens no
+messages list. It stays past the four-box limit. The "not bound" message names the same keys.
 
 **The message sink (plan `3.13`).** Config warnings, walk errors, watcher problems and command
 feedback all go to one place: a floating box briefly, the messages list permanently (the last

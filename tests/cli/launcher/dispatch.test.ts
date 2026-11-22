@@ -18,6 +18,18 @@ describe("the vault and the tool", () => {
     expect(r.code).toBe(2);
     expect(r.err).toContain("slipbox lsp was removed");
   });
+  test("a mistyped command (CL2) stops with a suggestion and exit 2; a path-like or existing word still opens", () => {
+    const r = slipbox(["serch", "foo"]);
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('unknown command "serch"');
+    expect(r.err).toContain("did you mean `search`?");
+    expect(r.err).toContain("`slipbox ./serch`");
+    expect(r.err).not.toContain("not starting the TUI");
+    // Not a typo of a command, a path by its slash or extension, or an existing path: the screen's rules apply.
+    for (const word of ["zzzzzzzz", "./serch", "serch.md", "ideas/serch", "home"]) {
+      expect(slipbox([word]).err).toStartWith("slipbox: not starting the TUI");
+    }
+  });
   test("no terminal (9.3): slipbox [path] and slipbox open [path] refuse the TUI, a hint and exit 2; --help, --version, --json run the CLI", () => {
     for (const args of [[], ["home.md"], ["open"], ["open", "home.md"], ["home.md", "--theme", "nord"]]) {
       const r = slipbox(args);

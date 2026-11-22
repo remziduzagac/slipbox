@@ -2,6 +2,7 @@
 // is up (SD-D9).
 // Imported lazily by main.ts only when stdout and stdin are terminals (9.3).
 
+import { showFirstSteps } from "../../app/notifications/first-steps.ts";
 import { type CliRenderer, createCliRenderer, type KeyEvent, NativeSession } from "@opentui/core";
 import { flag, parseArgs } from "../../../cli/args.ts";
 import { loadConfig } from "../../../core/application/config/config.ts";
@@ -493,15 +494,17 @@ export async function runTui(argv: string[]): Promise<number> {
     if (ready) trace?.ready();
     ready = false;
   };
+  // The start settled: its first read and what it opens are in, and nothing is out (one promise, for both users).
+  const started = app.reads.quiet();
   if (trace)
-    void (async () => {
-      do {
-        await app.reads.settled();
-        await new Promise((r) => setTimeout(r, 0));
-      } while (app.reads.busy);
+    void started.then(() => {
       ready = true;
       renderer.requestRender();
-    })();
+    });
+  // The first steps' hint (FR1): once the start has opened its note, the first time slipbox starts on this machine.
+  void started
+    .then(() => showFirstSteps(app))
+    .catch((err) => app.message("warn", `the first steps' hint failed: ${(err as Error).message}`));
   // The whole of it one frame painted: a message said in any of it asks for no other (`App.whileDrawing`).
   const paint = (canvas: Canvas) =>
     app.whileDrawing(() => {

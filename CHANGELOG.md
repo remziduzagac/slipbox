@@ -16,6 +16,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   note's paragraphs that mark a footnote or use a reference defined elsewhere are parsed on other threads with the
   rest of it, so neither view pauses for them once the note is read.
 
+- The first time slipbox starts on a machine with a note open, a box says how to begin, in the keys of the view: `i` to
+  start typing (`i i` from the rendered view, where the first `i` opens the lens), `space` for the menu, `?` for the
+  keys and `:` for a command. It goes at the first key and is not shown again. A key that does nothing says how to
+  type from the view too, and the installer ends with what to do next.
+
 - `space f e` opens a file by its path, anywhere on the machine: it asks for the path, `~` your home folder, and lists
   the folders and files as you type. `tab` completes the path, `enter` goes into a folder or opens the file, `ctrl+w`
   goes back a folder. The switcher (`ctrl+p`) takes a path too, one starting with `/`, `~/`, `./` or `../`. A file of
@@ -279,6 +284,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   gives its licence and how to run slipbox with an FFmpeg you've changed.
 
 ### Fixed
+
+- A mistyped command, such as `slipbox serch foo`, stops with `did you mean search?` and exit code 2 instead of
+  opening a new note named `serch`. `slipbox ./serch` still opens one, and a name that holds a command or is short
+  (`inbox`, `todo`, `tasks`) is a note. The manual's troubleshooting chapter now says that only a missing path ending
+  in `/` stops with `no such directory`.
 
 - A web link copied or opened from a rendered row includes every source line its text came from, rather than only
   the first. Selections include every contributing source line at both ends, in either direction.
