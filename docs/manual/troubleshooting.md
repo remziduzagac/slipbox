@@ -163,10 +163,13 @@ slipbox chooses `ascii` by itself on the Linux console, or when your locale isn'
 Choose the `terminal` theme, which uses your terminal's own colours. Press `space u t`, or set `theme = "terminal"` in
 your config.
 
-**Colours are close but not exact over SSH.** Over SSH, slipbox draws 24-bit colour only when the server knows your
-terminal has it: `COLORTERM=truecolor` is set there, or the terminal is kitty. Otherwise it uses the nearest of 256
-colours. macOS's `ssh` doesn't send `COLORTERM`. Add `SendEnv COLORTERM` to your SSH config and `AcceptEnv COLORTERM`
-to the server's `sshd_config`, or put `export COLORTERM=truecolor` in your shell's profile on the server.
+**Colours are close but not exact over SSH.** Over SSH, slipbox draws 24-bit colour only when it knows your terminal
+has it: `COLORTERM=truecolor` is set on the server, or the terminal says so when slipbox asks it. Ghostty, kitty,
+WezTerm, foot, xterm, iTerm2 and tmux say so. Otherwise it uses the nearest of 256 colours. Alacritty and mosh don't
+answer, and macOS's `ssh` doesn't send `COLORTERM`. Add `SendEnv COLORTERM` to your SSH config and `AcceptEnv
+COLORTERM` to the server's `sshd_config`, or put `export COLORTERM=truecolor` in your shell's profile on the server.
+Inside GNU Screen, slipbox uses 256 colours, as Screen drops 24-bit ones; with Screen's `truecolor` on, set
+`OPENTUI_FORCE_TRUECOLOR=1`.
 
 **No colour at all.** `NO_COLOR` is set in your environment. slipbox then uses its `mono` theme, which marks things
 with bold, underline and reversed text instead.

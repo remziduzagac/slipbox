@@ -604,7 +604,7 @@ package — no build toolchain). SQLite is the runtime's own, `node:sqlite` (D19
 
 | Package | Used for |
 | --- | --- |
-| `@opentui/core` **0.6.8, pinned exactly** | the TUI renderer and input |
+| `@opentui/core` **0.9.0, pinned exactly** | the TUI renderer and input; its native library links FFmpeg, LGPL-2.1 |
 | `unified`, `remark-parse`, `remark-gfm`, `remark-frontmatter` | parsing, with source positions |
 | `mdast-util-to-string` | heading text fallback |
 | `highlight.js` | code-fence highlighting, in the core so CLI and TUI match |
@@ -637,9 +637,10 @@ server's half of the protocol library left the runtime with the LSP face (D170, 
 and lints the code (GR-D7), and `markdownlint-cli2` 0.23.3 lints the repository's Markdown, at the version slipbox
 installs for notes ([repository.md](repository.md) § The check).
 
-Licences: permissive, but for three weak-copyleft libraries accepted for use: `elkjs` (EPL-2.0), resvg (MPL-2.0)
-and Hunspell (MPL-1.1, in `hunspell-asm`) (D192, D194). What a distributed binary owes them:
-[distribution.md](distribution.md) § Notices.
+Licences: permissive, but for four weak-copyleft libraries accepted for use: `elkjs` (EPL-2.0), resvg (MPL-2.0),
+Hunspell (MPL-1.1, in `hunspell-asm`) and FFmpeg (LGPL-2.1-or-later, in OpenTUI's native library, whose packages are
+`MIT AND LGPL-2.1-or-later` since 0.8.1) (D192, D194, D277). What a distributed binary owes them, FFmpeg's source with
+each release among it: [distribution.md](distribution.md) § Notices.
 
 No external binary is required (D3). The clipboard tools are used when present and never needed.
 Clipboard copies and reads use asynchronous helpers with a one-second deadline per helper (five for PowerShell),
@@ -651,24 +652,32 @@ its public copy/paste methods, register, current vault and quit flag; helpers re
 vault when each queued copy starts. This collaborator has no document-writing path.
 The synchronous clipboard functions remain available for file-only callers and compatibility tests (#172).
 
-### OpenTUI upgrade policy (`0.6`)
+### OpenTUI upgrade policy (`0.9`)
 
 OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `package.json`
-(`"0.6.8"`, no caret; D6). To upgrade:
+(`"0.9.0"`, no caret; D6). To upgrade:
 
 1. Read the changelog from the pinned version to the target.
 2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui/shell/terminal/integration.test.ts`
-   exercises the adapter through OpenTUI's own test renderer.
+   exercises the adapter through OpenTUI's own test renderer. A native package's licence, or the FFmpeg its
+   `FFMPEG-SOURCE.md` names, changing fails `check:deps`: `scripts/licences.ts` follows it (`NAMED`; `EMBEDDED`'s
+   version, address and SHA-256, which the release's source is fetched and checked by; D277), a new licence asked
+   about first.
 3. Launch the TUI and check what the adapter uses: `drawText` and `fillRect` output, key names (`keyName` in
    `tui/shell/input/keys.ts`), paste, mouse and resize events, `widthMethod` (a wcwidth terminal's rows must not drift),
    `suspend`/`resume` (the `$EDITOR` hand-off, each awaited), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
-   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns; when it
-   isn't, slipbox writes OpenTUI's teardown itself, `RESTORE` in `run.ts`, which
-   `tests/tui/shell/terminal/closing.test.ts` holds to what this version's setup and teardown write). And
-   pictures: `NativeImage` (decode, `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and
-   hands the renderer, whose `write` sends Kitty placeholders' pictures in order with the frames (12.7).
+   `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns, by OpenTUI
+   even when it's late, the rest dropped, slipbox then ending the picture cut short; when OpenTUI gives up, or hasn't
+   finished by slipbox's own bound, counted from slipbox's quit since OpenTUI puts off its `destroy` event while a
+   renderable's cleanup runs, slipbox writes its teardown itself, `restoreText` in `run.ts`, which
+   `tests/tui/shell/terminal/closing.test.ts` holds to what this version's setup and teardown write, grapheme clustering
+   by the terminal's answer to OpenTUI's question, read in `prependInputHandlers`). And pictures: `NativeImage` (decode,
+   `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and hands the renderer, whose `write`
+   sends Kitty placeholders' pictures in order with the frames (12.7).
 4. Only `tui/shell/terminal/opentui.ts` and `tui/shell/terminal/run.ts` should need changes. If anything else does, the
-   boundary has leaked; fix that first.
+   boundary has leaked; fix that first. The exception is `core/foundation/text/width.ts`, which counts as OpenTUI lays
+   cells out, without importing it: `tests/tui/shell/terminal/widths.test.ts` holds the two together, and a change in
+   OpenTUI's widths changes it too ([rendering.md](rendering.md) § Wrapping and width).
 
 Since 0.6 the app's `renderSelf` draws into a recording that native code plays back: it can't read the frame's cells,
 and a draw call with a fractional coordinate fails the whole frame. `BufferCanvas` passes whole cells, the fraction

@@ -3,6 +3,7 @@
 //
 //   bun scripts/release.ts build [--target <t>]… --repo <owner/name> [--tag v<version>] [--out <dir>]
 //   bun scripts/release.ts finish --repo <owner/name> [--tag v<version>] [--out <dir>]
+//   bun scripts/release.ts sources [--out <dir>]
 //   bun scripts/release.ts notes [--tag v<version>]
 //
 // build: each target — this machine's when none is named — compiled by package.json's own `build` (its autoload
@@ -12,9 +13,10 @@
 // (`--version`) before it's packed. Another platform's needs that platform's OpenTUI package installed
 // (`bun install --os <os> --cpu <cpu>`); CI builds each on its own platform instead
 // (`.github/workflows/build.yml`), where it's there.
-// finish: `SHA256SUMS` over the packs in `--out`; `install.sh` (14.7): `install.template.sh` with the version, its
-// tag, the repository and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew
-// formula, from `homebrew.template.rb` — Apple silicon's and glibc Linux's packs, which are Homebrew's.
+// finish: this version's packs in `--out` checked, then the sources the binaries' licences ask to go with them fetched
+// (`sources.ts`, D277); `SHA256SUMS` over both; `install.sh` (14.7): `install.template.sh` with the version, its tag,
+// the repository and each pack's sum written in; and, but for a preview, `slipbox.rb` (14.3), the Homebrew formula,
+// from `homebrew.template.rb`: Apple silicon's and glibc Linux's packs, Homebrew's. sources: refused without them.
 // notes: the release's notes on stdout, its version's section of CHANGELOG.md; none there fails.
 //
 // The version is package.json's, which must be `src/version.ts`'s, and the tag's when one is given. `--out` is
@@ -42,7 +44,6 @@
 // repository's releases (`gh api`): the highest stable release, the newest preview; a channel with none has no file.
 // stale: the published previews beyond the newest `--keep`, a tag a line, for the workflow to delete.
 
-import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { rootPage } from "../site/scripts/root.ts";
@@ -54,6 +55,10 @@ import {
   tagOf,
 } from "../src/core/application/distribution/release.ts";
 import { checkDeps, notices, sbom } from "./check-deps.ts";
+import { sourceArchives } from "./licences.ts";
+import { checkSources, download, fetchSources, hashes, sha256, sumsText } from "./sources.ts";
+
+export { sha256sums } from "./sources.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -193,15 +198,6 @@ export function buildArgs(script: string, outfile: string, target: string, repo:
   // OpenTUI picks its musl library only when told at run time (OPENTUI_LIBC): a musl build is told when it's built.
   const musl = target.endsWith("-musl") ? ['--define=process.env.OPENTUI_LIBC="musl"'] : [];
   return [...argv.slice(1), `--target=${TARGETS[target]}`, `--define=SLIPBOX_RELEASE=${release}`, ...musl];
-}
-
-/** `SHA256SUMS`'s text for files: `<hash>  <name>` a line, by name — what `sha256sum -c` and `shasum -c` read. */
-export function sha256sums(files: string[]): string {
-  return files
-    .map((f) => ({ name: basename(f), hash: createHash("sha256").update(readFileSync(f)).digest("hex") }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((x) => `${x.hash}  ${x.name}\n`)
-    .join("");
 }
 
 /** A release asset's name. */
@@ -400,30 +396,30 @@ export function homebrewFormula(template: string, version: string, repo: string,
   return out;
 }
 
-/** The release's packs in `out` summed: `SHA256SUMS`, `install.sh` and `slipbox.rb` written; their paths. A preview
- *  has no formula: Homebrew never gets one (GR-D15). */
-export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string }): string[] {
+/** This version's packs in `out`; none, or another version's pack or SBOM beside them, refused. A source the release
+ *  carries (`carried`, by name) is no pack, whatever its archive's kind. */
+export function packsIn(out: string, version: string, carried = sourceArchives().map((a) => a.name)): string[] {
+  const packs = Object.keys(TARGETS)
+    .map((t) => join(out, assetName(version, t)))
+    .filter((f) => existsSync(f));
+  if (!packs.length) throw new Error(`no packs of ${version} in ${out}: build them first`);
+  const ours = [...carried, ...Object.keys(TARGETS).flatMap((t) => [assetName(version, t), sbomName(version, t)])];
+  const stray = readdirSync(out).filter((f) => /\.(tar\.gz|cdx\.json)$/.test(f) && !ours.includes(f));
+  if (stray.length) throw new Error(`packs of another version in ${out}: ${stray.join(", ")}`);
+  return packs;
+}
+
+/** `SHA256SUMS` (the packs in `out`, and `sources`), `install.sh`, and but for a preview `slipbox.rb` (GR-D15). */
+export function finishRelease(opts: { repo: string; tag?: string; out: string; root?: string; sources?: string[] }) {
   const root = opts.root ?? ROOT;
   const version = releaseVersion(root, opts.tag);
-  const packs = Object.keys(TARGETS)
-    .map((t) => join(opts.out, assetName(version, t)))
-    .filter((f) => existsSync(f));
-  if (!packs.length) throw new Error(`no packs of ${version} in ${opts.out}: build them first`);
-  const ours = new Set(Object.keys(TARGETS).flatMap((t) => [assetName(version, t), sbomName(version, t)]));
-  const stray = readdirSync(opts.out).filter((f) => /\.(tar\.gz|cdx\.json)$/.test(f) && !ours.has(f));
-  if (stray.length) throw new Error(`packs of another version in ${opts.out}: ${stray.join(", ")}`);
+  const packs = packsIn(opts.out, version);
+  // Each file hashed once: SHA256SUMS, the installer's sums and Homebrew's, all from these.
+  const all = hashes([...packs, ...(opts.sources ?? [])]);
   const sums = join(opts.out, "SHA256SUMS");
-  const text = sha256sums(packs);
-  writeFileSync(sums, text);
-  const byTarget = Object.fromEntries(
-    text
-      .trim()
-      .split("\n")
-      .map((line) => {
-        const [hash, file] = line.split("  ") as [string, string];
-        return [file.slice(`slipbox-${version}-`.length, -".tar.gz".length), hash];
-      }),
-  );
+  writeFileSync(sums, sumsText(all));
+  const byTarget: Record<string, string> = {};
+  for (const t of Object.keys(TARGETS)) if (all[assetName(version, t)]) byTarget[t] = all[assetName(version, t)]!;
   const installer = join(opts.out, "install.sh");
   writeFileSync(
     installer,
@@ -446,6 +442,14 @@ export function finishRelease(opts: { repo: string; tag?: string; out: string; r
     out.push(formula);
   }
   return out;
+}
+
+/** The `finish` step: the version, its tag and its packs checked, then the sources fetched (`fetch`), so `SHA256SUMS`
+ *  sums them as it does the packs. */
+export async function finish(opts: { repo: string; tag?: string; out: string }, fetch = fetchSources) {
+  packsIn(opts.out, releaseVersion(ROOT, opts.tag));
+  const sources = await fetch(opts.out);
+  return [...finishRelease({ ...opts, sources }), ...sources];
 }
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -495,9 +499,7 @@ export async function channelFiles(
     if (!r) return null;
     const asset = r.assets?.find((a) => a.name === "install.sh");
     if (!asset) throw new Error(`${r.tag_name} has no install.sh: its channel can't name it`);
-    const sha = createHash("sha256")
-      .update(await download(asset.browser_download_url))
-      .digest("hex");
+    const sha = sha256(await download(asset.browser_download_url));
     if (asset.digest && asset.digest !== `sha256:${sha}`)
       throw new Error(`${r.tag_name}'s install.sh has the SHA-256 ${sha} here, and ${asset.digest} on GitHub`);
     return `${r.tag_name} ${sha}\n`;
@@ -539,12 +541,6 @@ function listReleases(repo: string): GhRelease[] {
     .map((l) => JSON.parse(l) as GhRelease);
 }
 
-async function download(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`couldn't download ${url}: ${res.status} ${res.statusText}`);
-  return new Uint8Array(await res.arrayBuffer());
-}
-
 /** The repository asked for, or origin's on GitHub. */
 function repoFrom(flag: string | undefined): string {
   if (flag) {
@@ -582,8 +578,10 @@ if (import.meta.main) {
       for (const p of buildRelease({ targets, repo: repoFrom(one("repo")), tag: one("tag"), out }))
         process.stdout.write(`${p}\n`);
     } else if (step === "finish") {
-      for (const p of finishRelease({ repo: repoFrom(one("repo")), tag: one("tag"), out }))
+      for (const p of await finish({ repo: repoFrom(one("repo")), tag: one("tag"), out }))
         process.stdout.write(`${p}\n`);
+    } else if (step === "sources") {
+      for (const p of checkSources(out)) process.stdout.write(`${p}\n`);
     } else if (step === "notes") {
       const tag = one("tag");
       const preview = tag !== undefined && PREVIEW_TAG.test(tag);
@@ -607,8 +605,8 @@ if (import.meta.main) {
       for (const tag of stalePreviews(listReleases(repoFrom(one("repo"))), keep)) process.stdout.write(`${tag}\n`);
     } else {
       process.stderr.write(
-        "release: build [--target <t>]… [--repo owner/name] [--tag <tag>] [--out <dir>] | finish … | notes … | " +
-          "preview [--remote <r>] | stamp --version <v> | site --repo owner/name --out <dir> | stale [--keep <n>]\n",
+        "release: build [--target <t>]… [--repo owner/name] [--tag <tag>] [--out <dir>] | finish … | sources | " +
+          "notes … | preview [--remote <r>] | stamp --version <v> | site … | stale [--keep <n>]\n",
       );
       process.exit(2);
     }

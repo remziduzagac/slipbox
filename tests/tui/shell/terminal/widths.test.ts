@@ -42,12 +42,26 @@ describe("widths as OpenTUI draws them", () => {
     // Clusters where the two counts part (a conjunct's parts, a flag's letters), whatever the corpus
     // holds. Not Bengali's reph (র্গা): OpenTUI's table has it 1, Bun's 2 — slipbox counts Bun's.
     for (const t of ["हिन्दी", "नमस्ते", "क्ष", "ஸ்ரீ", "ཀྱི", "각", "1️⃣", "🇩🇪", "✔️"]) for (const g of graphemes(t)) seen.add(g);
+    // A format character that prepends (Arabic's and Syriac's signs set before a number or a word) takes its cell where
+    // the terminal doesn't cluster; a joiner and a flag's tags don't.
+    for (const t of [
+      "\u0600١",
+      "\u0605١",
+      "\u06DD١",
+      "\u070F\u0710",
+      "\u08E2\u0628",
+      "क\u200C",
+      "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}",
+    ])
+      for (const g of graphemes(t)) seen.add(g);
     const fg = RGBA.fromHex("#ffffff");
     const bg = RGBA.fromHex("#000000");
     try {
       for (const method of ["unicode", "wcwidth"] as WidthMethod[]) {
         setWidthMethod(method);
-        const buf = frameBuffer(16, 1, method);
+        // Wide enough for the widest cluster probed: sixteen code points, each two cells to a terminal that doesn't
+        // cluster.
+        const buf = frameBuffer(40, 1, method);
         const off: string[] = [];
         for (const g of seen) {
           // Never drawn: sanitized first, or zero wide (the canvas skips those). A cluster of tens of
@@ -106,15 +120,15 @@ describe("widths as OpenTUI draws them", () => {
 describe("widths counted the terminal's way", () => {
   test("the method changing (the terminal's answer after the first frame): every layout made again", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "flags.md"), `${"🇯🇵".repeat(30)}\n`);
-    const h = await harness({ root, open: "flags.md", width: 60 });
+    writeFileSync(join(root, "thumbs.md"), `${"👍🏽".repeat(20)}\n`);
+    const h = await harness({ root, open: "thumbs.md", width: 60 });
     const rows = () =>
-      h.app.currentLayout(h.app.view!).lines.filter((l) => l.spans.some((sp) => sp.text.includes("🇯🇵"))).length;
+      h.app.currentLayout(h.app.view!).lines.filter((l) => l.spans.some((sp) => sp.text.includes("👍"))).length;
     try {
-      expect(rows()).toBe(2); // 60 columns of flags: two rows
+      expect(rows()).toBe(1); // 40 columns of thumbs, two cells each where the terminal clusters: one row
       setWidthMethod("wcwidth");
       h.app.widthsChanged();
-      expect(rows()).toBe(1); // a flag as wide as its first letter: one
+      expect(rows()).toBe(2); // a thumb and its skin tone, two cells each where it doesn't: two
     } finally {
       setWidthMethod("unicode");
     }

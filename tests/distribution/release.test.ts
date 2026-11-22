@@ -15,16 +15,19 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { checkDeps, purl, type Sbom } from "../../scripts/check-deps.ts";
+import { sourceArchives } from "../../scripts/licences.ts";
 import {
   assetName,
   buildArgs,
   buildRelease,
   changelogNotes,
   channelFiles,
+  finish,
   finishRelease,
   homebrewFormula,
   hostTarget,
   installScript,
+  packsIn,
   releaseNotes,
   releaseVersion,
   repoOf,
@@ -33,8 +36,10 @@ import {
   TARGETS,
   writeSite,
 } from "../../scripts/release.ts";
+import { checkSources, download, fetchSources, hashes } from "../../scripts/sources.ts";
 import { bootstrapScript } from "../../scripts/bootstrap.ts";
 import { RELEASE, RETIRED, retired, tagOf } from "../../src/core/application/distribution/release.ts";
+import { latestIn } from "../../src/core/application/distribution/updates/discovery.ts";
 import { VERSION } from "../../src/version.ts";
 
 import { makeDistributionSandbox, ROOT } from "../support/distribution-sandbox.ts";
@@ -191,6 +196,127 @@ describe("a release (14.2)", () => {
     // Another version's SBOM too: the release would carry it.
     const sboms = tree({ [assetName(VERSION, "linux-x64")]: "x", [sbomName("0.0.1", "linux-x64")]: "{}" });
     expect(() => finishRelease({ repo: "o/r", out: sboms })).toThrow(sbomName("0.0.1", "linux-x64"));
+    // A source the release carries is no pack, whatever its archive's kind.
+    const carried = tree({ [assetName(VERSION, "linux-x64")]: "x", "lib-1.0.tar.gz": "abc" });
+    expect(packsIn(carried, VERSION, ["lib-1.0.tar.gz"])).toEqual([join(carried, assetName(VERSION, "linux-x64"))]);
+  });
+
+  test("a target whose OpenTUI package names another FFmpeg than recorded: refused before it's built (D277)", () => {
+    // Each target is built where its package is installed (CI: a runner of its platform), the supply chain's gates
+    // run there first, and they read that package's FFMPEG-SOURCE.md.
+    const native = "node_modules/@opentui/core-linux-x64";
+    const root = tree({
+      "package.json": JSON.stringify({ version: VERSION, dependencies: { "@opentui/core-linux-x64": "0.9.0" } }),
+      "src/version.ts": `export const VERSION = "${VERSION}";\n`,
+      "bunfig.toml": "",
+      [`${native}/package.json`]: JSON.stringify({ name: "@opentui/core-linux-x64", version: "0.9.0", license: "MIT" }),
+      [`${native}/FFMPEG-SOURCE.md`]: "Native video statically links a minimal decode-only FFmpeg 9.0.1 build.\n",
+    });
+    expect(() => buildRelease({ targets: ["linux-x64"], repo: "o/r", out: tree({}), root })).toThrow(
+      "@opentui/core-linux-x64@0.9.0: its FFMPEG-SOURCE.md names FFmpeg 9.0.1",
+    );
+  });
+
+  describe("the sources it carries beside its binaries (D277)", () => {
+    /** A source as recorded: its archive, the bytes `abc`. */
+    const archive = {
+      name: "lib-1.0.tar.xz",
+      url: "https://example.org/lib-1.0.tar.xz",
+      sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      of: "Lib",
+    };
+    const fetched =
+      (bytes: string, seen: string[] = []) =>
+      async (url: string) => {
+        seen.push(url);
+        return new TextEncoder().encode(bytes);
+      };
+
+    test("FFmpeg's, as each package of OpenTUI's native library says it holds it; not zlib's, linked with it", () => {
+      // zlib's licence asks for no source: its archive recorded (the SBOM's, the notices'), not carried.
+      expect(sourceArchives()).toEqual([
+        {
+          name: "ffmpeg-9.0.2.tar.xz",
+          url: "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+          sha256: "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e",
+          of: "FFmpeg",
+        },
+      ]);
+    });
+
+    test("a release without one, or with another archive in its place, is refused: not drafted", () => {
+      expect(() => checkSources(tree({ [assetName(VERSION, "linux-x64")]: "x" }), [archive])).toThrow(
+        "lib-1.0.tar.xz, Lib's source, isn't in",
+      );
+      expect(() => checkSources(tree({ "lib-1.0.tar.xz": "xyz" }), [archive])).toThrow("lib-1.0.tar.xz's SHA-256 is");
+      const out = tree({ "lib-1.0.tar.xz": "abc" });
+      expect(checkSources(out, [archive])).toEqual([join(out, "lib-1.0.tar.xz")]);
+      // The real one: a release without FFmpeg's source isn't drafted.
+      expect(() => checkSources(tree({ [assetName(VERSION, "linux-x64")]: "x" }))).toThrow(
+        "ffmpeg-9.0.2.tar.xz, FFmpeg's source, isn't in",
+      );
+    });
+
+    test("finished with the sources fetched first: SHA256SUMS sums them as it does the packs", async () => {
+      const pack = assetName(VERSION, "linux-x64");
+      const out = tree({ [pack]: "x" });
+      const made = await finish({ repo: "o/r", out }, (dir) => fetchSources(dir, fetched("abc"), [archive]));
+      expect(made).toContain(join(out, "lib-1.0.tar.xz"));
+      const sums = readFileSync(join(out, "SHA256SUMS"), "utf8");
+      expect(sums).toContain(`${archive.sha256}  lib-1.0.tar.xz\n`);
+      expect(sums).toContain(`  ${pack}\n`);
+      // The updates still find the pack in it, and the installer sums the packs alone.
+      expect(latestIn(sums, "linux-x64")?.asset).toBe(pack);
+      expect(readFileSync(join(out, "install.sh"), "utf8")).not.toContain(archive.sha256);
+      expect(readFileSync(join(out, "install.sh"), "utf8")).toContain(hashes([join(out, pack)])[pack]!);
+    });
+
+    test("finished only once the version, its tag and the packs are checked: nothing fetched before", async () => {
+      const seen: string[] = [];
+      const fetch = (dir: string) => fetchSources(dir, fetched("abc", seen), [archive]);
+      await expect(finish({ repo: "o/r", out: tree({}) }, fetch)).rejects.toThrow(`no packs of ${VERSION}`);
+      const packed = tree({ [assetName(VERSION, "linux-x64")]: "x" });
+      await expect(finish({ repo: "o/r", tag: "v0.0.1", out: packed }, fetch)).rejects.toThrow("the tag is v0.0.1");
+      expect(seen).toEqual([]);
+    });
+
+    test("a download that takes too long, or isn't there, fails naming its address", async () => {
+      const server = Bun.serve({
+        port: 0,
+        fetch: (req) =>
+          req.url.endsWith("/slow") ? new Promise<Response>(() => {}) : new Response("", { status: 404 }),
+      });
+      try {
+        const at = Date.now();
+        await expect(download(`${server.url}slow`, 200)).rejects.toThrow(
+          `couldn't download ${server.url}slow: nothing whole in 0.2 s`,
+        );
+        expect(Date.now() - at).toBeLessThan(2_000);
+        await expect(download(`${server.url}gone`)).rejects.toThrow(
+          `couldn't download ${server.url}gone: 404 Not Found`,
+        );
+      } finally {
+        server.stop(true);
+      }
+    });
+
+    test("fetched where its project publishes it, and kept only as recorded; one there already, not fetched again", async () => {
+      const out = tree({});
+      const seen: string[] = [];
+      expect(await fetchSources(out, fetched("abc", seen), [archive])).toEqual([join(out, "lib-1.0.tar.xz")]);
+      expect(seen).toEqual([archive.url]);
+      expect(readFileSync(join(out, "lib-1.0.tar.xz"), "utf8")).toBe("abc");
+      await fetchSources(out, fetched("abc", seen), [archive]);
+      expect(seen).toHaveLength(1);
+      // Another archive under its name: refused, nothing written — and the release then refused without it.
+      const other = tree({});
+      await expect(fetchSources(other, fetched("xyz"), [archive])).rejects.toThrow("not kept");
+      expect(existsSync(join(other, "lib-1.0.tar.xz"))).toBe(false);
+      // One there that isn't it: fetched again.
+      const stale = tree({ "lib-1.0.tar.xz": "old" });
+      await fetchSources(stale, fetched("abc"), [archive]);
+      expect(readFileSync(join(stale, "lib-1.0.tar.xz"), "utf8")).toBe("abc");
+    });
   });
 
   test("the release's notes: its version's section of the changelog, without its heading", () => {

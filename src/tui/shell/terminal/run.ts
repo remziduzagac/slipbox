@@ -8,8 +8,9 @@ import { loadConfig } from "../../../core/application/config/config.ts";
 import { Graph } from "../../../core/workspace/graph/graph.ts";
 import { sanitize } from "../../../core/foundation/text/sanitize.ts";
 import { setWidthMethod } from "../../../core/foundation/text/width.ts";
-import { statSync, writeSync } from "node:fs";
+import { closeSync, constants, openSync, statSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isatty } from "node:tty";
 import { dataHome, stateHome } from "../../../core/foundation/platform/paths.ts";
 import { installedBy, readChannel } from "../../../core/application/distribution/install.ts";
 import { RELEASE } from "../../../core/application/distribution/release.ts";
@@ -141,55 +142,111 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
 const COMPILED = /^file:\/\/\/(\$bunfs|[A-Za-z]:\/~BUN)\//.test(import.meta.url);
 
 /**
- * How long OpenTUI may take to give the terminal back at quit. Its teardown goes out behind what's queued before it —
- * a picture's megabytes take seconds over a slow link — and once this has passed OpenTUI cancels the rest, teardown and
- * all (its own wait is a second).
+ * How long a quit may hold the terminal, from slipbox's `quit`: past it, slipbox stops OpenTUI's close, gives the
+ * terminal back itself, and ends. OpenTUI's close waits for the terminal to take what's still queued — a picture's
+ * megabytes take seconds over a slow link — and once it's late, drops the rest and writes its teardown. But writing to
+ * the process's own terminal, it can wait for ever on a write the terminal never takes (a link that stopped reading),
+ * its close never settling, and the quit with it. Fifteen seconds, slipbox's own, not taken from OpenTUI's wait:
+ * longer than a slow terminal that still reads needs for OpenTUI's teardown (late by ten seconds at most, at OpenTUI's
+ * defaults), so that one comes first; short enough that a quit is never taken for a hang.
  */
-export const CLOSE_WAIT_MS = 10_000;
+export const QUIT_BOUND_MS = 15_000;
+
+/** The keyboard protocol popped: what's pushed by OpenTUI's setup, popped once only — a second pops another's. */
+const POP = "\x1b[<u";
+/** Grapheme clustering (mode 2027) off. */
+const CLUSTERING_OFF = "\x1b[?2027l";
 
 /**
- * The terminal given back when OpenTUI's teardown didn't go out: a string terminator, ending a picture's sequence cut
- * short, and the end of a frame cut short (synchronized output); then OpenTUI's own teardown as 0.6.8 writes it — the
- * cursor shown, attributes and the pointer's shape reset, the keyboard's protocol undone (Kitty's popped, or xterm's
- * modifyOtherKeys reset), mouse reporting, bracketed paste and focus reports off, the main screen back, palette reports
- * off, the title, the cursor's colour and shape reset. Each undoes what OpenTUI's setup turns on, and does nothing
- * where it didn't; grapheme clustering (2027) stays on, as OpenTUI's own teardown leaves it. A test holds this to what
- * OpenTUI writes, so an upgrade that changes that says so.
+ * The terminal given back by slipbox: a string terminator, ending a picture's sequence cut short, and the end of a
+ * frame cut short (synchronized output); then OpenTUI's own teardown as 0.9.0 writes it — the cursor shown, attributes
+ * and the pointer's shape reset, the keyboard's protocol undone (Kitty's popped, or xterm's modifyOtherKeys reset),
+ * mouse reporting, bracketed paste and focus reports off, the main screen back, palette reports off, grapheme
+ * clustering (2027) off, the title, the cursor's colour and shape reset. Each undoes what OpenTUI's setup turns on,
+ * and does nothing where it didn't. `pop`: but for the keyboard protocol's pop where OpenTUI's teardown went out
+ * already. `clusteringOff`: grapheme clustering too, unless the terminal had it on before (`clusteringOff()`).
  */
-export const RESTORE =
-  "\x1b\\\x1b[?2026l" +
-  "\x1b[?25h\x1b[0m\x1b]22;\x1b\\\x1b[<u\x1b[>4;0m\x1b[?1003l\x1b[?1002l\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?1004l" +
-  "\x1b[?1049l\x1b[?2031l\x1b]0;\x07\x1b]12;default\x07\x1b]112\x07\x1b[0 q\x1b[?25h";
+export function restoreText(o: { pop: boolean; clusteringOff: boolean }): string {
+  return (
+    "\x1b\\\x1b[?2026l" +
+    `\x1b[?25h\x1b[0m\x1b]22;\x1b\\${o.pop ? POP : ""}\x1b[>4;0m` +
+    "\x1b[?1003l\x1b[?1002l\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?1004l\x1b[?1049l\x1b[?2031l" +
+    `${o.clusteringOff ? CLUSTERING_OFF : ""}\x1b]0;\x07\x1b]12;default\x07\x1b]112\x07\x1b[0 q\x1b[?25h`
+  );
+}
 
-/** `text` to the terminal now, after whatever it was sent: a slow one waited for (a while), one gone left be. */
-function toTerminal(text: string): void {
+/** All of it. A test holds this to what OpenTUI writes, so an upgrade that changes that says so. */
+export const RESTORE = restoreText({ pop: true, clusteringOff: true });
+
+/**
+ * Whether giving the terminal back turns grapheme clustering off, as OpenTUI's teardown does: where its setup turned it
+ * on and left it on, the terminal having said it was off (`before`, its DECRPM reply to OpenTUI's question: 2) or said
+ * nothing. Never where it was on before (1, 3), nor where OpenTUI turned it off again itself, counting code points
+ * (`method`, `wcwidth`: a terminal that doesn't know the mode, 0, or can't change it, 4).
+ */
+export function clusteringOff(before: number | null, method: string): boolean {
+  return (before === null || before === 2) && method !== "wcwidth";
+}
+
+/**
+ * `text` to the terminal now, after whatever it was sent: one slow to take it waited for (two seconds at most), one
+ * that takes nothing, or is gone, left be. Written through the terminal opened again (`reopened`), not to block.
+ */
+export function toTerminal(text: string, path?: string): void {
   const bytes = Buffer.from(text);
-  const until = Date.now() + 2_000;
-  for (let at = 0; at < bytes.length; ) {
-    try {
-      at += writeSync(1, bytes, at);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EAGAIN" || Date.now() > until) return;
-      Bun.sleepSync(5);
+  const fd = reopened(path);
+  try {
+    const until = Date.now() + 2_000;
+    for (let at = 0; at < bytes.length; ) {
+      try {
+        at += writeSync(fd, bytes, at);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "EAGAIN" || Date.now() > until) return;
+        Bun.sleepSync(5);
+      }
     }
+  } finally {
+    if (fd !== 1) closeSync(fd);
   }
 }
 
 /**
+ * Stdout's terminal opened again (or `path`), not to block: stdout's own descriptor blocks, and a terminal that stopped
+ * reading would hold the quit for as long as it doesn't. Linux names stdout's own (`/proc`); elsewhere it's the
+ * process's controlling terminal (`/dev/tty`), stdout's unless its output was sent to another terminal (macOS: then
+ * the restore goes to the controlling one). Stdout as it is where it isn't a terminal, or there's none to open.
+ */
+function reopened(path?: string): number {
+  if (!path && !isatty(1)) return 1;
+  for (const p of path ? [path] : ["/proc/self/fd/1", "/dev/tty"])
+    try {
+      return openSync(p, constants.O_WRONLY | constants.O_NONBLOCK | constants.O_APPEND);
+    } catch {
+      // not there: the next
+    }
+  return 1;
+}
+
+/**
  * OpenTUI's renderer as slipbox runs it (on the process's terminal unless given others), the output it writes through,
- * and `closed`: settled once the terminal is given back, by OpenTUI's teardown or else by `restore` writing RESTORE.
+ * `quit`, which destroys the renderer, and `closed`: resolved once the terminal is given back after it — by OpenTUI's
+ * teardown, by `restore` writing the rest, or by `restore` once `quitBoundMs` has passed since `quit`. `closeWaitMs` is
+ * OpenTUI's close wait, where a test needs another than its own.
  */
 export async function openRenderer(o: {
   mouse: boolean;
   stdin?: NodeJS.ReadStream;
   stdout?: NodeJS.WriteStream;
   closeWaitMs?: number;
+  quitBoundMs?: number;
   restore?: (text: string) => void;
-}): Promise<{ session: NativeSession; renderer: CliRenderer; closed: Promise<void> }> {
+}): Promise<{ session: NativeSession; renderer: CliRenderer; closed: Promise<void>; quit: () => void }> {
   const stdout = o.stdout ?? process.stdout;
   // The output OpenTUI writes its frames through, made here (as it would make it) so that slipbox holds it: Kitty's
   // pictures are sent through it, in order with the frames (12.7).
-  const session = new NativeSession(stdout, { closeTimeoutMs: o.closeWaitMs ?? CLOSE_WAIT_MS });
+  const session = new NativeSession(stdout, o.closeWaitMs === undefined ? {} : { closeTimeoutMs: o.closeWaitMs });
+  // Grapheme clustering as the terminal had it, from its answer to OpenTUI's own question at setup (DECRPM 2027).
+  let before: number | null = null;
   const renderer = await createCliRenderer({
     ...(o.stdin ? { stdin: o.stdin } : {}),
     stdout,
@@ -203,19 +260,77 @@ export async function openRenderer(o: {
     // Pictures sent compressed (12.7): OpenTUI numbers them by the order they're drawn in, so one is sent again when
     // those above it in view change — a third of the bytes, measured scrolling the pictures demo.
     kittyImageTransport: "zlib",
+    prependInputHandlers: [
+      (sequence) => {
+        // The first answer only: the one to OpenTUI's question at setup, before it turned clustering on.
+        if (before !== null) return false;
+        const reply = /\x1b\[\?2027;(\d)\$y/.exec(sequence);
+        if (reply) before = Number(reply[1]);
+        return false;
+      },
+    ],
   });
-  // Raw mode is off as `destroy()` returns; the rest of OpenTUI's teardown — the main screen back, the mouse let go — is
-  // written after it. `closed` resolves once that's out, and rejects when it isn't: the terminal failed, or
-  // CLOSE_WAIT_MS passed and OpenTUI cancelled what was left, the terminal not restored. Then it's restored here.
+  // `destroy()` returns at once; OpenTUI's teardown — the main screen back, the mouse let go, then raw mode off — is
+  // written after it. `renderer.closed` resolves once that's out. It rejects when it was late, what was still queued
+  // dropped and its teardown written all the same, but no string terminator before it: one picture's sequence cut short
+  // can take that teardown in. Then slipbox gives the terminal back again, all but the keyboard protocol's pop, which a
+  // second time would pop that of whatever ran slipbox. It rejects too when the teardown isn't out — the terminal
+  // failed, or took nothing more — and then slipbox writes all of it. And when it hasn't settled by QUIT_BOUND_MS after
+  // `quit`, slipbox stops OpenTUI's close and writes what of the teardown isn't out. The `closed` returned here never
+  // rejects: it resolves once the terminal is given back, slipbox's part of it written.
   const restore = o.restore ?? toTerminal;
-  const closed = renderer.closed.catch(() => {
+  const giveBack = (late: boolean) => {
+    let method = "unicode";
     try {
-      restore(RESTORE);
+      method = renderer.widthMethod;
+    } catch {
+      // the renderer gone: as it counts by default
+    }
+    try {
+      restore(restoreText({ pop: !late, clusteringOff: clusteringOff(before, method) }));
     } catch {
       // the terminal gone: nothing to give back
     }
-  });
-  return { session, renderer, closed };
+  };
+  const { promise: closed, resolve } = Promise.withResolvers<void>();
+  let bound: ReturnType<typeof setTimeout> | null = null;
+  let settled = false;
+  // `late`: OpenTUI's teardown written, but no string terminator before it; false, not written; null, all of it out.
+  const settle = (late: boolean | null) => {
+    if (settled) return;
+    settled = true;
+    if (bound) clearTimeout(bound);
+    if (late !== null) giveBack(late);
+    resolve();
+  };
+  // OpenTUI's session's own end, as `late` says it: `renderer.closed` waits for the renderer to be destroyed too.
+  let out: boolean | null = false;
+  session.closed.then(
+    () => (out = null),
+    (err: unknown) => (out = session.isCloseInterruption(err)),
+  );
+  renderer.closed.then(
+    () => settle(null),
+    (err: unknown) => settle(session.isCloseInterruption(err)),
+  );
+  // The bound, from slipbox's quit — not from OpenTUI's `destroy` event, which it puts off while a renderable's cleanup
+  // runs, `renderer.closed` with it — unless the terminal is given back already (it failed first, or hung up); never
+  // what keeps slipbox running.
+  const quit = () => {
+    if (!settled && !bound) {
+      bound = setTimeout(() => {
+        try {
+          session.dispose();
+        } catch {
+          // already closing past recall: given back all the same
+        }
+        settle(out);
+      }, o.quitBoundMs ?? QUIT_BOUND_MS);
+      bound.unref();
+    }
+    renderer.destroy();
+  };
+  return { session, renderer, closed, quit };
 }
 
 export async function runTui(argv: string[]): Promise<number> {
@@ -226,7 +341,7 @@ export async function runTui(argv: string[]): Promise<number> {
   // The file slipbox was started by, as the shell found it, asked before anything changes: a restart starts it again.
   const startedBy = startedPath(process.argv0, process.env.PATH ?? "", process.cwd());
 
-  const { session, renderer, closed } = await openRenderer({ mouse: start.config.ui.mouse });
+  const { session, renderer, closed, quit } = await openRenderer({ mouse: start.config.ui.mouse });
   let resolveDone: (code: number) => void = () => {};
   const done = new Promise<number>((r) => (resolveDone = r));
   const cell = () => {
@@ -272,7 +387,7 @@ export async function runTui(argv: string[]): Promise<number> {
       osc52: (text) => process.env.SLIPBOX_CLIPBOARD !== "file" && renderer.copyToClipboardOSC52(text),
       quit: () => {
         pictures.releaseAll();
-        renderer.destroy();
+        quit();
         resolveDone(0);
       },
       setTitle: (t) => renderer.setTerminalTitle(t),

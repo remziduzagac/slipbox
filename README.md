@@ -79,6 +79,9 @@ you were. `slipbox channel` says whether it follows previews, and changes that.
 With Homebrew, run `brew install remziduzagac/tap/slipbox`. Intel Macs aren't supported any more:
 0.3.0 was the last release built for them.
 
+slipbox includes FFmpeg, under the LGPL 2.1, and its source comes with each release. The library slipbox draws the
+terminal with has it built in, for video slipbox doesn't play.
+
 [Installation][guides/install] has the rest: previews, Windows through WSL, upgrading and removing it,
 and running it from source.
 

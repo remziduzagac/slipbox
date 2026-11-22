@@ -730,7 +730,13 @@ describe("the workflows: one build for releases and previews, previews from test
       expect(download?.with?.name, file).toBe("release");
       // The build itself happens only in build.yml.
       expect(runs(caller.jobs.publish!)).not.toContain("release.ts build");
+      // D277: no draft without the sources its binaries' licences ask for — checked first, the draft after.
+      const r = runs(caller.jobs.publish!);
+      expect(r.indexOf("release.ts sources"), file).toBeGreaterThanOrEqual(0);
+      expect(r.indexOf("release.ts sources"), file).toBeLessThan(r.indexOf("gh release create"));
     }
+    // Fetched where the packs are finished, beside them: the artifact the callers publish.
+    expect(runs(workflow("build.yml").jobs.finish!)).toContain("release.ts finish");
     const release = workflow("release.yml");
     expect(release.on).toEqual({ push: { tags: ["v*"] } });
     expect(runs(release.jobs.publish!)).toContain("--draft --verify-tag");

@@ -527,6 +527,10 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
 - slipbox under Apache-2.0. (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Chosen (GR-D3).
 - slipbox under both, "MIT OR Apache-2.0". (2026-10-09) Weighed; the choice parked (D193). (2026-10-12) Not chosen
   (GR-D3).
+- Stay on OpenTUI 0.8.0, the last whose native packages are MIT alone, rather than take the LGPL of the FFmpeg they
+  link from 0.8.1. (2026-11-22) Not chosen (D277).
+- Give FFmpeg's source as a link to ffmpeg.org, or a written offer, without its archive in each release. (2026-11-22)
+  Not chosen (D277).
 
 ## Documentation
 
