@@ -21,7 +21,7 @@ function terminal(ms: number) {
   return { out: out as unknown as NodeJS.WriteStream, text: () => text, say: (t: string) => (text += t) };
 }
 
-/** A terminal that takes what it's sent until `stall()`, then nothing more: the piece it was given then, never taken. */
+/** A terminal that takes what it's sent until `stall()`, then nothing more: the piece it was given then, not taken. */
 function stalling() {
   let text = "";
   let stalled = false;
@@ -66,7 +66,7 @@ describe("the terminal given back at quit", () => {
     const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = terminal(30);
     const restored: string[] = [];
-    const { session, renderer, closed } = await openRenderer({
+    const { session, closed, quit } = await openRenderer({
       mouse: true,
       stdin: keys(),
       stdout: term.out,
@@ -77,7 +77,7 @@ describe("the terminal given back at quit", () => {
       },
     });
     expect(session.write(picture)).toBe(true);
-    renderer.destroy();
+    quit();
     await closed;
     const text = term.text();
     expect(text.length).toBeLessThan(picture.length);
@@ -96,7 +96,7 @@ describe("the terminal given back at quit", () => {
     const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = stalling();
     const restored: string[] = [];
-    const { session, renderer, closed } = await openRenderer({
+    const { session, renderer, closed, quit } = await openRenderer({
       mouse: true,
       stdin: keys(),
       stdout: term.out,
@@ -106,7 +106,7 @@ describe("the terminal given back at quit", () => {
     expect(session.write(picture)).toBe(true);
     term.stall();
     const at = Date.now();
-    renderer.destroy();
+    quit();
     await closed;
     expect(Date.now() - at).toBeGreaterThanOrEqual(290);
     expect(Date.now() - at).toBeLessThan(1_500);
@@ -122,14 +122,13 @@ describe("the terminal given back at quit", () => {
     expect(restored).toHaveLength(1);
   });
 
-  test("the terminal given back before OpenTUI says it's destroyed: no bound armed, nothing stopped", async () => {
-    // OpenTUI puts off saying it's destroyed while a renderable's cleanup runs, and its teardown may be out first. Said
-    // then, it arms nothing, to keep slipbox running and stop a session that's over. Held back here, as that cleanup
-    // would hold it.
+  test("the terminal given back before slipbox quits: no bound armed, nothing stopped", async () => {
+    // OpenTUI destroys the renderer itself when the terminal fails or hangs up, and gives it back. slipbox's quit after
+    // that arms nothing: it would stop a session that's over. Destroyed here as OpenTUI would destroy it.
     const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = terminal(0);
     const restored: string[] = [];
-    const { session, renderer, closed } = await openRenderer({
+    const { session, renderer, closed, quit } = await openRenderer({
       mouse: true,
       stdin: keys(),
       stdout: term.out,
@@ -142,22 +141,55 @@ describe("the terminal given back at quit", () => {
       stopped++;
       dispose();
     };
-    const emit = renderer.emit.bind(renderer);
-    let held = false;
-    renderer.emit = ((event: string, ...args: unknown[]) => {
-      if (event !== "destroy") return emit(event, ...args);
-      held = true;
-      return true;
-    }) as typeof renderer.emit;
     renderer.destroy();
     await closed;
-    expect(held).toBe(true);
     expect(term.text()).toContain("\x1b[?1049l");
-    renderer.emit = emit;
-    emit("destroy");
+    quit();
     await Bun.sleep(300);
     expect(stopped).toBe(0);
     expect(restored).toEqual([]);
+  });
+
+  test("a destroy OpenTUI puts off while a renderable's cleanup runs: the quit ended by its bound all the same", async () => {
+    // OpenTUI defers its destroy, its `destroy` event and `renderer.closed` until that cleanup is done; its session
+    // closes meanwhile, its teardown out. Deferred here as such a cleanup would defer it.
+    const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const term = terminal(0);
+    const restored: string[] = [];
+    // The console as it is before OpenTUI takes it over, and gives it back as its destroy ends.
+    const shown = console;
+    const { renderer, closed, quit } = await openRenderer({
+      mouse: true,
+      stdin: keys(),
+      stdout: term.out,
+      quitBoundMs: 300,
+      restore: (text) => restored.push(text),
+    });
+    const root = renderer.root as unknown as { _cleanupInProgress: boolean; _deferredCleanup?: (() => void)[] };
+    root._cleanupInProgress = true;
+    let destroyed = false;
+    renderer.once("destroy", () => {
+      destroyed = true;
+    });
+    const at = Date.now();
+    quit();
+    expect(await Promise.race([closed.then(() => true), Bun.sleep(3_000).then(() => false)])).toBe(true);
+    expect(Date.now() - at).toBeLessThan(1_500);
+    expect(destroyed).toBe(false);
+    // Its teardown out already: nothing written a second time, the keyboard protocol's pop least of all.
+    expect(term.text()).toContain("\x1b[?1049l");
+    expect(restored).toEqual([]);
+    // The cleanup done, OpenTUI's destroy goes on: its scene, the session over, says so — kept off the console.
+    root._cleanupInProgress = false;
+    const error = shown.error;
+    shown.error = () => {};
+    try {
+      for (const resume of root._deferredCleanup?.splice(0) ?? []) resume();
+    } finally {
+      shown.error = error;
+    }
+    await renderer.closed;
+    expect(destroyed).toBe(true);
   });
 
   test("grapheme clustering given back as the terminal had it: off where it was off, left on where it was on", async () => {
@@ -172,7 +204,7 @@ describe("the terminal given back at quit", () => {
       const term = stalling();
       const stdin = keys();
       const restored: string[] = [];
-      const { renderer, closed } = await openRenderer({
+      const { renderer, closed, quit } = await openRenderer({
         mouse: true,
         stdin,
         stdout: term.out,
@@ -187,7 +219,7 @@ describe("the terminal given back at quit", () => {
       stdin.push(`\x1b[?2027;${on ? 2 : 1}$y`);
       await Bun.sleep(50);
       term.stall();
-      renderer.destroy();
+      quit();
       await closed;
       expect(restored).toHaveLength(1);
       expect({ on, off: restored[0]!.includes("\x1b[?2027l") }).toEqual({ on, off: !on });
@@ -232,7 +264,7 @@ describe("the terminal given back at quit", () => {
     const { openRenderer, RESTORE } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = stalling();
     const restored: string[] = [];
-    const { session, renderer, closed } = await openRenderer({
+    const { session, closed, quit } = await openRenderer({
       mouse: true,
       stdin: keys(),
       stdout: term.out,
@@ -241,7 +273,7 @@ describe("the terminal given back at quit", () => {
     expect(session.write(picture)).toBe(true);
     term.stall();
     const at = Date.now();
-    renderer.destroy();
+    quit();
     await closed;
     expect(Date.now() - at).toBeLessThan(5_000);
     expect(term.text()).not.toContain("\x1b[?1049l");
@@ -253,7 +285,7 @@ describe("the terminal given back at quit", () => {
     const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = terminal(60);
     const restored: string[] = [];
-    const { session, renderer, closed } = await openRenderer({
+    const { session, closed, quit } = await openRenderer({
       mouse: true,
       stdin: keys(),
       stdout: term.out,
@@ -264,7 +296,7 @@ describe("the terminal given back at quit", () => {
     });
     expect(session.write(picture)).toBe(true);
     const at = Date.now();
-    renderer.destroy();
+    quit();
     await closed;
     expect(Date.now() - at).toBeGreaterThan(1_000);
     expect(restored).toEqual([]);
@@ -280,7 +312,12 @@ describe("the terminal given back at quit", () => {
     for (const answers of ["", MODERN]) {
       const term = terminal(0);
       const stdin = keys();
-      const { renderer, closed } = await openRenderer({ mouse: true, stdin, stdout: term.out, restore: () => {} });
+      const { renderer, closed, quit } = await openRenderer({
+        mouse: true,
+        stdin,
+        stdout: term.out,
+        restore: () => {},
+      });
       if (answers) stdin.push(answers);
       renderer.requestRender();
       await until(
@@ -288,7 +325,7 @@ describe("the terminal given back at quit", () => {
       );
       await Bun.sleep(50);
       const setup = term.text();
-      renderer.destroy();
+      quit();
       await closed;
       const teardown = term.text().slice(setup.length);
       expect(teardown).toContain("\x1b[?1049l");

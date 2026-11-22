@@ -600,14 +600,37 @@ describe("the supply chain's gates (14.10)", () => {
       "libwebp",
       "FFmpeg",
       "zlib",
+      "Ghostty",
+      "Little CMS",
+      "libwebp",
+      "stb",
+      "Wuffs",
     ]);
     expect(bom.dependencies.find((d) => d.ref.startsWith("pkg:npm/hunspell-asm@"))?.dependsOn).toContain(
       "embedded:Hunspell",
     );
-    // FFmpeg and zlib in each of OpenTUI's native packages installed here, each source the archive recorded (D277).
+    // What's in each of OpenTUI's native packages installed here, as their licence files say: FFmpeg and zlib, each
+    // source the archive recorded (D277), and the libraries no version or archive is named for.
     const natives = bom.dependencies.filter((d) => /^pkg:npm\/%40opentui\/core-(darwin|linux)-/.test(d.ref));
     expect(natives.length).toBeGreaterThan(0);
-    for (const d of natives) expect(d.dependsOn).toEqual(["embedded:FFmpeg", "embedded:zlib"]);
+    for (const d of natives)
+      expect(d.dependsOn).toEqual([
+        "embedded:FFmpeg",
+        "embedded:zlib",
+        "embedded:Ghostty",
+        "embedded:Little CMS",
+        "embedded:libwebp-native",
+        "embedded:stb",
+        "embedded:Wuffs",
+      ]);
+    expect(bom.components.find((c) => c["bom-ref"] === "embedded:Wuffs")).toEqual({
+      type: "library",
+      "bom-ref": "embedded:Wuffs",
+      name: "Wuffs",
+      description: "compiled into OpenTUI's native library (@opentui/core-<platform>)",
+      licenses: [{ license: { id: "Apache-2.0" } }],
+      externalReferences: [{ type: "vcs", url: "https://github.com/google/wuffs" }],
+    });
     expect(bom.components.find((c) => c.name === "zlib")).toMatchObject({
       version: "1.3.2",
       licenses: [{ license: { id: "Zlib" } }],
@@ -694,7 +717,12 @@ describe("the supply chain's gates (14.10)", () => {
         pkg("own", "MIT", { dir: own, repository: "https://github.com/x/own" }),
         pkg("bare", "MIT", { dir: bare, author: "Bare Author" }),
         pkg("mpl", "MPL-2.0", { dir: bare, repository: "https://github.com/x/mpl" }),
-        pkg("@opentui/core-linux-x64", "MIT", { dir: tree({ "LICENSE-ZLIB": "zlib's licence, as shipped\n" }) }),
+        pkg("@opentui/core-linux-x64", "MIT", {
+          dir: tree({
+            "LICENSE-FFMPEG": "FFmpeg's licence, as shipped\n",
+            "LICENSE-ZLIB": "zlib's licence, as shipped\n",
+          }),
+        }),
       ],
       "9.9.9",
       ROOT,
@@ -716,14 +744,18 @@ describe("the supply chain's gates (14.10)", () => {
     expect(part("libwebp, compiled into @jsquash/webp — BSD-3-Clause")).toContain(
       "Redistribution and use in source and binary forms",
     );
-    // FFmpeg (D277): its version, its copyright, the LGPL's whole text, its source — the archive, as each release has it.
+    // FFmpeg (D277): its version, its copyright, its source — the archive, as each release has it — and its licence,
+    // the text OpenTUI's package ships, said once: in that package's part.
     const ffmpeg = part("FFmpeg 9.0.2, compiled into OpenTUI's native library (@opentui/core-<platform>)");
     expect(ffmpeg).toStartWith("\nCopyright (c) 2000-2026 the FFmpeg developers\n");
     expect(ffmpeg).toContain(
       "Its source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz (SHA-256 8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e),\nand beside the binaries of each slipbox release, as ffmpeg-9.0.2.tar.xz",
     );
-    expect(ffmpeg).toContain("GNU LESSER GENERAL PUBLIC LICENSE\n\nVersion 2.1, February 1999");
-    expect(ffmpeg).toContain("END OF TERMS AND CONDITIONS");
+    expect(ffmpeg).toContain("Its licence: LICENSE-FFMPEG, in the part for @opentui/core-linux-x64 1.0.0 above.");
+    expect(ffmpeg).not.toContain("GNU LESSER GENERAL PUBLIC LICENSE");
+    for (const shipped of ["FFmpeg's licence, as shipped", "zlib's licence, as shipped"])
+      expect(text.split(shipped)).toHaveLength(2);
+    expect(part("@opentui/core-linux-x64 1.0.0 — MIT")).toContain("FFmpeg's licence, as shipped");
     // zlib, linked in with it: its source recorded, not carried; its licence as OpenTUI's package ships it.
     const zlib = part("zlib 1.3.2, compiled into OpenTUI's native library (@opentui/core-<platform>) — Zlib");
     expect(zlib).toStartWith("\n(C) 1995-2026 Jean-loup Gailly and Mark Adler\n");
@@ -731,7 +763,7 @@ describe("the supply chain's gates (14.10)", () => {
       "Its source: https://zlib.net/fossils/zlib-1.3.2.tar.gz (SHA-256 bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16)\n",
     );
     expect(zlib).not.toContain("beside the binaries");
-    expect(zlib).toContain("zlib's licence, as shipped");
+    expect(zlib).toContain("Its licence: LICENSE-ZLIB, in the part for @opentui/core-linux-x64 1.0.0 above.");
     expect(text).toContain(`Bun ${Bun.version}, the runtime the binary is built on`);
     expect(text).toContain("Bun statically links JavaScriptCore");
     expect(text).toContain("GNU LESSER GENERAL PUBLIC LICENSE");

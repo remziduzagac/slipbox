@@ -4,11 +4,26 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { type SourceArchive, sourceArchives } from "./licences.ts";
 
 /** Bytes' SHA-256, in hex. */
 export const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
+
+/** Files' SHA-256s, by name: each file read and hashed once. */
+export const hashes = (files: string[]): Record<string, string> =>
+  Object.fromEntries(files.map((f) => [basename(f), sha256(readFileSync(f))]));
+
+/** `SHA256SUMS`'s text for SHA-256s by name (`hashes`): `<hash>  <name>` a line, by name — what `sha256sum -c` and
+ *  `shasum -c` read. */
+export const sumsText = (sums: Record<string, string>): string =>
+  Object.keys(sums)
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => `${sums[name]}  ${name}\n`)
+    .join("");
+
+/** `SHA256SUMS`'s text for files. */
+export const sha256sums = (files: string[]): string => sumsText(hashes(files));
 
 /** How long a download may take, whole: an FFmpeg archive's 12 MB over a slow link, with room to spare. */
 export const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;

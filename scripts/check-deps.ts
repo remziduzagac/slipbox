@@ -9,10 +9,10 @@
 //     (`permissions: {}`, each job granting its own) and giving every job a timeout (GR-D9).
 //
 // `--notices <file>` writes, from the same walk, the third-party notices a release ships beside the binary (`14.2`):
-// each package's own licence files, the texts of those that ship none, what's compiled into packages (Hunspell,
-// libwebp, FFmpeg), and Bun's own — the runtime is in the binary too. `--sbom <file>` writes, from it too, the SBOM a release
-// ships beside each pack (CycloneDX JSON, attested with the pack): the packages, their licences, sources and
-// dependencies, what's compiled into them, and Bun.
+// each package's own licence files, the texts of those that ship none, what's compiled into packages (`EMBEDDED`:
+// Hunspell, libwebp, and what OpenTUI's native library links, FFmpeg first), and Bun's own — the runtime is in the
+// binary too. `--sbom <file>` writes, from it too, the SBOM a release ships beside each pack (CycloneDX JSON, attested
+// with the pack): the packages, their licences, sources and dependencies, what's compiled into them, and Bun.
 
 import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -316,16 +316,16 @@ export function notices(packages: Package[], version: string, root = ROOT): stri
     const carried = sourceArchives().find((a) => a.of === e.name);
     const source = e.archive ? `${e.source} (SHA-256 ${e.archive.sha256})` : e.source;
     const beside = carried ? `,\nand beside the binaries of each slipbox release, as ${carried.name}` : "";
-    // Its licence's text: the standard one, or as the package it's in ships it.
-    const shipped = e.licenceFile
-      ? packages.find((p) => holds(e, p.name) && existsSync(join(p.dir, e.licenceFile!)))
-      : null;
+    // Its licence's text: where a package it's in ships it, that package's part above has it, said once; otherwise
+    // the standard one.
+    const file = e.licenceFile && LICENCE_FILE.test(e.licenceFile) ? e.licenceFile : null;
+    const shipped = file ? packages.find((p) => holds(e, p.name) && existsSync(join(p.dir, file))) : null;
     const text = shipped
-      ? readFileSync(join(shipped.dir, e.licenceFile!), "utf8").trimEnd()
+      ? `Its licence: ${file}, in the part for ${shipped.name} ${shipped.version} above.`
       : (standardText(root, e.licence, "the copyright holders above") ?? e.licence);
     const body = `${e.note ? `${e.note}\n` : ""}Its source: ${source}${beside}\n\n${text}`;
     const name = e.version ? `${e.name} ${e.version}` : e.name;
-    section(`${name}, compiled into ${e.inside} — ${e.licence}`, `${e.copyright}\n\n${body}`);
+    section(`${name}, compiled into ${e.inside} — ${e.licence}`, `${e.copyright ? `${e.copyright}\n\n` : ""}${body}`);
   }
   const bun = join(root, "node_modules", "bun-types", "docs", "project", "license.mdx");
   const bunText = existsSync(bun)
@@ -430,12 +430,12 @@ export function sbom(
   // What's compiled into a package the walk bundles: into its WebAssembly, or a native library's (`within`).
   const embedded: CdxComponent[] = EMBEDDED.filter((e) => walk.packages.some((p) => holds(e, p.name))).map((e) => ({
     type: "library",
-    "bom-ref": `embedded:${e.name}`,
+    "bom-ref": `embedded:${e.ref ?? e.name}`,
     name: e.name,
     ...(e.version ? { version: e.version } : {}),
     description: `compiled into ${e.within ? e.inside : `${e.inside}'s WebAssembly`}`,
     licenses: cdxLicences(e.licence),
-    copyright: e.copyright,
+    ...(e.copyright ? { copyright: e.copyright } : {}),
     externalReferences: [
       e.archive
         ? { type: "source-distribution", url: e.source, hashes: [{ alg: "SHA-256", content: e.archive.sha256 }] }
@@ -454,7 +454,7 @@ export function sbom(
     licenses: cdxLicences("MIT"),
     externalReferences: [{ type: "website", url: "https://bun.com" }],
   };
-  const inside = (p: Package) => EMBEDDED.filter((e) => holds(e, p.name)).map((e) => `embedded:${e.name}`);
+  const inside = (p: Package) => EMBEDDED.filter((e) => holds(e, p.name)).map((e) => `embedded:${e.ref ?? e.name}`);
   return {
     bomFormat: "CycloneDX",
     specVersion: "1.6",

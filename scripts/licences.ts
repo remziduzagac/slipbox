@@ -54,19 +54,21 @@ export const named = (name: string): Taken | undefined =>
 export const DECLARED: Record<string, string> = { "png-js": "MIT", typeahead: "Apache-2.0" };
 
 /** Code compiled into a package's WebAssembly or native library, not a package of its own: its notice is owed too.
- *  `within`, the packages it's in, when `inside` names more than one. `licenceFile`, its licence's text as those
- *  packages ship it, in place of the standard text. `archive`: its source's archive (`source`), by its SHA-256;
- *  `declared`, how the packages it's in name the same version, address and SHA-256 — a file of theirs, and its lines
- *  for the address and the hash — which `embeddedProblems` holds to this, so an upgrade that changes it says so;
- *  `carried`, whether each release carries the archive beside its binaries, as the licence asks. */
+ *  `within`, the packages it's in, when `inside` names more than one. `ref`, its SBOM reference where another's name
+ *  is its own. `licenceFile`, its licence's text as those packages ship it, in place of the standard text. `archive`:
+ *  its source's archive (`source`), by its SHA-256; `declared`, how the packages it's in name the same version, address
+ *  and SHA-256 — a file of theirs, and its lines for the address and the hash — which `embeddedProblems` holds to this,
+ *  so an upgrade that changes it says so; `carried`, whether each release carries the archive beside its binaries, as
+ *  the licence asks. */
 export interface Embedded {
   name: string;
+  ref?: string;
   version?: string;
   inside: string;
   within?: RegExp;
   licence: string;
   licenceFile?: string;
-  copyright: string;
+  copyright?: string;
   source: string;
   archive?: { sha256: string; declared: { file: string; source: RegExp; sha256: RegExp }; carried: boolean };
   note?: string;
@@ -94,6 +96,7 @@ export const EMBEDDED: Embedded[] = [
     inside: OPENTUI_LIBRARY,
     within: OPENTUI_PACKAGES,
     licence: "LGPL-2.1-or-later",
+    licenceFile: "LICENSE-FFMPEG",
     copyright: "Copyright (c) 2000-2026 the FFmpeg developers",
     source: "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
     archive: {
@@ -126,6 +129,55 @@ export const EMBEDDED: Embedded[] = [
       carried: false,
     },
     note: "Linked into OpenTUI's native library with FFmpeg, which uses it.",
+  },
+  // The rest of OpenTUI's native library, as its packages' licence files say; no source archive, nor version, named.
+  {
+    name: "Ghostty",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT AND Unicode-3.0",
+    licenceFile: "LICENSE-GHOSTTY",
+    copyright:
+      "Copyright (c) 2024 Mitchell Hashimoto, Ghostty contributors\nCopyright (c) 2026 Jacob Sandlund (uucode)\n" +
+      "Copyright (c) 2008-2009 Bjoern Hoehrmann (uucode's UTF-8 decoder)\n" +
+      "Copyright (c) 1991-2025 Unicode, Inc. (Unicode data)",
+    source: "https://github.com/ghostty-org/ghostty",
+  },
+  {
+    name: "Little CMS",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT",
+    licenceFile: "LICENSE-LCMS2",
+    copyright: "Copyright (c) 2023 Marti Maria Saguer",
+    source: "https://github.com/mm2/Little-CMS",
+  },
+  {
+    name: "libwebp",
+    ref: "libwebp-native",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "BSD-3-Clause",
+    licenceFile: "LICENSE-LIBWEBP",
+    copyright: "Copyright (c) 2010, Google Inc. All rights reserved.",
+    source: "https://chromium.googlesource.com/webm/libwebp",
+  },
+  {
+    name: "stb",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT OR Unlicense",
+    licenceFile: "LICENSE-STB",
+    copyright: "Copyright (c) 2017 Sean Barrett",
+    source: "https://github.com/nothings/stb",
+  },
+  {
+    name: "Wuffs",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "Apache-2.0",
+    licenceFile: "LICENSE-WUFFS",
+    source: "https://github.com/google/wuffs",
   },
 ];
 

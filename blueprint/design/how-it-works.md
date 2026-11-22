@@ -668,7 +668,8 @@ OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `packa
    `suspend`/`resume` (the `$EDITOR` hand-off, each awaited), `setTerminalTitle`, `setBackgroundColor`, `useMouse`,
    `copyToClipboardOSC52`, and `destroy` with `closed` (the terminal given back after `destroy()` returns, by OpenTUI
    even when it's late, the rest dropped, slipbox then ending the picture cut short; when OpenTUI gives up, or hasn't
-   finished by slipbox's own bound, slipbox writes its teardown itself, `restoreText` in `run.ts`, which
+   finished by slipbox's own bound, counted from slipbox's quit since OpenTUI puts off its `destroy` event while a
+   renderable's cleanup runs, slipbox writes its teardown itself, `restoreText` in `run.ts`, which
    `tests/tui/shell/terminal/closing.test.ts` holds to what this version's setup and teardown write, grapheme clustering
    by the terminal's answer to OpenTUI's question, read in `prependInputHandlers`). And pictures: `NativeImage` (decode,
    `resize`, `raw`), `drawImage` for sixel, and the `NativeSession` slipbox makes and hands the renderer, whose `write`

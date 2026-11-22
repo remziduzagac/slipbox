@@ -27,6 +27,7 @@ import {
   homebrewFormula,
   hostTarget,
   installScript,
+  packsIn,
   releaseNotes,
   releaseVersion,
   repoOf,
@@ -35,7 +36,7 @@ import {
   TARGETS,
   writeSite,
 } from "../../scripts/release.ts";
-import { checkSources, download, fetchSources } from "../../scripts/sources.ts";
+import { checkSources, download, fetchSources, hashes } from "../../scripts/sources.ts";
 import { bootstrapScript } from "../../scripts/bootstrap.ts";
 import { RELEASE, RETIRED, retired, tagOf } from "../../src/core/application/distribution/release.ts";
 import { latestIn } from "../../src/core/application/distribution/updates/discovery.ts";
@@ -195,6 +196,25 @@ describe("a release (14.2)", () => {
     // Another version's SBOM too: the release would carry it.
     const sboms = tree({ [assetName(VERSION, "linux-x64")]: "x", [sbomName("0.0.1", "linux-x64")]: "{}" });
     expect(() => finishRelease({ repo: "o/r", out: sboms })).toThrow(sbomName("0.0.1", "linux-x64"));
+    // A source the release carries is no pack, whatever its archive's kind.
+    const carried = tree({ [assetName(VERSION, "linux-x64")]: "x", "lib-1.0.tar.gz": "abc" });
+    expect(packsIn(carried, VERSION, ["lib-1.0.tar.gz"])).toEqual([join(carried, assetName(VERSION, "linux-x64"))]);
+  });
+
+  test("a target whose OpenTUI package names another FFmpeg than recorded: refused before it's built (D277)", () => {
+    // Each target is built where its package is installed (CI: a runner of its platform), the supply chain's gates
+    // run there first, and they read that package's FFMPEG-SOURCE.md.
+    const native = "node_modules/@opentui/core-linux-x64";
+    const root = tree({
+      "package.json": JSON.stringify({ version: VERSION, dependencies: { "@opentui/core-linux-x64": "0.9.0" } }),
+      "src/version.ts": `export const VERSION = "${VERSION}";\n`,
+      "bunfig.toml": "",
+      [`${native}/package.json`]: JSON.stringify({ name: "@opentui/core-linux-x64", version: "0.9.0", license: "MIT" }),
+      [`${native}/FFMPEG-SOURCE.md`]: "Native video statically links a minimal decode-only FFmpeg 9.0.1 build.\n",
+    });
+    expect(() => buildRelease({ targets: ["linux-x64"], repo: "o/r", out: tree({}), root })).toThrow(
+      "@opentui/core-linux-x64@0.9.0: its FFMPEG-SOURCE.md names FFmpeg 9.0.1",
+    );
   });
 
   describe("the sources it carries beside its binaries (D277)", () => {
@@ -248,6 +268,16 @@ describe("a release (14.2)", () => {
       // The updates still find the pack in it, and the installer sums the packs alone.
       expect(latestIn(sums, "linux-x64")?.asset).toBe(pack);
       expect(readFileSync(join(out, "install.sh"), "utf8")).not.toContain(archive.sha256);
+      expect(readFileSync(join(out, "install.sh"), "utf8")).toContain(hashes([join(out, pack)])[pack]!);
+    });
+
+    test("finished only once the version, its tag and the packs are checked: nothing fetched before", async () => {
+      const seen: string[] = [];
+      const fetch = (dir: string) => fetchSources(dir, fetched("abc", seen), [archive]);
+      await expect(finish({ repo: "o/r", out: tree({}) }, fetch)).rejects.toThrow(`no packs of ${VERSION}`);
+      const packed = tree({ [assetName(VERSION, "linux-x64")]: "x" });
+      await expect(finish({ repo: "o/r", tag: "v0.0.1", out: packed }, fetch)).rejects.toThrow("the tag is v0.0.1");
+      expect(seen).toEqual([]);
     });
 
     test("a download that takes too long, or isn't there, fails naming its address", async () => {
