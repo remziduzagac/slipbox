@@ -219,4 +219,12 @@ export class KeyReads {
   async settled(): Promise<void> {
     while (this.held.size) await Promise.allSettled([...this.held]);
   }
+
+  /** Settled, and still so a turn later: what a read opened has had its own turn to start more, and none did. */
+  async quiet(): Promise<void> {
+    do {
+      await this.settled();
+      await new Promise((r) => setTimeout(r, 0));
+    } while (this.busy);
+  }
 }

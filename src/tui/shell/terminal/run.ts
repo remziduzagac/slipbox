@@ -495,12 +495,7 @@ export async function runTui(argv: string[]): Promise<number> {
     ready = false;
   };
   // The start settled: its first read and what it opens are in, and nothing is out (one promise, for both users).
-  const started = (async () => {
-    do {
-      await app.reads.settled();
-      await new Promise((r) => setTimeout(r, 0));
-    } while (app.reads.busy);
-  })();
+  const started = app.reads.quiet();
   if (trace)
     void started.then(() => {
       ready = true;

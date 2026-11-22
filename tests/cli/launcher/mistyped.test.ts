@@ -10,7 +10,7 @@ describe("a mistyped command (CL2)", () => {
     expect(meant("serch")).toBe("search"); // typos: ignore-line
     expect(meant("fnid")).toBe("find");
     expect(meant("rendr")).toBe("render");
-    expect(meant("serach")).toBe("search");
+    expect(meant("serach")).toBe("search"); // typos: ignore-line
   });
 
   test("a name a person gives a note is a note: short, plural or containing a command, or two edits from one", () => {
@@ -41,7 +41,7 @@ describe("a mistyped command (CL2)", () => {
     expect(meant("rnder")).toBe("render"); // one
     expect(meant("rendre")).toBe("render"); // a swap: one
     expect(meant("doctr")).toBe("doctor"); // one
-    expect(meant("conxtext")).toBe("context"); // one, eight letters
+    expect(meant("conxtext")).toBe("context"); // one, eight letters // typos: ignore-line
     expect(meant("conxtxt")).toBe("context"); // two, seven letters
     expect(meant("rndr")).toBeNull(); // two, four letters
   });
