@@ -266,10 +266,17 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - `slipbox upgrade` runs one at a time per install, never moves back to an older version than the one installed, and
   keeps the version running as well as the one it replaced. A version already downloaded is installed without
   downloading it again.
-- Over SSH, slipbox draws 24-bit colour only when the server knows your terminal has it: `COLORTERM=truecolor` set
-  there, or kitty. Otherwise it uses the nearest of 256 colours, so a terminal that has only 256 shows the themes
-  properly. macOS's `ssh` doesn't send `COLORTERM`: [Troubleshooting](docs/manual/troubleshooting.md) says how to.
-- OpenTUI, the library slipbox draws the terminal with, is 0.6.8.
+- Over SSH, slipbox draws 24-bit colour only when it knows your terminal has it: `COLORTERM=truecolor` set on the
+  server, or the terminal saying so when slipbox asks it, as Ghostty, kitty, WezTerm, foot, xterm, iTerm2 and tmux do.
+  Otherwise it uses the nearest of 256 colours, so a terminal that has only 256 shows the themes properly. Alacritty
+  doesn't answer, and macOS's `ssh` doesn't send `COLORTERM`: [Troubleshooting](docs/manual/troubleshooting.md) says
+  how to.
+- In a terminal that draws an emoji sequence by its parts (xterm, Alacritty, GNOME Terminal, VS Code's), slipbox
+  counts the parts too: a family, or a thumb with its skin tone, takes a cell or two for each, so the rows after it
+  stay in line. The heart ornaments, ❤ among them, take one cell, as terminals draw them.
+- OpenTUI, the library slipbox draws the terminal with, is 0.9.0. Its native library has FFmpeg built in, for video
+  slipbox doesn't play, under the LGPL 2.1: each release carries FFmpeg's source beside its builds, and `NOTICES.txt`
+  gives its licence and how to run slipbox with an FFmpeg you've changed.
 
 ### Fixed
 

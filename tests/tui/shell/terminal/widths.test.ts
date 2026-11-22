@@ -47,7 +47,9 @@ describe("widths as OpenTUI draws them", () => {
     try {
       for (const method of ["unicode", "wcwidth"] as WidthMethod[]) {
         setWidthMethod(method);
-        const buf = frameBuffer(16, 1, method);
+        // Wide enough for the widest cluster probed: sixteen code points, each two cells to a terminal that doesn't
+        // cluster.
+        const buf = frameBuffer(40, 1, method);
         const off: string[] = [];
         for (const g of seen) {
           // Never drawn: sanitized first, or zero wide (the canvas skips those). A cluster of tens of
@@ -106,15 +108,15 @@ describe("widths as OpenTUI draws them", () => {
 describe("widths counted the terminal's way", () => {
   test("the method changing (the terminal's answer after the first frame): every layout made again", async () => {
     const root = makeVault();
-    writeFileSync(join(root, "flags.md"), `${"🇯🇵".repeat(30)}\n`);
-    const h = await harness({ root, open: "flags.md", width: 60 });
+    writeFileSync(join(root, "thumbs.md"), `${"👍🏽".repeat(20)}\n`);
+    const h = await harness({ root, open: "thumbs.md", width: 60 });
     const rows = () =>
-      h.app.currentLayout(h.app.view!).lines.filter((l) => l.spans.some((sp) => sp.text.includes("🇯🇵"))).length;
+      h.app.currentLayout(h.app.view!).lines.filter((l) => l.spans.some((sp) => sp.text.includes("👍"))).length;
     try {
-      expect(rows()).toBe(2); // 60 columns of flags: two rows
+      expect(rows()).toBe(1); // 40 columns of thumbs, two cells each where the terminal clusters: one row
       setWidthMethod("wcwidth");
       h.app.widthsChanged();
-      expect(rows()).toBe(1); // a flag as wide as its first letter: one
+      expect(rows()).toBe(2); // a thumb and its skin tone, two cells each where it doesn't: two
     } finally {
       setWidthMethod("unicode");
     }

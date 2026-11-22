@@ -7,6 +7,7 @@ import { ACCEPTED, AUDITED, type Accepted, acceptedProblems, ignoreArgs } from "
 import {
   bunfigProblems,
   checkDeps,
+  embeddedProblems,
   licenceProblems,
   licenceTaken,
   notices,
@@ -88,6 +89,31 @@ describe("the supply chain's gates (14.10)", () => {
     // Taken by name for its licence, not any: a new copyleft one, or a named package's licence changing, is asked about.
     expect(licenceProblems([pkg("elkjs", "GPL-3.0-only")])).toHaveLength(1);
     expect(licenceProblems([pkg("other", "MPL-2.0")])).toHaveLength(1);
+    // OpenTUI's native library, FFmpeg linked in (D277): each platform slipbox is built for, by name; none other.
+    const lgpl = "MIT AND LGPL-2.1-or-later";
+    for (const t of ["darwin-arm64", "linux-x64", "linux-arm64", "linux-x64-musl", "linux-arm64-musl"])
+      expect(licenceProblems([pkg(`@opentui/core-${t}`, lgpl)])).toEqual([]);
+    expect(licenceProblems([pkg("@opentui/core-win32-x64", lgpl)])).toHaveLength(1);
+    expect(licenceProblems([pkg("@opentui/core-linux-x64", "MIT AND GPL-2.0-or-later")])).toHaveLength(1);
+  });
+
+  test("FFmpeg, compiled into OpenTUI's native library: each package says it holds the version and source recorded", () => {
+    const declared = (version: string, sha: string) =>
+      `# FFmpeg\n\nNative video statically links a minimal decode-only FFmpeg ${version} build.\n\n` +
+      `- Source: https://ffmpeg.org/releases/ffmpeg-${version}.tar.xz\n- SHA-256: \`${sha}\`\n`;
+    const sha = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e";
+    const native = (files: Record<string, string>) => pkg("@opentui/core-linux-x64", "", { dir: tree(files) });
+    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", sha) })])).toEqual([]);
+    // An upgrade linking another FFmpeg, or another archive of it: said, until what's recorded follows.
+    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.3", sha) })])).toEqual([
+      `@opentui/core-linux-x64@1.0.0: its FFMPEG-SOURCE.md names FFmpeg 9.0.3 (https://ffmpeg.org/releases/ffmpeg-9.0.3.tar.xz, SHA-256 ${sha}), and EMBEDDED FFmpeg 9.0.2 (https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz, SHA-256 ${sha}): update EMBEDDED`,
+    ]);
+    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", "0".repeat(64)) })])).toHaveLength(1);
+    expect(embeddedProblems([native({ LICENSE: "MIT" })])).toEqual([
+      `@opentui/core-linux-x64@1.0.0: no FFMPEG-SOURCE.md to say it holds FFmpeg 9.0.2 (https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz, SHA-256 ${sha}): update EMBEDDED`,
+    ]);
+    // OpenTUI's own package, and any other, holds none.
+    expect(embeddedProblems([pkg("@opentui/core", "MIT", { dir: tree({ LICENSE: "MIT" }) })])).toEqual([]);
   });
 
   test("package.json's versions exact: a range, a tag or a partial version is a problem", () => {
@@ -554,10 +580,26 @@ describe("the supply chain's gates (14.10)", () => {
     expect(bom.components.filter((c) => c["bom-ref"].startsWith("embedded:")).map((c) => c.name)).toEqual([
       "Hunspell",
       "libwebp",
+      "FFmpeg",
     ]);
     expect(bom.dependencies.find((d) => d.ref.startsWith("pkg:npm/hunspell-asm@"))?.dependsOn).toContain(
       "embedded:Hunspell",
     );
+    // FFmpeg in each of OpenTUI's native packages installed here, its source the archive a release carries (D277).
+    const natives = bom.dependencies.filter((d) => /^pkg:npm\/%40opentui\/core-(darwin|linux)-/.test(d.ref));
+    expect(natives.length).toBeGreaterThan(0);
+    for (const d of natives) expect(d.dependsOn).toEqual(["embedded:FFmpeg"]);
+    expect(bom.components.find((c) => c.name === "FFmpeg")).toMatchObject({
+      version: "9.0.2",
+      licenses: [{ license: { id: "LGPL-2.1-or-later" } }],
+      externalReferences: [
+        {
+          type: "source-distribution",
+          url: "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+          hashes: [{ alg: "SHA-256", content: "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e" }],
+        },
+      ],
+    });
     expect(bom.dependencies.map((d) => d.ref).sort()).toEqual([...refs].sort());
     for (const d of bom.dependencies) for (const r of d.dependsOn) expect(refs.has(r)).toBe(true);
     for (const c of bom.components) expect(c.licenses?.length).toBe(1);
@@ -643,6 +685,14 @@ describe("the supply chain's gates (14.10)", () => {
     expect(part("libwebp, compiled into @jsquash/webp — BSD-3-Clause")).toContain(
       "Redistribution and use in source and binary forms",
     );
+    // FFmpeg (D277): its version, its copyright, the LGPL's whole text, its source — the archive, as each release has it.
+    const ffmpeg = part("FFmpeg 9.0.2, compiled into OpenTUI's native library (@opentui/core-<platform>)");
+    expect(ffmpeg).toStartWith("\nCopyright (c) 2000-2026 the FFmpeg developers\n");
+    expect(ffmpeg).toContain(
+      "Its source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz (SHA-256 8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e),\nand beside the binaries of each slipbox release, as ffmpeg-9.0.2.tar.xz",
+    );
+    expect(ffmpeg).toContain("GNU LESSER GENERAL PUBLIC LICENSE\n\nVersion 2.1, February 1999");
+    expect(ffmpeg).toContain("END OF TERMS AND CONDITIONS");
     expect(text).toContain(`Bun ${Bun.version}, the runtime the binary is built on`);
     expect(text).toContain("Bun statically links JavaScriptCore");
     expect(text).toContain("GNU LESSER GENERAL PUBLIC LICENSE");

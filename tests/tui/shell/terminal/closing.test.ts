@@ -18,6 +18,20 @@ function terminal(ms: number) {
   return { out: out as unknown as NodeJS.WriteStream, text: () => text };
 }
 
+/** A terminal that takes what it's sent until `stall()`, then nothing more: the piece it was given then, never taken. */
+function stalling() {
+  let text = "";
+  let stalled = false;
+  const out = new Writable({
+    highWaterMark: 16384,
+    write(chunk: Buffer, _encoding, done) {
+      text += chunk.toString("latin1");
+      if (!stalled) done();
+    },
+  });
+  return { out: out as unknown as NodeJS.WriteStream, text: () => text, stall: () => (stalled = true) };
+}
+
 const keys = () => new Readable({ read() {} }) as unknown as NodeJS.ReadStream & Readable;
 
 /** A picture as slipbox sends one, Kitty's graphics: two megabytes of it. */
@@ -39,28 +53,52 @@ async function until(what: () => boolean): Promise<void> {
 }
 
 describe("the terminal given back at quit", () => {
-  test("a picture still on its way to a slow terminal when the wait runs out: the terminal is given back all the same", async () => {
-    // OpenTUI's close, out of time, cancels what's left — its own teardown with it — and left the terminal on slipbox's
-    // screen, the mouse reported and a picture's sequence open, swallowing the shell's output.
-    const { openRenderer, RESTORE } = await import("../../../../src/tui/shell/terminal/run.ts");
-    const term = terminal(100);
+  test("a picture still on its way to a slow terminal when the wait runs out: OpenTUI's own teardown, and no other", async () => {
+    // Out of time, OpenTUI drops what's still queued and writes its teardown, saying it was late. A second teardown,
+    // slipbox's, would pop the keyboard protocol of whatever ran slipbox.
+    const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const term = terminal(30);
     const restored: string[] = [];
     const { session, renderer, closed } = await openRenderer({
       mouse: true,
       stdin: keys(),
       stdout: term.out,
-      closeWaitMs: 300,
+      closeWaitMs: 400,
       restore: (text) => restored.push(text),
     });
     expect(session.write(picture)).toBe(true);
     renderer.destroy();
     await closed;
+    const text = term.text();
+    expect(text.length).toBeLessThan(picture.length);
+    expect(text.indexOf("\x1b[?1049l")).toBeGreaterThan(text.lastIndexOf("AAAA"));
+    expect(restored).toEqual([]);
+  });
+
+  test("a terminal that takes nothing more at quit: given back by slipbox, within seconds", async () => {
+    // OpenTUI waits a second for it to take something, drops the rest, waits a second more for its teardown to go out,
+    // then gives up, the terminal not restored: slipbox writes the teardown itself.
+    const { openRenderer, RESTORE } = await import("../../../../src/tui/shell/terminal/run.ts");
+    const term = stalling();
+    const restored: string[] = [];
+    const { session, renderer, closed } = await openRenderer({
+      mouse: true,
+      stdin: keys(),
+      stdout: term.out,
+      restore: (text) => restored.push(text),
+    });
+    expect(session.write(picture)).toBe(true);
+    term.stall();
+    const at = Date.now();
+    renderer.destroy();
+    await closed;
+    expect(Date.now() - at).toBeLessThan(5_000);
     expect(term.text()).not.toContain("\x1b[?1049l");
     expect(restored).toEqual([RESTORE]);
   });
 
-  test("a picture taking seconds to reach a slow terminal: OpenTUI's own teardown follows it", async () => {
-    // A 64 KB piece taken every 60 ms: two megabytes in about two seconds, longer than OpenTUI's own wait of a second.
+  test("a picture taking seconds to reach a slow terminal, within the wait: OpenTUI's own teardown follows it", async () => {
+    // A 64 KB piece taken every 60 ms: two megabytes in about two seconds, the picture whole, then the teardown.
     const { openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
     const term = terminal(60);
     const restored: string[] = [];
@@ -68,6 +106,7 @@ describe("the terminal given back at quit", () => {
       mouse: true,
       stdin: keys(),
       stdout: term.out,
+      closeWaitMs: 5_000,
       restore: (text) => restored.push(text),
     });
     expect(session.write(picture)).toBe(true);
@@ -77,6 +116,7 @@ describe("the terminal given back at quit", () => {
     expect(Date.now() - at).toBeGreaterThan(1_000);
     expect(restored).toEqual([]);
     const text = term.text();
+    expect(text).toContain("AAAA\x1b\\");
     expect(text.indexOf("\x1b[?1049l")).toBeGreaterThan(text.lastIndexOf("AAAA\x1b\\"));
   });
 
@@ -100,10 +140,9 @@ describe("the terminal given back at quit", () => {
       const teardown = term.text().slice(setup.length);
       expect(teardown).toContain("\x1b[?1049l");
       for (const s of sequences(teardown)) expect(RESTORE).toContain(s);
-      // Grapheme clustering (2027) OpenTUI's own teardown leaves on, and so does the restore.
       const modes = new Set([...setup.matchAll(/\x1b\[\?([\d;]+)h/g)].flatMap((m) => m[1]!.split(";")));
       expect(modes).toContain("1049");
-      for (const mode of modes) if (mode !== "2027") expect(RESTORE).toContain(`\x1b[?${mode}l`);
+      for (const mode of modes) expect(RESTORE).toContain(`\x1b[?${mode}l`);
       if (/\x1b\[>\d+u/.test(setup)) expect(RESTORE).toContain("\x1b[<u");
       if (/\x1b\[>4;[12]m/.test(setup)) expect(RESTORE).toContain("\x1b[>4;0m");
       if (answers) expect(modes).toContain("1004");

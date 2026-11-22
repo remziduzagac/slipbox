@@ -85,4 +85,18 @@ describe("review cycle 5 (core, from mutation testing)", () => {
     expect(graphemeWidth("\u{1F02C}️")).toBe(2);
     expect(graphemeWidth("❤️")).toBe(2);
   });
+  test("as OpenTUI lays a cluster out since 0.7: the heart ornaments one cell; each code point, where it won't cluster", async () => {
+    const { graphemeWidth, setWidthMethod } = await import("../../../../src/core/foundation/text/width.ts");
+    // ❠ to ❧ are one cell without a VS16, as terminals draw them.
+    expect(["❤", "❤\uFE0E", "❧"].map(graphemeWidth)).toEqual([1, 1, 1]);
+    setWidthMethod("wcwidth");
+    try {
+      // A flag's two letters, a family's three people (their joiners nothing), a thumb and its skin tone; a VS16 nothing.
+      const clusters = ["🇩🇪", "👨\u200D👩\u200D👧", "👍🏽", "❤️", "1️⃣", "हिन्दी"];
+      expect(clusters.map((g) => stringWidth(g))).toEqual([2, 6, 4, 1, 1, 3]);
+    } finally {
+      setWidthMethod("unicode");
+    }
+    expect(["🇩🇪", "👨\u200D👩\u200D👧", "👍🏽", "❤️"].map(graphemeWidth)).toEqual([2, 2, 2, 2]);
+  });
 });

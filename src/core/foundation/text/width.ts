@@ -13,6 +13,9 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 const RGI_EMOJI = /^\p{RGI_Emoji}$/v;
 const PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
 const MARK_ONLY = /^\p{M}+$/u;
+// What a terminal that doesn't cluster advances nothing for, within a cluster: a mark (a selector among them), a
+// joiner or another format character.
+const JOINS = /^[\p{M}\p{Cf}]$/u;
 // Zero-width format characters that survive sanitising: ZWSP, ZWNJ, ZWJ, word joiner, BOM.
 const ZERO_WIDTH = /^[​-‍⁠﻿]+$/;
 
@@ -59,9 +62,10 @@ function isPrintableAscii(text: string): boolean {
 /**
  * How a grapheme cluster's width is counted — OpenTUI's methods, chosen by asking the terminal:
  * `unicode`, each cluster its own width (Bun's: terminals that cluster graphemes — libghostty, kitty,
- * WezTerm — and the default); `wcwidth`, a cluster as wide as its first code point (terminals that
- * don't). OpenTUI's third, `unicode-wide`, counts Indic spacing marks by rules of its own: slipbox
- * counts as `unicode` there, and such text may drift.
+ * WezTerm, tmux — and the default); `wcwidth`, each of a cluster's code points its own width, a mark or
+ * a joiner none (terminals that don't: xterm, Alacritty, GNOME Terminal, VS Code's). OpenTUI's third,
+ * `unicode-wide`, counts Indic spacing marks by rules of its own: slipbox counts as `unicode` there, and
+ * such text may drift.
  */
 export type WidthMethod = "unicode" | "wcwidth";
 let method: WidthMethod = "unicode";
@@ -92,14 +96,15 @@ export function graphemeWidth(g: string): number {
 function computeWidth(g: string): number {
   if (ZERO_WIDTH.test(g) || MARK_ONLY.test(g)) return 0;
   const cp = g.codePointAt(0) ?? 0;
-  // Where OpenTUI's table differs from the others (a test holds slipbox and OpenTUI together on
-  // every grapheme the reference set and halden have, and slipbox's own glyphs): the heart and
-  // exclamation ornaments, ❠ to ❧ — ❤ — are wide to it, whatever their selector. Terminals draw them
-  // one cell, so a row holding one is out of step there; slipbox's own glyphs are none of them.
-  if (cp >= 0x2760 && cp <= 0x2767) return 2;
-  // Not clustering, the terminal advances by the first code point (a flag's first letter, a
-  // keycap's digit, ✔ before its VS16), as OpenTUI then lays the cluster out.
-  if (method === "wcwidth") return eastAsianWidth(cp, { ambiguousAsWide: false });
+  // Not clustering, the terminal advances by each code point in turn, a mark or a joiner taking
+  // nothing (a flag's two letters, a family's three people, ✔ and not its VS16), as OpenTUI then lays
+  // the cluster out.
+  if (method === "wcwidth") {
+    if (g.length === 1 || (g.length === 2 && cp > 0xffff)) return eastAsianWidth(cp, { ambiguousAsWide: false });
+    let w = 0;
+    for (const c of g) if (!JOINS.test(c)) w += eastAsianWidth(c.codePointAt(0)!, { ambiguousAsWide: false });
+    return w;
+  }
   // Clustering: the cluster's own width — an RGI emoji or a VS16 pictograph two, a conjunct with
   // its spacing marks what its parts take (Bun's measure, OpenTUI's too).
   if (RGI_EMOJI.test(g) || (g.includes("️") && PICTOGRAPHIC.test(g))) return 2;

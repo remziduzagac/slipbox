@@ -72,8 +72,8 @@ jobs:
       # Tested already: the commit passed `full` (D251), the step above says so. Built and run, not tested again.
       suite: false
 
-  # The draft, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS`, `install.sh` and
-  # `slipbox.rb`, each attested already. Nothing built runs here.
+  # The draft, from build.yml's `release` artifact: the packs, their SBOMs, `SHA256SUMS`, `install.sh`, `slipbox.rb`
+  # and FFmpeg's source, each attested already. Nothing built runs here.
   publish:
     needs: build
     runs-on: ubuntu-24.04
@@ -97,6 +97,9 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: bun --no-install scripts/release.ts notes --tag "$TAG" >"$RUNNER_TEMP/notes.md"
+      # D277: the binaries link FFmpeg (LGPL-2.1), whose source goes with them: no draft without it, as recorded.
+      - name: sources
+        run: bun --no-install scripts/release.ts sources
       - name: draft
         env:
           GH_TOKEN: ${{ github.token }}

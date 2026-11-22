@@ -14,13 +14,15 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { checkDeps, purl, type Sbom } from "../../scripts/check-deps.ts";
+import { checkDeps, purl, type Sbom, sourceArchives } from "../../scripts/check-deps.ts";
 import {
   assetName,
   buildArgs,
   buildRelease,
   changelogNotes,
   channelFiles,
+  checkSources,
+  fetchSources,
   finishRelease,
   homebrewFormula,
   hostTarget,
@@ -191,6 +193,64 @@ describe("a release (14.2)", () => {
     // Another version's SBOM too: the release would carry it.
     const sboms = tree({ [assetName(VERSION, "linux-x64")]: "x", [sbomName("0.0.1", "linux-x64")]: "{}" });
     expect(() => finishRelease({ repo: "o/r", out: sboms })).toThrow(sbomName("0.0.1", "linux-x64"));
+  });
+
+  describe("the sources it carries beside its binaries (D277)", () => {
+    /** A source as recorded: its archive, the bytes `abc`. */
+    const archive = {
+      name: "lib-1.0.tar.xz",
+      url: "https://example.org/lib-1.0.tar.xz",
+      sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      of: "Lib",
+    };
+    const fetched =
+      (bytes: string, seen: string[] = []) =>
+      async (url: string) => {
+        seen.push(url);
+        return new TextEncoder().encode(bytes);
+      };
+
+    test("FFmpeg's, as each package of OpenTUI's native library says it holds it", () => {
+      expect(sourceArchives()).toEqual([
+        {
+          name: "ffmpeg-9.0.2.tar.xz",
+          url: "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+          sha256: "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e",
+          of: "FFmpeg",
+        },
+      ]);
+    });
+
+    test("a release without one, or with another archive in its place, is refused: not drafted", () => {
+      expect(() => checkSources(tree({ [assetName(VERSION, "linux-x64")]: "x" }), [archive])).toThrow(
+        "lib-1.0.tar.xz, Lib's source, isn't in",
+      );
+      expect(() => checkSources(tree({ "lib-1.0.tar.xz": "xyz" }), [archive])).toThrow("lib-1.0.tar.xz's SHA-256 is");
+      const out = tree({ "lib-1.0.tar.xz": "abc" });
+      expect(checkSources(out, [archive])).toEqual([join(out, "lib-1.0.tar.xz")]);
+      // The real one: a release without FFmpeg's source isn't drafted.
+      expect(() => checkSources(tree({ [assetName(VERSION, "linux-x64")]: "x" }))).toThrow(
+        "ffmpeg-9.0.2.tar.xz, FFmpeg's source, isn't in",
+      );
+    });
+
+    test("fetched where its project publishes it, and kept only as recorded; one there already, not fetched again", async () => {
+      const out = tree({});
+      const seen: string[] = [];
+      expect(await fetchSources(out, fetched("abc", seen), [archive])).toEqual([join(out, "lib-1.0.tar.xz")]);
+      expect(seen).toEqual([archive.url]);
+      expect(readFileSync(join(out, "lib-1.0.tar.xz"), "utf8")).toBe("abc");
+      await fetchSources(out, fetched("abc", seen), [archive]);
+      expect(seen).toHaveLength(1);
+      // Another archive under its name: refused, nothing written — and the release then refused without it.
+      const other = tree({});
+      await expect(fetchSources(other, fetched("xyz"), [archive])).rejects.toThrow("not kept");
+      expect(existsSync(join(other, "lib-1.0.tar.xz"))).toBe(false);
+      // One there that isn't it: fetched again.
+      const stale = tree({ "lib-1.0.tar.xz": "old" });
+      await fetchSources(stale, fetched("abc"), [archive]);
+      expect(readFileSync(join(stale, "lib-1.0.tar.xz"), "utf8")).toBe("abc");
+    });
   });
 
   test("the release's notes: its version's section of the changelog, without its heading", () => {

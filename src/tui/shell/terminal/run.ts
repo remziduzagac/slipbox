@@ -141,25 +141,27 @@ export function prepare(argv: string[], back: CameBack | null = null): Start | n
 const COMPILED = /^file:\/\/\/(\$bunfs|[A-Za-z]:\/~BUN)\//.test(import.meta.url);
 
 /**
- * How long OpenTUI may take to give the terminal back at quit. Its teardown goes out behind what's queued before it —
- * a picture's megabytes take seconds over a slow link — and once this has passed OpenTUI cancels the rest, teardown and
- * all (its own wait is a second).
+ * How long OpenTUI's close at quit waits for the terminal to take more. Its teardown goes out behind what's queued
+ * before it — a picture's megabytes take seconds over a slow link — and once this has passed with nothing taken, or ten
+ * times this in all, OpenTUI drops the rest and writes its teardown; once it has passed again with nothing taken,
+ * OpenTUI gives up, the terminal not restored.
  */
-export const CLOSE_WAIT_MS = 10_000;
+export const CLOSE_WAIT_MS = 1_000;
 
 /**
  * The terminal given back when OpenTUI's teardown didn't go out: a string terminator, ending a picture's sequence cut
- * short, and the end of a frame cut short (synchronized output); then OpenTUI's own teardown as 0.6.8 writes it — the
+ * short, and the end of a frame cut short (synchronized output); then OpenTUI's own teardown as 0.9.0 writes it — the
  * cursor shown, attributes and the pointer's shape reset, the keyboard's protocol undone (Kitty's popped, or xterm's
  * modifyOtherKeys reset), mouse reporting, bracketed paste and focus reports off, the main screen back, palette reports
- * off, the title, the cursor's colour and shape reset. Each undoes what OpenTUI's setup turns on, and does nothing
- * where it didn't; grapheme clustering (2027) stays on, as OpenTUI's own teardown leaves it. A test holds this to what
- * OpenTUI writes, so an upgrade that changes that says so.
+ * off, grapheme clustering (2027) off, the title, the cursor's colour and shape reset. Each undoes what OpenTUI's setup
+ * turns on, and does nothing where it didn't — but for grapheme clustering, which OpenTUI's teardown puts back as the
+ * terminal had it, as only it knows: a terminal that had it on is left with it off, as a shell counts anyway. A test
+ * holds this to what OpenTUI writes, so an upgrade that changes that says so.
  */
 export const RESTORE =
   "\x1b\\\x1b[?2026l" +
   "\x1b[?25h\x1b[0m\x1b]22;\x1b\\\x1b[<u\x1b[>4;0m\x1b[?1003l\x1b[?1002l\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?1004l" +
-  "\x1b[?1049l\x1b[?2031l\x1b]0;\x07\x1b]12;default\x07\x1b]112\x07\x1b[0 q\x1b[?25h";
+  "\x1b[?1049l\x1b[?2031l\x1b[?2027l\x1b]0;\x07\x1b]12;default\x07\x1b]112\x07\x1b[0 q\x1b[?25h";
 
 /** `text` to the terminal now, after whatever it was sent: a slow one waited for (a while), one gone left be. */
 function toTerminal(text: string): void {
@@ -204,11 +206,14 @@ export async function openRenderer(o: {
     // those above it in view change — a third of the bytes, measured scrolling the pictures demo.
     kittyImageTransport: "zlib",
   });
-  // Raw mode is off as `destroy()` returns; the rest of OpenTUI's teardown — the main screen back, the mouse let go — is
-  // written after it. `closed` resolves once that's out, and rejects when it isn't: the terminal failed, or
-  // CLOSE_WAIT_MS passed and OpenTUI cancelled what was left, the terminal not restored. Then it's restored here.
+  // `destroy()` returns at once; OpenTUI's teardown — the main screen back, the mouse let go, then raw mode off — is
+  // written after it. `closed` resolves once that's out, and rejects when it was late: what was still queued dropped,
+  // its teardown written all the same (CLOSE_WAIT_MS) — or when it isn't out: the terminal failed, or took nothing
+  // more, and OpenTUI gave up. Then, and only then, it's restored here: a second teardown would pop the keyboard
+  // protocol of whatever ran slipbox.
   const restore = o.restore ?? toTerminal;
-  const closed = renderer.closed.catch(() => {
+  const closed = renderer.closed.catch((err: unknown) => {
+    if (session.isCloseInterruption(err)) return;
     try {
       restore(RESTORE);
     } catch {

@@ -14,6 +14,9 @@ scout.
 > **Detailed by D194 (2026-10-10):** Hunspell is taken under MPL-1.1, weak copyleft as here.
 >
 > **Detailed by D201 (2026-10-10):** a licence gate holds every package the binary can bundle to this.
+>
+> **Detailed by D277 (2026-11-22):** OpenTUI's native packages, `MIT AND LGPL-2.1-or-later` for the FFmpeg they link,
+> are accepted for use too; FFmpeg's source goes with each release.
 
 **Decision:** Dependencies are permissive (MIT, ISC, BSD, Apache-2.0, BlueOak, Zlib). Weak copyleft is accepted for
 use, by name: `elkjs` (EPL-2.0, under beautiful-mermaid) and `@resvg/resvg-wasm` (MPL-2.0). `jszip`, "MIT OR
@@ -344,3 +347,38 @@ release); asking Pages first whether the commit was deployed (`pages/deployments
 never deployed; an answer nothing documents, a check that can race the deployment, and a second path); a hand-off that
 waits for the run it starts (it deadlocks in the `pages` concurrency group, and a newer pending run replaces one waited
 for).
+
+## D277: OpenTUI's native library taken with its FFmpeg, LGPL-2.1; the source in each release (14.6, 14.10, 2026-11-22)
+
+**Decision:** The maintainer's call: from OpenTUI 0.8.1, each of its native packages (`@opentui/core-<platform>`) is
+`MIT AND LGPL-2.1-or-later`, its library linking a decode-only FFmpeg statically, for OpenTUI's video, which slipbox
+doesn't play; `@opentui/core` stays MIT. LGPL-2.1 is accepted for these packages, so slipbox keeps following OpenTUI's
+releases (0.9.0 first); slipbox's own licence stays Apache-2.0. What the binary then owes FFmpeg, it carries:
+
+- Each native package of a platform released is taken by name (`NAMED`, in `scripts/licences.ts`).
+- FFmpeg is code compiled into another package (`EMBEDDED`): `NOTICES.txt` names it, its version, its copyright, the
+  LGPL-2.1's whole text, its source by address and SHA-256, and how to run slipbox with a changed one; the SBOM lists
+  it, its source as a `source-distribution` with that hash.
+- Each release and preview carries FFmpeg's exact source archive beside its binaries: `release.ts finish` fetches it
+  from ffmpeg.org and keeps it only when its SHA-256 is the one recorded, which `check-deps.ts` holds to what each
+  native package's `FFMPEG-SOURCE.md` names; `release.ts sources` refuses the release without it, before the draft.
+- The README and the install guide say slipbox includes FFmpeg under the LGPL 2.1, and that its source comes with each
+  release.
+
+Detail: design/distribution.md § The supply chain, § Releases, § Notices; design/how-it-works.md § Dependencies.
+
+**Why:** OpenTUI is pre-1.0 and pinned (D6); staying on the last version without FFmpeg would leave slipbox behind its
+fixes to teardown, input and widths, and further behind each release. The LGPL is weak copyleft, which D192 accepts for
+use: it asks the binary for the licence's text, the library's source, and a way to use a changed library, none of it
+reaching slipbox's own code. The binary already carries LGPL code, Bun's JavaScriptCore, whose notice it ships. The
+source goes beside the binaries, from the same place, rather than as a link to ffmpeg.org, which can move, or a written
+offer to keep. A changed FFmpeg is used by building OpenTUI's library again, from its MIT source and its FFmpeg build
+script, and naming it in `OPENTUI_LIB_PATH`, which OpenTUI reads before loading its own.
+
+**Cost:** About 12 MB more in each release's assets, and ffmpeg.org reached at each build: down, `finish` fails, and is
+run again. An OpenTUI upgrade linking another FFmpeg fails `check:deps` until `scripts/licences.ts` names it, and a
+licence the native packages change to is asked about first, as any. Whoever redistributes slipbox's binaries owes the
+same.
+
+**Not chosen:** staying on OpenTUI 0.8.0, the last whose native packages are MIT alone; giving FFmpeg's source as a
+link or a written offer, without the archive in the release (ideas.md § Licence).

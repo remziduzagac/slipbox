@@ -84,8 +84,13 @@ the installer downloads.
 - `SHA256SUMS`, their checksums.
 - For each build, an SBOM, `slipbox-<version>-<platform>.cdx.json`. It lists the software built into that build, with
   their licences, in CycloneDX's format.
+- `ffmpeg-<version>.tar.xz`, FFmpeg's source.
 
 A preview carries the same.
+
+slipbox includes FFmpeg, under the LGPL 2.1, and its source comes with each release. The library slipbox draws the
+terminal with has FFmpeg built in, for video slipbox doesn't play. Each build's `NOTICES.txt` gives FFmpeg's licence
+in full, and how to run slipbox with an FFmpeg you've changed.
 
 Every file is attested. Run `gh attestation verify <file> --repo remziduzagac/slipbox`, and GitHub's CLI shows that the
 file was built by slipbox's own workflows, and from which commit. A release is built from its tag, a preview from the

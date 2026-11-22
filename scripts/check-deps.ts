@@ -10,60 +10,18 @@
 //
 // `--notices <file>` writes, from the same walk, the third-party notices a release ships beside the binary (`14.2`):
 // each package's own licence files, the texts of those that ship none, what's compiled into packages (Hunspell,
-// libwebp), and Bun's own — the runtime is in the binary too. `--sbom <file>` writes, from it too, the SBOM a release
+// libwebp, FFmpeg), and Bun's own — the runtime is in the binary too. `--sbom <file>` writes, from it too, the SBOM a release
 // ships beside each pack (CycloneDX JSON, attested with the pack): the packages, their licences, sources and
 // dependencies, what's compiled into them, and Bun.
 
 import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { DECLARED, EMBEDDED, embeddedProblems, holds, NAMED, PERMISSIVE } from "./licences.ts";
+
+export { embeddedProblems, NAMED, sourceArchives } from "./licences.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
-
-/** Licences taken for any package: permissive ones. */
-const PERMISSIVE = new Set([
-  "MIT",
-  "MIT-0",
-  "ISC",
-  "BSD-2-Clause",
-  "BSD-3-Clause",
-  "0BSD",
-  "Apache-2.0",
-  "BlueOak-1.0.0",
-  "Zlib",
-  "CC0-1.0",
-  "Unlicense",
-]);
-
-/** Packages taken by name under a licence that isn't in `PERMISSIVE`: each was asked about (plan 14.6). */
-export const NAMED: Record<string, { licence: string; why: string }> = {
-  elkjs: { licence: "EPL-2.0", why: "weak copyleft, accepted for use 2026-10-09 (beautiful-mermaid's layout)" },
-  "@resvg/resvg-wasm": { licence: "MPL-2.0", why: "weak copyleft, accepted for use 2026-10-09 (SVG drawn, 12.15)" },
-  "dictionary-en": { licence: "(MIT AND BSD)", why: "SCOWL's word lists under their own permissive terms (25.6)" },
-};
-
-/** Packages whose package.json names no licence: what their own LICENSE file says. */
-const DECLARED: Record<string, string> = { "png-js": "MIT", typeahead: "Apache-2.0" };
-
-/** Code compiled into a package's WebAssembly, not a package of its own: its notice is owed too. */
-const EMBEDDED: { name: string; inside: string; licence: string; copyright: string; source: string; note?: string }[] =
-  [
-    {
-      name: "Hunspell",
-      inside: "hunspell-asm",
-      licence: "MPL-1.1",
-      copyright: "Copyright (C) 2002-2022 Németh László",
-      source: "https://github.com/hunspell/hunspell",
-      note: "Hunspell is offered under MPL-1.1, GPL-2.0 or LGPL-2.1; slipbox takes it under MPL-1.1 (plan 14.6).",
-    },
-    {
-      name: "libwebp",
-      inside: "@jsquash/webp",
-      licence: "BSD-3-Clause",
-      copyright: "Copyright (c) 2010, Google Inc. All rights reserved.",
-      source: "https://chromium.googlesource.com/webm/libwebp",
-    },
-  ];
 
 export interface Package {
   name: string;
@@ -305,6 +263,7 @@ export function checkDeps(root = ROOT): { problems: string[]; packages: Package[
     ...bunfigProblems(readFileSync(join(root, "bunfig.toml"), "utf8")),
     ...siteProblems(root),
     ...licenceProblems(packages),
+    ...embeddedProblems(packages),
     ...workflows(root).flatMap((w) => [...workflowProblems(w.name, w.text), ...workflowShapeProblems(w.name, w.text)]),
   ];
   return { problems, packages, direct };
@@ -313,9 +272,10 @@ export function checkDeps(root = ROOT): { problems: string[]; packages: Package[
 const RULE = "=".repeat(100);
 const LICENCE_FILE = /^(licen[cs]e|copying|notice|copyright)([.-].*)?$/i;
 
-/** A licence's standard text (notices/licenses), its copyright filled in where it has a blank for one. */
+/** A licence's standard text (notices/licenses), its copyright filled in where it has a blank for one. An "or later"
+ *  licence's text is its version's. */
 function standardText(root: string, id: string, holder: string): string | null {
-  const f = join(root, "notices", "licenses", `${id}.txt`);
+  const f = join(root, "notices", "licenses", `${id.replace(/-or-later$/, "-only")}.txt`);
   if (!existsSync(f)) return null;
   return readFileSync(f, "utf8").replace(/<year> <copyright holders>|<year> <owner>/, holder || "the authors");
 }
@@ -355,8 +315,13 @@ export function notices(packages: Package[], version: string, root = ROOT): stri
     section(`${p.name} ${p.version} — ${p.licence}${p.repository ? `\n${p.repository}` : ""}`, `${source}${body}`);
   }
   for (const e of EMBEDDED) {
-    const body = `${e.note ? `${e.note}\n` : ""}Its source: ${e.source}\n\n${standardText(root, e.licence, "the copyright holders above") ?? e.licence}`;
-    section(`${e.name}, compiled into ${e.inside} — ${e.licence}`, `${e.copyright}\n\n${body}`);
+    // An archive's address, its SHA-256, and the release's asset of it (release.ts' `sources`).
+    const source = e.archive
+      ? `${e.source} (SHA-256 ${e.archive.sha256}),\nand beside the binaries of each slipbox release, as ${e.source.slice(e.source.lastIndexOf("/") + 1)}`
+      : e.source;
+    const body = `${e.note ? `${e.note}\n` : ""}Its source: ${source}\n\n${standardText(root, e.licence, "the copyright holders above") ?? e.licence}`;
+    const name = e.version ? `${e.name} ${e.version}` : e.name;
+    section(`${name}, compiled into ${e.inside} — ${e.licence}`, `${e.copyright}\n\n${body}`);
   }
   const bun = join(root, "node_modules", "bun-types", "docs", "project", "license.mdx");
   const bunText = existsSync(bun)
@@ -389,7 +354,11 @@ export interface CdxComponent {
   purl?: string;
   licenses?: CdxLicence[];
   copyright?: string;
-  externalReferences?: { type: "vcs" | "website"; url: string }[];
+  externalReferences?: {
+    type: "vcs" | "website" | "source-distribution";
+    url: string;
+    hashes?: { alg: "SHA-256"; content: string }[];
+  }[];
   properties?: { name: string; value: string }[];
 }
 
@@ -454,14 +423,20 @@ export function sbom(
       ...(p.repository ? { externalReferences: [{ type: "vcs", url: p.repository }] } : {}),
     };
   });
-  const embedded: CdxComponent[] = EMBEDDED.filter((e) => walk.packages.some((p) => p.name === e.inside)).map((e) => ({
+  // What's compiled into a package the walk bundles: into its WebAssembly, or a native library's (`within`).
+  const embedded: CdxComponent[] = EMBEDDED.filter((e) => walk.packages.some((p) => holds(e, p.name))).map((e) => ({
     type: "library",
     "bom-ref": `embedded:${e.name}`,
     name: e.name,
-    description: `compiled into ${e.inside}'s WebAssembly`,
+    ...(e.version ? { version: e.version } : {}),
+    description: `compiled into ${e.within ? e.inside : `${e.inside}'s WebAssembly`}`,
     licenses: cdxLicences(e.licence),
     copyright: e.copyright,
-    externalReferences: [{ type: "vcs", url: e.source }],
+    externalReferences: [
+      e.archive
+        ? { type: "source-distribution", url: e.source, hashes: [{ alg: "SHA-256", content: e.archive.sha256 }] }
+        : { type: "vcs", url: e.source },
+    ],
   }));
   const bun: CdxComponent = {
     type: "platform",
@@ -475,7 +450,7 @@ export function sbom(
     licenses: cdxLicences("MIT"),
     externalReferences: [{ type: "website", url: "https://bun.com" }],
   };
-  const inside = (p: Package) => EMBEDDED.filter((e) => e.inside === p.name).map((e) => `embedded:${e.name}`);
+  const inside = (p: Package) => EMBEDDED.filter((e) => holds(e, p.name)).map((e) => `embedded:${e.name}`);
   return {
     bomFormat: "CycloneDX",
     specVersion: "1.6",

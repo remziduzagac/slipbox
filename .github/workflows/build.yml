@@ -6,7 +6,7 @@ name: build
 # by Bun on a Mac — straight away, the commit tested already: a preview's passed CI's check before `test` took it, a
 # release's passed `full`, the whole suite, before `main` did (D251). The binary is run before it's packed either way.
 # Each pack's SBOM is attested to it; then the packs are summed, the installer (and a release's Homebrew formula)
-# written, and every asset attested.
+# written, FFmpeg's source fetched and checked (D277), and every asset attested.
 # The whole set is the `release` artifact, which the caller publishes: nothing here can write to the repository.
 # Every action pinned by its commit, a week old when taken (14.10); values reach the shell through env, never inline.
 on:
@@ -159,7 +159,8 @@ jobs:
           subject-path: dist/release/slipbox-${{ inputs.version }}-${{ matrix.target }}.tar.gz
           sbom-path: dist/release/slipbox-${{ inputs.version }}-${{ matrix.target }}.cdx.json
 
-  # The packs summed, the installer (and a release's formula) written from them, every asset attested, and the set
+  # The packs summed, the installer (and a release's formula) written from them, FFmpeg's source fetched beside them —
+  # kept only as the archive whose SHA-256 scripts/licences.ts records (D277) — every asset attested, and the set
   # handed to the caller. Only slipbox's own scripts run here, no dependency's: nothing is installed.
   finish:
     needs: [build, sbom]
@@ -191,8 +192,8 @@ jobs:
         run: |
           bun --no-install scripts/release.ts stamp --version "$VERSION"
           bun --no-install scripts/release.ts finish --repo "$REPO" --tag "$TAG"
-      # Who built each asset — the packs, their SBOMs, the sums, the installer, a release's formula — from which commit,
-      # by which workflow: `gh attestation verify <file> --repo <owner/name>`.
+      # Who built each asset — the packs, their SBOMs, the sums, the installer, a release's formula, FFmpeg's source —
+      # from which commit, by which workflow: `gh attestation verify <file> --repo <owner/name>`.
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/release/*
