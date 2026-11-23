@@ -160,7 +160,7 @@ const CLUSTERING_OFF = "\x1b[?2027l";
 
 /**
  * The terminal given back by slipbox: a string terminator, ending a picture's sequence cut short, and the end of a
- * frame cut short (synchronized output); then OpenTUI's own teardown as 0.9.1 writes it — the cursor shown, attributes
+ * frame cut short (synchronized output); then OpenTUI's own teardown as 0.9.2 writes it — the cursor shown, attributes
  * and the pointer's shape reset, the keyboard's protocol undone (Kitty's popped, or xterm's modifyOtherKeys reset),
  * mouse reporting, bracketed paste and focus reports off, the main screen back, palette reports off, grapheme
  * clustering (2027) off, the title, the cursor's colour and shape reset. Each undoes what OpenTUI's setup turns on,
