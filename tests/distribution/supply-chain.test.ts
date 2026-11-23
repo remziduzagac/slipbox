@@ -134,6 +134,28 @@ describe("the supply chain's gates (14.10)", () => {
     expect(embeddedProblems([pkg("@opentui/core", "MIT", { dir: tree({ LICENSE: "MIT" }) })])).toEqual([]);
   });
 
+  test("a library an upgrade links into OpenTUI's native library: its licence file, unrecorded, is said", () => {
+    const sha = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e";
+    const zlibSha = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16";
+    const source =
+      "FFmpeg 9.0.2\n- Source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz\n" +
+      `- SHA-256: \`${sha}\`\n- zlib 1.3.2: https://zlib.net/fossils/zlib-1.3.2.tar.gz\n- zlib SHA-256: \`${zlibSha}\`\n`;
+    const native = (files: Record<string, string>) =>
+      pkg("@opentui/core-linux-x64", "", { dir: tree({ "FFMPEG-SOURCE.md": source, LICENSE: "MIT", ...files }) });
+    // Each part recorded, and the Windows libraries' own, which no slipbox build has: nothing said.
+    const recorded = Object.fromEntries(EMBEDDED.flatMap((e) => (e.licenceFile ? [[e.licenceFile, "text"]] : [])));
+    expect(embeddedProblems([native({ ...recorded, "LICENSE-MINGW-W64": "ZPL", "LICENSE-GDTOA": "Lucent" })])).toEqual(
+      [],
+    );
+    expect(recorded).toMatchObject({ "LICENSE-ZIG": "text", "LICENSE-LLVM": "text", "LICENSE-YOGA": "text" });
+    // One no part records: said, till EMBEDDED has it.
+    expect(embeddedProblems([native({ ...recorded, "LICENSE-NEWLIB": "MIT" })])).toEqual([
+      "@opentui/core-linux-x64@1.0.0: ships LICENSE-NEWLIB, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN",
+    ]);
+    // Another package's licence files are its own: not asked about.
+    expect(embeddedProblems([pkg("other", "MIT", { dir: tree({ "LICENSE-EXTRA": "MIT" }) })])).toEqual([]);
+  });
+
   test("package.json's versions exact: a range, a tag or a partial version is a problem", () => {
     const deps = {
       a: "1.2.3",
@@ -605,6 +627,9 @@ describe("the supply chain's gates (14.10)", () => {
       "libwebp",
       "stb",
       "Wuffs",
+      "Zig",
+      "LLVM",
+      "Yoga",
     ]);
     expect(bom.dependencies.find((d) => d.ref.startsWith("pkg:npm/hunspell-asm@"))?.dependsOn).toContain(
       "embedded:Hunspell",
@@ -622,6 +647,9 @@ describe("the supply chain's gates (14.10)", () => {
         "embedded:libwebp-native",
         "embedded:stb",
         "embedded:Wuffs",
+        "embedded:Zig",
+        "embedded:LLVM",
+        "embedded:Yoga",
       ]);
     expect(bom.components.find((c) => c["bom-ref"] === "embedded:Wuffs")).toEqual({
       type: "library",

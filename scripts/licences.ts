@@ -1,7 +1,7 @@
 // What slipbox takes, by licence, and what's compiled into the packages it bundles (plan 14.6, 14.10; D192): read
 // by `check-deps.ts`' gates and notices, and by `release.ts`, whose releases carry the sources these licences ask for.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Package } from "./check-deps.ts";
 
@@ -179,7 +179,38 @@ export const EMBEDDED: Embedded[] = [
     licenceFile: "LICENSE-WUFFS",
     source: "https://github.com/google/wuffs",
   },
+  // Built with Zig from 0.9.1 on: Zig's runtime and LLVM's, which it links, and Yoga, the layout engine, in C++.
+  {
+    name: "Zig",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT",
+    licenceFile: "LICENSE-ZIG",
+    copyright: "Copyright (c) Zig contributors",
+    source: "https://codeberg.org/ziglang/zig",
+  },
+  {
+    name: "LLVM",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "Apache-2.0 WITH LLVM-exception",
+    licenceFile: "LICENSE-LLVM",
+    source: "https://github.com/llvm/llvm-project",
+  },
+  {
+    name: "Yoga",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT",
+    licenceFile: "LICENSE-YOGA",
+    copyright: "Copyright (c) Facebook, Inc. and its affiliates.",
+    source: "https://github.com/facebook/yoga",
+  },
 ];
+
+/** Licence files OpenTUI's native packages ship for code no slipbox build has: its Windows libraries' alone (MinGW-w64's
+ *  runtime and the gdtoa in it), and slipbox builds no Windows binary. Every other one an `EMBEDDED` part's. */
+export const NOT_BUILT_IN = new Set(["LICENSE-MINGW-W64", "LICENSE-GDTOA"]);
 
 /** A source archive a release carries beside its binaries: its file name, address and SHA-256, and what it's the
  *  source of. */
@@ -206,6 +237,13 @@ export const holds = (e: Embedded, name: string) => (e.within ? e.within.test(na
  *  at the version, address and SHA-256 recorded here. */
 export function embeddedProblems(packages: Package[], embedded: Embedded[] = EMBEDDED): string[] {
   const out: string[] = [];
+  // A package whose parts' licences it ships: each `LICENSE-<part>` file in it a part recorded, so a library an
+  // upgrade links in is said, not left out of the SBOM.
+  const files = new Set(embedded.flatMap((e) => (e.licenceFile ? [e.licenceFile] : [])));
+  for (const p of packages.filter((x) => embedded.some((e) => e.licenceFile && holds(e, x.name))))
+    for (const f of readdirSync(p.dir).filter((f) => /^LICENSE-/.test(f)))
+      if (!files.has(f) && !NOT_BUILT_IN.has(f))
+        out.push(`${p.name}@${p.version}: ships ${f}, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN`);
   for (const e of embedded)
     for (const p of e.archive ? packages.filter((x) => holds(e, x.name)) : []) {
       const { declared, sha256 } = e.archive!;

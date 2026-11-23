@@ -279,7 +279,7 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - In a terminal that draws an emoji sequence by its parts (xterm, Alacritty, GNOME Terminal, VS Code's), slipbox
   counts the parts too: a family, or a thumb with its skin tone, takes a cell or two for each, so the rows after it
   stay in line. The heart ornaments, ❤ among them, take one cell, as terminals draw them.
-- OpenTUI, the library slipbox draws the terminal with, is 0.9.0. Its native library has FFmpeg built in, for video
+- OpenTUI, the library slipbox draws the terminal with, is 0.9.1. Its native library has FFmpeg built in, for video
   slipbox doesn't play, under the LGPL 2.1: each release carries FFmpeg's source beside its builds, and `NOTICES.txt`
   gives its licence and how to run slipbox with an FFmpeg you've changed.
 

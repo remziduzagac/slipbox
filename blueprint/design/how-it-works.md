@@ -607,7 +607,7 @@ package — no build toolchain). SQLite is the runtime's own, `node:sqlite` (D19
 
 | Package | Used for |
 | --- | --- |
-| `@opentui/core` **0.9.0, pinned exactly** | the TUI renderer and input; its native library links FFmpeg, LGPL-2.1 |
+| `@opentui/core` **0.9.1, pinned exactly** | the TUI renderer and input; its native library links FFmpeg, LGPL-2.1 |
 | `unified`, `remark-parse`, `remark-gfm`, `remark-frontmatter` | parsing, with source positions |
 | `mdast-util-to-string` | heading text fallback |
 | `highlight.js` | code-fence highlighting, in the core so CLI and TUI match |
@@ -658,7 +658,7 @@ The synchronous clipboard functions remain available for file-only callers and c
 ### OpenTUI upgrade policy (`0.9`)
 
 OpenTUI is pre-1.0 and moves fast, so it is pinned to an exact version in `package.json`
-(`"0.9.0"`, no caret; D6). To upgrade:
+(`"0.9.1"`, no caret; D6). To upgrade:
 
 1. Read the changelog from the pinned version to the target.
 2. Bump the pin, run `bun run check`. The `OpenTUI end to end` test in `tests/tui/shell/terminal/integration.test.ts`

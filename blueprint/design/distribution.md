@@ -83,8 +83,11 @@ it's for). A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A 
 `slipbox-<version>-<target>.tar.gz`, a folder of that name inside. Beside each pack, `build` writes its SBOM,
 `slipbox-<version>-<target>.cdx.json` (CycloneDX 1.6, JSON), from the same walk as its notices (`check-deps.ts`'
 `sbom`): slipbox; each package bundled, with its licence, its source and the packages it depends on; the code compiled
-into packages (Hunspell, libwebp; in OpenTUI's native library FFmpeg, zlib, Ghostty, Little CMS, libwebp, stb and
-Wuffs, as its packages' licence files name them), each source archive recorded by its SHA-256; and Bun, the runtime.
+into packages (Hunspell, libwebp; in OpenTUI's native library FFmpeg, zlib, Ghostty, Little CMS, libwebp, stb, Wuffs,
+Zig, LLVM and Yoga, as its packages' licence files name them), each source archive recorded by its SHA-256; and Bun,
+the runtime. A licence file a native package ships that no part records fails `check:deps`, so a library an upgrade
+links in isn't left out; only those of OpenTUI's Windows libraries (MinGW-w64, gdtoa), which no slipbox build has, are
+not parts (`NOT_BUILT_IN`).
 There's one per pack because the walk differs by platform: a platform's OpenTUI package is installed only there.
 `finish` first checks the version, its tag and the packs, refusing none, or another version's packs or SBOMs beside
 them (a source it carries is no pack, whatever its archive's kind); then fetches the source of what's compiled in whose
@@ -817,10 +820,11 @@ package of its own — Hunspell (taken under MPL-1.1) in `hunspell-asm`, libwebp
 native library: its version, its copyright, its source at ffmpeg.org by its SHA-256 and beside each release's binaries,
 and how to run slipbox with it changed (OpenTUI's source builds the library again; `OPENTUI_LIB_PATH` names the one to
 load); zlib, linked in with it: its version, copyright and source by its SHA-256; and the rest of that library, each
-with its copyright and source: Ghostty, Little CMS, libwebp, stb, Wuffs. Each licence is said once: where the package
-it's in ships its text (OpenTUI's `LICENSE-FFMPEG`, `LICENSE-ZLIB`, …), that package's part has it, read from the file,
-and the compiled-in part points there — and Bun's own licence page, since the runtime is in the binary: Bun is MIT,
-and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the libraries it lists, the LGPL's text after it.
+with its copyright and source: Ghostty, Little CMS, libwebp, stb, Wuffs, Zig, LLVM, Yoga. Each licence is said once:
+where the package it's in ships its text (OpenTUI's `LICENSE-FFMPEG`, `LICENSE-ZLIB`, …), that package's part has it,
+read from the file, and the compiled-in part points there — and Bun's own licence page, since the runtime is in the
+binary: Bun is MIT, and links JavaScriptCore and WebKit (LGPL-2), tinycc (LGPL-2.1) and the libraries it lists, the
+LGPL's text after it.
 slipbox's own licence, Apache-2.0 (GR-D3), is `LICENSE`, in the repository and in each pack beside `NOTICES.txt`;
 `tests/distribution/supply-chain.test.ts` keeps it Apache-2.0's text, and `package.json`'s `license` saying so.
 
