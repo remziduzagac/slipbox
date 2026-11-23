@@ -104,18 +104,25 @@ describe("the supply chain's gates (14.10)", () => {
     expect(licenceProblems([pkg("@opentui/core-linux-x64", "MIT AND GPL-2.0-or-later")])).toHaveLength(1);
   });
 
+  // OpenTUI's native package as it ships: its licence, an FFMPEG-SOURCE.md naming the FFmpeg and zlib recorded, and
+  // each part's licence file; `files` over them, a null one left out.
+  const sha = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e";
+  const zlibSha = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16";
+  const declared = (version = "9.0.2", fsha = sha, zlib = "1.3.2", zsha = zlibSha) =>
+    `# FFmpeg\n\nNative video statically links a minimal decode-only FFmpeg ${version} build.\n\n` +
+    `- Source: https://ffmpeg.org/releases/ffmpeg-${version}.tar.xz\n- SHA-256: \`${fsha}\`\n` +
+    `- License: LGPL-2.1-or-later (\`COPYING.LGPLv2.1\`)\n` +
+    `- zlib ${zlib}: https://zlib.net/fossils/zlib-${zlib}.tar.gz\n- zlib SHA-256: \`${zsha}\`\n`;
+  const partLicences = Object.fromEntries(EMBEDDED.flatMap((e) => (e.licenceFile ? [[e.licenceFile, "text"]] : [])));
+  const native = (files: Record<string, string | null> = {}, name = "@opentui/core-linux-x64") => {
+    const all = { LICENSE: "MIT", "FFMPEG-SOURCE.md": declared(), ...partLicences, ...files };
+    return pkg(name, "", { dir: tree(Object.fromEntries(Object.entries(all).filter(([, v]) => v !== null))) });
+  };
+
   test("FFmpeg and zlib, compiled into OpenTUI's native library: each package says it holds the versions and sources recorded", () => {
-    const declared = (version: string, sha: string, zlib = "1.3.2", zsha = zlibSha) =>
-      `# FFmpeg\n\nNative video statically links a minimal decode-only FFmpeg ${version} build.\n\n` +
-      `- Source: https://ffmpeg.org/releases/ffmpeg-${version}.tar.xz\n- SHA-256: \`${sha}\`\n` +
-      `- License: LGPL-2.1-or-later (\`COPYING.LGPLv2.1\`)\n` +
-      `- zlib ${zlib}: https://zlib.net/fossils/zlib-${zlib}.tar.gz\n- zlib SHA-256: \`${zsha}\`\n`;
-    const sha = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e";
-    const zlibSha = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16";
-    const native = (files: Record<string, string>) => pkg("@opentui/core-linux-x64", "", { dir: tree(files) });
-    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", sha) })])).toEqual([]);
+    expect(embeddedProblems([native()])).toEqual([]);
     // An upgrade linking another FFmpeg, or another archive of it: said, until what's recorded follows.
-    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.3", sha) })])).toEqual([
+    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.3") })])).toEqual([
       `@opentui/core-linux-x64@1.0.0: its FFMPEG-SOURCE.md names FFmpeg 9.0.3 (https://ffmpeg.org/releases/ffmpeg-9.0.3.tar.xz, SHA-256 ${sha}), and EMBEDDED FFmpeg 9.0.2 (https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz, SHA-256 ${sha}): update EMBEDDED`,
     ]);
     expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", "0".repeat(64)) })])).toHaveLength(1);
@@ -126,7 +133,7 @@ describe("the supply chain's gates (14.10)", () => {
     expect(
       embeddedProblems([native({ "FFMPEG-SOURCE.md": declared("9.0.2", sha, "1.3.2", "0".repeat(64)) })]),
     ).toHaveLength(1);
-    expect(embeddedProblems([native({ LICENSE: "MIT" })])).toEqual([
+    expect(embeddedProblems([native({ "FFMPEG-SOURCE.md": null })])).toEqual([
       `@opentui/core-linux-x64@1.0.0: no FFMPEG-SOURCE.md to say it holds FFmpeg 9.0.2 (https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz, SHA-256 ${sha}): update EMBEDDED`,
       `@opentui/core-linux-x64@1.0.0: no FFMPEG-SOURCE.md to say it holds zlib 1.3.2 (https://zlib.net/fossils/zlib-1.3.2.tar.gz, SHA-256 ${zlibSha}): update EMBEDDED`,
     ]);
@@ -134,24 +141,30 @@ describe("the supply chain's gates (14.10)", () => {
     expect(embeddedProblems([pkg("@opentui/core", "MIT", { dir: tree({ LICENSE: "MIT" }) })])).toEqual([]);
   });
 
-  test("a library an upgrade links into OpenTUI's native library: its licence file, unrecorded, is said", () => {
-    const sha = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e";
-    const zlibSha = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16";
-    const source =
-      "FFmpeg 9.0.2\n- Source: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz\n" +
-      `- SHA-256: \`${sha}\`\n- zlib 1.3.2: https://zlib.net/fossils/zlib-1.3.2.tar.gz\n- zlib SHA-256: \`${zlibSha}\`\n`;
-    const native = (files: Record<string, string>) =>
-      pkg("@opentui/core-linux-x64", "", { dir: tree({ "FFMPEG-SOURCE.md": source, LICENSE: "MIT", ...files }) });
-    // Each part recorded, and the Windows libraries' own, which no slipbox build has: nothing said.
-    const recorded = Object.fromEntries(EMBEDDED.flatMap((e) => (e.licenceFile ? [[e.licenceFile, "text"]] : [])));
-    expect(embeddedProblems([native({ ...recorded, "LICENSE-MINGW-W64": "ZPL", "LICENSE-GDTOA": "Lucent" })])).toEqual(
-      [],
-    );
-    expect(recorded).toMatchObject({ "LICENSE-ZIG": "text", "LICENSE-LLVM": "text", "LICENSE-YOGA": "text" });
-    // One no part records: said, till EMBEDDED has it.
-    expect(embeddedProblems([native({ ...recorded, "LICENSE-NEWLIB": "MIT" })])).toEqual([
-      "@opentui/core-linux-x64@1.0.0: ships LICENSE-NEWLIB, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN",
+  test("the parts of OpenTUI's native library, by the licence files its packages ship: one unrecorded, or one gone, is said", () => {
+    expect(partLicences).toMatchObject({ "LICENSE-ZIG": "text", "LICENSE-LLVM": "text", "LICENSE-YOGA": "text" });
+    // The Windows libraries' own, which no slipbox build has: not asked about, but on Windows' package.
+    const windows = { "LICENSE-MINGW-W64": "ZPL", "LICENSE-GDTOA": "Lucent" };
+    expect(embeddedProblems([native(windows)])).toEqual([]);
+    expect(embeddedProblems([native(windows, "@opentui/core-win32-x64")])).toEqual([
+      "@opentui/core-win32-x64@1.0.0: ships LICENSE-GDTOA, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN",
+      "@opentui/core-win32-x64@1.0.0: ships LICENSE-MINGW-W64, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN",
     ]);
+    // A library an upgrade links in, by any name the notices read a licence by: said, till EMBEDDED has it.
+    for (const f of ["LICENSE-NEWLIB", "COPYING-NEWLIB", "NOTICE-NEWLIB", "licence-newlib"])
+      expect(embeddedProblems([native({ [f]: "MIT" })])).toEqual([
+        `@opentui/core-linux-x64@1.0.0: ships ${f}, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN`,
+      ]);
+    expect(embeddedProblems([native({ "LICENSE-NEWLIB": "MIT" })], EMBEDDED, new Set(["LICENSE-NEWLIB"]))).toEqual([]);
+    // The package's own licence, by any of its names: not a part.
+    expect(embeddedProblems([native({ "LICENSE.md": "MIT", COPYING: "MIT", NOTICE: "x" })])).toEqual([]);
+    // A part whose file an upgrade drops: said, not listed on.
+    expect(embeddedProblems([native({ "LICENSE-WUFFS": null })])).toEqual([
+      "@opentui/core-linux-x64@1.0.0: no LICENSE-WUFFS, which EMBEDDED's Wuffs is said by: is it still in?",
+    ]);
+    // A package's folder gone: said, the other gates still run.
+    const gone = pkg("@opentui/core-linux-x64", "", { dir: join(tree({}), "gone") });
+    expect(embeddedProblems([gone]).length).toBe(Object.keys(partLicences).length + 2);
     // Another package's licence files are its own: not asked about.
     expect(embeddedProblems([pkg("other", "MIT", { dir: tree({ "LICENSE-EXTRA": "MIT" }) })])).toEqual([]);
   });

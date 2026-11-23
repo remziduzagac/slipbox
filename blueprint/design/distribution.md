@@ -85,9 +85,10 @@ it's for). A Mac's binary built on a Mac is signed ad hoc again (§ Signing). A 
 `sbom`): slipbox; each package bundled, with its licence, its source and the packages it depends on; the code compiled
 into packages (Hunspell, libwebp; in OpenTUI's native library FFmpeg, zlib, Ghostty, Little CMS, libwebp, stb, Wuffs,
 Zig, LLVM and Yoga, as its packages' licence files name them), each source archive recorded by its SHA-256; and Bun,
-the runtime. A licence file a native package ships that no part records fails `check:deps`, so a library an upgrade
-links in isn't left out; only those of OpenTUI's Windows libraries (MinGW-w64, gdtoa), which no slipbox build has, are
-not parts (`NOT_BUILT_IN`).
+the runtime. A part's licence file a native package ships that no part records fails `check:deps`, so a library an
+upgrade links in isn't left out, and so does a recorded part's file gone, so one dropped isn't listed on. Only those
+of OpenTUI's Windows library (MinGW-w64, gdtoa), which no slipbox build has, are no parts (`NOT_BUILT_IN`); their
+texts stay in the package's part of the notices, as it ships them.
 There's one per pack because the walk differs by platform: a platform's OpenTUI package is installed only there.
 `finish` first checks the version, its tag and the packs, refusing none, or another version's packs or SBOMs beside
 them (a source it carries is no pack, whatever its archive's kind); then fetches the source of what's compiled in whose
