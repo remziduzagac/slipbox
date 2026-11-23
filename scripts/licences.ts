@@ -256,7 +256,7 @@ export function embeddedProblems(
   // drops isn't listed on.
   const shipping = embedded.filter((e) => e.licenceFile);
   for (const p of packages.filter((x) => shipping.some((e) => holds(e, x.name)))) {
-    const files = existsSync(p.dir) ? readdirSync(p.dir) : [];
+    const files = existsSync(p.dir) ? readdirSync(p.dir).sort() : []; // in one order, whatever the disk's
     const recorded = shipping.filter((e) => holds(e, p.name));
     const exempt = (f: string) => notBuiltIn.has(f) && !/win32/.test(p.name);
     for (const f of files.filter(partLicence))
