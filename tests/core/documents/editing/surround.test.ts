@@ -17,7 +17,10 @@ const applied = (source: string, s: Surrounded) =>
   [...s.edits].reverse().reduce((t, e) => t.slice(0, e.from) + e.text + t.slice(e.to), source);
 
 /** `text` without its `|`, and where the `|` was: the cursor. */
-const cursor = (text: string) => ({ source: text.replace("|", ""), at: text.indexOf("|") });
+function cursor(text: string) {
+  const at = text.indexOf("|");
+  return { source: text.slice(0, at) + text.slice(at + 1), at };
+}
 
 /** `mark` put around the first `word` in `source`: the text after, the text inside, and the link's target. */
 function added(source: string, word: string, mark: Mark) {
