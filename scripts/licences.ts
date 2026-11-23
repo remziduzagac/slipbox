@@ -1,7 +1,7 @@
 // What slipbox takes, by licence, and what's compiled into the packages it bundles (plan 14.6, 14.10; D192): read
 // by `check-deps.ts`' gates and notices, and by `release.ts`, whose releases carry the sources these licences ask for.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Package } from "./check-deps.ts";
 
@@ -179,7 +179,48 @@ export const EMBEDDED: Embedded[] = [
     licenceFile: "LICENSE-WUFFS",
     source: "https://github.com/google/wuffs",
   },
+  // In the library before 0.9.1 too, which first ships their licences: it's built with Zig, whose runtime and LLVM's
+  // it links, and has Yoga, the layout engine, in C++.
+  {
+    name: "Zig",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT",
+    licenceFile: "LICENSE-ZIG",
+    copyright: "Copyright (c) Zig contributors",
+    source: "https://codeberg.org/ziglang/zig",
+  },
+  {
+    name: "LLVM",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "Apache-2.0 WITH LLVM-exception",
+    licenceFile: "LICENSE-LLVM",
+    copyright: "Copyright (c) 2009-2019 by the contributors listed in CREDITS.TXT",
+    source: "https://github.com/llvm/llvm-project",
+  },
+  {
+    name: "Yoga",
+    inside: OPENTUI_LIBRARY,
+    within: OPENTUI_PACKAGES,
+    licence: "MIT",
+    licenceFile: "LICENSE-YOGA",
+    copyright: "Copyright (c) Facebook, Inc. and its affiliates.",
+    source: "https://github.com/facebook/yoga",
+  },
 ];
+
+/** Licence files OpenTUI's native packages ship for code no slipbox build has: its Windows libraries' alone (MinGW-w64's
+ *  runtime and the gdtoa in it), and slipbox builds no Windows binary. Exempt in every other platform's package; every
+ *  other one an `EMBEDDED` part's. Their texts stay in the package's part of the notices, as it ships them. */
+export const NOT_BUILT_IN = new Set(["LICENSE-MINGW-W64", "LICENSE-GDTOA"]);
+
+/** A licence file, as the notices read a package's: `LICENSE`, `COPYING`, `NOTICE`, `COPYRIGHT`, either spelling and
+ *  case, alone or with an extension or a part's name after it. */
+export const LICENCE_FILE = /^(licen[cs]e|copying|notice|copyright)([.-].*)?$/i;
+
+/** One of a part the package has compiled in, by its name after the word (`LICENSE-ZIG`), not the package's own. */
+const partLicence = (f: string) => LICENCE_FILE.test(f) && !/^(licen[cs]e|copying|notice|copyright)(\.\w+)?$/i.test(f);
 
 /** A source archive a release carries beside its binaries: its file name, address and SHA-256, and what it's the
  *  source of. */
@@ -204,8 +245,27 @@ export const holds = (e: Embedded, name: string) => (e.within ? e.within.test(na
 
 /** Where what's compiled in and what its packages declare part: each package it's in names it, in its `declared` file,
  *  at the version, address and SHA-256 recorded here. */
-export function embeddedProblems(packages: Package[], embedded: Embedded[] = EMBEDDED): string[] {
+export function embeddedProblems(
+  packages: Package[],
+  embedded: Embedded[] = EMBEDDED,
+  notBuiltIn: Set<string> = NOT_BUILT_IN,
+): string[] {
   const out: string[] = [];
+  // A package whose parts' licences it ships: each part's licence file in it a part recorded, so a library an upgrade
+  // links in is said, not left out of the SBOM; and each part recorded by its file still shipped, so one an upgrade
+  // drops isn't listed on.
+  const shipping = embedded.filter((e) => e.licenceFile);
+  for (const p of packages.filter((x) => shipping.some((e) => holds(e, x.name)))) {
+    const files = existsSync(p.dir) ? readdirSync(p.dir).sort() : []; // in one order, whatever the disk's
+    const recorded = shipping.filter((e) => holds(e, p.name));
+    const exempt = (f: string) => notBuiltIn.has(f) && !/win32/.test(p.name);
+    for (const f of files.filter(partLicence))
+      if (!recorded.some((e) => e.licenceFile === f) && !exempt(f))
+        out.push(`${p.name}@${p.version}: ships ${f}, a part EMBEDDED doesn't record: add it, or to NOT_BUILT_IN`);
+    for (const e of recorded)
+      if (!files.includes(e.licenceFile!))
+        out.push(`${p.name}@${p.version}: no ${e.licenceFile}, which EMBEDDED's ${e.name} is said by: is it still in?`);
+  }
   for (const e of embedded)
     for (const p of e.archive ? packages.filter((x) => holds(e, x.name)) : []) {
       const { declared, sha256 } = e.archive!;

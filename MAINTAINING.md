@@ -263,6 +263,10 @@ another, from a fixed `dev`.
 - a licence slipbox doesn't take, in any package the binary can bundle: permissive licences pass, weak copyleft only by
   name (`NAMED`, each asked about first), and a package that names none only once its own licence file has been read and
   recorded (`DECLARED`);
+- what's compiled into OpenTUI's native packages differing from `scripts/licences.ts`' `EMBEDDED`: the FFmpeg or zlib
+  their `FFMPEG-SOURCE.md` names, by version, address or SHA-256; a part's licence file they ship that no part records
+  (add the part, with its licence, copyright and source; or, when it's OpenTUI's Windows library's alone, which no
+  slipbox build has, list it in `NOT_BUILT_IN`); or a recorded part's file gone (drop the part, once it's out);
 - an action in `.github/workflows/` not pinned by its commit's full hash.
 
 ### Admitting a dependency

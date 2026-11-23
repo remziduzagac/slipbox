@@ -17,7 +17,16 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { DECLARED, EMBEDDED, embeddedProblems, holds, named, PERMISSIVE, sourceArchives } from "./licences.ts";
+import {
+  DECLARED,
+  EMBEDDED,
+  embeddedProblems,
+  holds,
+  LICENCE_FILE,
+  named,
+  PERMISSIVE,
+  sourceArchives,
+} from "./licences.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -268,7 +277,6 @@ export function checkDeps(root = ROOT): { problems: string[]; packages: Package[
 }
 
 const RULE = "=".repeat(100);
-const LICENCE_FILE = /^(licen[cs]e|copying|notice|copyright)([.-].*)?$/i;
 
 /** A licence's standard text (notices/licenses), its copyright filled in where it has a blank for one. An "or later"
  *  licence's text is its version's. */

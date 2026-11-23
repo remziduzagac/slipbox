@@ -196,7 +196,7 @@ describe("the terminal given back at quit", () => {
     // OpenTUI asks the terminal at setup (DECRPM 2027), turns clustering on, and its teardown turns it off only where
     // the terminal said it was off; so does slipbox's.
     const { clusteringOff, openRenderer } = await import("../../../../src/tui/shell/terminal/run.ts");
-    // Each answer as OpenTUI 0.9.0's teardown takes it: none, set, reset, set or reset for good, not known.
+    // Each answer as OpenTUI 0.9.1's teardown takes it: none, set, reset, set or reset for good, not known.
     const answers = [null, 1, 2, 3, 4, 0] as const;
     const counting = (b: number | null) => (b === 0 || b === 4 ? "wcwidth" : "unicode");
     expect(answers.map((b) => clusteringOff(b, counting(b)))).toEqual([true, false, true, false, false, false]);
