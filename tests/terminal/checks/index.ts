@@ -61,6 +61,7 @@ import { SOURCE_CONTROL } from "./source-control.ts";
 import { START } from "./start.ts";
 import { STATUS_LINE } from "./status-line.ts";
 import { LINKED } from "./symlinks.ts";
+import { SURROUND } from "./surround.ts";
 import { SYNTAX_STRUCTURE } from "./syntax-structure.ts";
 import { TERMINAL_INPUT } from "./terminal-input.ts";
 import { TERMINAL_STATE } from "./terminal-state.ts";
@@ -98,6 +99,8 @@ export const CHECK_FILES: Record<string, Check[]> = {
   editing: EDITING,
   // Reflow (EG-D12): the editing area's, in a file of their own.
   reflow: REFLOW,
+  // Surround (EG-D8): the editing area's, in a file of their own.
+  surround: SURROUND,
   "new-file": NEW_FILE,
   // The screen and navigation: panes, tabs, windows, the palette, which-key, find, replace, search, tags, the
   // explorer, settings, and the terminal's own behaviour: keys as sent, pastes, the session, resizes, signals (TT-T5).

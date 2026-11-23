@@ -1062,6 +1062,9 @@ build (`scripts/build-home.ts`), not kept as they are. Each file's purpose and t
   each with a link and a code span kept whole, the heading and table left; g shift+q ip joins each back; V's lines, a
   width typed (:reflow 60), :unwrap — the note is unwrapped on purpose — `work/product/drafts/2.3-retro.md`,
   `work/product/.markdownlint-cli2.jsonc` (editing.md Reflow; terminal check 'reflow')
+- surround: y s i w b and . on the next word, c s \* then \` on the italic inside the bold, d s ( around a quoted
+  remark, v e e e shift+s \~; with editor.auto\_pairs on, a quote typed over a selection and \* twice making it bold —
+  `notes/weekly/2026-W39.md` (editing.md Surrounding text; terminal check 'surround')
 
 ### yaml-frontmatter
 
@@ -2598,6 +2601,7 @@ A long note: headings, paragraphs, pages to move through; the daily note has the
   (catalog.ts)
 - `visual.reflow` — Reflow the selection — `work/product/drafts/2.3-retro.md` (catalog.ts)
 - `visual.unwrap` — Unwrap the selection — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `visual.surround` — Surround the selection — `notes/weekly/2026-W39.md` (catalog.ts)
 - `visual.grow` — Grow the selection — `notes/projects/sync-rewrite.md`, `work/kestrel/src/sync/queue.ts` (catalog.ts)
 - `visual.shrink` — Shrink the selection back — `notes/projects/sync-rewrite.md`, `work/kestrel/src/sync/queue.ts`
   (catalog.ts)
@@ -2748,6 +2752,9 @@ Notes being written today: lists, tasks, tables, quotes, code to change.
 - `edit.op_unwrap` — Unwrap (operator) — `work/product/drafts/2.3-retro.md` (catalog.ts)
 - `edit.reflow` — Reflow paragraphs — `work/product/drafts/2.3-retro.md` (catalog.ts)
 - `edit.unwrap` — Unwrap paragraphs — `work/product/drafts/2.3-retro.md` (catalog.ts)
+- `edit.surround_add` — Surround (operator) — `notes/weekly/2026-W39.md` (catalog.ts)
+- `edit.surround_delete` — Delete the surrounding marks — `notes/weekly/2026-W39.md` (catalog.ts)
+- `edit.surround_change` — Change the surrounding marks — `notes/weekly/2026-W39.md` (catalog.ts)
 - `edit.delete_to_end` — Delete to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,
   `notes/daily/2026-10-05.md` (catalog.ts)
 - `edit.change_to_end` — Change to the line's end — `notes/daily/2026-10-06.md`, `notes/projects/kestrel-v2-3.md`,

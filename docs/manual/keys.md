@@ -587,6 +587,10 @@ These keys belong to SOURCE view and the lens. In your configuration, they are u
 | comment or uncomment the lines it covers, as the language writes comments | `g c`, then the motion |
 | wrap the paragraphs it touches to the width / join each back to one line | `g q` / `g shift+q`, then the motion |
 | the same on whole lines (with a count first, that many) | `d d`, `c c`, `y y`, `> >`, `< <`, `g c c`, `g q q` |
+| put a pair of marks around what a motion covers ([marks](editing.md#surrounding-text)) | `y s`, the motion, the mark |
+| put a pair of marks around the line's text | `y s s`, then the mark |
+| take out the nearest pair of a mark around the cursor, the text kept | `d s`, then the mark |
+| change the nearest pair of a mark around the cursor to another | `c s`, the mark, the new one |
 | comment or uncomment the line | `ctrl+/` |
 | delete / change to the line's end | `shift+d` / `shift+c` |
 | delete the character under the cursor | `x` |
@@ -639,6 +643,7 @@ they are under [`[keys.visual]`](configuration.md).
 | indent / outdent its lines | `>` / `<` |
 | comment or uncomment its lines | `g c`, `ctrl+/` |
 | wrap its paragraphs to the width / join each back to one line | `g q` / `g shift+q` |
+| put a pair of marks around it | `shift+s`, then the mark |
 | select a text object (`v i w`, `v i (`) | `i` or `a`, then the object |
 | grow the selection to the next thing around it, by the text's structure / back a step | `alt+o` / `alt+i` |
 | filter its lines through a shell command (types `:'<,'>!`) | `!` |
@@ -679,6 +684,8 @@ With [`editor.auto_pairs`](configuration.md) on:
 - a bracket or a quote types its closing half too
 - a closing one typed where it already is steps over it
 - `backspace` between an empty pair deletes both
+- a bracket, a quote or a backtick typed over a selection goes around it, and so do `*` and `~` in a Markdown note
+  outside its code; the selection stays on the text inside
 
 ### Completion and snippets
 

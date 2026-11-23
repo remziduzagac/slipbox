@@ -152,7 +152,7 @@ autosave_ms = 10000
 edit_in = "live"
 lens_min_rows = 8
 lens_max = 0.4
-auto_pairs = true                # typing ( [ { " ' ` puts its closing half after the cursor
+auto_pairs = true                # typing ( [ { " ' ` puts its closing half after the cursor, or wraps a selection
 text_width = 100                # g q wraps to 100; 0 takes markdownlint's line_length, then .editorconfig's, then 80
 remote = [                      # run in order, each after the last; the first failure stops
   "nvim --server {server} --remote {file}",
@@ -439,6 +439,11 @@ sidebar_vault = { bold = true, underline = true }
 "leader ; 5 d" = "edit.unwrap"
 "leader ; 5 e" = "visual.reflow"
 "leader ; 5 f" = "visual.unwrap"
+# surround: a pair of marks added, taken out, changed; a selection's
+"leader ; 6 a" = "edit.surround_add"
+"leader ; 6 b" = "edit.surround_delete"
+"leader ; 6 c" = "edit.surround_change"
+"leader ; 6 d" = "visual.surround"
 "leader ; a z" = "edit.undo"
 "leader ; a A" = "edit.redo"
 "leader ; d a" = "file.save"

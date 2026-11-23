@@ -5,6 +5,7 @@ import { cells } from "../cursor.ts";
 import { keyChar } from "../../../shell/input/keys/decoding.ts";
 import { autoPair } from "../../../../core/documents/editing/brackets.ts";
 import { deleteTypedSelection, typedSelection } from "./selection.ts";
+import { wrapSelectionTyped } from "../surround.ts";
 import { insertText, nextBoundary, prevBoundary } from "./text.ts";
 import { lineOf, lineText, offsetOf, placeAt } from "./position.ts";
 import { stopInsert } from "./lifecycle.ts";
@@ -74,8 +75,8 @@ function selectTo(app: App, view: View, move: string): void {
 /**
  * A key while typing with a selection (DF-D15), as a desktop editor has it: a character typed, `enter` or a paste
  * replaces it; `backspace`, `delete` and the other deleting keys delete it; `ctrl+c` copies it and `ctrl+x` cuts it;
- * `left` and `right` go to its start and end. Any other key lets it go, then does what it does. True when the key is
- * spent here.
+ * `left` and `right` go to its start and end; with closing pairs on, a bracket or a quote typed wraps it (EG-D8). Any
+ * other key lets it go, then does what it does. True when the key is spent here.
  */
 function selectionKey(app: App, view: View, key: string): boolean {
   switch (key) {
@@ -108,7 +109,10 @@ function selectionKey(app: App, view: View, key: string): boolean {
       return true;
     }
   }
-  if (keyChar(key) !== null || key === "enter" || key === "ctrl+v") deleteTypedSelection(app, view);
+  const typed = keyChar(key);
+  // A mark typed over it wraps it, with closing pairs on (EG-D8).
+  if (typed !== null && wrapSelectionTyped(app, view, typed)) return true;
+  if (typed !== null || key === "enter" || key === "ctrl+v") deleteTypedSelection(app, view);
   else view.sel = null;
   return false;
 }

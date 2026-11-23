@@ -52,8 +52,15 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
     o.count = count; // d2i( and 2di( both: a count before the object counts too
     return;
   }
-  // The operator doubled (dd, cc, yy, >>, <<, gcc, gqq): whole lines, count of them.
-  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c", gq: "q", gQ: "shift+q" }[o.op];
+  // A binding of its own that goes on from the operator's key (`y s`, `d s`, `c s`: surround, EG-D8), not a motion.
+  const bound = o.keys.length ? undefined : boundAfter(app, o.op, key);
+  if (bound) {
+    s.op = null;
+    s.count = given ? String(count) : "";
+    return app.run(bound);
+  }
+  // The operator doubled (dd, cc, yy, >>, <<, gcc, gqq, yss): whole lines, count of them.
+  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c", gq: "q", gQ: "shift+q", ys: "s" }[o.op];
   if (!o.keys.length && key === opKey) {
     s.op = null;
     const at = E.offsetOf(app, view);
@@ -112,6 +119,29 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
   }
   const r = await motionRange(app, view, spec, count, o.op);
   if (r) return apply(app, view, o.op, r);
+}
+
+/** The command each operator is started by. */
+const OP_COMMANDS: Record<Op, string> = {
+  d: "edit.op_delete",
+  c: "edit.op_change",
+  y: "edit.op_yank",
+  ">": "edit.op_indent",
+  "<": "edit.op_outdent",
+  gc: "edit.op_comment",
+  gq: "edit.op_reflow",
+  gQ: "edit.op_unwrap",
+  ys: "edit.surround_add",
+};
+
+/** What SOURCE view's keys bind to an operator's keys and then `key` (`y s` after `y`), as they're set: undefined for
+ *  none, the key then a motion's. */
+function boundAfter(app: App, op: Op, key: string): string | undefined {
+  for (const keys of app.sourceKeys.keysFor(OP_COMMANDS[op])) {
+    const spec = app.sourceKeys.lookup(`${keys} ${key}`);
+    if (spec) return spec;
+  }
+  return undefined;
 }
 
 /** An operator with f / t: f and t take the character they land on, F and T don't. */

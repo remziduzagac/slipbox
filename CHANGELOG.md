@@ -72,6 +72,12 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   `line_length`, else `.editorconfig`'s `max_line_length`, else 80. `:reflow [width]` and `:unwrap` do the same at
   the `:` prompt, with a range before them (`:%reflow`, `:'<,'>reflow`).
 
+- `y s`, a motion or a text object, then a mark puts a pair of marks around text: `*` italic, `b` bold, `` ` `` code,
+  `~` strikethrough, `l` a link, a bracket or a quote. `y s i w b` makes a word bold. `d s` and a mark takes out the
+  nearest pair around the cursor, `c s` changes it to another (`c s *` then `` ` `` turns italic into code), and
+  `shift+s` puts one around a visual selection. With `editor.auto_pairs` on, a bracket, a quote or a backtick typed
+  over a selection goes around it, and in a note so do `*` and `~`: typing `*` twice makes the selection bold.
+
 - Markdown document HTML now renders with scoped formatting, aligned images, theme-aware picture alternatives,
   headings and collapsible details. Image permissions still apply. Noninteractive output expands details; Markdown
   exports preserve original HTML except omitted non-document content.

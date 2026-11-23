@@ -189,7 +189,7 @@ function fenceOf(source: string, starts: number[], s: Span, lang: string | null)
 }
 
 /** A link's text: `[text]`'s, an image's alt, a wikilink's alias or else its target, an autolink's address. */
-function linkText(source: string, starts: number[], n: Nodes, s: Span): Span {
+export function linkText(source: string, starts: number[], n: Nodes, s: Span): Span {
   const raw = source.slice(s.from, s.to);
   if (n.type === "wikiLink") {
     const open = raw.startsWith("!") ? 3 : 2;

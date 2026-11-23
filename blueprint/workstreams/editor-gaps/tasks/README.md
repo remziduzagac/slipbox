@@ -10,7 +10,7 @@ roadmap's Later item on windows and tabs; EG-T17 last, its keys settled first; E
 - [EG-T3](archive/problems.md): Problems where they are: jumps, the status line, the whole message. Done.
 - [EG-T4](archive/git-keys-and-commits.md): `space g` as a group, a branch's commits, a line's web link. Done.
 - [EG-T5](archive/structure.md): The structure: text objects, syntax jumps, growing the selection. Done.
-- [EG-T6](surround.md): Surround, and wrapping on type.
+- [EG-T6](archive/surround.md): Surround, and wrapping on type. Done.
 - [EG-T7](todos.md): TODOs.
 - [EG-T8](find-and-replace.md): Find in every note, and a replace with rows left out.
 - [EG-T9](folds.md): Folding a note's sections.

@@ -236,6 +236,8 @@ In code, `enter` goes a level in after an opening bracket, or after Python's or 
 - typing `(`, `[`, `{` or a quote types its closing half too
 - typing the closing one where it already is steps over it
 - `backspace` between an empty pair deletes both
+- typing a bracket, a quote or a backtick over a selection puts it around the selection
+  ([Surrounding text](#surrounding-text))
 
 **Moving lines.** When you are not typing, `alt+shift+up` / `alt+shift+down` move the cursor's line up or down, past
 the next one. With lines selected with `shift+v`, they move those lines. Each move is one undo step.
@@ -363,8 +365,9 @@ capitals switch to editing first. `d`, `c`, `x` or `p` do nothing there.
 | `>` and `<` | Indent and outdent |
 | `g c` | Comments out or back in |
 | `g q` and `g shift+q` | Wrap paragraphs to a width and join them back ([Reflowing](#reflowing-paragraphs)) |
+| `y s` | Puts a pair of marks around it, the mark typed after ([Surrounding](#surrounding-text)) |
 
-Doubled, an operator takes the whole line: `d d`, `c c`, `y y`, `> >`, `< <`, `g c c`, `g q q`.
+Doubled, an operator takes the whole line: `d d`, `c c`, `y y`, `> >`, `< <`, `g c c`, `g q q`, `y s s`.
 
 **Motions** are the keys that move the cursor: `w`, `b`, `e`, `0`, `^`, `$`, `j`, `k`, `g g`, `shift+g`, `{`, `}`,
 `%`, `f`, `t` and the rest. A search is one too. For example, `d`, then `/`, the text and `enter`, deletes up to the
@@ -430,6 +433,7 @@ system clipboard, as in vim with `clipboard=unnamedplus`. `p` puts what the clip
 | `>` and `<` | Indent or outdent it |
 | `g c` | Comments it |
 | `g q` and `g shift+q` | Wrap its paragraphs to a width and join them back |
+| `shift+s`, then a mark | Puts the mark's pair around it |
 | `o` | Jumps to its other end |
 | `i` or `a` with an object | Selects that object (`v i w`) |
 | `:` | Types `'<,'>` for a command on its lines |
@@ -712,6 +716,37 @@ columns this once. A range goes first: `:%reflow` the whole note, `:'<,'>reflow`
 selection types `'<,'>` for you), `:3,20unwrap` lines 3 to 20.
 
 Reflowing is for Markdown notes. In any other file it says so and changes nothing.
+
+## Surrounding text
+
+`y s`, a motion or a text object, then a mark puts a pair of marks around the text: `y s i w b` makes the word at the
+cursor bold. `d s` and a mark takes out the nearest pair of it around the cursor and keeps the text: `d s (` deletes
+the brackets. `c s`, the mark there, then the one you want changes the pair: `c s *` then `` ` `` turns italic into
+code. In visual mode, `shift+s` and a mark puts the pair around the selection.
+
+| Mark | The pair |
+| --- | --- |
+| `*` | Italic: `*text*` |
+| `b` | Bold: `**text**` |
+| `` ` `` | Code, with as many backticks as the text needs |
+| `~` | Strikethrough: `~~text~~` |
+| `l` | A link: `[text]()`, and you type its target |
+| `(`, `[`, `{`, `<` | Brackets. A closing bracket is the same mark |
+| `"`, `'` | Quotes |
+
+White space at the ends of the text stays outside the pair: `y s a w b` makes the word bold, not the space after it.
+`y s s` puts the pair around the line's text.
+
+`d s` and `c s` find italic, bold, strikethrough, code and links as the note's Markdown reads them, so `_text_` is
+italic too. They find brackets across lines, as `%` matches them, and quotes on the cursor's line. In a file that isn't
+a Markdown note, a backtick is found as a quote is, and `*`, `b`, `~` and `l` aren't found.
+
+Each change is one step to undo, and `.` does it again. A link's target typed after `l` is part of the same step.
+
+**Typing over a selection.** With [`editor.auto_pairs`](configuration.md) on, typing a bracket, a quote or a backtick
+over a selection you made while typing puts it around the selection, instead of replacing it. In a Markdown note, `*`
+and `~` do the same, except in a fenced block's code. In code, where they are operators, they replace the selection.
+The selection stays on the text inside, so typing `*` twice makes it bold.
 
 ## Footnotes and properties
 
