@@ -370,16 +370,19 @@ Adds:
   them when it starts or ends with one), `~` strikethrough, `l` a link (the text its text, its target left empty and
   typed into), the brackets `(`, `[`, `{`, `<` (a closing one the same mark) and the quotes `"`, `'`. Deleting and
   changing find the nearest pair of that mark around the cursor, one under it included: emphasis, code and links by the
-  note's tree (`_x_` and `__x__` too; a link inline, by reference or a wikilink, its text kept; not an image, nor a bare
-  address), brackets across lines as `%` matches them, quotes on the line as vim's `i"` finds them (the next pair when
-  the cursor is before it). A file that isn't a Markdown note has no tree: there `` ` `` is found as a quote is, and
-  `*`, `b`, `~` and `l` aren't found, said. White space at the ends of `y s`'s range stays outside the pair (`y s a w`,
-  a line's indent); `y s s` doubles it, the line's text. The cursor ends on the opening mark (where it was, after
-  `d s`), or typing in a new link's target. One undo step each, a link's typed target in it; `.` repeats it.
+  note's tree (`_x_` and `__x__` too; a link inline, by reference or a wikilink, its text kept; not an image, an embed
+  `![[…]]` nor a bare address), brackets across lines as `%` matches them, quotes on the line as vim's `i"` finds them
+  (the next pair when the cursor is before it). A file that isn't a Markdown note has no tree: there `` ` `` is found
+  as a quote is, and `*`, `b`, `~` and `l` aren't found, said. White space at the ends of `y s`'s range stays outside
+  the pair (`y s a w`, a line's indent); whole lines of a note start at their first line's text, past its block's
+  marks (a list item's bullet and task box, a heading's `#`s, a quote's `>`s: core's `textStart`, by the tree); `y s s`
+  doubles it, the line's text. The cursor ends on the opening mark (where it was, after `d s`), or typing in a new
+  link's target. One undo step each, a link's typed target in it; `.` repeats it. A count before `d s` or `c s` is
+  dropped, from `.`'s keys too; before `y s`, it's the operator's.
   `y s`, `d s` and `c s` are bindings of their own beside the operators, read by the vim grammar after an operator's
-  key as its motions are (`vim/operators.ts`: `[keys.source]`'s binding of the operator's keys and the next one), so
-  they're rebound as any key is; an operator's key is never a prefix, so `y` and `d` wait for nothing: `s` is no motion
-  there.
+  key as its motions are (`vim/operators.ts`: `[keys.source]`'s binding of the operator's keys and the keys after
+  them, read on while they start a longer one, as a user's `d x y`), so they're rebound as any key is; an operator's
+  key is never a prefix, so `y` and `d` wait for nothing: `s` is no motion there.
   `y s` is an operator of its own (`ys`) whose range then awaits its mark as a character, as `r` does; `shift+s` awaits
   it with the selection still shown. The pure work is `core/documents/editing/surround.ts`: the marks, a pair added
   around a range, the pair around a place, a pair's marks taken out or changed.

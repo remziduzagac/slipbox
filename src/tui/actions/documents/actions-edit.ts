@@ -11,7 +11,7 @@ import { editable } from "../../documents/editing/editable.ts";
 import { endSnippet } from "../../documents/editing/snippets.ts";
 import * as C from "../../documents/editing/cursor.ts";
 import { reflowCommand } from "../../documents/editing/reflow.ts";
-import { addMarks, changeSurround, deleteSurround, markTyped } from "../../documents/editing/surround.ts";
+import { applySurround, changeSurround, deleteSurround, surrounding } from "../../documents/editing/surround.ts";
 
 /** Editing: insert mode, vim's operators, the register, undo, spelling; saving, and hand-offs to an editor. */
 export function editActions(): Record<string, Run> {
@@ -353,14 +353,12 @@ export function visualSurround(a: App): void {
   withView(a, (v) => {
     if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
     a.vim.awaitKey = "S";
-    a.vim.awaitChar = (ch) => {
-      if (markTyped(a, ch)) visualOp(a, "ys", ch);
-    };
+    a.vim.awaitChar = (ch) => visualOp(a, "ys", ch);
   });
 }
 
 /** d / c / > / < / g c / g q / g shift+q on a visual selection (char or line), in source mode; `ys`, `mark`'s pair
- *  around it. */
+ *  around it — refused (no mark, only white space), the selection kept and `.` as it was. */
 export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc" | "gq" | "gQ" | "ys", mark = ""): void {
   withView(a, (v) => {
     if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
@@ -368,6 +366,8 @@ export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc" | "gq" | "gQ" 
     if (why) return a.message("warn", `${why} — not editing`);
     const line = v.visual === "line";
     const { range: r, from, to } = selectionRange(a, v);
+    const wrap = op === "ys" ? surrounding(a, v, r, mark) : null;
+    if (op === "ys" && !wrap) return;
     Object.assign(v, { visual: null, sel: null });
     // For `.`: the same change on as much text, said in keys.
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
@@ -379,8 +379,8 @@ export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc" | "gq" | "gQ" 
         ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), ...opKeys]
         : null;
     const before = v.buf.version;
-    if (op === "ys") {
-      addMarks(a, v, r, mark);
+    if (wrap) {
+      applySurround(a, v, wrap);
       return V.recordVisual(a, keys, !!v.insert, before);
     }
     const times = op === ">" || op === "<" ? V.takeCount(a) : 1;

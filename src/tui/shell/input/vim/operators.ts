@@ -52,11 +52,18 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
     o.count = count; // d2i( and 2di( both: a count before the object counts too
     return;
   }
-  // A binding of its own that goes on from the operator's key (`y s`, `d s`, `c s`: surround, EG-D8), not a motion.
-  const bound = o.keys.length ? undefined : boundAfter(app, o.op, key);
+  // A binding of its own that goes on from the operator's keys, not a motion: `y s`, `d s`, `c s` (surround, EG-D8), or
+  // one of the user's (`d x y`), read while the keys so far start one.
+  const bound = boundAfter(app, o.op, [...o.keys, key].join(" "));
+  if (bound === true) {
+    o.keys.push(key);
+    return;
+  }
   if (bound) {
     s.op = null;
-    s.count = given ? String(count) : "";
+    // Another operator (`y s`) takes the count; any other binding has none (`d s`, `c s`), nor do the keys `.` repeats.
+    if (OPERATORS.has(bound)) s.count = given ? String(count) : "";
+    else s.seq = uncounted(s.seq);
     return app.run(bound);
   }
   // The operator doubled (dd, cc, yy, >>, <<, gcc, gqq, yss): whole lines, count of them.
@@ -134,14 +141,24 @@ const OP_COMMANDS: Record<Op, string> = {
   ys: "edit.surround_add",
 };
 
-/** What SOURCE view's keys bind to an operator's keys and then `key` (`y s` after `y`), as they're set: undefined for
- *  none, the key then a motion's. */
-function boundAfter(app: App, op: Op, key: string): string | undefined {
-  for (const keys of app.sourceKeys.keysFor(OP_COMMANDS[op])) {
-    const spec = app.sourceKeys.lookup(`${keys} ${key}`);
+/** The commands that start an operator. */
+const OPERATORS = new Set(Object.values(OP_COMMANDS));
+
+/** What SOURCE view's keys bind to an operator's keys and then `keys` (`y s` after `y`), as they're set: the command;
+ *  true while `keys` start one, longer; undefined for none, the keys then a motion's. */
+function boundAfter(app: App, op: Op, keys: string): string | true | undefined {
+  let more = false;
+  for (const started of app.sourceKeys.keysFor(OP_COMMANDS[op])) {
+    const spec = app.sourceKeys.lookup(`${started} ${keys}`);
     if (spec) return spec;
+    more ||= app.sourceKeys.isPrefix(`${started} ${keys}`);
   }
-  return undefined;
+  return more || undefined;
+}
+
+/** A change's keys without its counts: each run of digits that starts with 1-9. */
+function uncounted(keys: string[]): string[] {
+  return keys.filter((k, i) => !/^[1-9]$/.test(k) && !(k === "0" && /^\d$/.test(keys[i - 1] ?? "")));
 }
 
 /** An operator with f / t: f and t take the character they land on, F and T don't. */

@@ -735,11 +735,13 @@ code. In visual mode, `shift+s` and a mark puts the pair around the selection.
 | `"`, `'` | Quotes |
 
 White space at the ends of the text stays outside the pair: `y s a w b` makes the word bold, not the space after it.
-`y s s` puts the pair around the line's text.
+`y s s` puts the pair around the line's text. In a note, whole lines start at their text: a list item's bullet and
+task box, a heading's `#`s and a quote's `>` stay outside, so `y s s b` on `- milk` makes `- **milk**`.
 
 `d s` and `c s` find italic, bold, strikethrough, code and links as the note's Markdown reads them, so `_text_` is
-italic too. They find brackets across lines, as `%` matches them, and quotes on the cursor's line. In a file that isn't
-a Markdown note, a backtick is found as a quote is, and `*`, `b`, `~` and `l` aren't found.
+italic too; an image or an embedded note (`![[…]]`) isn't a link to them. They find brackets across lines, as `%`
+matches them, and quotes on the cursor's line. In a file that isn't a Markdown note, a backtick is found as a quote
+is, and `*`, `b`, `~` and `l` aren't found. A count before `d s` or `c s` is ignored.
 
 Each change is one step to undo, and `.` does it again. A link's target typed after `l` is part of the same step.
 

@@ -17,6 +17,7 @@ import {
   type Pair,
   pairAt,
   type Surrounded,
+  textStart,
   TYPED_NOTE_WRAPS,
   TYPED_WRAPS,
   wrapTyped,
@@ -24,7 +25,7 @@ import {
 import type { Span } from "../../../core/documents/editing/structure.ts";
 import type { App, View } from "../../app/runtime/app.ts";
 import { startInsert } from "./source/lifecycle.ts";
-import { offsetOf, placeAt } from "./source/position.ts";
+import { lineOf, offsetOf, placeAt } from "./source/position.ts";
 import { typedSelection } from "./source/selection.ts";
 
 /** Whether the buffer is a Markdown note, whose tree finds emphasis, code and links. */
@@ -42,7 +43,7 @@ export function markTyped(app: App, ch: string): Mark | null {
 
 /** The edits as one undo step; then the cursor on the opening mark, or typing in a link's target (the step goes on
  *  with what's typed, as `c`'s does). */
-function made(app: App, view: View, s: Surrounded): void {
+export function applySurround(app: App, view: View, s: Surrounded): void {
   const buf = view.buf;
   buf.beginStep(offsetOf(app, view));
   for (const e of [...s.edits].reverse()) buf.edit(e.from, e.to - e.from, e.text);
@@ -63,19 +64,32 @@ function pairHere(app: App, view: View, m: Mark): Pair | null {
   return pair;
 }
 
+/** A stretch of text to surround: whole lines (`linewise`) or characters. */
+type Stretch = Span & { linewise?: boolean };
+
 /** `y s` with its motion or object: the mark is the next key, then its pair goes around the text it covered. */
-export function awaitAddMark(app: App, view: View, span: Span, key = "ys"): void {
+export function awaitAddMark(app: App, view: View, span: Stretch, key = "ys"): void {
   app.vim.awaitKey = key;
-  app.vim.awaitChar = (ch) => addMarks(app, view, span, ch);
+  app.vim.awaitChar = (ch) => {
+    const s = surrounding(app, view, span, ch);
+    if (s) applySurround(app, view, s);
+  };
 }
 
-/** `ch`'s pair around `span`, the white space at its ends left outside. */
-export function addMarks(app: App, view: View, span: Span, ch: string): void {
+/** `ch`'s pair around `span` as edits, not yet made: the white space at its ends left outside, and whole lines of a
+ *  Markdown note from their first line's text, its block's marks outside too (`- **milk**`). Null, said why, for no
+ *  mark or no text. */
+export function surrounding(app: App, view: View, span: Stretch, ch: string): Surrounded | null {
   const m = markTyped(app, ch);
-  if (!m) return;
-  const s = addPair(view.buf.source, span, m);
-  if (!s) return app.message("info", "nothing to surround: only white space");
-  made(app, view, s);
+  if (!m) return null;
+  const tree = treeOf(view);
+  const source = view.buf.source;
+  const starts = view.buf.lineStarts();
+  const line = lineOf(view, span.from) - 1;
+  const from = span.linewise && tree ? Math.max(span.from, textStart(source, tree, line, starts)) : span.from;
+  const s = addPair(source, { from, to: Math.max(from, span.to) }, m);
+  if (!s) app.message("info", "nothing to surround: only white space");
+  return s;
 }
 
 /** `d s`: the mark is the next key, then the nearest pair of it around the cursor is taken out. */
@@ -84,7 +98,7 @@ export function deleteSurround(app: App, view: View): void {
   app.vim.awaitChar = (ch) => {
     const m = markTyped(app, ch);
     const pair = m && pairHere(app, view, m);
-    if (pair) made(app, view, deletePair(pair));
+    if (pair) applySurround(app, view, deletePair(pair));
   };
 }
 
@@ -98,7 +112,7 @@ export function changeSurround(app: App, view: View): void {
     app.vim.awaitChar = (next) => {
       const to = markTyped(app, next);
       const pair = to && pairHere(app, view, from);
-      if (to && pair) made(app, view, changePair(view.buf.source, pair, to));
+      if (to && pair) applySurround(app, view, changePair(view.buf.source, pair, to));
     };
   };
 }

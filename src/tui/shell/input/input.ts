@@ -455,7 +455,7 @@ export class Input {
     const hit =
       at >= 0 && !(prefixAt >= 0 && prefixAt < at) ? { ...maps[at]!, spec: maps[at]!.map.lookup(seq) } : undefined;
     // An operator's key starts it at once: what follows is the vim grammar's, which reads the bindings that go on from
-    // it (`y s`, vim/operators.ts) as it reads a motion.
+    // it (`y s`, or a user's `d x y`: vim/operators.ts) as it reads a motion.
     if (prefixAt >= 0 && !hit?.spec?.startsWith("edit.op_")) {
       this.startPending(key);
       if (hit) {

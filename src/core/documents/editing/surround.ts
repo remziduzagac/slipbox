@@ -75,6 +75,37 @@ function codeMarks(text: string): [string, string] {
   return [ticks + pad, pad + ticks];
 }
 
+/** The blocks whose start is where their line's text starts: past a quote's `>`s, a list item's bullet or number and
+ *  task box. A heading's text is its first child's. */
+const LEAVES = new Set(["paragraph", "heading", "code", "html", "table", "thematicBreak", "definition", "math"]);
+
+/**
+ * Where line `line`'s (0-based) text starts in a Markdown note: past its block's marks — a quote's `>`s, a list item's
+ * bullet or number and its task box, a heading's `#`s — as the tree reads them. A line going on with a block begun
+ * above: past the `>`s of the quotes it's in. `y s s` and the other whole lines start their pair there.
+ */
+export function textStart(source: string, tree: Root, line: number, starts = lineStarts(source)): number {
+  const from = starts[line] ?? source.length;
+  const to = starts[line + 1] ?? source.length;
+  const off = (p: { line: number; column: number }) =>
+    Math.min(source.length, (starts[p.line - 1] ?? source.length) + p.column - 1);
+  let text: number | null = null;
+  let quotes = 0;
+  visit(tree, (n) => {
+    if (!n.position) return;
+    const a = off(n.position.start);
+    if (n.type === "blockquote" && a < to && off(n.position.end) > from) quotes++;
+    if (a < from || a >= to || !LEAVES.has(n.type)) return;
+    const first = n.type === "heading" ? n.children[0]?.position : undefined;
+    const at = n.type === "heading" ? (first ? off(first.start) : off(n.position.end)) : a;
+    text = Math.min(text ?? at, at);
+  });
+  if (text !== null) return text;
+  let at = from;
+  for (let q = 0; q < quotes; q++) at += /^[ \t]*>[ \t]?/.exec(source.slice(at, to))?.[0].length ?? 0;
+  return at;
+}
+
 /** The opening and closing marks `mark` puts around `text`. */
 export function marksOf(mark: Mark, text: string): [string, string] {
   if (mark === "*") return ["*", "*"];
@@ -207,6 +238,8 @@ function nodePair(source: string, at: number, mark: Mark, tree: Root, starts: nu
   let best: Pair | null = null;
   visit(tree, (n) => {
     if (!kinds.includes(n.type) || !n.position) return;
+    // An embed (`![[…]]`) shows its note or picture: not a link to take apart.
+    if (n.type === "wikiLink" && n.embed) return;
     const outer = { from: off(n.position.start), to: off(n.position.end) };
     if (outer.from > at || at >= outer.to) return;
     if (best && best.outer.to - best.outer.from <= outer.to - outer.from) return;

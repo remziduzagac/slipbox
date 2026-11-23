@@ -77,7 +77,7 @@ describe("surround in the editor (EG-D8)", () => {
     await h.keys("u");
     cursorTo(h, "Trip");
     await h.keys("y", "s", "a", "h", "'");
-    expect(text(h)).toBe(`'${NOTE.trimEnd()}'\n`);
+    expect(text(h)).toBe(`# '${NOTE.slice(2).trimEnd()}'\n`);
   });
 
   test("y s i w l: a link, typing in its target; the target with it one undo step; . types it again", async () => {
@@ -199,6 +199,81 @@ describe("surround in the editor (EG-D8)", () => {
     expect(text(h)).toBe(NOTE.replace("rail", "**rail**"));
     await h.keys("d", "s", "b");
     expect(text(h)).toBe(NOTE);
+  });
+
+  test("a count before d s or c s goes with it: the keys at rest after, . its keys without the count", async () => {
+    const two = "Pack (both) vouchers\nthen [a] and [b]\nlast\n";
+    const h = await open({ "n.md": two }, "n.md", "both");
+    await h.keys("2", "d", "s", "(");
+    expect(text(h)).toBe(two.replace("(both)", "both"));
+    expect([h.app.vim.count, h.app.vim.op, h.app.vim.lastChange]).toEqual(["", null, ["d", "s", "("]]);
+    await h.keys("j");
+    expect(here(h, 4)).toBe("[a] ");
+    cursorTo(h, "a]");
+    await h.keys("c", "3", "s", "[", "(");
+    expect(text(h)).toBe("Pack both vouchers\nthen (a) and [b]\nlast\n");
+    expect([h.app.vim.count, h.app.vim.lastChange]).toEqual(["", ["c", "s", "[", "("]]);
+    cursorTo(h, "b]");
+    await h.keys(".");
+    expect(text(h)).toBe("Pack both vouchers\nthen (a) and (b)\nlast\n");
+  });
+
+  test("a binding of three keys or more after an operator's key: read to its end; d w still at once", async () => {
+    const h = await open({ "n.md": "one two\nthree\n" }, "n.md", "two", {
+      config: (c) => {
+        c.keys.source = { "d x y": "edit.join", "y x s": "edit.surround_add" };
+      },
+    });
+    await h.keys("d", "x");
+    expect(text(h)).toBe("one two\nthree\n");
+    await h.keys("y");
+    expect(text(h)).toBe("one two three\n");
+    cursorTo(h, "two");
+    await h.keys("y", "x", "s", "i", "w", "b");
+    expect(text(h)).toBe("one **two** three\n");
+    cursorTo(h, "one");
+    await h.keys("d", "w");
+    expect([text(h), h.app.pending]).toEqual(["**two** three\n", []]);
+  });
+
+  test("whole lines of a note from their text: a list item's bullet and box, a heading's #s, a quote's > stay out", async () => {
+    const note = "# Trip\n\n- milk\n- [ ] eggs\n1. tea\n\n> quoted\n> on\n";
+    const h = await open({ "n.md": note }, "n.md", "milk");
+    const lines: [string, string][] = [
+      ["Trip", "# **Trip**"],
+      ["milk", "- **milk**"],
+      ["eggs", "- [ ] **eggs**"],
+      ["tea", "1. **tea**"],
+      ["quoted", "> **quoted**"],
+      ["on\n", "> **on**"],
+    ];
+    for (const [at, want] of lines) {
+      cursorTo(h, at);
+      await h.keys("y", "s", "s", "b");
+      expect(text(h).split("\n")).toContain(want);
+      await h.keys("u");
+    }
+    expect(text(h)).toBe(note);
+    cursorTo(h, "milk");
+    await h.keys("shift+v", "j", "shift+s", "*");
+    expect(text(h)).toBe(note.replace("milk\n- [ ] eggs", "*milk\n- [ ] eggs*"));
+    // A code file's lines are its text, whatever they start with.
+    const ts = await open({ "a.ts": "  - x;\n" }, "a.ts", "x");
+    await ts.keys("y", "s", "s", "(");
+    expect(text(ts)).toBe("  (- x;)\n");
+  });
+
+  test("visual shift+s refused (only white space, no mark): the selection kept, . what it was", async () => {
+    const h = await open({ "n.md": "a   b (c)\n" }, "n.md", "c)");
+    await h.keys("d", "s", "(");
+    expect(h.app.vim.lastChange).toEqual(["d", "s", "("]);
+    cursorTo(h, "  b");
+    await h.keys("v", "l", "shift+s", "*");
+    expect(said(h)).toBe("nothing to surround: only white space");
+    await h.keys("shift+s", "x");
+    expect(said(h)).toContain("x isn't a surround mark");
+    expect([h.app.view!.visual, !!h.app.view!.sel, h.app.vim.lastChange]).toEqual(["char", true, ["d", "s", "("]]);
+    expect(text(h)).toBe("a   b c\n");
   });
 
   describe("a mark typed over a selection while typing", () => {

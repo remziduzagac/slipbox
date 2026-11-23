@@ -8,6 +8,7 @@ import {
   markOf,
   pairAt,
   type Surrounded,
+  textStart,
   wrapTyped,
 } from "../../../../src/core/documents/editing/surround.ts";
 
@@ -162,8 +163,12 @@ describe("surround's marks (EG-D8)", () => {
     expect(deleted('a "b" |c', '"')).toBeNull();
     // A bare address has no marks to take.
     expect(deleted("see https://exa|mple.org now", "l")).toBeNull();
-    // An image isn't a link here.
+    // An image isn't a link here, nor an embed: each shows its picture or note.
     expect(deleted("an ![ca|t](cat.png) here", "l")).toBeNull();
+    expect(deleted("See ![[pho|to.png]] and ![alt](x.png)", "l")).toBeNull();
+    expect(deleted("See ![[photo.png]] and ![a|lt](x.png)", "l")).toBeNull();
+    expect(deleted("See ![[Pl|an]] now", "l")).toBeNull();
+    expect(deleted("[[a]] ![[b]] [[|c]]", "l")).toBe("[[a]] ![[b]] c");
   });
 
   test("outside a Markdown note: a backtick found on the line as a quote is; emphasis and links not at all", () => {
@@ -171,6 +176,27 @@ describe("surround's marks (EG-D8)", () => {
     expect(deleted("f(a|b)", "(", false)).toBe("fab");
     expect(deleted("x = a *|b* c", "*", false)).toBeNull();
     expect(deleted("x = [a|](b)", "l", false)).toBeNull();
+  });
+
+  test("a note's line's text starts past its block's marks; a code block's line at its start", () => {
+    const note = "# Trip\n- milk\n- [ ] eggs\n  1. tea\n> quoted\n> on\n> - a\n\n```\n- x\n```\nplain\n";
+    const lines = note.split("\n");
+    const tree = parseMarkdown(note).tree;
+    const rest = (line: number) => note.slice(textStart(note, tree, line)).split("\n")[0];
+    expect(lines.slice(0, 12).map((_, k) => rest(k))).toEqual([
+      "Trip",
+      "milk",
+      "eggs",
+      "tea",
+      "quoted",
+      "on",
+      "a",
+      "",
+      "```",
+      "- x",
+      "```",
+      "plain",
+    ]);
   });
 
   test("each mark changed to another, nested ones too", () => {

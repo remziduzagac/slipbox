@@ -36,8 +36,10 @@ Settled here, for the maintainer to confirm; the design's Surround and Wrap on t
 
 - A note's fenced block's code counts as code: `*` and `~` typed over a selection starting in it replace it.
 - `y s s` surrounds the line's text, the operator doubled; a closing bracket is the same mark as its opening one.
-- White space at the ends of `y s`'s range stays outside the pair (`y s a w b` bolds the word, not its space).
+- White space at the ends of `y s`'s range stays outside the pair (`y s a w b` bolds the word, not its space); whole
+  lines of a note start at their text, a list item's bullet and box, a heading's `#`s and a quote's `>` outside.
 - In a file that isn't a Markdown note, `d s` and `c s` find `` ` `` on the line as a quote; `*`, `b`, `~` and `l`
   aren't found there, said.
-- A link's `d s l` keeps its text (a wikilink's alias, else its target); an image and a bare address aren't links here.
+- A link's `d s l` keeps its text (a wikilink's alias, else its target); an image, an embed and a bare address aren't
+  links here.
 - The cursor ends on the opening mark, or where it was after `d s`; typing in a new link's target after `l`.
