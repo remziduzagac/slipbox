@@ -52,8 +52,22 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
     o.count = count; // d2i( and 2di( both: a count before the object counts too
     return;
   }
-  // The operator doubled (dd, cc, yy, >>, <<, gcc, gqq): whole lines, count of them.
-  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c", gq: "q", gQ: "shift+q" }[o.op];
+  // A binding of its own that goes on from the operator's keys, not a motion: `y s`, `d s`, `c s` (surround, EG-D8), or
+  // one of the user's (`d x y`), read while the keys so far start one.
+  const bound = boundAfter(app, o.op, [...o.keys, key].join(" "));
+  if (bound === true) {
+    o.keys.push(key);
+    return;
+  }
+  if (bound) {
+    s.op = null;
+    // Another operator (`y s`) takes the count; any other binding has none (`d s`, `c s`), nor do the keys `.` repeats.
+    if (OPERATORS.has(bound)) s.count = given ? String(count) : "";
+    else s.seq = uncounted(s.seq);
+    return app.run(bound);
+  }
+  // The operator doubled (dd, cc, yy, >>, <<, gcc, gqq, yss): whole lines, count of them.
+  const opKey = { d: "d", c: "c", y: "y", ">": ">", "<": "<", gc: "c", gq: "q", gQ: "shift+q", ys: "s" }[o.op];
   if (!o.keys.length && key === opKey) {
     s.op = null;
     const at = E.offsetOf(app, view);
@@ -112,6 +126,39 @@ export async function operatorKey(app: App, view: View, key: string): Promise<vo
   }
   const r = await motionRange(app, view, spec, count, o.op);
   if (r) return apply(app, view, o.op, r);
+}
+
+/** The command each operator is started by. */
+const OP_COMMANDS: Record<Op, string> = {
+  d: "edit.op_delete",
+  c: "edit.op_change",
+  y: "edit.op_yank",
+  ">": "edit.op_indent",
+  "<": "edit.op_outdent",
+  gc: "edit.op_comment",
+  gq: "edit.op_reflow",
+  gQ: "edit.op_unwrap",
+  ys: "edit.surround_add",
+};
+
+/** The commands that start an operator. */
+const OPERATORS = new Set(Object.values(OP_COMMANDS));
+
+/** What SOURCE view's keys bind to an operator's keys and then `keys` (`y s` after `y`), as they're set: the command;
+ *  true while `keys` start one, longer; undefined for none, the keys then a motion's. */
+function boundAfter(app: App, op: Op, keys: string): string | true | undefined {
+  let more = false;
+  for (const started of app.sourceKeys.keysFor(OP_COMMANDS[op])) {
+    const spec = app.sourceKeys.lookup(`${started} ${keys}`);
+    if (spec) return spec;
+    more ||= app.sourceKeys.isPrefix(`${started} ${keys}`);
+  }
+  return more || undefined;
+}
+
+/** A change's keys without its counts: each run of digits that starts with 1-9. */
+function uncounted(keys: string[]): string[] {
+  return keys.filter((k, i) => !/^[1-9]$/.test(k) && !(k === "0" && /^\d$/.test(keys[i - 1] ?? "")));
 }
 
 /** An operator with f / t: f and t take the character they land on, F and T don't. */

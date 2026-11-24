@@ -1,8 +1,9 @@
 // Vim register, counts and pending grammar records remain owned by App.
 import type { App } from "../../../app/runtime/app.ts";
 
-/** `gq` and `gQ` (`g shift+q`) are reflow's (EG-D12): wrap, and join back. */
-export type Op = "d" | "c" | "y" | ">" | "<" | "gc" | "gq" | "gQ";
+/** `gq` and `gQ` (`g shift+q`) are reflow's (EG-D12): wrap, and join back. `ys` is surround's (EG-D8): its range,
+ *  then a mark, the pair put around it. */
+export type Op = "d" | "c" | "y" | ">" | "<" | "gc" | "gq" | "gQ" | "ys";
 
 export type FindKind = "f" | "F" | "t" | "T";
 

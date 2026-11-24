@@ -11,6 +11,7 @@ import { editable } from "../../documents/editing/editable.ts";
 import { endSnippet } from "../../documents/editing/snippets.ts";
 import * as C from "../../documents/editing/cursor.ts";
 import { reflowCommand } from "../../documents/editing/reflow.ts";
+import { applySurround, changeSurround, deleteSurround, surrounding } from "../../documents/editing/surround.ts";
 
 /** Editing: insert mode, vim's operators, the register, undo, spelling; saving, and hand-offs to an editor. */
 export function editActions(): Record<string, Run> {
@@ -86,6 +87,10 @@ export function editActions(): Record<string, Run> {
     "edit.op_unwrap": (a) => sourceEdit(a, () => V.startOperator(a, "gQ")),
     "edit.reflow": (a, arg) => reflowCommand(a, "wrap", arg),
     "edit.unwrap": (a, arg) => reflowCommand(a, "join", arg),
+    // Surround (EG-D8): y s an operator whose range then waits for a mark; d s and c s wait for theirs.
+    "edit.surround_add": (a) => sourceEdit(a, () => V.startOperator(a, "ys")),
+    "edit.surround_delete": (a) => sourceEdit(a, (v) => deleteSurround(a, v)),
+    "edit.surround_change": (a) => sourceEdit(a, (v) => changeSurround(a, v)),
     "edit.delete_to_end": (a) =>
       sourceEdit(a, (v) => {
         const r = toLineEnd(a, v, V.takeCount(a));
@@ -342,25 +347,42 @@ function selectionRange(a: App, v: View): { range: V.Range; from: number; to: nu
 /** The keys a visual operator is repeated by (`.`), where they aren't its name. */
 const VISUAL_KEYS: Record<string, string[]> = { gc: ["g", "c"], gq: ["g", "q"], gQ: ["g", "shift+q"] };
 
-/** d / c / > / < / g c / g q / g shift+q on a visual selection (char or line), in source mode. */
-export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc" | "gq" | "gQ"): void {
+/** `shift+s` on a visual selection (EG-D8): the mark is the next key, the selection shown till then; then its pair
+ *  around the selection, as `y s` puts one. */
+export function visualSurround(a: App): void {
+  withView(a, (v) => {
+    if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
+    a.vim.awaitKey = "S";
+    a.vim.awaitChar = (ch) => visualOp(a, "ys", ch);
+  });
+}
+
+/** d / c / > / < / g c / g q / g shift+q on a visual selection (char or line), in source mode; `ys`, `mark`'s pair
+ *  around it — refused (no mark, only white space), the selection kept and `.` as it was. */
+export function visualOp(a: App, op: "d" | "c" | ">" | "<" | "gc" | "gq" | "gQ" | "ys", mark = ""): void {
   withView(a, (v) => {
     if (!editable(v)) return a.message("info", "editing is in the lens (space n l) or source mode (ctrl+k)");
     const why = E.cannotEdit(v);
     if (why) return a.message("warn", `${why} — not editing`);
     const line = v.visual === "line";
     const { range: r, from, to } = selectionRange(a, v);
+    const wrap = op === "ys" ? surrounding(a, v, r, mark) : null;
+    if (op === "ys" && !wrap) return;
     Object.assign(v, { visual: null, sel: null });
     // For `.`: the same change on as much text, said in keys.
     const lines = E.lineOf(v, to) - E.lineOf(v, from) + 1;
     const chars = graphemes(v.buf.source.slice(r.from, r.to)).length; // as l moves: by character
-    const opKeys = VISUAL_KEYS[op] ?? [op];
+    const opKeys = op === "ys" ? ["shift+s", mark] : (VISUAL_KEYS[op] ?? [op]);
     const keys = line
       ? ["shift+v", ...Array(lines - 1).fill("j"), ...opKeys]
       : lines === 1
         ? ["v", ...Array(Math.max(0, chars - 1)).fill("l"), ...opKeys]
         : null;
     const before = v.buf.version;
+    if (wrap) {
+      applySurround(a, v, wrap);
+      return V.recordVisual(a, keys, !!v.insert, before);
+    }
     const times = op === ">" || op === "<" ? V.takeCount(a) : 1;
     V.apply(a, v, op, { ...r, times });
     V.recordVisual(a, times > 1 ? null : keys, op === "c", before);

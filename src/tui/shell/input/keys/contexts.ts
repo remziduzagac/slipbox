@@ -21,6 +21,10 @@ export const DEFAULT_SOURCE_KEYS: Record<string, string> = {
   "g q": "edit.op_reflow",
   "g shift+q": "edit.op_unwrap",
   "g w": "cursor.jump",
+  // Surround (EG-D8): read after the operators' keys, as their motions are; `s` is no motion there.
+  "y s": "edit.surround_add",
+  "d s": "edit.surround_delete",
+  "c s": "edit.surround_change",
   // Growing the selection by syntax (EG-D7): from the cursor's word; `ctrl+space` stays the user's.
   "alt+o": "visual.grow",
   "ctrl+/": "edit.comment_line",
@@ -44,6 +48,7 @@ export const DEFAULT_VISUAL_KEYS: Record<string, string> = {
   "g c": "visual.comment",
   "g q": "visual.reflow",
   "g shift+q": "visual.unwrap",
+  "shift+s": "visual.surround",
   "ctrl+/": "visual.comment",
   "ctrl+_": "visual.comment",
   escape: "visual.exit",

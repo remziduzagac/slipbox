@@ -157,6 +157,25 @@ export const EDITING_SPECS: CommandSpec[] = [
     cli: I,
     desc: ":unwrap — the selection's paragraphs, else the cursor's, each joined back to one line",
   },
+  // Surround (EG-D8): a pair of marks put around text, taken out or changed; y s, d s and c s go on from the operators.
+  {
+    id: "edit.surround_add",
+    title: "Surround (operator)",
+    cli: I,
+    desc: "y s, a motion or a text object, then a mark: * italic, b bold, ` code, ~ strikethrough, l a link, ( [ { < \" ': y s i w b",
+  },
+  {
+    id: "edit.surround_delete",
+    title: "Delete the surrounding marks",
+    cli: I,
+    desc: "d s, then a mark: the nearest pair of it around the cursor taken out, the text kept: d s (, d s *",
+  },
+  {
+    id: "edit.surround_change",
+    title: "Change the surrounding marks",
+    cli: I,
+    desc: "c s, the mark there, then the one wanted: the nearest pair around the cursor changed: c s * ` turns italic into code",
+  },
   {
     id: "edit.delete_to_end",
     title: "Delete to the line's end",
@@ -250,6 +269,12 @@ export const EDITING_SPECS: CommandSpec[] = [
     title: "Unwrap the selection",
     cli: I,
     desc: "Each paragraph the selection touches joined back to one line (source mode): g shift+q",
+  },
+  {
+    id: "visual.surround",
+    title: "Surround the selection",
+    cli: I,
+    desc: "shift+s, then a mark: the selection wrapped in its pair, as y s does (source mode)",
   },
   { id: "edit.undo", title: "Undo", cli: I, desc: "Undoes the last change (a whole insert session is one)" },
   { id: "edit.redo", title: "Redo", cli: I, desc: "Redoes what undo undid" },

@@ -22,7 +22,7 @@ D235, ORG-D1), else the feature's module:
 | `documents/views/drawing/marks/hit.ts` | the preview's hit, marked in its window (EG-D2) |
 | `shell/overlays/places.ts` | the last list of places and its hits, `space '` and `] q` (`app.places`; EG-D2, EG-D10) |
 | `documents/editing/structure.ts` | text objects, syntax jumps, growing the selection (`app.structure`; EG-D6, EG-D7) |
-| `documents/editing/surround.ts` | surround: add, delete, change, wrap on type (EG-D8) |
+| `documents/editing/surround.ts` | surround: the marks awaited, add, delete, change, wrap on type (EG-D8) |
 | `documents/editing/reflow.ts` | reflow: a range's paragraphs wrapped or joined, `:reflow` and `:unwrap` (EG-D12) |
 | `documents/editing/selections.ts` | several selections, by view (`app.selections`; EG-D14) |
 | `documents/views/folds.ts` | each tab's folded sections (`app.folds`; EG-D11) |
@@ -39,7 +39,8 @@ D235, ORG-D1), else the feature's module:
 | `workspace/git/inline-diff.ts` | the inline diff (`app.inlineDiff`; EG-D17) |
 
 In the core, pure: `core/documents/editing/reflow.ts` and the width's search, `core/documents/editing/reflow-width.ts`
-(EG-D12), `core/documents/diagnostics/todos.ts` (EG-D9), `core/workspace/git/forge.ts` (EG-D18).
+(EG-D12), `core/documents/editing/surround.ts` (EG-D8), `core/documents/diagnostics/todos.ts` (EG-D9),
+`core/workspace/git/forge.ts` (EG-D18).
 The structure's (EG-D6, EG-D7): `core/documents/editing/structure.ts`, pure (a note's objects, fenced blocks and nodes;
 the object around a place; the jumps' and growing's arithmetic); in the syntax worker,
 `core/documents/syntax/tree/structure.ts` (code's objects and nodes from a tree) and the queries it runs,
@@ -365,14 +366,33 @@ Adds:
   are. The code's blocks in a fenced block are reached by `alt+o`, which grows through them to the fence.
 - **Surround** (EG-D8; `edit.surround_add` `y s <motion or object> <mark>`, `edit.surround_delete` `d s <mark>`,
   `edit.surround_change` `c s <old> <new>`, `visual.surround` `shift+s <mark>`; `[keys.source]` and the visual
-  keymap): the marks are `*` italic, `b` bold, `` ` `` code (as many backticks as the text inside needs), `~`
-  strikethrough, `l` a link (the text its text, its target left empty and typed into), the brackets `(`, `[`, `{`, `<`
-  and the quotes `"`, `'`. Deleting and changing find the nearest pair of that mark around the cursor: emphasis, code
-  and links by the note's tree, brackets across lines as `%` matches them, quotes on the line. One undo step each; `.`
-  repeats it. `y s`, `d s` and `c s` are bindings of their own beside the operators: `s` is no motion there.
+  keymap): the marks are `*` italic, `b` bold, `` ` `` code (as many backticks as the text inside needs, a space inside
+  them when it starts or ends with one), `~` strikethrough, `l` a link (the text its text, its target left empty and
+  typed into), the brackets `(`, `[`, `{`, `<` (a closing one the same mark) and the quotes `"`, `'`. Deleting and
+  changing find the nearest pair of that mark around the cursor, one under it included: emphasis, code and links by the
+  note's tree (`_x_` and `__x__` too; a link inline, by reference or a wikilink, its text kept; not an image, an embed
+  `![[…]]` nor a bare address), brackets across lines as `%` matches them, quotes on the line as vim's `i"` finds them
+  (the next pair when the cursor is before it). A file that isn't a Markdown note has no tree: there `` ` `` is found
+  as a quote is, and `*`, `b`, `~` and `l` aren't found, said. White space at the ends of `y s`'s range stays outside
+  the pair (`y s a w`, a line's indent); whole lines of a note start at their first line's text, past its block's
+  marks (a list item's bullet and task box, a heading's `#`s, a quote's `>`s: core's `textStart`, by the tree); `y s s`
+  doubles it, the line's text. The cursor ends on the opening mark (where it was, after `d s`), or typing in a new
+  link's target. One undo step each, a link's typed target in it; `.` repeats it. A count before `d s` or `c s` is
+  dropped, from `.`'s keys too; before `y s`, it's the operator's.
+  `y s`, `d s` and `c s` are bindings of their own beside the operators, read by the vim grammar after an operator's
+  key as its motions are (`vim/operators.ts`: `[keys.source]`'s binding of the operator's keys and the keys after
+  them, read on while they start a longer one, as a user's `d x y`), so they're rebound as any key is; an operator's
+  key is never a prefix, so `y` and `d` wait for nothing: `s` is no motion there.
+  `y s` is an operator of its own (`ys`) whose range then awaits its mark as a character, as `r` does; `shift+s` awaits
+  it with the selection still shown. The pure work is `core/documents/editing/surround.ts`: the marks, a pair added
+  around a range, the pair around a place, a pair's marks taken out or changed.
 - **Wrap on type** (EG-D8): while typing, a mark typed over the selection (`typedSelection`) wraps it instead of
-  replacing it, the selection kept on the text inside. **Open:** whether only with `editor.auto_pairs` on, and which
-  characters (the brackets and quotes `autoPair` closes; `*`, `~`, `` ` ``).
+  replacing it, the selection kept on the text inside, so `*` typed twice makes it bold. One step with the typing
+  around it, as all of an insert is. **Settled by the maintainer (2026-11-24):** only with `[editor] auto_pairs` on;
+  with it off, a character typed over a selection replaces it, as before. With it on, `(`, `[`, `{`, `"`, `'` and
+  `` ` `` wrap it everywhere, each in itself and its closing half as typed; `*` and `~` only in Markdown notes: in code
+  (code files, code cells) they replace it, being operators there. Read here, for the maintainer to confirm: a note's
+  fenced block's code is code too, `*` and `~` replacing a selection that starts in it.
 - **Reflow** (EG-D12; `edit.op_reflow` `g q` and `edit.op_unwrap` `g shift+q`, operators of the vim grammar (`gq`,
   `gQ`; doubled, `g q q` and `g shift+q shift+q`), in `[keys.source]`; `visual.reflow` and `visual.unwrap`, visual `g q`
   and `g shift+q`; `:reflow [width]` `edit.reflow` and `:unwrap` `edit.unwrap`, aliases, on a range's lines — `'<,'>`,
