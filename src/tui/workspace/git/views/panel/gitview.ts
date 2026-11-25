@@ -27,6 +27,7 @@ import {
 import { climbsOut, decodeText, readRegular } from "../../../../../core/foundation/platform/fsutil.ts";
 import { sanitize } from "../../../../../core/foundation/text/sanitize.ts";
 import { openDiff } from "../changes/diffview.ts";
+import { lockedSaid } from "../../../../documents/buffers/opening.ts";
 import { andThen } from "../../../../app/runtime/key-reads.ts";
 import { match } from "../../../../shell/overlays/match.ts";
 import type { App } from "../../../../app/runtime/app.ts";
@@ -191,6 +192,14 @@ function unsavedFor(app: App, path: string): boolean {
   return !!dirty;
 }
 
+/** Why a file's open buffer is read-only, or, not open, why the file is (`lockedSaid`, as opening it says); null when
+ *  neither. */
+function readOnlyFor(app: App, rel: string, path: string): string | null {
+  const abs = join(app.git.checkout!.root, path);
+  const open = [...app.buffers.values()].find((b) => b.abs === abs);
+  return open ? open.readOnly : lockedSaid(rel, abs);
+}
+
 /** Open buffers of a file reloaded from disk once git has changed it there. */
 function reload(app: App, path: string): void {
   const abs = join(app.git.checkout!.root, path);
@@ -245,10 +254,15 @@ function discard(app: App, row: WorkRow): void {
   if (unsavedFor(app, e.path)) return;
   if (row.kind === "change") {
     if (rel === null) return app.message("warn", `${e.path} is outside this vault`);
+    // A read-only file (one you may not write): its save would be refused, so nothing is asked or put in it, said why
+    // — before asking, and again once answered, the file opened then.
+    const locked = readOnlyFor(app, rel, e.path);
+    if (locked) return app.message("warn", `${e.path}: not discarded — ${locked}`);
     const ch = row.change;
     app.overlays.confirm(`Discard the change at line ${ch.from} of ${e.path}? It goes back to what's staged.`, () => {
       const buf = app.buffer(rel);
       if (!buf) return app.message("warn", `${e.path} can't be read`);
+      if (buf.readOnly) return app.message("warn", `${e.path}: not discarded — ${buf.readOnly}`);
       buf.edit(0, buf.source.length, replaceLines(buf.source, ch.from - 1, ch.now.length, ch.was));
       if (app.saving.save(buf, true)) after(app, null, `discarded a change of ${e.path}`);
     });

@@ -396,6 +396,11 @@ export function mergeSave(app: App): boolean {
   }
   const buf = target(app, m);
   if (!buf) return false;
+  // A read-only file (one you may not write): its save would be refused, so the result isn't put in it, said why.
+  if (buf.readOnly) {
+    app.message("warn", `${m.rel}: not saved — ${buf.readOnly}`);
+    return false;
+  }
   const before = { text: buf.source, markers: buf.markers };
   put(app, m, buf);
   if (!app.saving.save(buf, true)) {

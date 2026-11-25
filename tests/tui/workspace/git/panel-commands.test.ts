@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { PanelRow } from "../../../../src/tui/workspace/git/views/panel/gitpanel.ts";
 import { lineOf, offsetOf } from "../../../../src/tui/documents/editing/editing.ts";
@@ -248,5 +248,35 @@ describe("source control (26.2)", () => {
     select(h, "M a.md");
     await h.keys("d");
     expect(h.app.messages.at(-1)?.text).toBe("staged: u unstages it first — discarding is for what isn't staged");
+  });
+
+  test("a change of a file you may not write isn't discarded: said why before asking, and once answered; the file as it was", async () => {
+    if (process.getuid?.() === 0) return; // root may write anything: nothing is read-only
+    const root = repo({ ".gitignore": ".slipbox/\n", "a.md": "a\n", "b.md": "one\ntwo\n" });
+    if (!root) return;
+    const file = join(root, "b.md");
+    writeFileSync(file, "one\nTWO\n");
+    chmodSync(file, 0o444);
+    const h = await opened(root);
+    select(h, "M b.md");
+    await h.keys("l");
+    expect(await until(() => (h.frame(), labels(h).includes("  2 change")))).toBe(true);
+    const said = "b.md: not discarded — b.md is read-only: you may not write it (no permission)";
+    // Not open: the file's own reason, said before anything is asked.
+    select(h, "  2 change");
+    await h.keys("d");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toBe(said);
+    // Made read-only while asked: refused once answered, nothing put in its buffer.
+    chmodSync(file, 0o644);
+    await h.keys("d");
+    expect((h.app.overlay as { label?: string }).label).toBe(
+      "Discard the change at line 2 of b.md? It goes back to what's staged.",
+    );
+    chmodSync(file, 0o444);
+    await h.keys("y");
+    expect(h.app.messages.at(-1)?.text).toBe(said);
+    expect(h.app.buffers.get("b.md")?.dirty).toBe(false);
+    expect(readFileSync(file, "utf8")).toBe("one\nTWO\n");
   });
 });

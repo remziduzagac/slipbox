@@ -351,6 +351,8 @@ export async function reviewRevert(app: App): Promise<void> {
   if (!now) return app.message("warn", `${it.path} changed since the review read it: that change isn't there now`);
   const buf = app.buffer(it.rel);
   if (!buf) return;
+  // A read-only file (one you may not write): its save would be refused, so nothing is put in it, said why.
+  if (buf.readOnly) return app.message("warn", `${it.path}: not reverted — ${buf.readOnly}`);
   if (buf.dirty) return skip(app, r, it);
   // The hunk's lines are the disk's: a buffer not read again since the file changed (the watcher off, or not yet run)
   // is read again first, so the edit lands on the lines the review found.

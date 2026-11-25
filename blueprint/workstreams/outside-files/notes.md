@@ -78,7 +78,8 @@ otherwise.
 - The write guard: the design had it where the code doesn't hold it. The read-only guard moves into the write path,
   where every save passes, and a chosen file is written as its own place writes its files, so VV-D6 and D220 hold for
   it there (design.md § Chosen, so editable). The read-only guard landed first, on 2026-11-26, as a fix: a forced save
-  wrote a read-only tab.
+  wrote a read-only tab. With it, git's edits that save at once (the review's `x`, a change discarded, the merge
+  screen's `w`) refuse a read-only file before putting anything in it.
 - `intoOther` sits in the shared ways of opening, which links reach too: the chosen routes get a way of their own, and
   nothing shared marks a buffer chosen. `ctrl+click` stays a switch, asked (OUT-D9).
 - A buffer of another place skips the lock and the "just looking" marks, and its way wasn't checked in its own place's

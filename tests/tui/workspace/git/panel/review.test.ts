@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { rmSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pointedAt } from "../../../../../src/tui/workspace/git/views/panel/gitmouse.ts";
 import { makeGitPanelFixture } from "../../../../support/tui/git-panel-fixture.ts";
@@ -233,5 +233,45 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     expect(await until(() => (frame(), app.messages.some((m) => /^the merge aborted/.test(m.text))))).toBe(true);
     expect(ids()).not.toContain("abort");
     expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  // A file you may not write: its save would be refused, so nothing is put in it, said why.
+  const locked = (root: string, rel: string) => {
+    const file = join(root, rel);
+    chmodSync(file, 0o444);
+    return {
+      file,
+      text: readFileSync(file, "utf8"),
+      said: `${rel} is read-only: you may not write it (no permission)`,
+    };
+  };
+
+  test("the review's x on a change of a file you may not write: not reverted, said why; the file and its buffer as they were", async () => {
+    if (process.getuid?.() === 0) return; // root may write anything: nothing is read-only
+    const root = repo();
+    writeFileSync(join(root, "a.md"), "# A\n\ntwo\n");
+    const { file, text, said } = locked(root, "a.md");
+    const { app, keys } = await panel(root, "b.md");
+    await app.run("git.review");
+    expect(await until(() => app.floating?.kind === "review")).toBe(true);
+    await keys("x");
+    // Once git's staged version is read: said, either way.
+    expect(await until(() => app.messages.some((m) => m.text.startsWith("a.md: ")))).toBe(true);
+    expect(app.messages.at(-1)?.text).toBe(`a.md: not reverted — ${said}`);
+    expect(app.buffers.get("a.md")?.dirty).toBe(false);
+    expect(readFileSync(file, "utf8")).toBe(text);
+  });
+
+  test("the merge screen's w on a file you may not write: not saved, said why; the file and its buffer as they were", async () => {
+    if (process.getuid?.() === 0) return; // root may write anything: nothing is read-only
+    const root = conflicted();
+    const { file, text, said } = locked(root, "a.md");
+    const { app, click, keys } = await panel(root, "a.md");
+    click("git:btn:resolve");
+    expect(await until(() => app.floating?.kind === "merge")).toBe(true);
+    await keys("o", "w");
+    expect(app.messages.at(-1)?.text).toBe(`a.md: not saved — ${said}`);
+    expect(app.buffers.get("a.md")?.dirty).toBe(false);
+    expect(readFileSync(file, "utf8")).toBe(text);
   });
 });

@@ -1150,8 +1150,10 @@ keys.
   the commands given paths only, never in the environment, which a hook would inherit), so `Why?.md` or `:a.md` never
   names another. A rename is unstaged whole, both its paths. A change is staged as `git add -p` does: the index given
   its text with that change made (`hash-object`, `update-index`), so nothing else in it moves. A file unsaved here isn't
-  discarded: git works on the file on disk; an untracked file discarded goes to the trash, as the explorer's `d`. git's
-  answer comes in the background, again whenever it has news; `23.6`'s guards apply in a vault not trusted (D175).
+  discarded: git works on the file on disk; a change of a read-only file (one you may not write) isn't either, said
+  before asking and again once answered (`b.md: not discarded — …`); an untracked file discarded goes to the trash, as
+  the explorer's `d`. git's answer comes in the background, again whenever it has news; `23.6`'s guards apply in a
+  vault not trusted (D175).
 - **Its keys** (`[keys.git]`, `DEFAULT_GIT_KEYS`, actions `GIT_ACTIONS`): `j`/`k`, `g g`/`shift+g` move; `enter`
   (`open`) a file's or a change's diff in the diff window (GIT-D2, `showWorkDiff`: a staged one's against the last
   commit, a changed one's against what's staged, an untracked file's all added; `esc` back to the panel), folds a
@@ -2973,7 +2975,8 @@ unit), as in the diff window; the window is as tall as its rows.
   where they're looked for, and the lines drawn around them. A new or deleted file is staged whole.
 - `x` (`git.review_revert`) puts the hunk's lines back as staged, in the file's buffer, as one edit — the part of the
   text that differs — so one undo step there, and saves it at once (`Saving.save`, so `App.writeBuffer`); a save
-  refused (the file changed on disk) leaves it unsaved, said (`reverted, but not saved — :w saves it`). A file with
+  refused (the file changed on disk) leaves it unsaved, said (`reverted, but not saved — :w saves it`). A read-only
+  file (one you may not write) is left as it is, nothing put in its buffer, said (`a.md: not reverted — …`). A file with
   unsaved typing is never written over: the hunk is skipped, said, and the review goes on. The edit is made on the
   disk's text: a buffer without unsaved typing that wasn't read again since the file changed (the watcher off, or not
   yet run) is read first. A new file goes to the trash, asked first (`Files.deleteItem`); a deleted one comes back as
@@ -3137,9 +3140,10 @@ marked, two lines around it, under a head naming it and how it's settled, the st
   lines, or as their blocks again, as in the diff window.
 - `w` (`git.merge_save`), and `ctrl+s` and `:w` there (`file.save` sends them to it, as the commit editor's), once
   every conflict is settled: the result into the buffer as one edit, saved through `App.writeBuffer`; refused, said,
-  while one isn't, or when the buffer changed since the screen read it. A save refused (the file changed on disk) puts
-  the buffer back as the screen read it, so nothing's in it the screen doesn't show, and says `x` reads the file again;
-  the conflict prompt's merge (below) leaves the result in the note, unsaved, its prompt saying how.
+  while one isn't, when the buffer changed since the screen read it, or when it's read-only (a file you may not write:
+  nothing put in it, `a.md: not saved — …`). A save refused (the file changed on disk) puts the buffer back as the
+  screen read it, so nothing's in it the screen doesn't show, and says `x` reads the file again; the conflict prompt's
+  merge (below) leaves the result in the note, unsaved, its prompt saying how.
 - `s` (`git.merge_stage`) once saved: the file read again first — one changed since it was saved, or with markers
   still in it (a side's own lines can hold them), isn't staged, said — then `git add` the file, which marks it
   resolved; the next file in conflict opens, else what comes next is said (`shift+r` continues the rebase, or
