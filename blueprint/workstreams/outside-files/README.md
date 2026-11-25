@@ -16,7 +16,7 @@ accepted, not built yet.
 - [requirements.md](requirements.md): its goals, what it builds on, its acceptance criteria, its changes to the root's
   requirements.
 - [design.md](design.md): its changes to the root's design, every point settled.
-- [decisions.md](decisions.md): OUT-D1 to OUT-D8.
+- [decisions.md](decisions.md): OUT-D1 to OUT-D11.
 - [notes.md](notes.md): how it came up, and the decisions it reopens.
 - [tasks/](tasks/README.md): the work, a task per file.
 - The research: [../../research/outside-files.md](../../research/outside-files.md), how nine editors and note apps
@@ -26,7 +26,9 @@ Five settled decisions and a constraint change in part, each with the maintainer
 retired, back for a file you name or pick, as no new kind of place: OUT-D8), VV-D4 (choosing another vault's file goes
 into it), VV-D7 (its reason that an editable tab of another vault's file would be a half-switch), D142 as amended by
 VV-D6 and constraint `7.5` (nothing written outside a vault), and D270 (`:e`, the explorer and the switcher's path
-going into the file's vault). Their notes are written at consolidation (notes.md § The decisions it reopens).
+going into the file's vault). VV-D6 and D220 get notes too: the one write out of a vault is written as the file's own
+vault writes it, so what they keep from being written stays so. Their notes are written at consolidation (notes.md
+§ The decisions it reopens).
 
 ## Goal
 
@@ -37,7 +39,7 @@ backlinks, always say where you are.
 ## Scope
 
 In: the TUI's ways of opening a file by name or by picking it (`:e`, the switcher's path, the explorer, the command
-line beside a `--root` that doesn't hold it), the tab they open, its writes, the command into its vault, the workspace
+line with a file outside `--root`), the tab they open, its writes, the command into its vault, the workspace
 bringing it back, a relative `:e` path that leaves the vault.
 
 Out:

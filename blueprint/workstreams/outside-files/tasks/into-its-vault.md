@@ -16,17 +16,20 @@ OUT-D4.
   `src/tui/actions/workspace/`; bound to `space v g` (`src/tui/shell/input/keys/bindings.ts`, free beside
   `leader v v`).
 - A click on the tab's vault mark runs it.
-- It goes into the file's vault with the file at its place (`switchVault`), asking Go or Stay; unsaved notes ask their
-  own question; on a peek's kept tab the same; on a note of this vault's own, said.
+- It goes into the file's vault with the file at its place (`switchVault` in `src/tui/workspace/vaults/vaults.ts`),
+  asking Go or Stay; unsaved notes ask their own question; on a peek's kept tab the same; on a note of this vault's
+  own, said. `switchVault` offers Peek whenever the switch opens a file and doesn't come from a peek, so the command
+  passes a flag saying the file is open here (`SwitchHow`'s `here`, a proposal) and the question leaves Peek out.
 - The line said on opening names `space v g`.
 - The design kept true as it's built: design.md § A file from outside the vault and its changes to design/tui.md
-  (§ Going into a vault, § The peek) and design/roots.md § Elsewhere, which those files take at consolidation
-  (OUT-T5).
+  (§ Going into a vault, § The peek, § Vault-switch ownership), design/roots.md § Elsewhere and requirements.md's
+  change to § Vaults and links, which those files take at consolidation (OUT-T5).
 
 ## Acceptance criteria
 
 - Unit tests (`tests/tui/workspace/vaults/switch-question.test.ts`, `switching.test.ts`): the question and its two
-  answers; unsaved notes asked first; a note of the vault's own.
+  answers, no Peek with the flag and Peek still offered without it; unsaved notes asked first; a note of the vault's
+  own.
 - Terminal checks: `outside-files` (`space v g`, Stay then Go, `ctrl+o` back; the click on the tab's mark), `vaults`,
   `which-key` (`space v` lists `g`).
 - Every bug found gets a regression test; `bun run check` passes; the user docs (`docs/manual/keys.md` § Vaults and

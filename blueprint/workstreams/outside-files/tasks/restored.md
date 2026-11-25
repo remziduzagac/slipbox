@@ -16,13 +16,16 @@ OUT-D6.
 - The real path recorded when the file was chosen kept with it (OUT-T2): one whose real path changed since comes back,
   and its save is refused, said, as before the restart. A file gone since does what a note's tab whose file is gone
   does.
+- A tab of a file of home's, in a vault's workspace, asks for its folder in home's graph before it opens, as a tab of
+  home brought back does (`Vaults.askTabs`, `src/tui/workspace/vaults/vaults.ts`; design/roots.md § Home).
 - The design kept true as it's built: design.md § A file from outside the vault (Back after a restart), which
   design/tui.md takes at consolidation (OUT-T5).
 
 ## Acceptance criteria
 
 - Unit tests: the session written and read with a chosen tab and a kept one; the chosen one back editable, the kept
-  one read-only; one whose real path changed while slipbox was closed back, its save refused.
+  one read-only; one whose real path changed while slipbox was closed back, its save refused; a home file's tab
+  asking for its folder before it opens.
 - A terminal check: `outside-files` across a restart (quit with two outside tabs, one saved; started again, both back
   as they were).
 - Every bug found gets a regression test; `bun run check` passes; the user docs (`docs/manual/vaults.md` § Vaults and

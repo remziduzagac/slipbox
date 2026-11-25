@@ -3,8 +3,8 @@
 ## Goals
 
 - **Opened where you are** (OUT-D1, OUT-D3, OUT-D7): a file outside the vault — another vault's, home's or
-  Elsewhere's — opened with `:e`, the switcher's path, the explorer or on the command line beside a `--root` that
-  doesn't hold it opens at once as a tab here, the tabs as they were; `:e ../x.md` reads from the vault's top.
+  Elsewhere's — opened with `:e`, the switcher's path, the explorer or on the command line with a `--root` it is
+  outside opens at once as a tab here, the tabs as they were; `:e ../x.md` reads from the vault's top.
 - **Edited when you chose it, looked at when a link led there** (OUT-D2): the file you named or picked is edited and
   saved where it is; a link's opens in the read-only peek.
 - **Its vault a command away** (OUT-D4): `space v g` goes into the file's vault with the file open, asked first as
@@ -40,22 +40,26 @@
 
 - **Opened here** (OUT-T1): from a vault of the reference set, `:e` with another vault's note's path, with a `~/` path,
   with a pointer and with `../`, the switcher's typed path, and `enter` on a file outside the vault's tree in the
-  explorer each open the file in a tab here, no question asked, the other tabs as they were; the tab names its vault;
-  its links open peeks; this vault's search, backlinks and task list don't list it, nor does the gutter mark its git
-  changes. Started with `--root` naming notes and kestrel's note, notes opens with that note as a tab, its vault
-  named; without `--root`, kestrel opens. The git panel's Open on a worktree still asks to go into it. A terminal
-  check covers each.
+  explorer each open the file in a tab here, no question asked, the other tabs as they were; the tab names its vault,
+  `Elsewhere: hosts` for `/etc/hosts`; its links open peeks; this vault's search, backlinks and task list don't list
+  it, nor does the gutter mark its git changes. A link not followed on its way is asked about first; a file of home's
+  has its folder walked in home's graph. Started with `--root` naming notes and kestrel's note, notes opens with that
+  note as a tab, its vault named; without `--root`, kestrel opens. `ctrl+click` on a link to it and the git panel's
+  Open on a worktree still ask to go into their vault. A terminal check covers each.
 - **Edited and saved** (OUT-T2): typed into and saved with `:w`, autosaved, a task ticked — written to the file
-  itself, atomically; a file a link led to, kept with `t`, still refuses typing, said; a note of the vault whose
-  target a symlink takes outside is still never written there; a save after the file changed on disk asks as any
-  note's does; a save after its real path changed is refused; a peek's kept tab named with `:e` becomes editable; a
-  named path through a symlink asks first. Unit tests for the write path: allowed for the buffer named, refused for
+  itself, atomically; a file a link led to, kept with `t`, still refuses typing, said, and every save of it, forced
+  too, is refused; a note of the vault whose target a symlink takes outside is still never written there, nor a
+  chosen file of another vault whose symlink leads out of that vault; a save after the file changed on disk asks as
+  any note's does; a save after its real path changed is refused; a peek's kept tab named with `:e` becomes editable,
+  and a named file kept from a peek stays so; a named path through a symlink asks first; link completion in another
+  vault's file offers that vault's notes. Unit tests for the write path: allowed for the buffer named, refused for
   every other case, each a test that fails without its guard; the CLI's `write` still refuses a path outside the vault.
-- **Into its vault** (OUT-T3): `space v g` on such a tab asks `Go into kestrel? …` with Go and Stay; Go opens kestrel
-  with the file open; Stay leaves everything as it was; a click on the tab's vault mark does the same; the line said
-  on opening names the key.
+- **Into its vault** (OUT-T3): `space v g` on such a tab asks `Go into kestrel? …` with Go and Stay, no Peek; Go opens
+  kestrel with the file open; Stay leaves everything as it was; a click on the tab's vault mark does the same; the
+  line said on opening names the key.
 - **After a restart** (OUT-T4): quit with two outside tabs open, one edited and saved; started again, both are back,
-  editable, their vaults named; one whose file is gone since does what a note's tab whose file is gone does.
+  editable, their vaults named; one whose file is gone since does what a note's tab whose file is gone does; one whose
+  real path changed is back, its save refused.
 - Every bug found gets a regression test; every part a terminal check; `bun run check` passes; the user docs say it
   all without the blueprint's IDs, and a CHANGELOG line comes with each task (OUT-T5).
 
@@ -74,8 +78,8 @@ there (D58, D69, D80, VV-D1–VV-D4, WSP-D1)."
 
 The bullet on going into another vault becomes:
 
-"- Going into another vault, by any way, asks first: Go, Peek at the note, or Stay; a peek never switches, and a file
-  opened here is no switch (D270, OUT-D1, OUT-D4)."
+"- Going into another vault, by any way, asks first: Go or Stay, and Peek at the note when there's one to read that
+  isn't open here already; a peek never switches, and a file opened here is no switch (D270, OUT-D1, OUT-D4)."
 
 Previously: "- Going into another vault, by any way, asks first: Go, Peek at the note, or Stay; a peek never switches
 (D270)."
@@ -90,11 +94,12 @@ Previously: "- Another vault's file is read in a peek, going there a choice (VV-
 ### MODIFIED requirements.md § Constraints, Safety: `7.5`
 
 "- **`7.5`** (D142, D69, D79, VV-D6, OUT-D2): slipbox never writes outside the vault, save a file outside it that the
-  person opened by name or picked, and that file alone. A symlinked note is written through to its target, and a
-  target outside the vault is refused; a file a link leads to is never written out of the vault; nothing is made
-  outside the vault. In home, a link the user followed is written through wherever it leads; in Elsewhere, which no
-  vault bounds, what the file system allows. design/tui.md § Writing notes; design/roots.md § Links followed only when
-  you say so."
+  person opened by name or picked in the TUI, and that file alone, written as its own vault writes its files; the
+  CLI's commands never write outside the vault. A symlinked note is written through to its target, and a target
+  outside the vault is refused; a file a link leads to is never written out of the vault, nor a read-only buffer by
+  any save; nothing is made outside the vault. In home, a link the user followed is written through wherever it
+  leads; in Elsewhere, which no vault bounds, what the file system allows. design/tui.md § Writing notes;
+  design/roots.md § Links followed only when you say so."
 
 Previously: "- **`7.5`** (D142, D69, D79, VV-D6): slipbox never writes outside the vault. A symlinked note is written
 through to its target, and a target outside the vault is refused; nothing is made outside the vault. In home, a link

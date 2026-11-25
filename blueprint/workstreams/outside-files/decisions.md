@@ -34,17 +34,21 @@ choice, and the guard stays where that risk is.
 touched, but editing still meant going into its vault); editable everywhere, links' files too (the simplest rule, but
 the guard against a changed link gone).
 
+**2026-11-25 note:** `t` keeps a link's file as a read-only tab unless the file is open here already by name: then
+the tab is the named one, still editable (OUT-D11).
+
 ## OUT-D3: What you pick yourself opens here; a link peeks (2026-11-25)
 
 **Decision:** Every way of opening a file by name or by picking it opens a file outside the vault here (OUT-D1),
 editable (OUT-D2): `:e` with a path or a pointer, its path typed in the switcher (`space f e`), the explorer's `enter`
-or `o` on a file outside the vault open's own tree, and the command line with `--root` naming a vault that doesn't
-hold the file: that vault opens, and the file is a tab of it, marked with its own vault, as `:e` from inside opens it,
-where today it is refused (`… is outside --root …`). Started with a file and no `--root`, slipbox opens in the file's
-own vault, as before. A link — followed by key or click, `ctrl+enter`, a backlink from another vault, another vault's
-search hit — opens a peek, as today (VV-D7). Choosing a vault itself — its row in the explorer, `space v v`, the top
-bar's vault list, the git panel's Open on a repository, a checkout or a branch's worktree, a folder link that leads
-out (D81) — still goes into it, asked (D270).
+or `o` on a file outside the vault open's own tree, and the command line with a file outside the folder of the vault
+`--root` names: that vault opens, and the file is a tab of it, marked with its own vault, as `:e` from inside opens
+it, where today it is refused (`… is outside --root …`). A file in that folder whose own vault is nested there still
+opens in its own vault (D80); started with a file and no `--root`, slipbox opens in the file's own vault, as before.
+A link — followed by key or click, `ctrl+enter`, a backlink from another vault, another vault's search hit — opens a
+peek, as today (VV-D7). Choosing a vault itself — its row in the explorer, `space v v`, the top bar's vault list, the
+git panel's Open on a repository, a checkout or a branch's worktree, a folder link that leads out (D81) — still goes
+into it, asked (D270).
 
 **Why:** One rule a person can hold: what you pick yourself opens here; where a link leads, you look; a vault you
 pick, you go into. The git panel's Open picks a worktree, which is a vault, and opens the note there; it opens no file
@@ -52,7 +56,7 @@ alone (`goInto`, `tui/workspace/git/views/branches/gitbranchview.ts`; `:worktree
 file are both named, so the file is chosen as `:e` would choose it.
 
 **Not chosen:** the git panel's Open opening the note's copy in the worktree here instead of going into the worktree;
-a file `--root` doesn't hold still refused; a link opening a read-only tab at once instead of a floating peek.
+a file outside `--root` still refused; a link opening a read-only tab at once instead of a floating peek.
 
 ## OUT-D4: Its vault a command away, still asked (2026-11-25)
 
@@ -117,3 +121,40 @@ none. The places stay vaults, home and Elsewhere, and the file is one of theirs,
 
 **Not chosen:** a file outside every vault falling back to read-only, as a peek's kept tab is, so that VV-D3 stood
 whole (editing it would still have meant going into Elsewhere).
+
+## OUT-D9: `ctrl+click` on a link still goes into the file's vault, asked (2026-11-25)
+
+**Decision:** `ctrl+click` on a link out of the vault (`link.go`, "go where the link leads") stays what D270 made it:
+a switch into the file's vault, asked, a peek skipped. It never opens the file here. Found when the design was checked
+against the code; the recommended option, as the maintainer asked for this workstream's further questions.
+
+**Why:** It is a link, and a link's file is never written out of the vault (OUT-D2); opened here, it would be either
+a second way to a read-only tab, beside the peek's `t`, or an editable tab a changed link could aim. As a switch it
+stays the link's way of choosing the vault, as the peek's `o` is.
+
+**Not chosen:** `ctrl+click` opening the file here, read-only, as a kept tab; opening it here, editable, since you
+clicked it on purpose (a link's file written, against OUT-D2).
+
+## OUT-D10: Link completion in another place's file offers that place's links (2026-11-25)
+
+**Decision:** In a chosen file of another vault, home or Elsewhere, link completion offers what it would offer in that
+place itself, from its own graph and in its link convention, never the current vault's notes. Found when the design was
+checked against the code (`linkItems` reads the current vault's); the recommended option.
+
+**Why:** A link written into a file is read in the file's own vault (OUT-D5); one completed from this vault's notes
+would be wrong there, written by slipbox itself.
+
+**Not chosen:** no link completion in such a file (simpler, but the one editing key that would behave unlike a note's);
+the current vault's notes, as today (wrong links).
+
+## OUT-D11: A file open both ways is the chosen one (2026-11-25)
+
+**Decision:** A buffer is one per path, so a file open both ways is one tab. A peek's read-only tab (`t`) of a file
+then named with `:e` becomes chosen, editable. A file open here by name and then kept from a peek with `t` stays
+chosen and editable: `t` goes to its tab. Its real path, recorded when it was chosen, still guards each save. Found
+when the design was checked against the code (`peekKeep` reuses the open buffer); the recommended option.
+
+**Why:** Naming the file is the choice OUT-D2 asks for, and a link reaching the same file later takes nothing back.
+
+**Not chosen:** `t` turning the named tab read-only (the person's choice undone by a link); `t` refusing, saying the
+file is open here already.

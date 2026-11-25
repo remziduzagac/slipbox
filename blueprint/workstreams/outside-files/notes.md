@@ -60,10 +60,35 @@ Found while drafting the design, then raised with the maintainer and settled on 
 - The git panel's Open and the command line, both in OUT-D3's first draft as routes here, turned out to open no file
   alone outside the vault. The git panel's Open stays a switch, asked, like the vault list: it picks a worktree, which
   is a vault; opening the note's copy in the worktree here was the alternative. The command line opens the file here
-  beside a `--root` that doesn't hold it, where it was refused; without `--root`, the file's own vault opens, as
-  before. OUT-D3 says both.
+  with a `--root` it is outside, where it was refused; without `--root`, the file's own vault opens, as before.
+  OUT-D3 says both.
 - The CLI's write commands keep refusing a path outside the vault: OUT is the TUI's.
 - The real path is recorded when the file is chosen, and a save is refused if it changed since.
 - A peek's kept read-only tab becomes editable once the file is named with `:e`.
 - A named path through a symlink asks, as today.
 - No git marks in the gutter for a chosen file from another repository.
+
+## Checked against the code
+
+A review of the design against the code on dev, the same day, found statements the code doesn't bear out. Each was
+read in the code and fixed in the design; where a fix needed a choice, the recommended option was taken, as the
+maintainer asked for this workstream's further questions, and a decision records the ones someone could have made
+otherwise.
+
+- The write guard: the design had it where the code doesn't hold it. The read-only guard moves into the write path,
+  where every save passes, and a chosen file is written as its own place writes its files, so VV-D6 and D220 hold for
+  it there (design.md § Chosen, so editable).
+- `intoOther` sits in the shared ways of opening, which links reach too: the chosen routes get a way of their own, and
+  nothing shared marks a buffer chosen. `ctrl+click` stays a switch, asked (OUT-D9).
+- A buffer of another place skips the lock and the "just looking" marks, and its way wasn't checked in its own place's
+  terms: a chosen one takes all three.
+- "Follow it" is kept for the link and where it leads, not for one file; what a yes allows is the file's own place's.
+- The tab named a vault only for a file in its index, never Elsewhere's: every such tab is named now.
+- `t` on a file already open by name reaches the named buffer: it stays chosen (OUT-D11).
+- Link completion read the current vault's notes: it reads the file's own place (OUT-D10).
+- A file of home's opened here didn't ask for its folder's walk: it does, as every way into home's folders does.
+- `space v g`'s Go and Stay needed the switch told the file is open here, or Peek is offered.
+- With `--root`, "a vault that doesn't hold it" read wrong for a nested vault's file: the change is for a file outside
+  `--root`'s folder, and a nested vault's file opens in its own vault, as now.
+- `7.5`'s exception named no interface: it is the TUI's, the CLI's commands never writing outside the vault.
+- VV-D6 and D220 get consolidation notes too.
