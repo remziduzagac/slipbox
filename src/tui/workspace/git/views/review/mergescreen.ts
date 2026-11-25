@@ -341,6 +341,8 @@ export function mergeEdit(app: App): void {
   const buf = target(app, m);
   if (!buf) return;
   if (buf.rel === null) return app.message("warn", `${m.rel} is outside this vault: slipbox writes only inside it`);
+  // A read-only file (one you may not write): neither typed in nor saved, so the result isn't put in it, said why.
+  if (buf.readOnly) return app.message("warn", `${m.rel}: not edited — ${buf.readOnly}`);
   const line = resultView(m.file, m.choices).lines[m.at] ?? 1;
   app.floating = null;
   put(app, m, buf);

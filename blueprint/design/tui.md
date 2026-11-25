@@ -3132,7 +3132,8 @@ marked, two lines around it, under a head naming it and how it's settled, the st
 - `e` (`git.merge_edit`) puts the result in the file's buffer as one edit — the conflicts not settled still marked,
   `markers` set so autosave doesn't write them — and opens the file at the conflict, in the mode the editing keys use
   (`[editor] edit_in`: the lens by default). `x` in the git panel (or `:resolve`) reads what's left of it onto the
-  screen again.
+  screen again. A read-only file (one you may not write) gets nothing put in it, the screen kept, said
+  (`a.md: not edited — …`).
 - `a` (`git.merge_agent`) asks for a note and adds the conflict to the scratch (`conflictExcerpt`): its lines in the
   file, three lines around it, the base between the sides as diff3 writes it; a note left empty is "a merge conflict:
   settle it, keeping what each side meant".

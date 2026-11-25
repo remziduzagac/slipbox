@@ -274,4 +274,18 @@ describe("the review, the merge screen and the rebase, from the panel (GIT-D3, G
     expect(app.buffers.get("a.md")?.dirty).toBe(false);
     expect(readFileSync(file, "utf8")).toBe(text);
   });
+
+  test("the merge screen's e on a file you may not write: not edited, said why; the screen stays, the buffer as it was", async () => {
+    if (process.getuid?.() === 0) return; // root may write anything: nothing is read-only
+    const root = conflicted();
+    const { file, text, said } = locked(root, "a.md");
+    const { app, click, keys } = await panel(root, "a.md");
+    click("git:btn:resolve");
+    expect(await until(() => app.floating?.kind === "merge")).toBe(true);
+    await keys("e");
+    expect(app.messages.at(-1)?.text).toBe(`a.md: not edited — ${said}`);
+    expect(app.floating?.kind).toBe("merge");
+    expect(app.buffers.get("a.md")?.dirty).toBe(false);
+    expect(readFileSync(file, "utf8")).toBe(text);
+  });
 });

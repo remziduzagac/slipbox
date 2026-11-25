@@ -293,8 +293,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - A forced save (`:w!`) now refuses a read-only tab, as a save does, and says why: another vault's note kept from a
   peek with `t`, or a file you may not write, is no longer written over the file on disk. Reverting a change in the
-  review, discarding one in source control and saving the merge screen refuse a file you may not write the same way,
-  before changing anything in it.
+  review, discarding one in source control, and saving or editing from the merge screen refuse a file you may not
+  write the same way, before changing anything in it.
 
 - A mistyped command, such as `slipbox serch foo`, stops with `did you mean search?` and exit code 2 instead of
   opening a new note named `serch`. `slipbox ./serch` still opens one, and a name that holds a command or is short
