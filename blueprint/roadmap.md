@@ -767,6 +767,15 @@ Items 5 and 7 are consolidated as CIW. The remaining work is tracked in the root
   kept in a dimmer `markup` role, by the render's own parse; the lens and a note's diff the same;
   `[render] source_styles` to turn it off.
 
+## A file outside the vault, opened where you are
+
+*Not a phase. Settled 2026-11-25, item by item with the maintainer; accepted, not built yet.*
+
+- [ ] **[A file outside the vault, opened where you are](workstreams/outside-files/README.md)** (OUT): a file of
+  another vault, home or Elsewhere opened by name or picked opens at once as a tab here, editable, its vault named; a
+  link's file keeps the read-only peek; `space v g` goes into its vault, asked; back after a restart; `:e ../x.md`
+  read from the vault's top.
+
 ## Later
 
 Agreed, but not scheduled.
