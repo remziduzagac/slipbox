@@ -2058,7 +2058,9 @@ and a target outside the vault is refused (`7.5`) — in home, a link you follow
 leads, and in Elsewhere what the file system allows (VV-D6; [roots.md](roots.md) § Links followed only when
 you say so); the watcher is told the write is its own; the buffer reloads, its windows keeping their anchors, so the
 cursor stays put. A virtual buffer (`3.20`: a note's properties, a commit's message, a peek, a report) is no file:
-`writeBuffer` refuses it, said, and `:w!` on one is `:w`, its own save (RPT, found by its review).
+`writeBuffer` refuses it, said, and `:w!` on one is `:w`, its own save (RPT, found by its review). A read-only buffer
+(`buf.readOnly`: a file you may not write, another place's file kept as a tab, a window read through a link not
+followed) is refused there too, whatever the save, `:w!` included, and said with its reason (`a.md not written: …`).
 
 **Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the checkbox, flips the task
 item holding the cursor — the innermost, from any of its rows; in SOURCE view and the lens, the one holding the

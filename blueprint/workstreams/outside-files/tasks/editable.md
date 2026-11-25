@@ -15,9 +15,9 @@ OUT-D2, OUT-D5, OUT-D10, OUT-D11.
 - The guards held in the write path, where every save passes (`App.writeBuffer`,
   `src/tui/documents/saving/write-buffer.ts`): `:w`, `:w!`, autosave, a task ticked, a save asked for on quitting or
   on a switch.
-  - A read-only buffer refused there, whatever the save: the read-only guard moves into the write path. The callers
-    that set `readOnly` checked, so that none whose buffer is saved on purpose is refused (a virtual buffer is turned
-    away before, as now).
+  - A read-only buffer refused there, whatever the save: already in place, a fix before this task (the read-only guard
+    in the write path, `:w!` included, its tests in `tests/tui/documents/saving/force.test.ts`). This task keeps it,
+    and builds only the guards below.
   - A buffer of another place (`elsewhere`) written only when chosen.
   - A chosen buffer written as its own place writes its files: its root and its links' rules from its own location
     (`locateVault`), not the current vault's; `writeNote`'s refusal (`src/core/foundation/platform/fsutil.ts`)
@@ -50,8 +50,8 @@ OUT-D2, OUT-D5, OUT-D10, OUT-D11.
 
 - Unit tests, each refusal one that fails without its guard:
   - `tests/tui/documents/saving/write-buffer.test.ts`, new: a chosen buffer outside the vault written by `:w`,
-    autosave and a task ticked; a read-only buffer refused by every save, the forced one too (a peek's kept tab, a
-    file you may not write, a file read just looking); a buffer of another place not chosen refused; a chosen file of
+    autosave and a task ticked; a buffer of another place not chosen refused (a read-only one refused by every save,
+    the forced one too, is `force.test.ts`'s already: a peek's kept tab, a file you may not write); a chosen file of
     another vault whose symlink leads out of that vault refused (D220); a chosen file of home's written through a link
     followed there; a chosen buffer whose real path changed since refused; a symlinked note of this vault out of it, a
     plan's file and a window through a link not followed still refused.
