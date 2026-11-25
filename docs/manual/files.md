@@ -118,7 +118,7 @@ You can open any folder you may read, inside your home folder or not. Outside ho
 [Elsewhere](vaults.md#elsewhere), whose folders are listed a level at a time:
 
 - A file you may not write opens read-only, and slipbox says so:
-  `/etc/hosts is read-only: you may not write it (no permission)`.
+  `/etc/hosts is read-only: you may not write it (no permission)`. No save writes it, `:w!` included.
 - A folder you may not read says why when you open it, unfold it or zoom into it:
   `can't read ~/private: you may not read it (no permission)`.
 

@@ -284,6 +284,7 @@ Discarding asks first. Then:
 - An untracked file goes to slipbox's trash, where you can get it back. [Files](files.md) has the trash.
 
 slipbox doesn't discard a file with unsaved changes in slipbox, since git works on the file on disk. Save it first.
+Nor does it discard one change in a file you may not write: it says why, before asking.
 
 When git refuses something, slipbox says why in git's own words.
 
@@ -339,8 +340,9 @@ press `esc`, a message says what you kept, reverted and noted. When you noted so
 copies the scratch for the agent ([The scratch](scratch-and-context.md#the-scratch)).
 
 A revert is one step of the file's undo: open the file and press `u` to bring the change back. slipbox doesn't revert a
-file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. A file git doesn't
-track goes to slipbox's trash when you revert it, after asking. A deleted file comes back as staged.
+file with unsaved typing, since that would write over it. It says so, skips the change, and goes on. It doesn't revert
+a change in a file you may not write either, and says why. A file git doesn't track goes to slipbox's trash when you
+revert it, after asking. A deleted file comes back as staged.
 
 A file can change while the review is open, when an agent is still at work. `y` and `x` act only on what the review
 showed you. A change no longer where the review found it, a deleted file written again, or a new file changed since is
@@ -467,7 +469,7 @@ in conflict opens.
 
 The file can change while the screen is open, when an agent writes it. Then `w` doesn't write over it: the screen says
 so, and `x` reads the file again. `s` reads the file before staging it, and doesn't stage one that changed since you
-saved it, or that still has conflict markers.
+saved it, or that still has conflict markers. On a file you may not write, `w` and `e` leave it as it is and say why.
 
 The base comes from git. Where git wrote the conflict with its base (`merge.conflictStyle` set to `diff3` or `zdiff3`),
 it's that. Otherwise it's the version git keeps of the file while the merge is under way. Where git doesn't have it,

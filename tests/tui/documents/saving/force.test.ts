@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
 import { openGraph } from "../../../../src/core/workspace/graph/graph.ts";
@@ -78,5 +78,41 @@ describe("a forced save refuses a read-only tab, as a save does", () => {
     expect(statSync(file).ino).toBe(was);
     expect(readFileSync(file, "utf8")).toBe("# Locked\n");
     expect(h.app.messages.at(-1)?.text).toBe(`locked.md not written: ${buf.readOnly}`);
+  });
+
+  // A read-only buffer holding unsaved text, as one kept through a link to a file you may not write is
+  // (`claimThroughLink`): typed in while it could be, then read-only.
+  const keptUnsaved = async () => {
+    const root = makeVault();
+    writeFileSync(join(root, ".editorconfig"), "root = true\n\n[*]\ntrim_trailing_whitespace = true\n");
+    const file = join(root, "kept.md");
+    writeFileSync(file, "# Kept\n");
+    const h = await harness({ root, open: "kept.md" });
+    const buf = h.app.view!.buf;
+    await h.keys("shift+a", "space", "space", "escape");
+    expect(buf.dirty).toBe(true);
+    buf.readOnly = "kept.md is read-only: you may not write it (no permission)";
+    return { h, buf, file, typed: buf.source };
+  };
+
+  test("autosave passes a read-only tab with unsaved text by: nothing written, nothing said on each pass", async () => {
+    const { h, file } = await keptUnsaved();
+    const said = h.app.messages.length;
+    h.app.saving.autosave();
+    h.app.saving.autosave();
+    expect(h.app.messages.slice(said).map((m) => m.text)).toEqual([]);
+    expect(readFileSync(file, "utf8")).toBe("# Kept\n");
+  });
+
+  test(":w on a read-only tab changed on disk refuses it first: no conflict prompt, the save rules not applied", async () => {
+    const { h, buf, file, typed } = await keptUnsaved();
+    writeFileSync(file, "# Changed out there\n");
+    const t = Date.now() / 1000 + 5;
+    utimesSync(file, t, t);
+    await ex(h, "w");
+    expect(h.app.overlay).toBeNull();
+    expect(h.app.messages.at(-1)?.text).toBe(`kept.md not written: ${buf.readOnly}`);
+    expect(buf.source).toBe(typed);
+    expect(readFileSync(file, "utf8")).toBe("# Changed out there\n");
   });
 });

@@ -45,9 +45,9 @@ export class Saving {
       this.app.message("error", `${buf.key} isn't valid UTF-8 — not saving over it`);
       return false;
     }
-    // Read through a link not followed now (VV-D6): refused as `writeBuffer` refuses it, before anything looks at the
-    // file through the link.
-    if (buf.throughLink) return this.app.writeBuffer(buf, buf.contentToSave(), true);
+    // Read-only, or read through a link not followed now (VV-D6): refused as `writeBuffer` refuses it, before anything
+    // looks at the file (through the link), asks about a change on disk or applies the save rules to text never saved.
+    if (buf.readOnly || buf.throughLink) return this.app.writeBuffer(buf, buf.contentToSave(), true);
     // A note deleted on disk that's there again (an agent recreated it) is a change like any:
     // never written over without asking.
     if (buf.deleted && existsSync(buf.abs)) buf.deleted = false;
@@ -210,7 +210,10 @@ export class Saving {
         later = true;
         continue;
       }
-      if (buf.conflictKept || buf.markers || buf.invalidUtf8 || buf.deleted || buf.throughLink) continue;
+      // A read-only buffer with unsaved text (one kept through a link to a file you may not write) is never written:
+      // skipped, not refused again on every pass.
+      if (buf.conflictKept || buf.markers || buf.invalidUtf8 || buf.deleted || buf.throughLink || buf.readOnly)
+        continue;
       if (buf.changedOnDisk()) {
         this.conflictPrompt(buf);
         continue;

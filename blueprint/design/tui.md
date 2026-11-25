@@ -2062,7 +2062,8 @@ you say so); the watcher is told the write is its own; the buffer reloads, its w
 cursor stays put. A virtual buffer (`3.20`: a note's properties, a commit's message, a peek, a report) is no file:
 `writeBuffer` refuses it, said, and `:w!` on one is `:w`, its own save (RPT, found by its review). A read-only buffer
 (`buf.readOnly`: a file you may not write, another place's file kept as a tab, a window read through a link not
-followed) is refused there too, whatever the save, `:w!` included, and said with its reason (`a.md not written: …`).
+followed) is refused there too, whatever the save, `:w!` included, and said with its reason (`a.md not written: …`);
+`Saving.save` refuses it first, before a change on disk is asked about or the save rules touch its text.
 
 **Task checkboxes** (`4.11`) are the first write. `ctrl+l` (`space n t`), or a click on the checkbox, flips the task
 item holding the cursor — the innermost, from any of its rows; in SOURCE view and the lens, the one holding the
@@ -2403,9 +2404,10 @@ about, and is left as a reload leaves it: no conflict kept or waiting over a cha
 **Autosave** (`4.7`, `5.6`, `5.10`; D138, D140, D153): a changed note is saved after `[editor] autosave_ms` (30 s; `0`
 turns it off) without a key pressed — not while you're in insert mode, not after (k) Keep yours until a saved, confirmed
 write, not over a file changed on disk (the conflict prompt comes instead), not with a merge's conflict markers in it,
-and not while git holds its `index.lock` (a commit in progress: it tries again later; in a worktree or submodule, the
-lock in the git directory its `.git` file names). **Hand-offs save first** (`4.10`; D145): `space n e`, `space f s` and
-a capture into an open scratch write unsaved changes before the other side reads the file; `space s c` saves every
+not a read-only one (passed by, not refused on every pass), and not while git holds its `index.lock` (a commit in
+progress: it tries again later; in a worktree or submodule, the lock in the git directory its `.git` file names).
+**Hand-offs save first** (`4.10`; D145): `space n e`, `space f s` and a capture into an open scratch write unsaved
+changes before the other side reads the file; `space s c` saves every
 unsaved note before it gathers the context bundle (`9.7`; D32), which it copies: the note, what it links to and what
 links to it, as `slipbox context` writes it ([cli.md](../../docs/manual/cli.md) § The scratch and the context bundle),
 as far as `[context]` says. One that can't be saved (it changed on disk meanwhile) stops it, nothing copied:
