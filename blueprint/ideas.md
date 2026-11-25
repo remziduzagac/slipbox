@@ -209,6 +209,14 @@ idea without an outcome is still open. Nothing here is agreed: the decisions are
   diff window. (2026-10-17) Open.
 - The git panel asking git again when the terminal gets the focus back (VV-D10): it asks when the panel is shown.
   (2026-10-17) Open.
+- A file outside the vault opened where you are, as code editors open one outside the project, instead of going into
+  its vault first ([research/outside-files.md](research/outside-files.md)). (2026-11-25) Chosen (OUT-D1–OUT-D7):
+  opened at once as a tab here, editable when named or picked, a link's still a read-only peek; `space v g` goes into
+  its vault, asked.
+- That tab read-only, as a peek's kept tab is: no write rule touched. (2026-11-25) Not chosen (OUT-D2): editing still
+  meant going into the vault.
+- Every outside file editable, a link's too. (2026-11-25) Not chosen (OUT-D2): the guard against a link a pull
+  changed, leading a save out of the vault (VV-D6), gone.
 
 ## Storage and state
 

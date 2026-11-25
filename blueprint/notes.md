@@ -634,3 +634,16 @@ dates. Each says what was asked, decided, built and found, and cites the decisio
   makes, SD-T11's measurement among them. None of them has a task yet.
 - The user docs gather what you see on a slow disk, and what still holds the screen, in How slipbox works § On a slow
   disk, with a line beside the explorer's listings and the save.
+
+## A file outside the vault (2026-11-25)
+
+- The maintainer found that a file outside the vault didn't open: `:e` with a whole path asked to go into its vault,
+  Stay opening nothing, and `:e ../x.md` was refused. [Research](research/outside-files.md) into nine editors and note
+  apps found the code editors open such a file where you are, asking about trust at most; Obsidian refused it until
+  September 2026.
+- Settled item by item with the maintainer, each with a recommendation: the outcome is a workstream,
+  [OUT](workstreams/outside-files/README.md), whose notes say how. A file named or picked opens at once as a tab here,
+  editable; a link's keeps the read-only peek; `space v g` goes into its vault, asked.
+- It reopens VV-D3 (the loose file, back as no new kind of place), VV-D4, VV-D7, D142 as VV-D6 amended it,
+  constraint `7.5` and D270, each raised with the maintainer and changed in part. Their notes are written when OUT is
+  consolidated.

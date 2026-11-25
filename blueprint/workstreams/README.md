@@ -13,6 +13,8 @@ dropped and superseded ones in `archive/`. The roadmap gives their order.
   moved off it, onto the disk threads; what still holds the screen there is in design/tui.md § Known limits.
 - Active: [SIS](source-inline-styles/README.md), issue #103: Markdown's inline styles in SOURCE view, the markers kept
   and dimmed; built on 2026-11-10, its consolidation waiting for the maintainer.
+- Active: [OUT](outside-files/README.md), a file outside the vault opened where you are, editable when you named or
+  picked it; settled item by item on 2026-11-25, not built yet.
 - Consolidated before 2026-10-26: [DOC](archive/user-docs/README.md),
   [DF](archive/doc-findings/README.md), [GR](archive/greenrepo/README.md),
   [DS](archive/docs-site/README.md), [VV](archive/vaults-and-view/README.md),

@@ -28,3 +28,5 @@ obtained. Research informs the decisions but decides nothing; each file's summar
 - [github-behaviour.md](github-behaviour.md): what GitHub does that the release flow and the upkeep rely on: a
   ruleset and the checks of a run by hand, a Pages deployment under a release, the site's cache, Dependabot's alerts
   in a folder.
+- [outside-files.md](outside-files.md): how nine editors and note apps open a file outside the project open: where,
+  with what trust prompt, what it keeps; the code editors open it in place, the vault-shaped apps refused it.

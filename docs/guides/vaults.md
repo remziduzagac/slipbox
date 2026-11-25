@@ -246,11 +246,12 @@ You're in Elsewhere. The top bar says `Elsewhere`, and the status line `‹ /etc
 From a vault, a file in `/etc` is a choice away:
 
 - A link to it, such as `[hosts](/etc/hosts)` in a note, opens a peek, `Elsewhere › /etc/hosts`, read where you are.
-  `o` goes into Elsewhere.
-- `:e /etc/hosts` goes into Elsewhere at once.
+  `o` asks to go into Elsewhere, Go or Stay.
+- `:e /etc/hosts` asks first, `Go into Elsewhere? Your tabs there replace these`: Go goes in, Peek reads the file
+  here, read-only, and Stay keeps you where you are.
 
-Either way, `ctrl+o` brings back your vault, its tabs as you left them. Elsewhere keeps its own tabs for the next time:
-open `/mnt/backup` next week, and `nginx.conf`'s tab is there.
+Once you've gone in, `ctrl+o` brings back your vault, its tabs as you left them. Elsewhere keeps its own tabs for the
+next time: open `/mnt/backup` next week, and `nginx.conf`'s tab is there.
 
 
 ## Check your context
