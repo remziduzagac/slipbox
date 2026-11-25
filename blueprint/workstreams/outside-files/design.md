@@ -42,8 +42,9 @@ a link, `ctrl+click`, a backlink, a search hit and a peek's `t` never set it. Th
 where every save passes (`App.writeBuffer`, `tui/documents/saving/write-buffer.ts`): `:w` and `:w!`, autosave, a task
 ticked, a save asked for on quitting or on a switch. There:
 
-- **A read-only buffer is refused, whatever the save.** The read-only guard moves into the write path itself
-  (`readOnly`: a peek's tab, a file you may not write, a file read through a link you're only looking at).
+- **A read-only buffer is refused, whatever the save.** The read-only guard is in the write path itself already
+  (`readOnly`: a peek's tab, a file you may not write, a file read through a link you're only looking at), `:w!`
+  included: it came before this workstream's build, as a fix, and the build keeps it.
 - **A buffer of another place** (`elsewhere`) is written only when it is chosen; one not chosen is refused there.
 - **A chosen buffer is written where it is, as its own place writes its files**: its root and its links' rules taken
   from its own location (`locateVault`), not the current vault's. In a vault, never through a symlink out of that
@@ -193,8 +194,9 @@ first (D270; § Going into a vault)".
 Its first paragraph's first sentence gains, after "(VV-D6; [roots.md](../../design/roots.md) § Links followed only when
 you say so)": "; a file outside the vault opened by name or picked is written where it is, as its own vault writes its
 files, the one write out of a vault, and never a file a link led to (OUT-D2; § A file from outside the vault)". After
-that sentence: "The write path holds the guards, every save passing there: a read-only buffer is refused whatever the
-save, and a buffer of another place unless it was chosen."
+that sentence: "The write path holds the guards, every save passing there: a buffer of another place is refused unless
+it was chosen." The section says already, at its first paragraph's end, that a read-only buffer is refused whatever the
+save.
 
 Previously: "Every write goes one way (`writeBuffer`; D142): the file is replaced atomically (a temp file in the same
 folder, then a rename) keeping its permissions; a symlinked note is written through to its target, and a target outside

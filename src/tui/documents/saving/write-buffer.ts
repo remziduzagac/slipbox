@@ -18,8 +18,10 @@ export function writeBuffer(
     app.message("warn", `${app.displayName(buf)} is the floating window's, not a file: not written`);
     return false;
   }
-  // Read through a link not followed now (VV-D6: looked at, or forgotten with unsaved text): never written through it.
-  if (buf.throughLink) {
+  // Read-only (a file you may not write, another place's file kept as a tab), or read through a link not followed now
+  // (VV-D6: looked at, or forgotten with unsaved text): never written, whatever the save — `:w!` too, which looks at
+  // nothing else first.
+  if (buf.readOnly || buf.throughLink) {
     app.message("warn", `${buf.key} not written: ${buf.readOnly ?? "read through a link not followed"}`);
     return false;
   }

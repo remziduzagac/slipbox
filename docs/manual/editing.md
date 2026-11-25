@@ -542,6 +542,8 @@ The conflict prompt offers four answers, each by its key:
 `space n c` opens the prompt again.
 
 `:w` on a note whose file changed since you opened it opens the prompt instead of writing. `:w!` writes yours over it.
+Neither writes a read-only tab, such as another vault's note kept from a peek or a file you may not write: slipbox
+says why.
 
 `:e!` throws your changes away and loads the file (`u` brings them back).
 
