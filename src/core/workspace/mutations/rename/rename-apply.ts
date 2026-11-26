@@ -14,6 +14,7 @@ import {
   realTarget,
 } from "../../../foundation/platform/fsutil.ts";
 import type { Graph } from "../../graph/graph.ts";
+import { walkLeavesOut } from "../../graph/reach/files.ts";
 import { trashVaultMarker } from "../trash.ts";
 import { contentHash } from "../../links/redirects.ts";
 import { changedSpan, forgetRename, type LoggedRename, logRename, readRenames } from "./rename-log.ts";
@@ -369,6 +370,10 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       })),
     });
   }
+  // What the index didn't hold before it moved (D278), a file or a folder: indexed where it went only where the walk
+  // takes it — a folder by walking again.
+  const fresh = new Set((plan.moves ?? []).filter(([from]) => !g.known(from)).map(([, to]) => to));
+  const dirKnown = !mv?.dir || g.dirs.includes(relative(g.root, mv.from));
   // Links to the old places still find the new ones (17.12); the vault's index follows.
   if (plan.moves?.length) {
     g.redirects?.add(plan.moves);
@@ -399,6 +404,7 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
     // unless a link reached it (20.8).
     const key = rel.split(sep).join("/");
     if ((walkSkips(key) || !g.admits(key)) && !g.notes.has(key) && !g.reached.has(key)) continue;
+    if (fresh.has(key) && walkLeavesOut(g, key) !== null) continue;
     try {
       const st = statSync(abs);
       if (classify(rel, g.config.walk.extensions).group === "note")
@@ -406,8 +412,14 @@ export function applyPlan(g: Graph, plan: RenamePlan): Applied {
       else g.addAsset(rel);
     } catch {}
   }
-  // A plain folder's (one holding a root nested in it, too), not a root's own folder.
-  if (mv?.dir && !plan.vaults?.some(([from]) => from === mv.from)) {
+  // A folder the walk didn't give, gone where it takes it (D278), and one leaving behind what the index holds of it —
+  // what the plan didn't move (an undo of one that came in): the index walked again.
+  const fromDir = mv?.dir ? relative(g.root, mv.from) : null;
+  if (fromDir !== null && [...g.notes.keys(), ...g.filePaths()].some((r) => r.startsWith(`${fromDir}/`))) unread = true;
+  if (mv?.dir && !dirKnown) {
+    if (walkLeavesOut(g, relative(g.root, mv.to).split(sep).join("/"), true) === null) unread = true;
+  } else if (mv?.dir && !plan.vaults?.some(([from]) => from === mv.from)) {
+    // A plain folder's (one holding a root nested in it, too), not a root's own folder.
     const from = relative(g.root, mv.from);
     const to = relative(g.root, mv.to);
     g.dirs = [

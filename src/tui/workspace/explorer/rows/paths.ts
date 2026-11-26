@@ -3,12 +3,13 @@
 // folder holding it judged it, on a disk thread; by its name alone while that listing is read.
 import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { MARKER } from "../../../../core/workspace/vaults/registry.ts";
-import { isInside, isListed } from "../../../../core/workspace/vaults/vault.ts";
+import { isLink } from "../../../../core/workspace/vaults/symlinks.ts";
+import { isInside, isListed, isVaultRoot } from "../../../../core/workspace/vaults/vault.ts";
 import type { FolderListing, ListedEntry } from "../../../../core/workspace/walk/listing.ts";
 import { ALWAYS_SKIPPED } from "../../../../core/workspace/walk/filtering/policy.ts";
 import { ANOTHER_DISK } from "../../../../core/workspace/walk/walk.ts";
 import { listsName } from "../explorer-disk.ts";
-import type { ExplorerReadContext, ExplorerRowState, TreeRow, LeftOut } from "../contracts.ts";
+import type { ExplorerReadContext, ExplorerRowState, TreeRow, LeftOut, LeftOutItem } from "../contracts.ts";
 
 /** A listing's entries by name, made once for each listing. */
 const byName = new WeakMap<FolderListing, Map<string, ListedEntry>>();
@@ -150,6 +151,45 @@ export class ExplorerPaths {
     // In a vault nested in it, or through a link the walk didn't take: that vault's, or not the walk's at all.
     if ([...this.nestedRels(), ...this.unwalkedRels()].some((n) => rel === n || rel.startsWith(`${n}/`))) return null;
     return this.leftOut(rel, abs);
+  }
+
+  /**
+   * What a row the vault open's walk leaves out names, in its own tree (D278): a note, file or folder the explorer
+   * renames, moves, copies and deletes as any of the vault's — by its path in the vault, with why it's left out. None
+   * for a row above or beside the vault, another vault's (one in what's left out, and all in it), a link the walk
+   * didn't take, what's under a link (a second name moves nothing by it), or one only saying something of its folder.
+   */
+  leftOutItem(row: TreeRow): LeftOutItem | null {
+    if (!row.outside || row.kind === "root" || row.placeholder || row.link?.reason) return null;
+    const abs = this.rowAbs(row);
+    const out = this.leftOutAt(abs);
+    if (!out || this.notOwn(dirname(abs), out)) return null;
+    return { rel: relative(this.app.loc.root, abs).split(sep).join("/"), dir: row.kind === "dir", leftOut: out.why };
+  }
+
+  /** Whether `dir`, or a folder holding it up to the one left out (`out.at`), is a vault of its own or a link: as the
+   *  listing of the folder holding each read it, else looked at — but on another disk, never looked into (VV-D2). */
+  private notOwn(dir: string, out: LeftOut): boolean {
+    for (let d = dir; isInside(out.at, d); d = dirname(d)) {
+      const e = this.keptEntry(d);
+      if (e ? !!(e.vault || e.link) : out.why !== ANOTHER_DISK && (isVaultRoot(d) || isLink(d))) return true;
+      if (d === out.at) break;
+    }
+    return false;
+  }
+
+  /** What a listing kept of the folder holding `abs` says of it — one listed a level at a time, or of the vault's own
+   *  tree — nothing asked. */
+  private keptEntry(abs: string): ListedEntry | undefined {
+    for (const own of [false, true]) {
+      const listing = this.listings().peek(dirname(abs), own);
+      if (!listing) continue;
+      let names = byName.get(listing);
+      if (!names) byName.set(listing, (names = new Map(listing.entries.map((e) => [e.name, e]))));
+      const e = names.get(basename(abs));
+      if (e) return e;
+    }
+    return undefined;
   }
 
   /** A row's path, absolute. */

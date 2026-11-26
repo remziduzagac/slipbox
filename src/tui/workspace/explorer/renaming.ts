@@ -56,7 +56,9 @@ export class Renaming {
       ...(plan.move ? [plan.move.from] : []),
       ...(plan.moves ?? []).map(([from]) => join(this.app.loc.root, from)),
     ]);
-    const dirty = this.app.dirtyBuffers().filter((b) => touched.has(b.abs));
+    // A folder's by where they are too: what's in one the walk leaves out isn't among its moves (D278).
+    const into = plan.move?.dir ? `${plan.move.from}${sep}` : null;
+    const dirty = this.app.dirtyBuffers().filter((b) => touched.has(b.abs) || (into && b.abs.startsWith(into)));
     if (dirty.length)
       return this.app.message(
         "warn",
@@ -153,6 +155,21 @@ export class Renaming {
     this.app.watch.builds.forKey(() => this.applied(plan));
   }
 
+  /** The files a plan moves that an open buffer follows: its moves, and what's open in a folder it moves that they
+   *  don't name — what its walk left out (D278) — but in a vault moved with it, which is that vault's. */
+  private followed(plan: RenamePlan): [string, string][] {
+    const pairs = [...(plan.moves ?? [])];
+    if (!plan.move?.dir) return pairs;
+    const { from, to } = plan.move;
+    const R = this.app.loc.root;
+    const named = new Set(pairs.map(([f]) => join(R, f)));
+    const inside = (dir: string, abs: string) => abs.startsWith(`${dir}${sep}`);
+    for (const b of this.app.buffers.values())
+      if (inside(from, b.abs) && !named.has(b.abs) && !plan.vaults?.some(([v]) => v === b.abs || inside(v, b.abs)))
+        pairs.push([relative(R, b.abs), relative(R, to + b.abs.slice(from.length))]);
+    return pairs;
+  }
+
   private applied(plan: RenamePlan): void {
     if ((plan.kind === "relink" || plan.kind === "convert" || plan.kind === "replace") && !plan.files.length) return;
     let applied: Applied;
@@ -165,7 +182,7 @@ export class Renaming {
     // Every file that moved (a folder's: each in it): its open buffer, views, history and recents
     // follow it to its new path.
     const moved = new Set<string>();
-    for (const [fromRel, toRel] of plan.moves ?? []) {
+    for (const [fromRel, toRel] of this.followed(plan)) {
       const old = byAbs(join(this.app.loc.root, fromRel));
       if (!old) continue;
       const nb = this.app.buffer(toRel);
@@ -246,10 +263,11 @@ export class Renaming {
     const made = plan.makeVault || plan.unmakeVault ? plan.from : undefined;
     this.app.files.afterFileOp(went || (made ? [made] : []), went ? went[1] : made);
     const n = plan.files.reduce((k, f) => k + f.edits.length, 0);
-    // A note or folder moved where the vault never indexes it (D246): said after where it went.
+    // A note or folder moved where the vault never indexes it (D246), or what the walk left out where it takes it
+    // (D278): said after where it went.
     const left =
       plan.move && (plan.kind === "note" || plan.kind === "folder")
-        ? this.app.files.notIndexed(plan.move.to, plan.move.dir)
+        ? `${this.app.files.notIndexed(plan.move.to, plan.move.dir)}${plan.comesIn ? " (now indexed)" : ""}`
         : "";
     const what = plan.undo
       ? {
@@ -290,17 +308,18 @@ export class Renaming {
     this.preview(() => planUndo(this.app.graph));
   }
 
-  /** Ask for a note's new path, then preview its rename. */
-  prompt(rel: string): void {
+  /** Ask for a note's new path, then preview its rename. `own`: one the walk leaves out, in slipbox's and git's own
+   *  folders too (D278). */
+  prompt(rel: string, own = false): void {
     this.app.overlays.prompt(`rename or move ${rel} to: `, (to) => {
-      if (to.trim()) this.noteTo(rel, to.trim());
+      if (to.trim()) this.noteTo(rel, to.trim(), own);
     });
     (this.app.overlay as PromptOverlay).text = rel.replace(/\.(md|markdown)$/i, "");
   }
 
   /** Preview a note's rename or move to a typed path: a folder there, or a path ending in `/`, is into it (DF-D4). */
-  noteTo(rel: string, to: string): void {
-    this.preview(() => planNoteRename(this.app.graph, rel, moveTarget(this.app.graph, rel, to)));
+  noteTo(rel: string, to: string, own = false): void {
+    this.preview(() => planNoteRename(this.app.graph, rel, moveTarget(this.app.graph, rel, to), { own }));
   }
 
   /** Ask for a heading's new name, then preview its rename (11.9): every link to it fixed. */

@@ -69,4 +69,46 @@ describe("writing", () => {
     expect(run(["write", "dist/d.md", "# D\n\nmore"]).code).toBe(0);
     expect(readFileSync(join(root, "dist", "d.md"), "utf8")).toBe("# D\n\nmore\n");
   });
+
+  test("a folder the walk leaves out is moved as it is: to a name the walk takes, its notes indexed, said; busy to busy, moved", () => {
+    const dir = mkdtempSync(join(sandbox, "left-out-"));
+    const own = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "d"),
+    };
+    const root = join(dir, "root");
+    const w = (rel: string, text: string) => {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    };
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    w(".gitignore", "tmp/\n");
+    w("a.md", "# A\n");
+    w("tmp/t.md", "# T\n");
+    w("node_modules/pkg/README.md", "# Pkg\n");
+    const run = (args: string[]) => slipbox(args, { cwd: root, env: own });
+    expect(run(["ls"]).out).not.toContain("t.md");
+    const mv = run(["mv", "tmp", "scratch"]);
+    expect([mv.code, mv.out.split("\n")[0]]).toEqual([
+      0,
+      "moved folder tmp → scratch (now indexed): 0 changes in 0 files",
+    ]);
+    expect(existsSync(join(root, "scratch", "t.md"))).toBe(true);
+    expect(run(["ls"]).out).toContain("scratch/t.md");
+    expect(run(["mv", "node_modules/pkg", "node_modules/pkg2", "--json"]).json.data).toMatchObject({
+      kind: "folder",
+      to: "node_modules/pkg2",
+    });
+    expect(existsSync(join(root, "node_modules", "pkg2", "README.md"))).toBe(true);
+    // An indexed note into a busy folder: refused, as ever.
+    const into = run(["mv", "a.md", "node_modules/pkg2/a.md"]);
+    expect([into.code, into.err]).toEqual([
+      5,
+      "slipbox: node_modules/pkg2/a.md: node_modules/ is a busy folder (no note at its top), which the vault doesn't index\n",
+    ]);
+    // Slipbox's and git's own: not from the command line.
+    expect(run(["rm", ".slipbox"]).code).toBe(5);
+    expect(existsSync(join(root, "a.md"))).toBe(true);
+  });
 });

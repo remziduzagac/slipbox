@@ -353,7 +353,7 @@ export async function renameResult(
           ? `${verb} ${p.from}/ a vault of its own${p.to !== p.from ? `, called ${p.to}` : ""}`
           : p.kind === "unmake-vault"
             ? `${verb} ${p.from}/ part of ${p.to}`
-            : `${verb} ${p.from} → ${p.to}${notIndexedSaid(left)}`;
+            : `${verb} ${p.from} → ${p.to}${notIndexedSaid(left)}${p.comesIn ? " (now indexed)" : ""}`;
   const human = [
     `${head}: ${links} change${links === 1 ? "" : "s"} in ${p.files.length} file${p.files.length === 1 ? "" : "s"}${saved ? ` — planned: slipbox apply ${saved.id} writes it (refused if any of these files changes first)` : ""}`,
     ...p.files.flatMap((f) => f.edits.map((e) => `  ${f.shown}:${e.line}\n    - ${e.before}\n    + ${e.after}`)),
@@ -367,6 +367,8 @@ export async function renameResult(
       dryRun: !applied,
       move: p.move,
       ...(left ? { notIndexed: left } : {}),
+      // What the walk left out, moved where it takes it (D278).
+      ...(p.comesIn ? { nowIndexed: true } : {}),
       files: p.files.map((f) => ({ path: f.shown, abs: f.abs, ...s.rootOf(f.abs), edits: f.edits })),
       warnings: [...p.warnings, ...(applied?.warnings ?? [])],
       skipped: p.skipped,

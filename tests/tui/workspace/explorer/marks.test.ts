@@ -580,7 +580,8 @@ describe("busy folders listed, not indexed (VV-D8)", () => {
     // Listed once, by its path: a note in it a link reached (20.8) is in its rows, not under a folder of the vault's.
     expect(h.app.graph.notes.has("out/reached.md")).toBe(true);
     expect(h.app.explorer.rows().filter((r) => r.name === "out")).toHaveLength(1);
-    expect(item(h, at("out"))).toBeNull(); // not this vault's to rename or delete
+    // Renamed, moved, copied and deleted as any of the vault's (D278), by its path in it.
+    expect(item(h, at("out"))).toEqual({ rel: "out", dir: true, leftOut: ".gitignore" });
     expect(h.app.explorer.rows().some((r) => r.name.startsWith("."))).toBe(false); // hidden ones aren't listed
     // Nor to make a note in: refused, said why.
     h.app.region = "sidebar";

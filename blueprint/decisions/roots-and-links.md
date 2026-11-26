@@ -959,6 +959,9 @@ be; a read of it would hang or never end. A hostile folder gets a warning, never
 > **Clarified by D240 (2026-10-17):** a busy name matches in its own case only (`Build` is a folder like any); a
 > cache's name, in any case.
 
+> **Amended by D278 (2026-11-26):** what the walk leaves out already, none of it indexed, may be moved or copied into
+> a busy folder; the guards refuse only what the index holds.
+
 **Decision:** A folder with a busy name (`node_modules`, `.venv`, `venv`, `__pycache__`, `target`, `build`, `dist`,
 `.next`, `vendor`, `Pods`, `DerivedData`, `.gradle`, `.tox`, a cache) is busy only when it looks generated: its
 repository's `.gitignore` ignores it, or it holds no note directly in it (a file of a note's extension at its top; its
@@ -1239,3 +1242,39 @@ each time the tree is built.
 **Not chosen:** other signs of a notes vault — the share of notes among its files, a setting `init` writes when it
 makes one; `init` asking, in a git repository of notes, what to list; leaving the screen silent, `a` and the setting
 found only in the docs.
+
+## D278: What the walk leaves out inside the vault is changed from the explorer as plain files (#307, 2026-11-26)
+
+**Decision:** Every row the vault open's walk leaves out inside its folder, whatever the reason — `.gitignore`, a busy
+folder, `walk.exclude`, a hidden name, `.git` and `.slipbox` and what's in them, and in home its skip list, a system
+folder, `Downloads`, another disk (the mount and what's on it) and a file that's no note or text — is renamed, moved,
+copied, cut and deleted from the explorer: the `…` button, its menu (Zoom in for a folder, Rename, Move to…, Copy,
+Cut, Copy path, Delete; no new note, no `.slipbox/`, no paste, no name), the keys and `space f`/`space d`. A new note,
+a new folder and a paste stay as D246 has them: on `walk.exclude`'s rows, refused on the others. Rows above or beside
+the vault, another vault's — one nested in what's left out, and all in it — and a link the walk didn't follow stay as
+they were. The core plans it, so the CLI's `mv` and `cp` take it too (`mv tmp scratch`), but for `.slipbox` and
+`.git`, which the CLI refuses as before: a plain move, nothing in it rewritten, nothing of its own links fixed. What's
+left out, and none of it in the index, may go where the walk leaves it out too (hidden, busy, always skipped); a note
+the index holds keeps today's refusals, so nothing indexed leaves the index that way. Moved where the walk takes it,
+it's indexed there, said `now indexed` (`nowIndexed` in the CLI's JSON); a copy there is indexed too. Delete asks
+first, saying `It isn't in the index (…)`, and moves it to the vault's trash; an unsaved note in it is matched by its
+whole path. As built: `walkLeavesOut` (`core/workspace/graph/reach/files.ts`), `unindexed` and `RenamePlan.comesIn`
+(`core/workspace/mutations/rename/planning/files.ts`), `own` on the plans, `copyPath` and `trashPath`,
+`ExplorerPaths.leftOutItem`; design/tui.md § What the walk leaves out, changed; design/roots.md § The walk.
+
+**Why:** The maintainer's choice, "truly everything" (#307). These rows are files in the vault's own folder, on your
+disk, and the explorer was the one place you couldn't tidy them: a git-ignored `tmp`, a stray `node_modules`, a
+hidden folder of drafts. Leaving any reason out would make the rule one more list to learn, and the reason a row is
+left out (a pattern in `.gitignore`, a folder's name) says nothing about whether you may move it. What stays out is
+what isn't this vault's: another vault's, and what's above or beside it. The command line keeps `.slipbox` and `.git`
+out because a typed path there is far likelier a slip than a choice, and the explorer's row is one you picked.
+
+**Cost:** `.slipbox` and `.git` can be broken from the explorer (a deleted `config.toml`, a moved `.git`); Delete asks
+first and the trash keeps it. A note's move that brought it in, undone, leaves it indexed at the git-ignored place it
+went back to until the vault is walked again (a folder's walks it at once). The Move picker lists only the folders the
+vault indexes.
+A vault nested in what's left out moves with its folder as plain files, the machine's list of vaults not told.
+
+**Not chosen:** only `walk.exclude`'s rows, the user's own setting (the issue's first reading); the explorer alone, the
+CLI still saying `no folder tmp`; every target allowed for any source, which would take indexed notes out of the index
+with nothing said.

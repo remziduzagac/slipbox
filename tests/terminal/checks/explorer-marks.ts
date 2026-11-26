@@ -73,9 +73,9 @@ const MARKED: Check[] = [
     run: async (s) => {
       await s.where("~");
       await explorerOpen(s);
-      // Downloads selected (a row of what home leaves out: no menu over any row's marks). A vault with its index on
-      // the disk, indexed; a folder of home before home's walk, being indexed; Downloads, left out.
-      await explorerRow(s, "Downloads");
+      // todo.md selected, its menu over its own marks alone. A vault with its index on the disk, indexed; a folder of
+      // home before home's walk, being indexed; Downloads, left out.
+      await explorerRow(s, "todo\\.md");
       await s.until(() => markOf(s, "notes") === "●", 5000, "notes, indexed: ●");
       await s.until(() => markOf(s, "household") === "◐", 3000, "household, home's walk to come: ◐");
       await s.until(() => markOf(s, "Downloads") === "⊘", 3000, "Downloads, left out: ⊘");
@@ -132,6 +132,8 @@ const MARKED: Check[] = [
       await explorerRow(s, "node_modules");
       await s.keys("z");
       await s.until(() => / notes › node_modules ›$/.test(crumbs(s)), 3000, "z: the view at node_modules");
+      // README.md selected, the menu's button over its own marks: dep's and lib's read.
+      await explorerRow(s, "README\\.md");
       await s.until(() => markOf(s, "dep") === "⊘" && markOf(s, "lib") === "⊘", 3000, "dep and lib, zoomed into: ⊘");
       await s.keys("escape");
       // Search finds the vault's note, and nothing in node_modules.

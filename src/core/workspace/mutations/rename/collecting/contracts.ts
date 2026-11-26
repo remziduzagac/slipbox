@@ -46,6 +46,8 @@ export interface RenamePlan {
   undo?: { id: string; at: string; made: string | null };
   /** Links the plan can't decide for itself (20.1: a wikilink several notes answer to): each to pick. */
   ambiguous?: Ambiguous[];
+  /** What moves was left out by the walk, and goes where it takes it (D278): indexed there, said `now indexed`. */
+  comesIn?: true;
 }
 
 /** A link with several possible targets, for the user to pick one of. */

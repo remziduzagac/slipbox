@@ -10,7 +10,7 @@ import type { App } from "../../app/runtime/app.ts";
 import { Listings } from "./listings.ts";
 import { Marks } from "./marks.ts";
 
-import type { ExplorerItem, TreeRow, LeftOut } from "./contracts.ts";
+import type { ExplorerItem, TreeRow, LeftOut, LeftOutItem } from "./contracts.ts";
 export type { LinkRow, ExplorerItem, TreeRow, LeftOut } from "./contracts.ts";
 export { listedDown } from "./rows/paths.ts";
 import { ExplorerFileRows } from "./rows/files.ts";
@@ -230,6 +230,11 @@ export class Explorer {
    *  shows that no row lists (under a hidden folder, D249); else null. */
   leftOutAt(abs: string): LeftOut | null {
     return this.paths.leftOutAt(abs);
+  }
+
+  /** A row the vault open's walk leaves out, in its own tree, as what its menu acts on (D278); null for any other. */
+  leftOutItem(row: TreeRow): LeftOutItem | null {
+    return this.paths.leftOutItem(row);
   }
 
   /** A row's path, absolute. */

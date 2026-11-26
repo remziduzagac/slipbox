@@ -22,7 +22,13 @@ export interface ExplorerItem {
   rel: string;
   dir: boolean;
   vault?: boolean;
+  /** One its walk leaves out (D278), a row by its path: why (`.gitignore`, `busy folder`…). Renamed, moved, copied
+   *  and deleted; never made a vault, nor given a new note unless `walk.exclude` is why. */
+  leftOut?: string;
 }
+
+/** A row the vault open's walk leaves out, in its own tree, as an item (D278). */
+export type LeftOutItem = ExplorerItem & { leftOut: string };
 
 export interface TreeRow {
   /** "note": a row the explorer opens — a note, or a data or text file (`group` says which).
@@ -194,6 +200,7 @@ export interface ExplorerActionHost extends ExplorerPosition {
   readonly app: ExplorerActionContext;
   readonly listings: { again(dir: string): void };
   leftOutAt(abs: string): LeftOut | null;
+  leftOutItem(row: TreeRow): LeftOutItem | null;
   treeRows(): TreeRow[];
   filesShown(): "notes" | "renderable" | "all";
   explorerShows(): "notes" | "renderable" | "all";
