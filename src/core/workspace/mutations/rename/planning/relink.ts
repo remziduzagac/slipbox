@@ -6,7 +6,7 @@ import type { Graph, ResolvedLink } from "../../../graph/graph.ts";
 import { formatPathLink, pathForm, pathLink, type PathForm, pathNamed } from "../../../links/links.ts";
 import { readRoots } from "../../../vaults/registry.ts";
 import {
-  copyAvailable,
+  copyHere,
   folderIdentity,
   pointerName,
   pointerNaming,
@@ -110,7 +110,7 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<stri
   let hit = ident && there ? { f: folders.find((x) => x.key === ident.key), root: there } : null;
   if (!hit?.f) {
     const was = folders.flatMap((f) =>
-      f.copies.filter((c) => !copyAvailable(c.path) && isInside(c.path, abs!)).map((c) => ({ f, root: c.path })),
+      f.copies.filter((c) => isInside(c.path, abs!) && !copyHere(f, c.path)).map((c) => ({ f, root: c.path })),
     )[0];
     hit = was ?? null;
   }

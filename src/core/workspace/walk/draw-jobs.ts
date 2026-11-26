@@ -1,13 +1,13 @@
 // What drawing asks of the disk (SD-T11, SD-D13; disk-jobs.ts hands it here): what's at each of some paths — a link's
 // target, a picture's file — the names a folder holds (a name's case, on a disk that folds it), files' texts — an
-// embedded note's, an SVG's, the scratch's places', the Problems panel's — and the folders this machine has named (a
-// pointer's, a hosting URL's: in slipbox's state folder, as the asking thread's environment finds it). Each read as the
-// screen's thread would read it, through the seam (SD-D10); one request a batch, asked in the background
-// (tui/app/runtime/drawn.ts).
+// embedded note's, an SVG's, the scratch's places', the Problems panel's — the folders this machine has named (a
+// pointer's, a hosting URL's: in slipbox's state folder, as the asking thread's environment finds it), and the folder
+// at each of some of their copies' places (whether it's still that folder, D279). Each read as the screen's thread
+// would read it, through the seam (SD-D10); one request a batch, asked in the background (tui/app/runtime/drawn.ts).
 
 import * as disk from "../../foundation/platform/disk.ts";
 import { decodeText } from "../../foundation/platform/fsutil.ts";
-import { type NamedFolder, readFolders } from "../vaults/folders.ts";
+import { type CopyAt, copyAt, type NamedFolder, readFolders } from "../vaults/folders.ts";
 import { type PathStat, statOf } from "./io/stamps.ts";
 
 /** A file's text as drawing reads it, with the stamp (`mtime:size`) of the file it was read from. */
@@ -17,12 +17,13 @@ export interface TextRead {
 }
 
 /** What a batch of drawing asks: paths statted, their links followed; folders' names; files' texts, each at most `max`
- *  bytes; and, asked, the machine's named folders. */
+ *  bytes; and, asked, the machine's named folders, and the folder at each of some copies' places. */
 export interface DrawAsk {
   stat: string[];
   names: string[];
   texts: { path: string; max: number }[];
   folders?: boolean;
+  copies?: string[];
 }
 
 /** A batch answered, each in the order asked: a path's stat or its error's code; a folder's names (null: it can't be
@@ -32,6 +33,7 @@ export interface DrawAnswer {
   names: (string[] | null)[];
   texts: (TextRead | null)[];
   folders?: NamedFolder[];
+  copies?: CopyAt[];
 }
 
 /** A folder's names, as `onDisk` reads them; null when it can't be listed. */
@@ -60,5 +62,6 @@ export function answerDraw(ask: DrawAsk): DrawAnswer {
     names: ask.names.map(namesIn),
     texts: ask.texts.map((t) => textRead(t.path, t.max)),
     ...(ask.folders ? { folders: readFolders() } : {}),
+    ...(ask.copies?.length ? { copies: ask.copies.map(copyAt) } : {}),
   };
 }

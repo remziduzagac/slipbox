@@ -480,4 +480,22 @@ describe("slipbox:// pointers (21.7)", () => {
       `[n](slipbox://rb${tag}/n.md#top) [n2](slipbox://rb${tag}/n.md)`,
     ]);
   });
+
+  test("the relink offers a pointer for a relative link into a copy's place that holds another folder now: its copy that's here (D279)", async () => {
+    const tag = uniq();
+    const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-t-"));
+    const b = await named(`tb${tag}`, { "n.md": "# N\n" }, parent);
+    const copy = join(mkdtempSync(join(tmpdir(), "slipbox-ptr-t2-")), `tb${tag}`);
+    mkdirSync(join(copy, ".slipbox"), { recursive: true });
+    writeFileSync(join(copy, ".slipbox", "config.toml"), readFileSync(join(b, ".slipbox", "config.toml")));
+    writeFileSync(join(copy, "n.md"), "# N\n");
+    await cli(["--root", copy, "ls"]);
+    const a = await named(`ta${tag}`, { "a.md": `[n](../tb${tag}/n.md)\n` }, parent);
+    // Its first copy's place taken by a folder with no name, a note of that name in it.
+    fs.rmSync(join(b, ".slipbox"), { recursive: true });
+    const r = JSON.parse((await cli(["--root", a, "relink", "--dry-run", "--json"])).out).data;
+    expect(r.files.flatMap((f: { edits: { after: string }[] }) => f.edits.map((e) => e.after))).toEqual([
+      `[n](slipbox://tb${tag}/n.md)`,
+    ]);
+  });
 });

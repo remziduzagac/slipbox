@@ -10,6 +10,7 @@
 import { join, relative, sep } from "node:path";
 import { climbsOut } from "../../foundation/platform/fsutil.ts";
 import { lookupFolder, type NamedFolder, readFolders } from "../vaults/folders.ts";
+import { probedCopyAt } from "./path-probe.ts";
 import { checkoutOf, headOf } from "../git/git.ts";
 import { branchesOf, worktreeList } from "../git/branches/gitops.ts";
 import { tildePath } from "../vaults/names.ts";
@@ -88,14 +89,17 @@ export type PointerTarget =
 
 /** Where a pointer leads on this machine: the folder's default copy (21.6), at its branch. */
 export function resolvePointer(p: Pointer, folders: NamedFolder[] = readFolders()): PointerTarget {
-  const l = lookupFolder(p.name, folders);
+  const l = lookupFolder(p.name, folders, probedCopyAt);
   if (l.status === "unknown") return { status: "unresolved", reason: l.reason };
   if (l.status === "ambiguous")
     return { status: "ambiguous", candidates: l.candidates, reason: l.reason, folders: l.folders };
+  // Not here: its place gone (a drive unplugged), or holding another folder now — never opened as it (D279).
   if (l.status === "unavailable")
     return {
       status: "unresolved",
-      reason: `${p.name} is at ${tildePath(l.path)}, which isn't here now (a drive unplugged?)`,
+      reason: l.other
+        ? `${p.name} was at ${tildePath(l.path)}, which holds another folder now`
+        : `${p.name} is at ${tildePath(l.path)}, which isn't here now (a drive unplugged?)`,
     };
   let root = l.path;
   const via = l.via;

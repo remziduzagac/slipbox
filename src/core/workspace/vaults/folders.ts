@@ -11,7 +11,9 @@
 // The lookup is durable, in the state folder (`folders.json`): each named folder, its copies on this
 // machine and the default one — the first found; when a second appears, the TUI asks once which links
 // open. Filled from the folders opened and by the background index; a copy that's gone stays listed,
-// unavailable, so an unplugged drive comes back. A worktree's name means its main checkout.
+// unavailable, so an unplugged drive comes back. A copy counts only while the folder at its place is
+// still that folder (`copyHere`): one gone, or another folder there, isn't here. A worktree's name
+// means its main checkout.
 
 import { existsSync, realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -220,9 +222,13 @@ export function recordFolder(
   const at = ident?.copy ?? opts.known?.real ?? realPath(root);
   const facts = opts.known?.copies;
   const realOf = (p: string) => (facts ? (facts[p]?.real ?? p) : realPath(p));
-  const there = (p: string) => (facts ? (facts[p]?.available ?? true) : copyAvailable(p));
+  // Still that folder at its place (`copyHere`): another folder there is no second copy.
+  const there = (f: NamedFolder, p: string) => {
+    if (!facts) return copyHere(f, p);
+    const x = facts[p];
+    return !x || (x.at !== undefined ? isCopyOf(f, x.at) : x.available);
+  };
   const here = (c: FolderCopy) => c.path === at || realOf(c.path) === at;
-  const available = (path: string) => path === at || there(path);
   // A copy moved here by hand (21.8, `movedFrom`): the one it was, gone.
   if (opts.replaces) {
     const f = list.find((x) => x.key === ident?.key);
@@ -249,11 +255,10 @@ export function recordFolder(
   }
   const now = (opts.now ?? new Date()).toISOString();
   const { copy: _, ...named } = ident;
-  let entry = list.find((f) => f.key === ident.key);
-  if (!entry) {
-    entry = { ...named, copies: [], default: null };
-    list.push(entry);
-  } else Object.assign(entry, named);
+  const seen = list.find((f) => f.key === ident.key);
+  const entry: NamedFolder = seen ? Object.assign(seen, named) : { ...named, copies: [], default: null };
+  if (!seen) list.push(entry);
+  const available = (path: string) => path === at || there(entry, path);
   // Recorded before by another path to it (a symlink's): one copy, by its real path now.
   const mine = entry.copies.find(here);
   if (mine) {
@@ -265,7 +270,7 @@ export function recordFolder(
     if (!opts.found) delete mine.found;
   } else {
     entry.copies.push({ path: at, seen: now, ...(opts.found ? { found: true } : {}) });
-    // A second copy here: a choice to make. One gone (moved here, a drive unplugged) isn't one.
+    // A second copy here: a choice to make. One gone (moved here, a drive unplugged, another folder there) isn't one.
     if (entry.copies.filter((c) => available(c.path)).length > 1 && !entry.asked) entry.ask = true;
   }
   entry.default ??= at;
@@ -339,27 +344,57 @@ export function setDefaultCopy(key: string, path: string | null): void {
   writeFolders(list);
 }
 
-/** Whether a copy is here now: its folder there (a drive unplugged, a folder deleted: not). */
+/** Whether anything is at a copy's place now (a drive unplugged, a folder deleted: not). Whether what's there is still
+ *  that folder is `copyHere`'s. */
 export function copyAvailable(path: string): boolean {
   return existsSync(path);
 }
 
-/** Each copy the list records: its real path, and whether it's there (`copyAvailable`). */
-export type CopyFacts = Record<string, { real: string; available: boolean }>;
+/** What's at a copy's place now (`copyAt`): the folder there by what tells copies apart, its `key` (null: a folder
+ *  unnamed) and a repository's `remote`; null when nothing is. */
+export type CopyAt = { key: string | null; remote: string | null } | null;
+
+/** The folder at a copy's place now, read as `folderIdentity` reads it: a few small files (its `.git`, its `.slipbox/`
+ *  config, its git config), no git run. */
+export function copyAt(path: string): CopyAt {
+  if (!copyAvailable(path)) return null;
+  const ident = folderIdentity(path);
+  return { key: ident?.key ?? null, remote: ident?.remote ?? null };
+}
+
+/** Whether the folder at a copy's place (`copyAt`) is still `f`: by its key, or a copy of its repository whatever its
+ *  `.slipbox/` calls it (DF-D30). Nothing there, or another folder, is no copy of `f` here (D279). */
+export function isCopyOf(f: Pick<NamedFolder, "key" | "remote">, at: CopyAt): boolean {
+  return !!at && ((at.key !== null && at.key === f.key) || sameRepository(at, f));
+}
+
+/** Whether `f`'s copy at `path` is here now: something there (`copyAvailable`), and still `f` (`isCopyOf`). */
+export function copyHere(f: Pick<NamedFolder, "key" | "remote">, path: string): boolean {
+  return isCopyOf(f, copyAt(path));
+}
+
+/** Each copy the list records: its real path, whether anything is there (`copyAvailable`), and for the copies of the
+ *  folder opened, the folder at its place (`copyAt`). */
+export type CopyFacts = Record<string, { real: string; available: boolean; at?: CopyAt }>;
 
 /** What `recordFolder` reads of the copies recorded, read beforehand: where a vault is opened on another thread (T12),
- *  so that a copy on a disk that answers slowly holds up nothing on the one that records it. */
-export function copyFacts(): CopyFacts {
+ *  so that a copy on a disk that answers slowly holds up nothing on the one that records it. `key`, the folder opened's:
+ *  whether each of its copies is still that folder, for a second copy asked about. */
+export function copyFacts(key?: string | null): CopyFacts {
   const out: CopyFacts = {};
   for (const f of readFolders())
-    for (const c of f.copies) out[c.path] ??= { real: realPath(c.path), available: copyAvailable(c.path) };
+    for (const c of f.copies) {
+      const x = (out[c.path] ??= { real: realPath(c.path), available: copyAvailable(c.path) });
+      if (key && f.key === key && x.at === undefined) x.at = x.available ? copyAt(c.path) : null;
+    }
   return out;
 }
 
 export type FolderLookup =
   | { status: "found"; folder: NamedFolder; path: string; via?: "old-name" | "another-copy" }
   | { status: "ambiguous"; candidates: string[]; reason: string; folders: NamedFolder[] }
-  | { status: "unavailable"; folder: NamedFolder; path: string }
+  /** No copy here; `other`: its default's place holds another folder now. */
+  | { status: "unavailable"; folder: NamedFolder; path: string; other?: true }
   | { status: "unknown"; reason: string };
 
 /** Whether two named folders are one repository: the same remote, whatever their `.slipbox/` calls them. */
@@ -401,9 +436,15 @@ function byRepository(folders: NamedFolder[]): NamedFolder[][] {
  * clone with a `.slipbox/` name of its own too: the repository's default copy (`byRepository`).
  * Different folders of one name are ambiguous, never guessed, each named by its path: repositories
  * each by their qualified name, `.slipbox/` folders until one is renamed. An alias finds it as its
- * name does; a name it had still finds it, said so.
+ * name does; a name it had still finds it, said so. A copy is here while the folder at its place is
+ * still that folder (`isCopyOf`, D279), as `at` reads it: at once (`copyAt`), or as a drawing answers
+ * (`PathProbe.copyAt`) — undefined while it's read, and taken as recorded meanwhile.
  */
-export function lookupFolder(name: string, folders = readFolders()): FolderLookup {
+export function lookupFolder(
+  name: string,
+  folders = readFolders(),
+  at: (path: string) => CopyAt | undefined = copyAt,
+): FolderLookup {
   const want = name.toLowerCase();
   const qualified = name.includes("/");
   let matches = folders.filter((f) =>
@@ -437,13 +478,16 @@ export function lookupFolder(name: string, folders = readFolders()): FolderLooku
   // Its default, a copy of the repository under any name (DF-D30); one that is no copy of it now, its first.
   const def =
     f.default && repositoryCopies(f, folders).some((c) => c.path === f.default) ? f.default : f.copies[0]!.path;
-  if (copyAvailable(def)) return { status: "found", folder: f, path: def, ...(via ? { via } : {}) };
+  const here = (g: NamedFolder, a: CopyAt | undefined) => a === undefined || isCopyOf(g, a);
+  // A default that's a clone's, under a name of its own, is a copy of `f`'s repository still: their remote says so.
+  const atDef = at(def);
+  if (here(f, atDef)) return { status: "found", folder: f, path: def, ...(via ? { via } : {}) };
   // Another copy: of that folder, else of the repository under another name.
   for (const g of group) {
-    const other = g.copies.find((c) => c.path !== def && copyAvailable(c.path));
+    const other = g.copies.find((c) => c.path !== def && here(g, at(c.path)));
     if (other) return { status: "found", folder: g, path: other.path, via: via ?? "another-copy" };
   }
-  return { status: "unavailable", folder: f, path: def };
+  return { status: "unavailable", folder: f, path: def, ...(atDef ? { other: true as const } : {}) };
 }
 
 /** A folder's name as a pointer is written with it (D74, D75), and what that means: said, or asked first (D83). */

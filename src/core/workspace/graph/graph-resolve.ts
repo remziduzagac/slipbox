@@ -5,7 +5,7 @@
 
 import { isAbsolute, join, posix, relative, sep } from "node:path";
 import { formatPointer, isPointer } from "../links/pointer.ts";
-import { probe } from "../links/path-probe.ts";
+import { probe, probedCopyAt } from "../links/path-probe.ts";
 import { lookupFolder, pointerName } from "../vaults/folders.ts";
 import {
   extensionless,
@@ -85,7 +85,7 @@ export class LinkResolver {
     const m = /^([^:/\s#]+):(?!\/\/)([^#]+)/.exec(target);
     if (!m) return null;
     const [, name, rest] = m as unknown as [string, string, string];
-    const l = lookupFolder(name);
+    const l = lookupFolder(name, undefined, probedCopyAt);
     if (l.status === "unknown") return null;
     let suggest: string | undefined;
     if (l.status === "found") {

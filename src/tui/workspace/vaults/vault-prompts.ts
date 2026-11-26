@@ -13,7 +13,7 @@ import {
 } from "../../../core/workspace/mutations/rename/rename.ts";
 import { tildePath } from "../../../core/workspace/vaults/names.ts";
 import {
-  copyAvailable,
+  copyHere,
   folderIdentity,
   type NamedFolder,
   pointerName,
@@ -171,8 +171,10 @@ export class VaultPrompts {
   askDefaultCopy(): void {
     const ident = this.app.loc.mode === "vault" ? folderIdentity(this.app.loc.root) : null;
     const f = ident ? readFolders().find((x) => x.key === ident.key) : undefined;
-    const here = f?.copies.filter((c) => copyAvailable(c.path)) ?? [];
-    if (!f?.ask || here.length < 2) return;
+    if (!f?.ask) return;
+    // Each copy still this folder at its place (D279): one gone, or another folder there, is no choice.
+    const here = f.copies.filter((c) => copyHere(f, c.path));
+    if (here.length < 2) return;
     this.app.overlays.openList({
       title: `${f.name}: ${here.length} copies on this machine — which do links to it open?`,
       items: here.map((c) => ({
@@ -313,7 +315,7 @@ export class VaultPrompts {
         ),
         items: copiesOf(f).map((c) => ({
           label: tildePath(c.path),
-          hint: c.path === f.default ? "links open it" : copyAvailable(c.path) ? undefined : "not here",
+          hint: c.path === f.default ? "links open it" : copyHere(f, c.path) ? undefined : "not here",
           data: c.path,
         })),
         accept: (copy) => {

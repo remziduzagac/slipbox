@@ -6,7 +6,7 @@ import { isAbsolute, join } from "node:path";
 import { scratchLocation } from "../core/workspace/mutations/capture.ts";
 import { COMMAND_SPECS } from "../core/application/commands/catalog.ts";
 import { conventionOf, describeConvention } from "../core/workspace/links/convention.ts";
-import { copyAvailable, folderIdentity, pointerName, readFolders } from "../core/workspace/vaults/folders.ts";
+import { copyHere, folderIdentity, pointerName, readFolders } from "../core/workspace/vaults/folders.ts";
 import { parseNoteFile } from "../core/documents/model/readers.ts";
 import { cacheDir, stateDir, userConfigFile } from "../core/foundation/platform/paths.ts";
 import { listThemes } from "../core/rendering/theme/index.ts";
@@ -43,7 +43,8 @@ export const INFO_COMMANDS: Record<string, Handler> = {
             path: c.path,
             seen: c.seen,
             here: c.path === ident.copy,
-            available: copyAvailable(c.path),
+            // Still this folder at its place (D279): another folder there is not here.
+            available: copyHere(named!, c.path),
           })),
           default: named?.default ?? null,
         }

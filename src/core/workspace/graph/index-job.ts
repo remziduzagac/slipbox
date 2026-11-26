@@ -63,7 +63,9 @@ export class IndexJob {
         try {
           real = realpathSync(this.of.root);
         } catch {}
-        opened = { key: loc.key, ident: folderIdentity(this.of.root), real, copies: copyFacts() };
+        const ident = folderIdentity(this.of.root);
+        // Its copies, whether each is still it (D279): a second copy asked about only while it is.
+        opened = { key: loc.key, ident, real, copies: copyFacts(ident?.key) };
         if (loc.worktree) opened.worktree = knownWorktree(loc.worktree);
       }
       if (performance.now() >= end) return { vault: true, opened, done: false };

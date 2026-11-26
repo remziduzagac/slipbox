@@ -1382,8 +1382,9 @@ slipbox folders
 slipbox folders default notes ~/notes
 ```
 
-A copy that's gone is listed as not here, and another copy answers meanwhile. A name two folders share is ambiguous
-until one is renamed. That's exit 4, with each folder's path among the candidates.
+A copy that's gone is listed as not here, and another copy answers meanwhile. So is a copy whose place holds another
+folder now: its `available` is `false`, in `slipbox info` too. A name two folders share is ambiguous until one is
+renamed. That's exit 4, with each folder's path among the candidates.
 
 A clone with a `.slipbox/` name of its own is listed under that name. It's still a copy of its repository. The
 repository's full name opens its default copy, and `folders default` can make the clone that copy. The repository then
