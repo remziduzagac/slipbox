@@ -29,6 +29,7 @@ import { forgetPlan, listPlans, loadPlan, type SavedPlan, savePlan } from "../co
 import { isInside, isVaultRoot, recordLocation, rootAt } from "../core/workspace/vaults/vault.ts";
 import { has, UsageError } from "./args.ts";
 import { notIndexedSaid } from "../core/workspace/graph/graph.ts";
+import { walkLeavesOut } from "../core/workspace/graph/reach/files.ts";
 import {
   EXIT,
   CliError,
@@ -53,13 +54,13 @@ export const FILE_COMMANDS: Record<string, Handler> = {
     if (dir !== null && isVaultRoot(join(s.loc.root, dir)))
       return renameResult(s, () => planVaultFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
     if (dir !== null) return renameResult(s, () => planFolderMove(s.graph, dir, moveTarget(s.graph, dir, to)));
-    const rel = resolveNote(s, what, false);
+    const rel = leftOutFile(s, what) ?? resolveNote(s, what, false);
     return renameResult(s, () => planNoteRename(s.graph, rel, moveTarget(s.graph, rel, to)));
   },
 
   cp(s, rest) {
     const what = requireArg(rest, "note or folder");
-    const rel = folderArg(s, what) ?? resolveNote(s, what, false);
+    const rel = folderArg(s, what) ?? leftOutFile(s, what) ?? resolveNote(s, what, false);
     // Into a folder that's there, or named with a `/`, as mv (DF-D20, DF-D21); into its own, beside it as
     // name-copy, as a paste there makes one.
     const dest = destArg(s, rest[1], true);
@@ -80,7 +81,7 @@ export const FILE_COMMANDS: Record<string, Handler> = {
 
   rm(s, rest) {
     const what = requireArg(rest, "note or folder");
-    const rel = folderArg(s, what) ?? resolveNote(s, what, false);
+    const rel = folderArg(s, what) ?? leftOutFile(s, what) ?? resolveNote(s, what, false);
     const breaking = linksInto(s.graph, rel);
     if (breaking) s.warnings.push(`${breaking} link${breaking === 1 ? "" : "s"} from other notes to ${rel} will break`);
     if (has(s.args, "dry-run"))
@@ -250,6 +251,28 @@ function folderArg(s: Session, arg: string): string | null {
     try {
       if (statSync(abs).isDirectory()) return relative(s.loc.root, abs);
     } catch {}
+  }
+  return null;
+}
+
+/**
+ * A file of the root its walk leaves out, named on the command line as `folderArg` reads one (D278): moved, copied and
+ * deleted as it is. Never reached first, as a note named elsewhere is (20.8): that would index it, and move it as a
+ * note — its links rewritten, its target's refusals an indexed note's. Null for one the index holds, one the walk
+ * takes, another vault's, and none.
+ */
+function leftOutFile(s: Session, arg: string): string | null {
+  for (const abs of [arg.startsWith("/") ? arg : join(s.io.cwd, arg), join(s.loc.root, arg)]) {
+    if (!isInside(s.loc.root, abs) || abs === s.loc.root) continue;
+    try {
+      if (!statSync(abs).isFile()) continue;
+    } catch {
+      continue;
+    }
+    const rel = relative(s.loc.root, abs).split(sep).join("/");
+    if (s.graph.known(rel)) return null;
+    const why = walkLeavesOut(s.graph, rel);
+    return why !== null && why !== "nested vault" ? rel : null;
   }
   return null;
 }

@@ -349,7 +349,9 @@ what the walk leaves out, the watcher doesn't subscribe to (D40).
   copied as plainly as it is (D278): nothing in it rewritten, and it may go where the walk leaves it out too — the
   guards (`cleanTarget`'s `leftOut`, `copyPath`) refuse only what the index holds, so nothing indexed leaves the index
   that way; moved where the walk takes it, it's indexed there (`walkLeavesOut` null at its new path: `comesIn`, said
-  `now indexed`; a folder by walking the vault again). The command line keeps out of `.slipbox` and `.git` (`slipbox's
+  `now indexed`; a folder by walking the vault again). The command line's `mv`, `cp` and `rm` take such a file by its
+  path, never reaching it first (`leftOutFile`) as a note named elsewhere is reached (20.8): that would index it, and
+  move it as a note. The command line keeps out of `.slipbox` and `.git` (`slipbox's
   and git's own folders aren't notes`, `inOwnFolder`); the explorer, whose row is picked, goes there (`own`). Another
   vault in what's left out (`walkLeavesOut` says `nested vault`), what's under a link, and a link the walk didn't take
   are refused as before. A folder listed a level at a time (Elsewhere's) reaches nothing. Reached files

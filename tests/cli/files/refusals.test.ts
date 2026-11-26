@@ -111,4 +111,40 @@ describe("writing", () => {
     expect(run(["rm", ".slipbox"]).code).toBe(5);
     expect(existsSync(join(root, "a.md"))).toBe(true);
   });
+
+  test("a file the walk leaves out is moved, copied and deleted as it is: never indexed by being named, nothing in it rewritten", () => {
+    const dir = mkdtempSync(join(sandbox, "left-out-file-"));
+    const own = {
+      XDG_STATE_HOME: join(dir, "state"),
+      XDG_CACHE_HOME: join(dir, "cache"),
+      XDG_DATA_HOME: join(dir, "d"),
+    };
+    const root = join(dir, "root");
+    const w = (rel: string, text: string) => {
+      mkdirSync(join(root, rel, ".."), { recursive: true });
+      writeFileSync(join(root, rel), text);
+    };
+    mkdirSync(join(root, ".slipbox"), { recursive: true });
+    w(".gitignore", "tmp/\n");
+    w("notes/x.md", "# X\n");
+    w("tmp/a.md", "# A\n\n[x](../notes/x.md)\n");
+    w("tmp/b.md", "# B\n");
+    w("tmp/c.md", "# C\n");
+    w("tmp/d.md", "# D\n");
+    const run = (args: string[]) => slipbox(args, { cwd: root, env: own });
+    // To where the walk takes it: a plain move, its own link as written, said indexed.
+    const mv = run(["mv", "tmp/a.md", "notes/a.md", "--json"]);
+    expect([mv.code, mv.json.data]).toMatchObject([0, { kind: "note", to: "notes/a.md", files: [], nowIndexed: true }]);
+    expect(readFileSync(join(root, "notes", "a.md"), "utf8")).toBe("# A\n\n[x](../notes/x.md)\n");
+    // Where the walk leaves it out too, as a folder's does.
+    expect(run(["mv", "tmp/b.md", ".drafts/b.md"]).code).toBe(0);
+    expect(run(["cp", "tmp/c.md", ".drafts/c.md"]).code).toBe(0);
+    expect([existsSync(join(root, ".drafts", "b.md")), existsSync(join(root, ".drafts", "c.md"))]).toEqual([
+      true,
+      true,
+    ]);
+    // A delete's preview leaves it out of the index, as it was.
+    expect(run(["rm", "tmp/d.md", "--dry-run"]).code).toBe(0);
+    expect(run(["ls"]).out.split("\n").filter(Boolean).sort()).toEqual(["notes/a.md", "notes/x.md"]);
+  });
 });
