@@ -151,6 +151,7 @@ slipbox resolve slipbox://research/x.md --from notes/plan.md --json   # data.hre
 slipbox link <note> --from <note>        # a link to <note> as this folder writes them (wikilink or markdown, path form)
 slipbox resolve slipbox://notes/inbox.md --json   # a pointer into a named folder: where it is on this machine
 slipbox folders --json                   # the named folders pointers use: each name, its copies, the one links open
+slipbox vaults --json                    # known vaults and saved home workspaces, newest first: data[].data.root
 slipbox search dome shutter --json       # notes ranked by the words: hits[{path, line, column, heading, snippet}]
 slipbox search dome --scope linked --json   # and the vaults linked to or from this one (all: every vault; no worktree)
 slipbox changed --json                   # what this branch changed against its own base: base, baseChosen, files[]
@@ -197,7 +198,10 @@ slipbox undo --dry-run                   # take back the last mv, rename-heading
 The new path is from the vault's top (or `./`, `../` from here). A folder that's there, or a path ending in `/`, is
 moved into, the name kept: `mv <note> archive/` makes `archive/<note>`. Any other path is the whole new path.
 `slipbox cp <note> <path>` reads its path the same way (no path, or the note's own folder: a `-copy` beside it);
-links aren't rewritten. Ask before deleting, emptying the trash or moving the user's notes.
+links aren't rewritten. `mv`, `cp` and `rm` take what the vault's index leaves out too, such as a git-ignored `tmp` or
+`node_modules`: it moves as it is, nothing in it rewritten, and `mv` sets `data.nowIndexed` when it lands where the
+vault indexes it. `.slipbox` and `.git` are refused (exit 5). Ask before deleting, emptying the trash or moving the
+user's notes.
 
 ## Exporting for the user
 
@@ -233,8 +237,8 @@ slipbox scratch clear --if-unchanged <sha>   # clear only if nobody appended sin
 ```
 
 Reference forms: `path:42`, `path:42-50`, `path:42:10-30` (line 42, columns 10–30), `path:42:10-50:30`.
-Paths inside the project are stored relative to it. Each entry follows a `---` rule; with a reference, the text is
-the note on it (`**Note:**`): say what it's for.
+Paths inside the project are stored relative to it. Each entry follows a `---` rule and starts with `**When:**`, the
+local time and its offset from UTC; with a reference, the text is the note on it (`**Note:**`): say what it's for.
 
 ## Reporting a problem in slipbox
 

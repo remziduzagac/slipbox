@@ -1,18 +1,16 @@
 # Roadmap
 
-Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. The repository is public on GitHub and kept
-to greenrepo (GR, consolidated 2026-10-13). Its history starts afresh on 2026-10-22, and 0.5.0 is its first release
-(2026-10-22); 0.2.1 (2026-10-12) to 0.4.0 (2026-10-17) were released before, and aren't published any more.
-Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are built, consolidated and documented
-(2026-10-17), and in 0.4.0. Next: native Windows
-(`14.14`–`14.17`); and, open in ideas.md, the skill as an npx package for common harnesses and how agents and slipbox
-work together (§ Agent surface), and search's improvements (§ Search).
-Automatic installation and maintenance of the bundled skill (#50) is built and consolidated as
-[ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`.
-Code organization and its follow-ups are built and consolidated as
-[ORG](workstreams/archive/code-organization/README.md) and [ORF](workstreams/archive/org-follow-ups/README.md)
-(2026-11-02); no handwritten source or test caps remain. Gateway execution and the proposed window/tab model remain
-in [Later](#later).
+Status: **initial design settled** (D210, 2026-10-11); phases 0–6+ built. The repository is public on GitHub and kept to
+greenrepo (GR, consolidated 2026-10-13). Its history starts afresh on 2026-10-22, and 0.5.0 is its first release
+(2026-10-22), 0.6.0 its latest (2026-11-27); 0.2.1 (2026-10-12) to 0.4.0 (2026-10-17) were released before, and aren't
+published any more. Vaults and the explorer's view (VV) and reviewing, diffing and merging (GIT) are built, consolidated
+and documented (2026-10-17), and in 0.4.0. Next: native Windows (`14.14`–`14.17`); and, open in ideas.md, the skill as
+an npx package for common harnesses and how agents and slipbox work together (§ Agent surface), and search's
+improvements (§ Search). Automatic installation and maintenance of the bundled skill (#50) is built and consolidated as
+[ASI](workstreams/archive/agent-skill-install/README.md), extending `14.4`, `14.7` and `14.8`. Code organization and its
+follow-ups are built and consolidated as [ORG](workstreams/archive/code-organization/README.md) and
+[ORF](workstreams/archive/org-follow-ups/README.md) (2026-11-02); no handwritten source or test caps remain. Gateway
+execution and the proposed window/tab model remain in [Later](#later).
 
 Each step's ID is the plan's stable item ID: cite it (`3.3`, `10.1`) rather than restating the work. Phases and
 clusters differ: a cluster groups related items in dependency order, and its line in italics says which phase it

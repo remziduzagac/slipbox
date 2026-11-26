@@ -58,7 +58,7 @@ what replaced them.
   is, the answer kept in slipbox's state (VV-D6). [roots.md](roots.md) § Links followed only when you say so.
 - **Fragile link**: a link by name won by where it is written, which a note of that name nearer would take.
   [links.md](links.md) § How a link landed.
-- **The git panel**: source control, the left panel's `±` view, `space g`: the working tree, this branch against its
+- **The git panel**: source control, the left panel's `±` view, `space g g`: the working tree, this branch against its
   base, the branches with their worktrees, the other repositories in the view, by mouse as by keys (GIT-D8, GIT-D12).
   [tui.md](tui.md) § Side panes.
 - **The graph**: the core's model of a vault's notes, their links, backlinks and tags, parsed lazily

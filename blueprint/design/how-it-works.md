@@ -409,7 +409,7 @@ Theme vocabulary and compatibility aliases live in `rendering/theme/roles.ts` be
 | [githistory.ts][o147] | 26.4, 22.1 | blame and a file's history: a version read, its diff to now |
 | [gitquery.ts][o148] | — | the one foreground git read: a newer one cancels it, a stale view never takes it |
 | [gitview.ts][o149] | 26.2, GIT-D8 | the git panel's working tree: its sections, a file's changes, what its keys run |
-| [gitpanel.ts][o150] | GIT-D8, GIT-D12 | the git panel: its top, buttons, rows, keys and footer; `space g` |
+| [gitpanel.ts][o150] | GIT-D8, GIT-D12 | the git panel: its top, buttons, rows, keys and footer; `space g g` |
 | [gitbranchview.ts][o151] | GIT-D9, GIT-D10 | the git panel's branches: worktrees, bases; made, removed, merged |
 | [gitreposview.ts][o152] | VV-D10, GIT-D11 | the git panel's repositories in the view, ordered by what needs attention |
 | [gitmouse.ts][o153] | GIT-D8 | the git panel by mouse; the branch where you are; a change's sign in the gutter |
