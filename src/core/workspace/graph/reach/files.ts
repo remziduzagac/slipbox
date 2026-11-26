@@ -5,13 +5,13 @@ import { climbsOut } from "../../../foundation/platform/fsutil.ts";
 import { blockingLink } from "../../vaults/symlinks.ts";
 import { isListed, isVaultRoot, type VaultLocation } from "../../vaults/vault.ts";
 import { onDisk } from "../../links/links.ts";
-import type { NoteFile, WalkFilter } from "../../walk/walk.ts";
+import { ANOTHER_DISK, type NoteFile, type WalkFilter } from "../../walk/walk.ts";
 import type { NoteEntry } from "../graph-types.ts";
 
 interface AdmissionContext {
   readonly root: string;
   readonly loc: VaultLocation;
-  readonly filter: Pick<WalkFilter, "reachable" | "exclusion" | "isNoteName" | "busy" | "maxFileSize">;
+  readonly filter: Pick<WalkFilter, "reachable" | "exclusion" | "isNoteName" | "busy" | "maxFileSize" | "onMount">;
 }
 interface LinkedContext extends Pick<AdmissionContext, "root" | "loc"> {
   known(rel: string): boolean;
@@ -38,6 +38,30 @@ export function neverIndexed(context: AdmissionContext, rel: string, isDir = fal
     if (why === "always skipped") return `${dir}/ is a folder the vault never indexes`;
   }
   return null;
+}
+
+/**
+ * Why the vault's walk leaves out `rel` — a folder, with `isDir` — in the words the explorer's `⊘` row gives
+ * (`.gitignore`, `busy folder`, `hidden`, `always skipped`, home's reasons…): the first folder on its way, or itself,
+ * that its filter excludes; null where the walk takes it, and in Elsewhere, which walks nothing. A vault of its own on
+ * the way, or `rel` itself, is `nested vault`, whatever leaves it out besides (a git-ignored clone). Another disk is
+ * never looked into, for a marker neither (VV-D2). Asked of the walk's settings, never of the index: a note a link
+ * reached (20.8) is still left out by its walk.
+ */
+export function walkLeavesOut(context: AdmissionContext, rel: string, isDir = false): string | null {
+  if (isListed(context.loc)) return null;
+  const parts = rel.split("/");
+  let why: string | null = null;
+  for (let i = 1; i <= parts.length; i++) {
+    const prefix = parts.slice(0, i).join("/");
+    const dir = i < parts.length || isDir;
+    if (why === null) why = context.filter.exclusion(prefix, dir);
+    if (why === ANOTHER_DISK || why === "nested vault") return why;
+    // Past what leaves it out, a folder of home's mounted from another disk is never looked into (VV-D2).
+    if (why !== null && dir && !context.filter.onMount(prefix) && isVaultRoot(join(context.root, prefix)))
+      return "nested vault";
+  }
+  return why;
 }
 
 export function reachable(context: AdmissionContext, rel: string): NoteFile | null {

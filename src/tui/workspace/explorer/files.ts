@@ -21,12 +21,12 @@ import { copyPath, linksInto, restorePath, trashPath } from "../../../core/works
 import { emptyTrash, listTrash, type TrashItem } from "../../../core/workspace/mutations/trash.ts";
 import { isInside, isListed } from "../../../core/workspace/vaults/vault.ts";
 import { NoteBuffer } from "../../documents/buffers/buffer.ts";
-import { match } from "../../shell/overlays/match.ts";
 import type { App, ListItem, PromptOverlay } from "../../app/runtime/app.ts";
 import { andThen } from "../../app/runtime/key-reads.ts";
 import { editable } from "../../documents/editing/editable.ts";
 import { peekOf } from "../../documents/navigation/peek/state.ts";
 import type { ExplorerItem } from "./explorer.ts";
+import { pickFolder } from "./folder-picker.ts";
 
 /** File operations: new, rename, move, copy, delete, the trash. */
 export class Files {
@@ -285,19 +285,28 @@ export class Files {
   /** What was deleted last this session: `u` in the explorer puts it back. */
   lastTrashed: string | null = null;
 
-  /** The plan moving an item to `to`: a note's, a folder's, or a nested vault's (18.3, 18.7). */
+  /** The plan moving an item to `to`: a note's, a folder's, or a nested vault's (18.3, 18.7) — one the walk leaves out
+   *  in slipbox's and git's own folders too (D278). */
   private movePlan(item: ExplorerItem, to: string): () => RenamePlan {
+    const own = { own: !!item.leftOut };
     return () =>
       item.vault
         ? planVaultFolderMove(this.app.graph, item.rel, to)
         : item.dir
-          ? planFolderMove(this.app.graph, item.rel, to)
-          : planNoteRename(this.app.graph, item.rel, to);
+          ? planFolderMove(this.app.graph, item.rel, to, own)
+          : planNoteRename(this.app.graph, item.rel, to, own);
   }
 
   /** Unsaved notes among `rel` and what's in it: a file operation would leave them behind. */
   private unsavedIn(rel: string): NoteBuffer[] {
-    return this.app.dirtyBuffers().filter((b) => b.rel !== null && (b.rel === rel || b.rel.startsWith(`${rel}/`)));
+    return this.app.dirtyBuffers().filter((b) => this.holds(rel, b));
+  }
+
+  /** Whether `b` is the file at `rel`, or in it: by its path in the vault, or by its whole path — one opened from what
+   *  the walk leaves out has no path in the vault (D278). */
+  private holds(rel: string, b: NoteBuffer): boolean {
+    const abs = join(this.app.loc.root, rel);
+    return b.rel === rel || !!b.rel?.startsWith(`${rel}/`) || b.abs === abs || b.abs.startsWith(`${abs}${sep}`);
   }
 
   /** Rename in place: a new name, in the same folder; every link fixed after a preview. */
@@ -317,7 +326,7 @@ export class Files {
   moveItem(item: ExplorerItem): void {
     const here = posix.dirname(item.rel) === "." ? "" : posix.dirname(item.rel);
     const name = posix.basename(item.rel);
-    this.pickFolder({
+    pickFolder(this.app, {
       title: `Move ${item.rel}${item.dir ? "/" : ""} to… — type to filter, ← → fold`,
       current: here,
       // A folder can't move into itself.
@@ -326,81 +335,8 @@ export class Files {
     });
   }
 
-  /**
-   * Pick a folder of the vault (18.8): a tree like the explorer's — its folds to begin with — the
-   * root first; ← folds, → unfolds; typing filters to the matching folders under their parents.
-   */
-  pickFolder(opts: {
-    title: string;
-    current: string;
-    exclude: (dir: string) => boolean;
-    pick: (dir: string) => void;
-  }): void {
-    const g = this.app.glyphs;
-    const open = new Set(this.app.explorer.expanded);
-    for (let d = opts.current; d; d = posix.dirname(d) === "." ? "" : posix.dirname(d)) open.add(d); // where it is, unfolded
-    const dirs = [...new Set(this.app.graph.dirs)]
-      .filter((d) => d && !opts.exclude(d))
-      .sort((a, b) => {
-        const pa = a.split("/");
-        const pb = b.split("/");
-        for (let i = 0; i < Math.min(pa.length, pb.length); i++)
-          if (pa[i] !== pb[i]) return pa[i]!.localeCompare(pb[i]!, undefined, { sensitivity: "base" });
-        return pa.length - pb.length;
-      });
-    const row = (d: string, unfolded: boolean, context = false): ListItem => ({
-      label: `${"  ".repeat(d.split("/").length)}${unfolded ? g.dirOpen : g.dirClosed} ${posix.basename(d)}`,
-      hint: d === opts.current ? "here" : "",
-      data: d,
-      ...(context ? { context } : {}),
-    });
-    const source = (input: string): ListItem[] => {
-      const out: ListItem[] = [
-        { label: `${g.dirOpen} / (the vault's top)`, hint: opts.current === "" ? "here" : "", data: "" },
-      ];
-      const q = input.trim();
-      if (q) {
-        // The matches, with their parents for where they are; enter takes the first match.
-        const shown = new Set<string>();
-        const hits = new Set<string>();
-        for (const d of dirs) {
-          if (!match(q, d)) continue;
-          hits.add(d);
-          const parts = d.split("/");
-          for (let i = 1; i <= parts.length; i++) shown.add(parts.slice(0, i).join("/"));
-        }
-        out[0]!.context = true;
-        return [...out, ...dirs.filter((d) => shown.has(d)).map((d) => row(d, true, !hits.has(d)))];
-      }
-      for (const d of dirs) {
-        const parts = d.split("/");
-        if (parts.slice(0, -1).every((_, i) => open.has(parts.slice(0, i + 1).join("/"))))
-          out.push(row(d, open.has(d)));
-      }
-      return out;
-    };
-    const first = source("");
-    this.app.overlays.openList({
-      title: opts.title,
-      items: [],
-      source,
-      selected: Math.max(
-        0,
-        first.findIndex((it) => it.data === opts.current),
-      ),
-      accept: (it) => opts.pick(it.data as string),
-      fold: (it, unfold) => {
-        // As in the explorer, a folder folds whatever it holds; what unfolds under it here is its folders.
-        const d = it.data as string;
-        if (!d || unfold === open.has(d)) return false;
-        if (unfold) open.add(d);
-        else open.delete(d);
-        return true;
-      },
-    });
-  }
-
-  /** Delete to the vault's trash, after asking — saying how many links it breaks; `then`, once it's gone. */
+  /** Delete to the vault's trash, after asking — saying how many links it breaks, or that what the walk leaves out
+   *  isn't in the index (D278); `then`, once it's gone. */
   deleteItem(item: ExplorerItem, then?: () => void): void {
     const unsaved = this.unsavedIn(item.rel);
     if (unsaved.length)
@@ -408,25 +344,28 @@ export class Files {
         "warn",
         `unsaved: ${unsaved.map((b) => this.app.displayName(b)).join(", ")} — save or revert it first`,
       );
-    const breaking = linksInto(this.app.graph, item.rel);
+    const breaking = item.leftOut ? 0 : linksInto(this.app.graph, item.rel);
     let what = item.dir ? `${item.rel}/ and everything in it` : item.rel;
     if (item.vault) {
       // A whole vault: said so, with how much it holds.
       const g = openVault(join(this.app.loc.root, item.rel));
       what = `the vault ${g.loc.name ?? item.rel} (${item.rel}/, ${g.notes.size} note${g.notes.size === 1 ? "" : "s"})`;
     }
-    const warn = breaking ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.` : "";
+    const warn = item.leftOut
+      ? ` It isn't in the index (${item.leftOut}).`
+      : breaking
+        ? ` ${breaking} link${breaking === 1 ? "" : "s"} to it will break.`
+        : "";
     this.app.overlays.confirm(`Delete ${what}?${warn} It goes to the trash: u restores it.`, () => {
       let t: ReturnType<typeof trashPath>;
       try {
-        t = trashPath(this.app.graph, this.app.loc, item.rel);
+        t = trashPath(this.app.graph, this.app.loc, item.rel, undefined, { own: !!item.leftOut });
       } catch (err) {
         return this.app.message("warn", (err as Error).message);
       }
       this.lastTrashed = t.id;
       // Open notes that went with it show their last text, marked deleted (as when deleted on disk).
-      for (const b of this.app.buffers.values())
-        if (b.rel !== null && (b.rel === item.rel || b.rel.startsWith(`${item.rel}/`))) b.deleted = true;
+      for (const b of this.app.buffers.values()) if (this.holds(item.rel, b)) b.deleted = true;
       this.afterFileOp([item.rel]);
       this.app.message("info", `deleted ${item.rel} to the trash — u in the explorer (or :trash) restores it`);
       then?.();
@@ -528,7 +467,9 @@ export class Files {
     let r: ReturnType<typeof copyPath>;
     try {
       // Into its own folder: beside it, as name-copy. A folder's build is a key's, as a restore's.
-      r = this.app.watch.builds.forKey(() => copyPath(this.app.graph, clip.rel, into === from ? undefined : to));
+      r = this.app.watch.builds.forKey(() =>
+        copyPath(this.app.graph, clip.rel, into === from ? undefined : to, { own: !!clip.leftOut }),
+      );
     } catch (err) {
       return this.app.message("warn", (err as Error).message);
     }

@@ -1010,14 +1010,15 @@ In a git repository, a vault with uncommitted changes is named in the warnings. 
 - `replace --all`
 - `apply`
 
-A change is
-`{kind, from, to, dryRun, move, notIndexed?, files[], warnings[], skipped[], ambiguous[]?, written[], undo?, plan?}`:
+A change is `{kind, from, to, dryRun, move, notIndexed?, nowIndexed?, files[], warnings[], skipped[], ambiguous[]?,
+written[], undo?, plan?}`:
 
 - `kind` is `note`, `folder`, `root` (a vault's name), `heading`, `relink`, `convert`, `replace`, `make-root` (`init`)
   or
   `unmake-root` (`deinit`).
 - `move` is `{from, to, dir}`, the absolute paths moved, when something moves.
 - `notIndexed` is `walk.exclude` when a note or folder moves where the vault doesn't index it.
+- `nowIndexed` is `true` when what the vault left out moves where it indexes it.
 - `files[{path, abs, root, name, edits[{line, before, after}]}]` lists each file rewritten, and each line in it.
 - `skipped` lists the links left as they are, and why.
 - `written` lists the files written (empty on a dry run).
@@ -1049,6 +1050,12 @@ nested in this one moves as a folder, keeping its name. A pointer as the new pat
 to move is fine. Moved where `walk.exclude` leaves it out, it's moved, and the line says it isn't indexed:
 `renamed coffee.md → drafts/coffee.md (not indexed: walk.exclude): 0 changes in 0 files`.
 
+What the vault leaves out, such as a git-ignored `tmp` or `node_modules`, moves as it is, nothing in it rewritten. It
+can go where the vault leaves things out too. Moved where the vault indexes it, its notes are indexed there, and the
+line says so: `moved folder tmp → scratch (now indexed): 0 changes in 0 files`. A note the vault indexes is still
+refused in a folder tools fill. `.slipbox` and `.git` are refused (exit 5), as `cp` and `rm` refuse them; the explorer
+moves them.
+
 `mv` takes `--dry-run` and `--plan`. With `--json`, the data is [a change](#moving-copying-and-deleting), with `kind`
 `note` or `folder`.
 
@@ -1071,7 +1078,8 @@ A folder that's there, or a path ending in `/`, is copied into, keeping the name
 so is a path in a folder tools fill, as `mv` refuses one.
 
 Links aren't rewritten. The copy says what the original says. A copy where `walk.exclude` leaves it out is made, and
-the line says it isn't indexed.
+the line says it isn't indexed. What the vault leaves out can be copied where it leaves things out too, as `mv` moves
+it.
 
 With `--json`, the data is `{from, to, dir, notIndexed?}`.
 

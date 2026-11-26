@@ -112,7 +112,8 @@ Zoomed out past the vault you are in, the explorer lists folders one level at a 
   to peek at the file ([Vaults, home and Elsewhere](vaults.md#switching-vaults)).
 - Everything outside the vault you are in is dimmed: nothing there can be renamed, moved or deleted from it. The keys
   that would change something there say why, such as `rename: app is outside this vault — go into its own to change it`.
-  What the vault's own index leaves out (`node_modules`, what `.gitignore` names) is dimmed too, for the same reason.
+- What the vault's own index leaves out (`node_modules`, what `.gitignore` names) is dimmed too, but it's in the
+  vault's folder, so you can rename, move, copy and delete it ([below](#what-the-explorer-lists)).
 
 You can open any folder you may read, inside your home folder or not. Outside home and every vault, it's
 [Elsewhere](vaults.md#elsewhere), whose folders are listed a level at a time:
@@ -260,13 +261,29 @@ Some folders are listed, but nothing in them is indexed. They are marked `⊘`:
   ([Home](vaults.md#home))
 
 You can unfold them and open their files. Their notes have no backlinks, search doesn't find them, and a wikilink's name
-doesn't reach them. Nothing in them can be renamed, moved or deleted from the explorer, and only what `walk.exclude`
-leaves out takes a new note there (below).
+doesn't reach them.
+
+What the vault leaves out inside its own folder can be renamed, moved, copied and deleted from the explorer, whatever
+leaves it out: a folder tools fill, what `.gitignore` or `walk.exclude` names, a hidden folder, `.slipbox` itself, and
+in your home folder `Downloads`, the system's folders and another disk. Its row has the `…` button, and its menu has
+Rename, Move to…, Copy, Cut, Copy path and Delete, with Zoom in here first for a folder.
+
+- It moves as it is, and nothing in it is rewritten.
+- It can go where the vault leaves things out too, such as from a git-ignored `tmp` into `.drafts`.
+- Moved where the vault indexes it, it's indexed there, and the message says so:
+  `moved tmp/ → scratch/ (now indexed): 0 changes in 0 files`.
+- Delete asks first, saying it isn't in the index: `Delete tmp/ and everything in it? It isn't in the index
+  (.gitignore). It goes to the trash: u restores it.` `u` brings it back.
+- A note open in it with unsaved changes stops a move or a delete until you save it.
+
+Another vault inside what's left out stays that vault's, and so does everything above or beside the vault. A link the
+vault doesn't follow stays as it is. Only what `walk.exclude` leaves out takes a new note or a paste there (below).
 
 Nothing new goes where it would never be indexed. A new note, a move or a copy is refused, typed as a path or from the
 command line, into a folder tools fill that `.gitignore` leaves out, or deeper in one with no note at its top
 (`target/debug/plan.md`). A note put directly in a folder called `build` that isn't ignored makes it a folder of
-notes, indexed. A note already in a folder tools fill can still be changed.
+notes, indexed. A note already in a folder tools fill can still be changed, and what the vault leaves out already can
+still be moved or copied there (above).
 
 What `walk.exclude` leaves out is your own choice, so you can write there. A new note or folder there is made, typed as
 a path or with its `⊘` row selected in the explorer, and a paste on that row goes there. A note there saved, or one

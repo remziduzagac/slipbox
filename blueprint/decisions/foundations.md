@@ -691,6 +691,9 @@ Where you are at the left, after the badge, was tried too and is left to decide 
 
 ## D270: Going into another vault asks first; the explorer dims what's outside the vault open (#104, 2026-11-08)
 
+> **Amended by D278 (2026-11-26):** what the walk leaves out inside the vault, still dimmed, is renamed, moved, copied
+> and deleted from the explorer; its keys no longer say it's not changed from there.
+
 **Decision:** Every way into another vault asks before the workspace changes: the explorer (another vault's row, or a
 file of one), `:e` and pointers, `space v v` and the top bar's vault list, `ctrl+click` on a link, the git panel's Open,
 a folder link that leads out, `o` in a peek, and `ctrl+o` back into the vault before. The question names the vault and

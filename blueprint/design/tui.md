@@ -639,7 +639,9 @@ The explorer makes and changes files by keys and by buttons, on the selected row
   vault's: "Make it part of the vault holding it"), "Paste … here" (when something is copied or cut), "Delete" (a nested
   vault's: "Delete the vault"). `enter` or a click does the selected one; `esc` or a click outside closes it. A name
   that doesn't fit beside the button widens the tree: the explorer's horizontal scrollbar appears, and scrolled to its
-  end the name ends just before it.
+  end the name ends just before it. A row the vault open's walk leaves out, inside its folder (D278; § What the walk
+  leaves out, changed), has the button too, its menu the file operations alone: "Zoom in here" for a folder, then
+  "Rename", "Move to…", "Copy", "Cut", "Copy path", "Delete" — no new note, no `.slipbox/`, no paste.
 - **A nested vault's row** (`18.7`) is a folder of this vault: `r` renames its folder and `m` moves it — links into it
   by path fixed here and in the vaults that reach it, its own relative links out fixed, its id and name kept (it's
   recorded at its new place); `d` deletes it whole, saying so ("the vault outreach (outreach/, 12 notes)") with the
@@ -984,11 +986,13 @@ keys.
   (VV-D4, D270; § Going into a vault); `l` unfolds any folder or vault in place, another vault's listed a level at a
   time, its rows not this vault's to change. **Outside the vault open's own tree** (#104) — above it, beside it, another
   vault's, what its walk leaves out — rows are drawn dim (`sidebar_outside`), but the note open; the keys that would
-  change one say why not (`rename: app is outside this vault — go into its own to change it`; the vault open's own row,
-  a left-out one, each its own words); `h` folds an unfolded folder or vault, else the folder holding the row (when it's
-  a row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s` opens it in the split's
-  other window. Moving the selection, or a click on a note, only selects; a click on a folder folds or unfolds it. New
-  notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any folder you may read:** a
+  change one say why not (`rename: app is outside this vault — go into its own to change it`; the vault open's own row
+  its own words), but what its walk leaves out inside its folder, renamed, moved, copied and deleted as any of its
+  files (D278; § What the walk leaves out, changed); `h` folds an unfolded folder or vault, else the folder holding
+  the row (when it's a row of the view); `o` replaces the current window's note (on a folder, unfolds it), and `s`
+  opens it in the split's other window. Moving the selection, or a click on a note, only selects; a click on a folder
+  folds or unfolds it. New notes and folders, renames, moves, deletes, copies: "Files in the explorer", above. **Any
+  folder you may read:** a
   folder you may not read says why when it's opened on, unfolded or zoomed into — as its folder's listing read it, else
   asked as a key's own read (§ A slow disk): `can't read ~/x: you may not read it (no permission)`, nothing unfolded;
   a file you may not write — it, or its folder, for the save's rename — opens read-only (`buf.readOnly`), said at once
@@ -1003,8 +1007,8 @@ keys.
   [roots.md](roots.md)), and a hidden name unless they're listed (below). What the walk leaves out — `node_modules` and
   the other busy folders (D237: ignored, or no note at their top; a notes `build/` is the vault's own), what
   `.gitignore` or `walk.exclude` leaves out, home's skip list — is a row by its absolute path (`outside`, its `leftOut`
-  the reason `exclusion` gives), listed a level at a time as a folder outside the vault, never this vault's to rename,
-  move or delete, nor to make a note in (`a folder this vault doesn't index: select one it does`) — but what
+  the reason `exclusion` gives), listed a level at a time as a folder outside the vault, changed only as plain files
+  (below), never made a note in (`a folder this vault doesn't index: select one it does`) — but what
   `walk.exclude` leaves out, your own setting, takes a new note, a new folder or a paste as a typed path into it does,
   said `not indexed` (D246: `Files.newItemBase` gives the row's folder when `Graph.notIndexed` says so of the row's
   path; a busy folder, a `.gitignore`'s, home's skip list or a vault there is refused as before); a file of it opens
@@ -1016,6 +1020,23 @@ keys.
   the view zooms out by itself to hold such a file (`zoomToHold`: only a hidden folder's isn't, the hidden names not
   listed, `listedDown`), and the view's own folder can be one (`ownView` null). The busy folders whose names start with
   a dot (`.venv`, `.cache`) are hidden, listed only with the hidden names.
+- **What the walk leaves out, changed** (D278). A row the walk leaves out inside the vault open's folder, whatever the
+  reason — `.gitignore`, a busy folder, `walk.exclude`, a hidden name, `.slipbox` (`always skipped`), and in home its
+  skip list, a mount and what's on it, a file that's no note or text — names an item (`ExplorerPaths.leftOutItem`, by
+  its path in the vault, `leftOut` its reason): renamed, moved (the picker lists the folders the vault indexes), copied,
+  cut and deleted as plainly as it is, never made a vault (`make root: tmp is left out of this vault (.gitignore) —
+  only renamed, moved, copied or deleted from here`). Not a row above or beside the vault, another vault's — one nested
+  in what's left out, and all in it (`notOwn`, from the folders' listings; on another disk never looked into) — what's
+  under a link, or a link the walk didn't take. The core plans it (`planNoteRename`, `planFolderMove`, `copyPath` with
+  `own`; the CLI's `mv` and `cp` the same, but for `.slipbox` and `.git`, refused there as `slipbox's and git's own
+  folders aren't notes`): nothing in it rewritten, nothing of its own links fixed — the index holds none of them; where
+  the walk leaves it out too (hidden, busy, always skipped) it may go, as nothing indexed leaves the index that way, and
+  a note the index holds (one a link reached in it) keeps today's refusals; moved where the walk takes it, it's indexed
+  there, said `now indexed` (`RenamePlan.comesIn`, `walkLeavesOut`; a folder by walking the vault again), and a copy
+  there is too. Delete asks first, saying `It isn't in the index (.gitignore).` instead of the links that break, and
+  moves it to the vault's trash (`u` restores it). An unsaved note in it is matched by its whole path, as one opened
+  from what's left out has no path in the vault: neither deleted nor moved until it's saved; an open one moves with its
+  folder (`Renaming.followed`).
 - **Hidden names, listed unless turned off** (D250, D271; `files.hidden`, the explorer's `shift+h`). Off, nothing whose
   name starts with a dot is listed (`listsName`). On, the default since D271 — `files.hidden` in your config or a
   vault's, or a UI setting (`hidden_files`, `uiDefaults`) changed by `shift+h` (`toggle_hidden`, the command

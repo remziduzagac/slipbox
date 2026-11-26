@@ -510,7 +510,7 @@ These are the roles of the screen most worth changing:
 | `breadcrumb_icon`, `breadcrumb_sep` | the breadcrumb's icon and separators |
 | `tree_guide` | the explorer's and the outline's tree lines |
 | `sidebar_root` | in the explorer, a folder that is a vault of its own |
-| `sidebar_outside` | in the explorer, what's outside the vault you are in, dimmed: nothing there is changed from it |
+| `sidebar_outside` | in the explorer, what's outside the vault you are in, and what it leaves out, dimmed |
 | `sidebar_mark` | in the explorer, a row's mark that it's indexed, at its end |
 | `scrollbar`, `scrollbar_track` | the scrollbar's thumb and track |
 | `cursor`, `cursor_line` | the cursor, and its row |

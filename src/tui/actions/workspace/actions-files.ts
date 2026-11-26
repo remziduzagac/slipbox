@@ -152,8 +152,8 @@ export function fileActions(): Record<string, Run> {
     "file.rename": (a, arg) => {
       const t = a.explorer.fileTarget();
       if (!t) return;
-      if (arg) return a.renaming.noteTo(t.rel, arg);
-      a.renaming.prompt(t.rel);
+      if (arg) return a.renaming.noteTo(t.rel, arg, !!t.leftOut);
+      a.renaming.prompt(t.rel, !!t.leftOut);
     },
     "heading.rename": (a, arg) =>
       withView(a, (v) => {

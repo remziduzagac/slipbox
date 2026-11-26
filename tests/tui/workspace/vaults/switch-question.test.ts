@@ -77,7 +77,7 @@ describe("outside the vault open, in the explorer (#104)", () => {
     expect(fgOf(h, "todo.md")).toBe(roles.sidebar.fg!);
   });
 
-  test("its keys on a row they won't change say why: outside, the vault you are in, left out of it", async () => {
+  test("its keys on a row they won't change say why: outside, the vault you are in; what it leaves out, moved", async () => {
     const { base, notes } = place();
     const h = await harness({ root: notes, open: "index.md", config: (c) => (c.walk.exclude = ["drafts"]) });
     h.app.explorer.zoomTo(base);
@@ -91,13 +91,65 @@ describe("outside the vault open, in the explorer (#104)", () => {
     select(h, "notes");
     await h.app.explorer.action("delete");
     expect(said()).toBe("delete: notes is the vault you are in — select something in it");
+    // What its walk leaves out, in it (D278): moved as any of it, the folder asked for.
     select(h, "drafts");
     await h.app.explorer.action("move");
-    expect(said()).toMatch(/^move: drafts is left out of this vault \(.+\) — not changed from here$/);
+    expect(question(h)?.title).toBe("Move drafts/ to… — type to filter, ← → fold");
+    await h.keys("escape");
     // In the vault's own tree, the menu as ever.
     select(h, "todo.md");
     await h.keys(".");
     expect(question(h)?.items).toContain("Rename");
+  });
+
+  test("a row its walk leaves out, in it: the menu button and its file operations; none above, beside or in another vault", async () => {
+    const { base, notes } = place();
+    mkdirSync(join(notes, "drafts", "inner"));
+    writeFileSync(join(notes, "drafts", "inner", "i.md"), "# I\n");
+    initVault(join(notes, "drafts", "inner"), `qinner${made}`);
+    const h = await harness({
+      root: notes,
+      open: "index.md",
+      width: 120,
+      height: 30,
+      config: (c) => (c.walk.exclude = ["drafts"]),
+    });
+    h.app.explorer.zoomTo(base);
+    const button = (name: string) => {
+      select(h, name);
+      h.frame();
+      return h.app.geometry!.hot.some((x) => x.id === "xrow:menu");
+    };
+    expect(button("drafts")).toBe(true);
+    expect(button("loose")).toBe(false);
+    expect(button("app")).toBe(false);
+    select(h, "drafts");
+    await h.app.explorer.action("expand");
+    expect(button("old.md")).toBe(true);
+    // A vault of its own in what's left out, and what's in it: that vault's.
+    expect(button("inner")).toBe(false);
+    select(h, "inner");
+    await h.app.explorer.action("expand");
+    expect(button("i.md")).toBe(false);
+    // Its file operations alone: no new note, no vault made of it, no paste.
+    h.app.files.clipItem("copy", { rel: "todo.md", dir: false });
+    select(h, "drafts");
+    await h.keys(".");
+    expect(question(h)).toEqual({
+      title: "drafts/",
+      items: ["Zoom in here", "Rename", "Move to…", "Copy", "Cut", "Copy path", "Delete"],
+    });
+    await h.keys("escape");
+    await h.app.explorer.action("make_root");
+    expect(h.app.messages.at(-1)!.text).toBe(
+      "make root: drafts is left out of this vault (walk.exclude) — only renamed, moved, copied or deleted from here",
+    );
+    select(h, "drafts");
+    await h.app.run("vault.init");
+    expect(h.app.messages.at(-1)!.text).toBe(
+      "drafts is left out of this vault (walk.exclude) — not made a vault from here",
+    );
+    expect(question(h)).toBeNull();
   });
 });
 

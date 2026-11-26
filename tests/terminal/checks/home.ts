@@ -462,9 +462,11 @@ export const HOME: Check[] = [
       await s.until(() => /^~ › Downloads ›$/.test(crumbs(s)), 3000, "the view at ~/Downloads");
       await s.until(() => listed(s, /\sstray-note\.md$/), 3000, "Downloads' files listed");
       await s.until(() => markOf(s, "old-blog-export") === "⊘", 3000, "a folder in Downloads: ⊘");
-      // In home's tree, Downloads itself: ⊘.
+      // In home's tree, Downloads itself: ⊘, read with another row selected (the selected one has its menu's button).
       await s.keys("-");
-      await s.until(() => /^~ ›/.test(crumbs(s)) && markOf(s, "Downloads") === "⊘", 3000, "Downloads ⊘ in home's tree");
+      await s.until(() => /^~ ›/.test(crumbs(s)), 3000, "the view at ~");
+      await explorerRow(s, "CASES\\.md");
+      await s.until(() => markOf(s, "Downloads") === "⊘", 3000, "Downloads ⊘ in home's tree");
     },
   },
   {

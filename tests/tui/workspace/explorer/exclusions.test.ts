@@ -124,4 +124,55 @@ describe("review (tui): the app's floating windows, new paths, roots and repeats
     h.app.files.createNote("nested-vault/idea", "");
     expect(last(h).text).toBe("created nested-vault/idea.md");
   });
+
+  test("what the walk leaves out, in the explorer (D278): unsaved there held by its path; renamed in, indexed, said; deleted, asked", async () => {
+    const root = makeVault();
+    const h = await harness({ root, open: join(root, "ignored", "secret.md") });
+    const secret = h.app.view!.buf;
+    expect(secret.rel).toBeNull(); // not in the index: known by its whole path alone
+    h.app.panels.showSidebar(true);
+    h.app.leftView = "explorer";
+    const pick = (name: string) => {
+      h.app.region = "sidebar";
+      h.app.sidebar.selected = h.app.explorer.rows().findIndex((r) => r.name === name);
+      expect(h.app.explorer.rows()[h.app.sidebar.selected]).toMatchObject({ outside: true });
+    };
+    const prompt = () => h.app.overlay as import("../../../../src/tui/app/runtime/app.ts").PromptOverlay;
+    // Unsaved in it: neither deleted nor moved.
+    secret.edit(0, 0, "x");
+    pick("ignored");
+    h.app.explorer.action("delete");
+    expect(last(h).text).toBe(`unsaved: ${h.app.displayName(secret)} — save or revert it first`);
+    h.app.explorer.action("rename");
+    prompt().text = "kept";
+    await h.keys("enter");
+    expect(last(h).text).toStartWith(`unsaved: ${h.app.displayName(secret)} — save first`);
+    expect(existsSync(join(root, "ignored", "secret.md"))).toBe(true);
+    await h.app.run("file.save");
+    // Renamed to a name the walk takes: indexed there, said; the note open goes with it.
+    pick("ignored");
+    h.app.explorer.action("rename");
+    prompt().text = "kept";
+    await h.keys("enter", "enter");
+    expect(existsSync(join(root, "kept", "secret.md"))).toBe(true);
+    expect(h.app.messages.map((m) => m.text)).toContain("moved ignored/ → kept/ (now indexed): 0 changes in 0 files");
+    expect(h.app.graph.notes.has("kept/secret.md")).toBe(true);
+    expect(h.app.view!.buf.abs).toBe(join(root, "kept", "secret.md"));
+    // A file in a busy folder: deleted after asking, saying it isn't in the index; u restores it.
+    for (const name of ["node_modules", "pkg"]) {
+      pick(name);
+      h.app.explorer.action("expand");
+    }
+    pick("README.md");
+    h.app.explorer.action("delete");
+    expect(prompt()).toMatchObject({
+      confirm: true,
+      label:
+        "Delete node_modules/pkg/README.md? It isn't in the index (busy folder). It goes to the trash: u restores it.",
+    });
+    await h.keys("y");
+    expect(existsSync(join(root, "node_modules", "pkg", "README.md"))).toBe(false);
+    await h.keys("u");
+    expect(existsSync(join(root, "node_modules", "pkg", "README.md"))).toBe(true);
+  });
 });

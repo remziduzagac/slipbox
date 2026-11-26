@@ -75,6 +75,9 @@ export class VaultPrompts {
         "info",
         `${f.rel} is a vault already — space v shift+m makes it part of the vault holding it`,
       );
+    // What the walk leaves out is renamed, moved, copied and deleted from here, never made a vault (D278).
+    if (f.leftOut)
+      return this.app.message("info", `${f.rel} is left out of this vault (${f.leftOut}) — not made a vault from here`);
     this.makeItem(f);
   }
 

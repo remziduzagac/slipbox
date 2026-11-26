@@ -9,22 +9,23 @@ import { basename, dirname, isAbsolute, join, posix, relative } from "node:path"
 import { classify } from "../../documents/model/filetypes.ts";
 import { landsInside } from "../../foundation/platform/fsutil.ts";
 import type { Backlink, Graph } from "../graph/graph.ts";
+import { walkLeavesOut } from "../graph/reach/files.ts";
 import type { Keyed } from "../../foundation/platform/paths.ts";
 import { openVault } from "../links/reach.ts";
-import { fileInTheWay, linksIntoFolder } from "./rename/rename.ts";
+import { fileInTheWay, inOwnFolder, linksIntoFolder, ownRefused } from "./rename/rename.ts";
 import { isInside, isVaultRoot } from "../vaults/vault.ts";
 import { holdsNotes } from "../walk/walk.ts";
 import { listTrash, moveTrashPath, saveTrash, trashDir, type TrashItem } from "./trash.ts";
 
 export class FileOpError extends Error {}
 
-/** A vault path of `g` that names a note, a file or a folder of it, checked. */
-function vaultPath(g: Graph, rel: string): { rel: string; abs: string; dir: boolean } {
+/** A vault path of `g` that names a note, a file or a folder of it, checked: what its walk leaves out too, but in
+ *  slipbox's and git's own folders only with `own`, the explorer's (D278). */
+function vaultPath(g: Graph, rel: string, own = false): { rel: string; abs: string; dir: boolean } {
   const clean = posix.normalize(rel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
   if (!clean || clean === "." || clean.startsWith("../") || clean === "..")
     throw new FileOpError(`${rel} isn't inside the vault`);
-  if (clean.split("/").some((s) => s === ".slipbox" || s === ".git"))
-    throw new FileOpError(`${rel}: slipbox's and git's own folders aren't notes`);
+  if (!own && inOwnFolder(clean)) throw new FileOpError(ownRefused(rel));
   const abs = join(g.root, clean);
   if (!landsInside(g.root, abs)) throw new FileOpError(`${rel} resolves outside the vault`);
   let dir: boolean;
@@ -63,10 +64,10 @@ export function linksInto(g: Graph, rel: string): number {
 
 /**
  * Delete a note, file or folder to the vault's trash (18.4): moved, never unlinked, with where it
- * was, so `restore` puts it back. The graph forgets it.
+ * was, so `restore` puts it back. The graph forgets it. `own`: in slipbox's and git's own folders too (D278).
  */
-export function trashPath(g: Graph, v: Keyed, rel: string, now = new Date()): TrashItem {
-  const p = vaultPath(g, rel);
+export function trashPath(g: Graph, v: Keyed, rel: string, now = new Date(), { own = false } = {}): TrashItem {
+  const p = vaultPath(g, rel, own);
   const id = `${now.toISOString().replace(/[:.]/g, "-")}-${randomBytes(3).toString("hex")}`;
   const gone = within(g, p.rel);
   moveTrashPath(p.abs, join(trashDir(v), id, basename(p.abs)));
@@ -123,10 +124,16 @@ function copyName(g: Graph, rel: string, dir: boolean): string {
 /**
  * Copy a note, file or folder (18.5): to `toRel`, else beside it as `name-copy`. The copy's links
  * are its original's, as written; nothing links to it yet. Refused onto something that exists.
- * `toRel` is the copy's whole path: one typed goes through `moveTarget` first, into a folder (DF-D20).
+ * `toRel` is the copy's whole path: one typed goes through `moveTarget` first, into a folder (DF-D20). `own`: from and
+ * into slipbox's and git's own folders too (D278).
  */
-export function copyPath(g: Graph, rel: string, toRel?: string): { from: string; to: string; dir: boolean } {
-  const p = vaultPath(g, rel);
+export function copyPath(
+  g: Graph,
+  rel: string,
+  toRel?: string,
+  { own = false } = {},
+): { from: string; to: string; dir: boolean } {
+  const p = vaultPath(g, rel, own);
   let to = toRel
     ? posix.normalize(toRel.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""))
     : copyName(g, p.rel, p.dir);
@@ -134,9 +141,13 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
   if (!to || to.startsWith("../") || to === "..") throw new FileOpError(`${toRel} isn't inside the vault`);
   if (to === p.rel || to.startsWith(`${p.rel}/`)) throw new FileOpError(`${p.rel} can't be copied into itself`);
   // Never where the vault doesn't index it (a busy folder, VV-D8): the copy would be found by nothing. A vault indexes
-  // its own, as a move's does.
+  // its own, as a move's does. What the walk leaves out already, the index holding nothing of it, goes where it leaves
+  // it out too, as its move does (D278) — and isn't indexed there.
+  const why = within(g, p.rel).length ? null : walkLeavesOut(g, p.rel, p.dir);
+  const left = why !== null && why !== "nested vault";
+  if (left && !own && inOwnFolder(to)) throw new FileOpError(ownRefused(to));
   const notes = p.dir ? holdsNotes(p.abs, (n) => g.filter.isNoteName(n)) : undefined;
-  const never = p.dir && isVaultRoot(p.abs) ? null : g.neverIndexed(to, p.dir, notes);
+  const never = left || (p.dir && isVaultRoot(p.abs)) ? null : g.neverIndexed(to, p.dir, notes);
   if (never) throw new FileOpError(`${to}: ${never}`);
   const toAbs = join(g.root, to);
   if (existsSync(toAbs)) throw new FileOpError(`${to} exists; not overwriting it`);
@@ -146,7 +157,7 @@ export function copyPath(g: Graph, rel: string, toRel?: string): { from: string;
   mkdirSync(dirname(toAbs), { recursive: true });
   cpSync(p.abs, toAbs, { recursive: true, errorOnExist: true, force: false });
   if (p.dir) g.build(true, "lazy");
-  else {
+  else if (!left || walkLeavesOut(g, to) === null) {
     const st = statSync(toAbs);
     if (classify(to, g.config.walk.extensions).group === "note")
       g.updateFile(to, { rel: to, abs: toAbs, size: st.size, mtimeMs: st.mtimeMs });

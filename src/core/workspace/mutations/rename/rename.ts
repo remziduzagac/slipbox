@@ -14,7 +14,7 @@ export { planVaultRename, planMakeVault, planUnmakeVault } from "./rename-vaults
 export { loggedRenames, planUndo, applyPlan, outside } from "./rename-apply.ts";
 export type { Applied } from "./rename-apply.ts";
 export { planHeadingRename } from "./rename-heading.ts";
-export { moveTarget, fileInTheWay } from "./planning/targets.ts";
+export { moveTarget, fileInTheWay, inOwnFolder, ownRefused } from "./planning/targets.ts";
 export { planNoteRename, planFolderMove } from "./planning/files.ts";
 export { planVaultFolderMove, linksIntoFolder } from "./planning/nested.ts";
 export { planRelink } from "./planning/relink.ts";

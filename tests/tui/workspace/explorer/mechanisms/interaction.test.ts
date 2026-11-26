@@ -111,6 +111,7 @@ function fixture() {
     rowAbs: (row) => (row.path.startsWith(root) ? row.path : join(root, row.path)),
     invalidateTree: () => void calls.push("invalidate"),
     leftOutAt: () => null,
+    leftOutItem: () => null,
     filesShown: () => "notes",
     explorerShows: () => "notes",
     reveal: (rel, open, zoom) => navigation.reveal(rel, open, zoom),

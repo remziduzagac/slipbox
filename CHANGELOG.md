@@ -154,6 +154,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Changed
 
+- What the vault's index leaves out, inside the vault's folder, can be renamed, moved, copied and deleted from the
+  explorer: a git-ignored `tmp`, `node_modules`, a hidden folder, what `walk.exclude` names, `.slipbox` itself. Its
+  row has the `…` menu, with Rename, Move to…, Copy, Cut, Copy path and Delete. It moves as it is, nothing in it
+  rewritten, and may go where the index leaves things out too. Moved where the vault indexes it, it's indexed there,
+  said `now indexed`. Delete asks first, saying it isn't in the index, and `u` brings it back. `slipbox mv tmp
+  scratch` works the same; `slipbox mv`, `cp` and `rm` still leave `.slipbox` and `.git` alone. Another vault inside
+  what's left out, and everything above or beside the vault, stay as they were.
+
 - A note on a slow disk, such as a network share or a drive that's asleep, no longer freezes the screen while it's
   opened. The window says `reading <note>…`, the keys typed meanwhile act on the note once it's there, and `esc` gives
   the read up. A list's preview, a peek, `:e!` and the git panel's keys read the same way.

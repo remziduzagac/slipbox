@@ -109,8 +109,9 @@ export function drawTree(app: App, c: Canvas, pane: Rect, bg: Color | null, geo:
   // The selected note, file, folder or nested vault: a button at the row's end opening its menu
   // (18.1) — rename, move, delete… — its right edge under the title's buttons'.
   const buttonsOf = (row: TreeRow) => {
-    // The rows outside the vault's own tree (VV-D5) aren't this vault's to act on: no menu, as explorerItem has it.
-    if (row.outside || row.root?.here) return null;
+    // The rows outside the vault's own tree (VV-D5) aren't this vault's to act on: no menu, as `item()` has it — but
+    // what its walk leaves out in it (D278).
+    if (row.root?.here || (row.outside && !app.explorer.leftOutItem(row))) return null;
     if (row.kind === "root" && !(row.root?.kind === "vault" && app.loc.mode !== "folder")) return null;
     const bs: (readonly [string, string])[] = [[g.itemMenu, "xrow:menu"]];
     return { bs, w: bs.reduce((n, [glyph]) => n + stringWidth(glyph) + 2, 0) };

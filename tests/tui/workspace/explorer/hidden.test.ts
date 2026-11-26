@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
@@ -47,7 +47,7 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
     expect(names(off)).toEqual(["docs", "inner", "index.md"]);
     const h = await harness({ root, open: "index.md" });
     expect(names(h)).toEqual([".github", ".notes", ".slipbox", "docs", "inner", ".prettierrc.json", "index.md"]);
-    // By their paths, as the busy folders are: not this vault's to change, never indexed.
+    // By their paths, as the busy folders are: never indexed, renamed, moved, copied and deleted as any (D278).
     expect(h.app.explorer.rows()[rowOf(h, ".github")]).toMatchObject({
       kind: "dir",
       path: join(root, ".github"),
@@ -55,7 +55,9 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
       leftOut: "hidden",
     });
     h.app.sidebar.selected = rowOf(h, ".notes");
-    expect(h.app.explorer.item()).toBeNull();
+    expect(h.app.explorer.item()).toEqual({ rel: ".notes", dir: true, leftOut: "hidden" });
+    h.app.sidebar.selected = rowOf(h, ".slipbox");
+    expect(h.app.explorer.item()).toEqual({ rel: ".slipbox", dir: true, leftOut: "always skipped" });
     expect(statusOn(h, ".github")).toContain("⊘ not indexed: hidden");
     expect(statusOn(h, ".prettierrc.json")).toContain("⊘ not indexed: hidden");
     expect(statusOn(h, ".slipbox")).toContain("⊘ not indexed: slipbox's own folder");
@@ -181,6 +183,36 @@ describe("hidden files in the explorer (files.hidden, shift+h)", () => {
     expect(h.app.view!.buf.rel).toBeNull();
     expect(h.app.graph.known(".slipbox/config.toml")).toBe(false);
     expect(h.app.info.rows().find((r) => r.key === "index")?.value).toBe("not indexed: slipbox's own folder");
+  });
+
+  test("slipbox's own folder, from the explorer (D278): a file in it renamed and copied as any, never indexed", async () => {
+    const root = hiddenVault();
+    writeFileSync(join(root, ".slipbox", "notes.txt"), "kept\n");
+    const h = await harness({ root, open: "index.md" });
+    h.app.leftView = "explorer";
+    h.app.region = "sidebar";
+    h.app.sidebar.selected = rowOf(h, ".slipbox");
+    h.app.explorer.action("expand");
+    h.app.sidebar.selected = rowOf(h, "notes.txt");
+    expect(h.app.explorer.item()).toEqual({ rel: ".slipbox/notes.txt", dir: false, leftOut: "always skipped" });
+    h.app.explorer.action("rename");
+    (h.app.overlay as import("../../../../src/tui/app/runtime/app.ts").PromptOverlay).text = "kept.txt";
+    await h.keys("enter", "enter");
+    expect(readFileSync(join(root, ".slipbox", "kept.txt"), "utf8")).toBe("kept\n");
+    expect(h.app.graph.known(".slipbox/kept.txt")).toBe(false);
+    h.app.files.clipItem("copy", { rel: ".slipbox/kept.txt", dir: false, leftOut: "always skipped" });
+    // Pasted into a folder of the vault's; into its own, refused as a new note there is.
+    h.app.sidebar.selected = rowOf(h, ".slipbox");
+    h.app.files.pasteItem();
+    expect(h.app.messages.at(-1)!.text).toBe("a folder this vault doesn't index: select one it does");
+    h.app.sidebar.selected = rowOf(h, "docs");
+    h.app.files.pasteItem();
+    expect(readFileSync(join(root, "docs", "kept.txt"), "utf8")).toBe("kept\n");
+    // Deleted to the trash after asking.
+    h.app.sidebar.selected = rowOf(h, "kept.txt");
+    h.app.explorer.action("delete");
+    await h.keys("y");
+    expect(existsSync(join(root, ".slipbox", "kept.txt"))).toBe(false);
   });
 
   test("home as before: its walk leaves hidden folders out; listed, ⊘ hidden, nothing in them indexed, opened or not", async () => {

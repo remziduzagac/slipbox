@@ -1,5 +1,5 @@
 // Explorer item menus and dispatch preserve feature-owned file, vault and navigation policy.
-import { dirname, posix, relative, sep } from "node:path";
+import { dirname, join, posix, relative, sep } from "node:path";
 import { tildePath } from "../../../../core/workspace/vaults/names.ts";
 import { isInside, locationAt } from "../../../../core/workspace/vaults/vault.ts";
 import { linkScope } from "../../../../core/workspace/vaults/symlinks.ts";
@@ -34,14 +34,17 @@ export class ExplorerActions {
   }
 
   /** What the explorer's selected row names: a note or file, a folder, or a vault nested in this
-   *  one (its folder); the rows outside its own tree name nothing to change. */
+   *  one (its folder) — one its walk leaves out too (D278); the rows outside its own tree name nothing to change. */
   item(): ExplorerItem | null {
     if (this.app.leftView !== "explorer") return null;
     const row = this.host.rows()[this.app.sidebar.selected];
     if (!row) return null;
-    // Above the vault, beside it, in another (VV-D5), the vault itself: not this one's to rename, move or delete here;
-    // nor a link the walk didn't go through (VV-D6).
-    if (row.outside || row.root?.here || row.link?.reason) return null;
+    // The vault itself, in a view above it, is not this one's to rename, move or delete here; nor a link the walk
+    // didn't go through (VV-D6).
+    if (row.root?.here || row.link?.reason) return null;
+    // Of what's outside its own tree, what its walk leaves out in the vault (D278), by its path there; never what's
+    // above or beside it, or in another vault (VV-D5).
+    if (row.outside) return this.host.leftOutItem(row);
     if (row.kind === "root")
       return row.root?.kind === "vault" && this.app.loc.mode !== "folder"
         ? { rel: row.path, dir: true, vault: true }
@@ -56,11 +59,18 @@ export class ExplorerActions {
       "info",
       row?.root?.here
         ? `${what}: ${row.name} is the vault you are in — select something in it`
-        : row?.leftOut && !row.link?.reason
-          ? `${what}: ${row.name} is left out of this vault (${row.leftOut}) — not changed from here`
-          : row?.outside
-            ? `${what}: ${row.name} is outside this vault — go into its own to change it`
-            : `${what}: select a note, file or folder first`,
+        : row?.outside
+          ? `${what}: ${row.name} is outside this vault — go into its own to change it`
+          : `${what}: select a note, file or folder first`,
+    );
+  }
+
+  /** What the walk leaves out (D278) is renamed, moved, copied and deleted, nothing more: made a vault, or named as one,
+   *  it says so. */
+  private onlyFiles(what: string, item: ExplorerItem): void {
+    this.app.message(
+      "info",
+      `${what}: ${posix.basename(item.rel)} is left out of this vault (${item.leftOut}) — only renamed, moved, copied or deleted from here`,
     );
   }
 
@@ -72,16 +82,18 @@ export class ExplorerActions {
     const item = this.item();
     if (!item) return this.noItem("menu");
     const actions: [string, string][] = [];
+    // What the walk leaves out (D278): its file operations alone — no new note, no vault made of it, no paste.
+    const own = !item.leftOut;
     if (item.dir) actions.push(["zoom_in", "Zoom in here"]);
-    if (item.dir && !item.vault) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
+    if (item.dir && !item.vault && own) actions.push(["new_note", "New note here"], ["new_folder", "New folder here"]);
     actions.push(["rename", item.vault ? "Rename the folder" : "Rename"]);
     if (item.vault) actions.push(["rename_root", "Name it"]);
     actions.push(["move", "Move to…"], ["copy", "Copy"], ["cut", "Cut"], ["copy_path", "Copy path"]);
-    if (item.dir)
+    if (item.dir && own)
       actions.push(
         item.vault ? ["unmake_root", "Make it part of the vault holding it"] : ["make_root", "Give it .slipbox/"],
       );
-    if (this.app.files.clip)
+    if (this.app.files.clip && own)
       actions.push([
         "paste",
         this.app.files.clip.mode === "cut"
@@ -193,7 +205,9 @@ export class ExplorerActions {
         : null;
     if (item?.dir) return item;
     const folder = item ? posix.dirname(item.rel) : ".";
-    if (folder !== ".") return { rel: folder, dir: true };
+    // A left-out file's folder, left out too or not (`.notes.md`'s, D278).
+    const out = item?.leftOut ? this.host.leftOutAt(join(this.app.loc.root, folder)) : null;
+    if (folder !== ".") return { rel: folder, dir: true, ...(out ? { leftOut: out.why } : {}) };
     this.app.message(
       "info",
       item
@@ -330,6 +344,7 @@ export class ExplorerActions {
         // On the selected note, file, folder or vault (18.x).
         const item = this.item();
         if (!item) return this.noItem(action.replace("_", " "));
+        if (item.leftOut && action.endsWith("_root")) return this.onlyFiles(action.replace("_", " "), item);
         return this.itemAction(action, item);
       }
       case "paste":

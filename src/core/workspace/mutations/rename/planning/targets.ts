@@ -12,13 +12,24 @@ import { walkSkips, sameEntry } from "../collecting/policy.ts";
  * A vault path as the user typed it: normalized, inside the vault, and not somewhere hidden. `holds`: what moves there
  * — a note or file, or a folder of them, never where the vault doesn't index it (a busy folder, VV-D8); a vault indexes
  * its own. `notes`: what moves puts a note directly in the folder it lands in (a note; a folder with one at its top).
+ * `leftOut`: what moves is left out by the walk already, and the index holds nothing of it (D278): it goes where the
+ * walk leaves it out too — hidden, busy or always skipped — nothing leaving the index that way; into slipbox's and
+ * git's own folders only with `own` (the explorer's).
  */
-export function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | "vault", notes = false): string {
+export function cleanTarget(
+  g: Graph,
+  input: string,
+  holds: "file" | "folder" | "vault",
+  notes = false,
+  leftOut = false,
+  own = false,
+): string {
   const rel = posix.normalize(input.replace(/\\/g, "/").replace(/^\/+/, "").replace(/\/+$/, ""));
   if (rel.startsWith("../") || rel === ".." || rel === "." || isAbsolute(rel))
     throw new RenameError(`${input} isn't inside the vault`);
-  if (walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders out`);
-  const never = holds === "vault" ? null : g.neverIndexed(rel, holds === "folder", notes);
+  if (leftOut && !own && inOwnFolder(rel)) throw new RenameError(ownRefused(input));
+  if (!leftOut && walkSkips(rel)) throw new RenameError(`${input}: the walk leaves hidden folders out`);
+  const never = holds === "vault" || leftOut ? null : g.neverIndexed(rel, holds === "folder", notes);
   if (never) throw new RenameError(`${input}: ${never}`);
   // A link there (the one moving, on a disk that ignores case) is its own entry, in its folder: not where it leads.
   const at = join(g.root, rel);
@@ -26,6 +37,17 @@ export function cleanTarget(g: Graph, input: string, holds: "file" | "folder" | 
   const where = fileInTheWay(g.root, rel);
   if (where) throw new RenameError(`${where} is a file: ${rel} can't go under it`);
   return rel;
+}
+
+/** Whether `rel` is, or is in, slipbox's or git's own folder (`.slipbox`, `.git`): the command line moves, copies and
+ *  deletes nothing there; the explorer does, as it does all its walk leaves out (D278, `own`). */
+export function inOwnFolder(rel: string): boolean {
+  return rel.split("/").some((s) => s === ".slipbox" || s === ".git");
+}
+
+/** What a move, a copy or a delete there says, refused (`inOwnFolder`). */
+export function ownRefused(rel: string): string {
+  return `${rel}: slipbox's and git's own folders aren't notes`;
 }
 
 /**
