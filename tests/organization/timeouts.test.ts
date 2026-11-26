@@ -180,6 +180,7 @@ test("Bun file-local timeout sites stay named; update this map when a file moves
     ["tests/core/workspace/mutations/files-integration.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/folders.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/headings.test.ts", "UNIT_TIMEOUT_MS"],
+    ["tests/core/workspace/mutations/left-out.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/link-moves.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/path-moves.test.ts", "UNIT_TIMEOUT_MS"],
     ["tests/core/workspace/mutations/plans.test.ts", "UNIT_TIMEOUT_MS"],
