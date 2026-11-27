@@ -6,6 +6,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-27
+
 ### Added
 
 - SOURCE view shows a note's inline styles as they read, with the markers kept: the text between `**` is bold, between
@@ -58,8 +60,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   it at their new place), changed or lost their file. In the scratch, `space s e` copies the entry under the cursor and
   `space s x` deletes it.
 
-- The top bar always shows the work count and running version. Open live task controls and recent outcomes with
-  `space b`, or full version and upgrade information with `space a`; a green arrow marks an available upgrade.
+- The top bar always shows the work count. Open live task controls and recent outcomes with `space b`, or full
+  version and upgrade information with `space a`; a green arrow marks an available upgrade.
   The leader popup keeps group explanations visible by shortening wide columns when needed.
 
 - Jump labels: `s` while reading, and `g w` there and in SOURCE view, put a label of one or two letters on every word of
@@ -105,15 +107,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 - The permanent top bar groups explorer zoom, workspace and git state, with separate click targets and changed-file
   count. Background indexing, exports, fetches and language servers starting have a task list with individual cancel;
-  an available upgrade stays visible. The bar remains in zen; `space u b` is removed and `ui.top_bar` is retired.
+  an available upgrade stays visible.
 
 - `slipbox vaults` lists known vaults and saved home workspaces as text or JSON.
 
 - The status chip keeps READ or SOURCE beside NORMAL, INSERT, VISUAL or V-LINE, so Escape visibly returns to
-  NORMAL. On narrow screens the view, then the mode, shortens before the file name. The header uses compact R/L/S
-  buttons: READ and SOURCE select a view; L toggles the lens within READ.
-  View switches are silent. Rendering defaults for notes, code and data choose the opening view without removing
-  READ. The explorer's zoom is named separately from a window's view.
+  NORMAL. On narrow screens the view, then the mode, shortens before the file name. View switches are silent.
+  Rendering defaults for notes, code and data choose the opening view without removing READ. The explorer's zoom is
+  named separately from a window's view.
 
 - Source mode highlights fenced code in its declared language and uses a bar cursor while typing. Set
   `ui.relative_numbers` to `"source"` or `"both"` for relative line numbers in its gutter; `"both"` keeps the lens's
@@ -126,11 +127,11 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - The docs for agents: `llms.txt` at the docs' root, a line per page, and every page's text in one file beside it,
   `llms-full.txt`.
 
-- Each window's header, the row above its note, has three buttons for how the window shows the note: **Read**,
-  **Lens** and **Source**. The bright one is the window's mode, as the status line says it; a click switches straight
-  to another, from source mode to the lens too. A mode the file can't be shown in is in italics, and a click on it says
-  why: a plain text file and a data file that doesn't parse have only Source. The command palette has them as Read
-  mode, Lens mode and Source mode, to bind keys to.
+- Each window's header, the row above its note, has three compact buttons for how the window shows the note: `R` for
+  Read, `L` for the lens and `S` for Source. `R` or `S` is lit, as the status line says, and `L` beside `R` while the
+  lens is open; a click on `L` opens the lens, from source mode too, and closes it again. A mode the file can't be
+  shown in is in italics, and a click on it says why: a plain text file and a data file that doesn't parse have only
+  Source. The command palette has them as Read view, Toggle lens and Source view, to bind keys to.
 - **Window header** in `space u u`, or `ui.window_header = false`, hides the whole row and gives it to the note, as
   hiding the breadcrumb used to.
 - Report a problem from inside slipbox: `space r` (or `:report`) opens the bug form's questions in a window, with the
@@ -223,37 +224,48 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   `file.save_all`, `note.save_force` `file.save_force`, `note.revert` `file.revert`, `note.reload` `file.reload`,
   `note.info` `file.info`, `note.send` `file.send`, `note.send_pick` `file.send_pick`, `note.open` `file.open`,
   `note.open_path` `file.open_path`, `folders.open` `vault.open`, `folders.default` `vault.default` and `folder.name`
-  `vault.name`. The command-line commands keep their names.
+  `vault.name`. The command-line commands keep their names. `slipbox commands --json` lists them by their new names,
+  each with its old one in `formerly`.
 
-- **Breaking:** `space g` is a group now, so the git panel opens on `space g g`. Undo the change asks first.
+- **Breaking:** `space g` is a group now, so the git panel opens on `space g g`.
 
 - Going into another vault asks first, whatever the way in (the explorer, `space v v`, `ctrl+click`, `:e`, git's Open,
   `o` in a peek, `ctrl+o` back): **Go**, **Stay**, or, when you were opening a note, **Peek at** it, read-only, where
   you are. With unsaved notes, their question is the only one.
 
-- The explorer lists every text file and the hidden files and folders from the start: `files.show` defaults to
-  `"all"` and `files.hidden` to `true`. `a` now switches to notes and data files alone, and back; `shift+h` hides the
-  hidden ones. `files.show = "auto"` and `files.hidden = false` give the old explorer. The switcher and replace in every
-  note list the files the explorer does, code files included. Going into a vault inside a hidden folder, such as a
-  worktree in `.claude/`, keeps the explorer where it is, that folder unfolded.
-- `files.show = "auto"` lists every text file in a git repository, whose top holds `.git`, with a `.slipbox/` or
-  without one: a repository named with `slipbox init --name` lists its code now, where it listed only notes and data
-  files. A `.slipbox/` with no `.git` beside it, a notes folder or a notes vault inside a repository, still lists notes
-  and data files. When the explorer leaves files out, or lists every text file because of git, a line at its foot says
-  why and names `[files] show`, the setting that changes it.
+- **Breaking:** the explorer lists every text file and the hidden files and folders from the start: `files.show`
+  defaults to `"all"` and `files.hidden` to `true`, where they were `"auto"` and `false`. `a` now switches to notes and
+  data files alone, and back; `shift+h` hides the hidden ones. For the old explorer, set `files.hidden = false` and
+  `files.show = "auto"`, or `"renderable"` in a git repository with a `.slipbox/` (the next entry). The switcher and
+  replace in every note list the files the explorer does, code files included. Going into a vault inside a hidden
+  folder, such as a worktree in `.claude/`, keeps the explorer where it is, that folder unfolded.
+- **Breaking:** `files.show = "auto"` lists every text file in a git repository, whose top holds `.git`, with a
+  `.slipbox/` or without one: a repository named with `slipbox init --name` lists its code now, where it listed only
+  notes and data files. Set `files.show = "renderable"` there for notes and data files alone, as before. A `.slipbox/`
+  with no `.git` beside it, a notes folder or a notes vault inside a repository, still lists notes and data files. When
+  the explorer leaves files out, or lists every text file because of git, a line at its foot says why and names
+  `[files] show`, the setting that changes it.
+- **Breaking:** the top bar is always shown, in zen mode too. `ui.top_bar` is retired: slipbox ignores it, with a
+  notice saying so. `space u b` and its command, `ui.top_bar`, are gone, so a key bound to that command is said to
+  bind an unknown one. Delete both from your config; nothing replaces them.
 - The top bar: `slipbox` at the left opens About slipbox, not the command palette, with a green `↑` right after it when
-  an upgrade is available. The version is no longer on the bar; About slipbox shows it. Where you are moved from the
-  middle to the right, next to the work and messages counts.
+  an upgrade is available. About slipbox shows the version.
 - A scratch entry's `When:`, `At:` and `Note:` sit on consecutive lines, the captured lines between them with one
   blank line each side. `esc` no longer closes the floating scratch; `q` does. The lens opens on what lies between two
   horizontal rules, as it does on a heading's section, so it holds one scratch entry. A code block with no language and
   no sideways scrollbar is drawn without its empty first and last rows.
 
-- Opening a path that isn't there (`slipbox ideas/coffee.md`, or `slipbox open ideas/coffee`) opens an empty new note
-  instead of exiting 3. Its tab shows the path and `[new]`; the first save makes the file and missing folders.
-  Quitting untouched makes nothing. Naming and refusals follow `:new`, and a file made meanwhile is never overwritten
-  without asking. A folder occupying the new name after adding `.md` is refused. CLI reads and writes keep their
-  existing rules.
+- **Breaking:** opening a path that isn't there (`slipbox ideas/coffee.md`, or `slipbox open ideas/coffee`) opens an
+  empty new note instead of exiting 3. Its tab shows the path and `[new]`; the first save makes the file and missing
+  folders. Quitting untouched makes nothing. Naming and refusals follow `:new`, and a file made meanwhile is never
+  overwritten without asking. A folder occupying the new name after adding `.md` is refused. CLI reads and writes keep
+  their existing rules. A script that relied on exit 3 checks the path first: `slipbox read` and `slipbox stat` still
+  exit 3 for a note that isn't there.
+
+- A mistyped command, such as `slipbox serch foo`, stops with `did you mean search?` and exit code 2 instead of being
+  taken for a path that isn't there. `slipbox ./serch` opens a new note named `serch`, and a name that holds a command
+  or is short (`inbox`, `todo`, `tasks`) is a note. The manual's troubleshooting chapter now says that only a missing
+  path ending in `/` stops with `no such directory`.
 
 - New slipbox branding in the README, documentation header, favicons and shared-link card, with variants for light
   and dark backgrounds, in the purple of Tokyo Night Moon, the family of slipbox's default theme.
@@ -262,20 +274,20 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   terminal", in its README, its help, its package, its Homebrew formula and its docs, instead of "the terminal
   companion for coding agents".
 
-- **Breadcrumb** in `space u u`, and `ui.breadcrumb = false`, hide only the headings now. The window header stays, with
-  its buttons and, in a split, the window's name. To hide the whole row as before, use **Window header**
-  (`ui.window_header = false`).
+- **Breaking:** **Breadcrumb** in `space u u`, and `ui.breadcrumb = false`, hide only the headings now. The window
+  header stays, with its buttons and, in a split, the window's name. To hide the whole row as before, use **Window
+  header** (`ui.window_header = false`).
 - A peek into a vault with no index here builds one, and lists the note's backlinks when it's done, instead of saying
   there are none to show yet. Your home folder's index is still left to the background index.
 - A picture is fitted to its window rather than drawn at most 12 rows tall: as wide as the text column, never larger
   than its own size, and no taller than the window, so a wide screenshot is drawn as wide as the text beside it. It's
   never made smaller than 12 rows tall or 20 columns wide. While you resize a window, its pictures wait and are drawn at
   the new size when you stop.
-- Where you are is on the top bar now, in its middle: the vault, its branch, and a folder of home you opened by name
-  (`◈ kestrel · main ↑2`, `◈ ~ › notes`, `Elsewhere`). Click the vault to go into another named folder, or the branch
-  for the branches, pull, push and fetch. The status line names the vault only while the top bar doesn't show it, so the
-  file's path has its room. On a narrow screen the top bar cuts it a step at a time: a long path first, then the branch,
-  the vault's name last.
+- Where you are is on the top bar now, at its right next to the work and messages counts, instead of on the status
+  line: the vault, or a folder of home you opened by name, and its branch (`◈ kestrel` `⎇ main ↑2`, `◈ notes`,
+  `◈ Elsewhere`). Click the vault to go into another named folder, or the branch for the branches, pull, push and
+  fetch. The status line gives the file's path that room. On a narrow screen the top bar cuts it a step at a time: the
+  branch's ahead and behind first, then the branch and the changed count, the names last.
 - What slipbox brings back of your work in a place, your tabs and windows, is called your workspace, apart from the
   vault: a vault is what's shared, its notes and settings, and a workspace is yours, kept on your machine. Each branch
   and each folder of home opened by name has one, as before; the docs and messages say workspace where they said
@@ -311,11 +323,6 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   peek with `t`, or a file you may not write, is no longer written over the file on disk. Reverting a change in the
   review, discarding one in source control, and saving or editing from the merge screen refuse a file you may not
   write the same way, before changing anything in it.
-
-- A mistyped command, such as `slipbox serch foo`, stops with `did you mean search?` and exit code 2 instead of
-  opening a new note named `serch`. `slipbox ./serch` still opens one, and a name that holds a command or is short
-  (`inbox`, `todo`, `tasks`) is a note. The manual's troubleshooting chapter now says that only a missing path ending
-  in `/` stops with `no such directory`.
 
 - A web link copied or opened from a rendered row includes every source line its text came from, rather than only
   the first. Selections include every contributing source line at both ends, in either direction.
@@ -358,13 +365,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
   labelled "took too long to draw" in that session and later ones. The drawing library's one-time set-up counted against
   the first diagram's time limit, its retry's too; it now happens as the background drawing starts.
 
-- Keep message timers within their normal four/eight-second lifetime after the system clock moves backwards. A clock
-  correction could make a timer overflow and wake repeatedly after one millisecond.
-
-- Preserve Markdown paragraphs inside preformatted HTML containers.
-- Preserve nested HTML line breaks inside preformatted containers in READ and document exports.
-- Restore saved workspaces with document HTML without a startup error.
-- Keep large notes on the background parsing path when revealing saved HTML positions.
+- A message on screen when the system clock is set back goes after its usual four or eight seconds. It stayed until
+  the clock caught up, and a large correction could make it wake slipbox over and over.
 
 - The agent guide's Markdown on the documentation site, which an agent can fetch on its own, links the other pages by
   their full addresses. Its links were relative to the docs folder and led nowhere on the site.
@@ -487,10 +489,10 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 - A task toggled (`ctrl+l`) in a note you're just looking at through a symlink isn't written through it, and in a
   vault a note too big to index, opened through a symlink you follow, is never saved through it. 0.5.0 wrote both
   where the link leads, out of the vault.
-- An export says it's written as soon as its file is in place, before its temporary files are removed, and Cancel
-  export chosen meanwhile says no export is running. It said nothing, and the export went on to say it was written.
-  A warning that those files couldn't be removed is now the newest message, no longer pushed down at once by the
-  export's.
+- An export says it's written as soon as its file is in place, before its temporary files are removed, and from then
+  the next export's window opens where it went. Cancel export chosen meanwhile says no export is running. It said
+  nothing, and the export went on to say it was written. A warning that those files couldn't be removed is now the
+  newest message, no longer pushed down at once by the export's.
 
 ## [0.5.0] - 2026-10-22
 
@@ -918,5 +920,6 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/remziduzagac/slipbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/remziduzagac/slipbox/releases/tag/v0.5.0

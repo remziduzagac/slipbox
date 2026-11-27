@@ -1131,8 +1131,8 @@ keys.
   `views/branches/worktrees.ts`, App-backed interactive worktree prompts;
   `tui/workspace/git/views/panel/gitview.ts`, the working tree's sections;
   `tui/workspace/git/views/branches/gitbranchview.ts`, the branches; `tui/workspace/git/views/branches/gitreposview.ts`,
-  the repositories; `tui/workspace/git/views/panel/draw-git.ts`; `tui/workspace/git/views/panel/gitmouse.ts`). `space g`
-  (`git.view`) opens it and focuses it, again closes it, as `space e` the explorer (GIT-D12); the status line's mode
+  the repositories; `tui/workspace/git/views/panel/draw-git.ts`; `tui/workspace/git/views/panel/gitmouse.ts`).
+  `space g g` (`git.view`) opens and focuses it, again closes it, as `space e` does (GIT-D12); the status line's mode
   chip says `GIT` while it has the keys. Shown again (opened, or its view picked on the rail), git is asked again about
   all it shows (`GitPanel.shown`). **Its top**, as the pane's rows allow: from 10 rows, the repository (`Git.repoName`:
   the vault's name, else the main checkout's folder's) and its branch, a click (`git:head`) the status line's branches;
@@ -2737,8 +2737,8 @@ The same key, the panel open there and focused, closes it; open and not focused,
 
 ## Git (plans `5.11`–`5.14`, `26.x`)
 
-`space g` is the git panel (`git.view`, GIT-D12; § Side panes): its keys act on what's selected there, and what's about
-the cursor's line stays out of it (`] c`, `[ c`; a click on a change's sign in the gutter). What git knows of the
+`space g g` opens the git panel (`git.view`, GIT-D12; § Side panes): its keys act on what's selected there, and what's
+about the cursor's line stays out of it (`] c`, `[ c`; a click on a change's sign in the gutter). What git knows of the
 vault is measured against each branch's own base, from where this branch left it (the merge base) — what an agent's
 worktree changed, ready to review (D154, GIT-D10):
 
@@ -3308,11 +3308,11 @@ APIs remain. Merge stages are read in parallel; explicit branch diffs select the
 another tab or quitting cancels it. Completion checks the repository, document version and disk identity, view and HEAD
 commit; staged/index reads also check the index's identity and timestamps. Results are fetched afresh, so no stale
 history/blob cache is introduced. Existing content remains while a loading message is shown. The key that starts a read
-waits for it, as any key waits for what it does: a list's selection, source control's and the branches' rows, `space g
-d`, a link to another branch's file, and `esc` back to the list a diff came from all return their reads to the key, so
-the keys typed after it act on what it opened. Completion requests a repaint. The base a diff is taken against is the
-branch's own; on a detached HEAD, `[git] base` or main/master, and one not there is named. These reads do not change the
-separate policies for git mutations.
+waits for it, as any key waits for what it does: a list's selection, source control's and the branches' rows, a link to
+another branch's file, and `esc` back to the list a diff came from all return their reads to the key, so the keys typed
+after it act on what it opened. Completion requests a repaint. The base a diff is taken against is the branch's own; on
+a detached HEAD, `[git] base` or main/master, and one not there is named. These reads do not change the separate
+policies for git mutations.
 
 Opening defaults (VB-D2): `render.notes`, `render.code` and `render.data` are true by default. False opens SOURCE;
 READ and its lens remain available where supported. Legacy code `"document"`/`"source"` reads as true/false, and
@@ -3370,7 +3370,7 @@ among the background tasks (`reading the vault…`, beside `Indexing`), `listing
 `⚠ disk not answering` on the status line while the watcher's look, or the TUI's look each second, doesn't answer.
 
 **A key's own read** (SD-D4). Opening a note — as a tab, by a link, from a list, at the start — zooming into or
-unfolding a folder, `:e!` and a reload by hand (`space n r`) read on a disk thread. The key waits, and the keys after it
+unfolding a folder, `:e!` and a reload by hand (`space f r`) read on a disk thread. The key waits, and the keys after it
 wait their turn (`Input.handleKey`), as for a big note's parse (§ Known limits); the screen draws, `reading <note>…` in
 the window the note will be in. `esc` is taken at once, out of turn: it gives the read up and leaves you where you were.
 Past its deadline the read is said (`<note> didn't answer: not opened`), nothing opened. The keys typed meanwhile are
