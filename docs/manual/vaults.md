@@ -413,7 +413,8 @@ the same `id` in `.slipbox/`.
   is still that folder, by its `id` in `.slipbox/` or its remote, before it opens anything there. A folder that moved
   away and left its path to another, or a drive swapped for another that mounts at the same place, is never opened
   under the old name: another copy answers, or slipbox says `notes was at ~/notes, which holds another folder now`.
-  A clone of the same repository in its place is still a copy.
+  A clone of the same repository in its place is still a copy, and so is a folder whose `.slipbox/config.toml` can't
+  be read for now, such as one with a typo you're still fixing.
 - **A clone given a `.slipbox/` name of its own,** to tell it from the repository it was cloned from, is still a copy
   of that repository. A pointer by the repository's full name (`slipbox://github.com/you/website/…`), and a link to its
   hosting, open the repository's default copy. That's the one called by the remote's name, not the renamed clone. The

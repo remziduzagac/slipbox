@@ -17,6 +17,7 @@ import {
 } from "../../vaults/registry.ts";
 import { openVault, Reach } from "../../links/reach.ts";
 import {
+  copyAtKept,
   folderIdentity,
   folderNamed,
   lookupFolder,
@@ -400,7 +401,8 @@ function pointersByItsName(parent: Graph, v: Graph, F: string, c: Collector): st
     for (const l of s.links) {
       if ((l.kind !== "markdown" && l.kind !== "image") || !isPointer(l.target)) continue;
       const p = parsePointer(l.target, folders);
-      const found = p ? lookupFolder(p.name, folders) : null;
+      // Each copy's place read once for the links into it, not once a link (D279).
+      const found = p ? lookupFolder(p.name, folders, copyAtKept) : null;
       if (!p || found?.status !== "found" || found.folder.key !== ident.key || real(found.path) !== real(V)) continue;
       const targetAbs = join(V, p.path);
       if (climbsOut(relative(V, targetAbs))) continue; // a pointer's path stays in its folder: it reached nothing

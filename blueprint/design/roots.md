@@ -634,7 +634,13 @@ rewrites the pointer. Names are compared case aside.
   for the CLI and a key, by a drawing on a disk thread with the rest it asks (`PathProbe.copyAt`; [tui.md](tui.md) § A
   slow disk), the copy taken as recorded until it answers, and for the background index where it opened the vault
   (`copyFacts`). A `.slipbox/` folder with neither an id nor a remote is keyed by its path: another such folder in its
-  place can't be told from it.
+  place can't be told from it. A `.slipbox/` whose config is there but can't be read or parsed (a typo mid-edit, a
+  disk's error) says nothing of which folder it is, so it counts as the copy (`unread`; `identityIfRead` in
+  `core/workspace/vaults/registry.ts`); one with no config is a folder unnamed. A pointer's lookup keeps what it read
+  of a place for two seconds at most, a drawing's kept answers' age, forgotten as slipbox writes `folders.json`
+  (`copyAtKept`, which `DISK_PROBE` and the unmaking's pointers use): an index's pass or a command's reads each place
+  once, not once a pointer. The relink offers a pointer into a copy whose place is taken only for a link that reaches
+  nothing; one that reaches its file there is left as it is.
 - **A clone with a `.slipbox/` name of its own,** given to tell it from the repository it was cloned from, is still a
   copy of that repository: the lookup takes a repository's copies, one remote, as one folder, whatever their
   `.slipbox/` call them (`byRepository` in `core/workspace/vaults/folders.ts`). By the remote, a qualified pointer and a

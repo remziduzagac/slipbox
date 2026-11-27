@@ -1,6 +1,15 @@
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { describe, expect, setDefaultTimeout, setSystemTime, test } from "bun:test";
+import {
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
@@ -181,6 +190,83 @@ describe("named folders (21.6)", () => {
     mkdirSync(join(repo, ".slipbox"));
     writeFileSync(join(repo, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "${short}-spike"\n`);
     expect(lookupFolder(short)).toMatchObject({ status: "found", path: repo });
+  });
+
+  test("a copy whose .slipbox/ config can't be read is still the copy — a typo mid-edit, a disk's error; one with no config is a folder unnamed (D279)", async () => {
+    const { copyAt, copyHere, lookupFolder, recordFolder } = await import(
+      "../../../../src/core/workspace/vaults/folders.ts"
+    );
+    const { parsePointer, resolvePointer } = await import("../../../../src/core/workspace/links/pointer.ts");
+    const name = `u${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    writeFileSync(join(a, "n.md"), "# N\n");
+    recordFolder(a);
+    const cfg = join(a, ".slipbox", "config.toml");
+    const good = readFileSync(cfg, "utf8");
+    // A typo mid-edit: what it says isn't known, so it's no other folder — found there, as it was.
+    writeFileSync(cfg, `[vault\nid = "${id}"\nname = "${name}"\n`);
+    expect(copyAt(a)).toEqual({ key: null, remote: null, unread: true });
+    expect(lookupFolder(name)).toEqual(expect.objectContaining({ status: "found", path: a }));
+    expect(lookupFolder(name)).not.toHaveProperty("via");
+    expect(copyHere({ key: `slipbox:${id}`, remote: null }, a)).toBe(true);
+    expect(resolvePointer(parsePointer(`slipbox://${name}/n.md`)!)).toMatchObject({ status: "found", root: a });
+    // A disk's error reading it (here, no leave to): the same. Root reads it anyway, so that part is for the rest.
+    writeFileSync(cfg, good);
+    if (process.getuid?.() !== 0) {
+      chmodSync(cfg, 0o000);
+      try {
+        expect(copyAt(a)).toMatchObject({ unread: true });
+        expect(lookupFolder(name)).toMatchObject({ status: "found", path: a });
+      } finally {
+        chmodSync(cfg, 0o644);
+      }
+    }
+    // Its .slipbox/ with no config at all: a folder with no name, read as it is — not this folder.
+    rmSync(cfg);
+    expect(copyAt(a)).toEqual({ key: null, remote: null });
+    expect(lookupFolder(name)).toMatchObject({ status: "unavailable", path: a, other: true });
+  });
+
+  test("pointers into one folder read its place once a moment: kept no longer than a drawing keeps it, forgotten as a folder's recorded; copyFacts reads it as it is (D279)", async () => {
+    const { copyFacts, recordFolder } = await import("../../../../src/core/workspace/vaults/folders.ts");
+    const { parsePointer, resolvePointer } = await import("../../../../src/core/workspace/links/pointer.ts");
+    const { setReadWait } = await import("../../../../src/core/foundation/platform/disk.ts");
+    const name = `k${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    writeFileSync(join(a, "n.md"), "# N\n");
+    recordFolder(a);
+    const cfg = join(a, ".slipbox", "config.toml");
+    const good = readFileSync(cfg, "utf8");
+    const p = parsePointer(`slipbox://${name}/n.md`)!;
+    let reads = 0;
+    setReadWait((path) => {
+      if (path === cfg) reads++;
+    });
+    const now = Date.now();
+    setSystemTime(new Date(now));
+    try {
+      // An index's pass, a command's: fifty pointers into it, its place read once.
+      for (let i = 0; i < 50; i++) expect(resolvePointer(p)).toMatchObject({ status: "found", root: a });
+      expect(reads).toBe(1);
+      // Another folder at its place meanwhile: a pointer reads what was kept for a moment; where a vault is recorded,
+      // copyFacts reads the place as it is.
+      writeFileSync(cfg, `[vault]\nid = "${uniq()}"\nname = "${name}-came"\n`);
+      expect(resolvePointer(p)).toMatchObject({ status: "found", root: a });
+      expect(copyFacts(`slipbox:${id}`)[a]?.at?.key).not.toBe(`slipbox:${id}`);
+      // As old as a drawing's kept answers (two seconds): read again — not here.
+      setSystemTime(new Date(now + 2000));
+      expect(resolvePointer(p)).toMatchObject({ reason: expect.stringContaining("holds another folder now") });
+      // Back at its place, and a folder recorded: what was kept is forgotten, read again — found.
+      writeFileSync(cfg, good);
+      expect(resolvePointer(p).status).toBe("unresolved");
+      recordFolder(folder({ name: `${name}-new`, id: uniq() }));
+      expect(resolvePointer(p)).toMatchObject({ status: "found", root: a });
+    } finally {
+      setSystemTime();
+      setReadWait(null);
+    }
   });
 
   test("a second copy isn't asked about while the first's place holds another folder: read at once, or where the vault was opened (T12)", async () => {

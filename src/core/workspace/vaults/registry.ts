@@ -64,22 +64,34 @@ const NO_IDENTITY: VaultIdentity = { id: null, name: null, aliases: [], previous
 
 /** The `[vault]` table of a config file; missing or malformed fields are empty, never an error. */
 export function readIdentity(configFile: string): VaultIdentity {
+  return identityIfRead(configFile) ?? { ...NO_IDENTITY };
+}
+
+/** `readIdentity`'s, but null when the file is there and can't be read or parsed (a typo mid-edit, a disk's error):
+ *  what it says isn't known, which no file isn't (D279). */
+export function identityIfRead(configFile: string): VaultIdentity | null {
   let text: string;
   try {
     text = readRegular(configFile, SMALL_FILE).toString("utf8");
-  } catch {
-    return { ...NO_IDENTITY };
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    return code === "ENOENT" || code === "ENOTDIR" ? { ...NO_IDENTITY } : null;
   }
-  return identityOf(text);
+  return parsedIdentity(text);
 }
 
 /** The `[vault]` table of a config's text; an unparsable one has none. */
 export function identityOf(text: string): VaultIdentity {
+  return parsedIdentity(text) ?? { ...NO_IDENTITY };
+}
+
+/** `identityOf`'s, null when the text doesn't parse. */
+function parsedIdentity(text: string): VaultIdentity | null {
   let data: Record<string, unknown>;
   try {
     data = parseToml(text) as Record<string, unknown>;
   } catch {
-    return { ...NO_IDENTITY };
+    return null;
   }
   const v = data.vault;
   if (!v || typeof v !== "object" || Array.isArray(v)) return { ...NO_IDENTITY };

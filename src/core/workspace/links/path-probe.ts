@@ -5,7 +5,7 @@
 // tui/app/runtime/drawn.ts).
 
 import * as disk from "../../foundation/platform/disk.ts";
-import { type CopyAt, copyAt, type NamedFolder, readFolders } from "../vaults/folders.ts";
+import { type CopyAt, copyAtKept, type NamedFolder, readFolders } from "../vaults/folders.ts";
 
 /** What a link asks of the disk about a path, as `links.ts`, the graph's resolver and its lookups ask it. */
 export interface PathProbe {
@@ -46,7 +46,8 @@ export const DISK_PROBE: PathProbe = {
     }
   },
   folders: () => readFolders(),
-  copyAt: (path) => copyAt(path),
+  // Kept a moment: an index's or a command's pointers into one folder read its place once (D279).
+  copyAt: (path) => copyAtKept(path),
 };
 
 let current: PathProbe = DISK_PROBE;

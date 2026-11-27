@@ -104,11 +104,13 @@ function pointerOffer(g: Graph, l: ResolvedLink, fromRel: string, said: Set<stri
   }
   if (!abs || isInside(g.root, abs)) return null;
   const folders = readFolders();
-  // Its folder: the root holding it now; else a copy of a named folder that isn't here any more.
-  const there = existsSync(abs) ? findVaultRoot(abs) : null;
+  // Its folder: the root holding it now; else, the link reaching nothing, a copy of a named folder that isn't here any
+  // more — its place gone, or another folder's now (D279). A link that reaches its file is left as it is.
+  const reaches = existsSync(abs);
+  const there = reaches ? findVaultRoot(abs) : null;
   const ident = there ? folderIdentity(there) : null;
   let hit = ident && there ? { f: folders.find((x) => x.key === ident.key), root: there } : null;
-  if (!hit?.f) {
+  if (!hit?.f && !reaches) {
     const was = folders.flatMap((f) =>
       f.copies.filter((c) => isInside(c.path, abs!) && !copyHere(f, c.path)).map((c) => ({ f, root: c.path })),
     )[0];

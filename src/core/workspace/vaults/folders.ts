@@ -30,6 +30,7 @@ import { checkoutOf, inMain } from "../git/git.ts";
 import { stateHome } from "../../foundation/platform/paths.ts";
 import {
   implicitName,
+  identityIfRead,
   MARKER,
   readIdentity,
   slugName,
@@ -63,9 +64,9 @@ export interface FolderIdentity {
  * The named folder at `root` (a root: its own `.slipbox/` or `.git` is there), or null when it's
  * unnamed. A `.slipbox/` name wins over the remote's: someone chose it.
  */
-export function folderIdentity(root: string): FolderIdentity | null {
+export function folderIdentity(root: string, own?: VaultIdentity | null): FolderIdentity | null {
   const c = checkoutOf(root);
-  const ident = identityAt(root);
+  const ident = identityAt(root, own);
   const inRepo = c !== null && c.root === root;
   const remote = inRepo ? originRemote(c.common, c.main ?? c.root) : null;
   // A worktree's copy is its main checkout, a folder inside it the same folder there.
@@ -86,10 +87,13 @@ export function folderIdentity(root: string): FolderIdentity | null {
 /**
  * The `[vault]` identity a root has — its `.slipbox/`'s; null without one. A worktree reads its main
  * checkout's where its own has none (17.19): the main's kept private, or a branch made before the folder
- * was named. Never written: a worktree writing its own would conflict when the branches merge.
+ * was named. Never written: a worktree writing its own would conflict when the branches merge. `own`,
+ * its own already read.
  */
-export function identityAt(root: string): VaultIdentity | null {
-  const own = existsSync(join(root, MARKER)) ? readIdentity(vaultConfigFile(root)) : null;
+export function identityAt(
+  root: string,
+  own = existsSync(join(root, MARKER)) ? readIdentity(vaultConfigFile(root)) : null,
+): VaultIdentity | null {
   const c = own?.id && own.name ? null : checkoutOf(root);
   const mainAt = c?.worktree ? inMain(c, root) : null;
   const main = mainAt && existsSync(join(mainAt, MARKER)) ? readIdentity(vaultConfigFile(mainAt)) : null;
@@ -194,6 +198,7 @@ export function readFolders(): NamedFolder[] {
 }
 
 function writeFolders(folders: NamedFolder[]): void {
+  kept.clear();
   try {
     ensureDir(stateHome());
     writeJson(foldersFile(), { version: 1, folders } satisfies FoldersFile);
@@ -351,21 +356,40 @@ export function copyAvailable(path: string): boolean {
 }
 
 /** What's at a copy's place now (`copyAt`): the folder there by what tells copies apart, its `key` (null: a folder
- *  unnamed) and a repository's `remote`; null when nothing is. */
-export type CopyAt = { key: string | null; remote: string | null } | null;
+ *  unnamed) and a repository's `remote`; `unread`, its `.slipbox/` config there but unreadable; null when nothing is. */
+export type CopyAt = { key: string | null; remote: string | null; unread?: true } | null;
 
 /** The folder at a copy's place now, read as `folderIdentity` reads it: a few small files (its `.git`, its `.slipbox/`
  *  config, its git config), no git run. */
 export function copyAt(path: string): CopyAt {
   if (!copyAvailable(path)) return null;
-  const ident = folderIdentity(path);
+  const marked = existsSync(join(path, MARKER));
+  const own = marked ? identityIfRead(vaultConfigFile(path)) : null;
+  // Its config there but unreadable (a typo mid-edit, a disk's error): which folder it is isn't known, so it's no other.
+  if (marked && !own) return { key: null, remote: null, unread: true };
+  const ident = folderIdentity(path, own);
   return { key: ident?.key ?? null, remote: ident?.remote ?? null };
 }
 
+/** How long `copyAtKept` keeps what it read (ms): no longer than a drawing keeps its answers (DRAWN_AGAIN_MS). */
+const COPY_KEPT_MS = 2000;
+const kept = new Map<string, { at: number; value: CopyAt }>();
+
+/** `copyAt`, kept a moment by path: a pass over many pointers into one folder reads it once (D279). Forgotten as
+ *  slipbox writes the folders it knows. */
+export function copyAtKept(path: string): CopyAt {
+  const k = kept.get(path);
+  if (k && Date.now() - k.at < COPY_KEPT_MS) return k.value;
+  const value = copyAt(path);
+  kept.set(path, { at: Date.now(), value });
+  return value;
+}
+
 /** Whether the folder at a copy's place (`copyAt`) is still `f`: by its key, or a copy of its repository whatever its
- *  `.slipbox/` calls it (DF-D30). Nothing there, or another folder, is no copy of `f` here (D279). */
+ *  `.slipbox/` calls it (DF-D30); one whose config can't be read, as nothing says it isn't. Nothing there, or another
+ *  folder, is no copy of `f` here (D279). */
 export function isCopyOf(f: Pick<NamedFolder, "key" | "remote">, at: CopyAt): boolean {
-  return !!at && ((at.key !== null && at.key === f.key) || sameRepository(at, f));
+  return !!at && (!!at.unread || (at.key !== null && at.key === f.key) || sameRepository(at, f));
 }
 
 /** Whether `f`'s copy at `path` is here now: something there (`copyAvailable`), and still `f` (`isCopyOf`). */

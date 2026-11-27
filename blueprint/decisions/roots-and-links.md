@@ -1289,10 +1289,13 @@ says the place holds another folder now. Nothing is opened or written under the 
 `slipbox folders`, `slipbox info`, the Info view and `:folders-default` say not here, and such a copy is no second
 copy to ask about. What's at the place is read as `folderIdentity` reads it, a few small files and no git run: at once
 for the CLI and a key; for a drawing, on a disk thread with the rest of its batch, the copy taken as recorded until it
-answers; for the background index, where it opened the vault, for that vault's own copies. As built: `copyAt`,
-`isCopyOf`, `copyHere`, `lookupFolder`'s `at` and `FolderLookup`'s `other`, `copyFacts(key)`
-(`core/workspace/vaults/folders.ts`); `PathProbe.copyAt` and `probedCopyAt` (`core/workspace/links/path-probe.ts`),
-`Drawn.copyAt`, `DrawAsk.copies`; design/roots.md § Named folders, design/tui.md § A slow disk.
+answers; for the background index, where it opened the vault, for that vault's own copies. A `.slipbox/` config there
+that can't be read or parsed says nothing either way, so that copy counts, as it did. A pointer's lookup keeps what it
+read of a place two seconds at most, so a pass over many pointers into one folder reads it once. As built: `copyAt`,
+`isCopyOf`, `copyHere`, `copyAtKept`, `lookupFolder`'s `at` and `FolderLookup`'s `other`, `copyFacts(key)`
+(`core/workspace/vaults/folders.ts`), `identityIfRead` (`registry.ts`); `PathProbe.copyAt` and `probedCopyAt`
+(`core/workspace/links/path-probe.ts`), `Drawn.copyAt`, `DrawAsk.copies`; design/roots.md § Named folders,
+design/tui.md § A slow disk.
 
 **Why:** A recorded place counted as the folder as soon as anything was at its path (#309). Once a vault left its
 place and another folder took it, as a vault renamed in a shell, a drive swapped for another at the same mount, or a
