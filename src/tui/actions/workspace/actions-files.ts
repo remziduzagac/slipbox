@@ -10,7 +10,7 @@ import { classify } from "../../../core/documents/model/filetypes.ts";
 import { revert } from "../documents/actions-edit.ts";
 import { copyPath } from "../../../core/workspace/mutations/files.ts";
 import { planHeadingRename, planVaultRename } from "../../../core/workspace/mutations/rename/rename.ts";
-import { folderIdentity, readFolders, recordFolder, copyAvailable } from "../../../core/workspace/vaults/folders.ts";
+import { copyHere, folderIdentity, readFolders, recordFolder } from "../../../core/workspace/vaults/folders.ts";
 import { tildePath, rootLabel } from "../../../core/workspace/vaults/names.ts";
 import { describeCap } from "../../../core/workspace/vaults/home.ts";
 import { describeBackground, backgroundStatus } from "../../../core/workspace/graph/autoindex.ts";
@@ -257,7 +257,7 @@ export function fileActions(): Record<string, Run> {
         ...(named?.copies ?? [])
           .filter((c) => c.path !== ident?.copy)
           .map(
-            (c) => ["copy", `${tildePath(c.path)}${copyAvailable(c.path) ? "" : " (not here)"}`] as [string, string],
+            (c) => ["copy", `${tildePath(c.path)}${copyHere(named!, c.path) ? "" : " (not here)"}`] as [string, string],
           ),
       ]);
     },

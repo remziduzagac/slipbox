@@ -547,8 +547,9 @@ deleted (D61). Each vault's is in its cache folder (the link index, the search i
   than home's when it's kept (Downloads moved meanwhile, a root marker added: the filter's signature, compared where the
   walk is), walked again, never kept under the new. The machine's lists are written on the main thread alone, from what
   the thread read of a vault it opened (`Opened`: its key, worktree, identity and real path, and the real path and
-  presence of each copy the list of named folders records, `copyFacts` — one recorded since taken as it was recorded, by
-  its real path, there: nothing read on the main thread; `recordRoot`'s `key`, `recordFolder`'s `known`) — a vault
+  presence of each copy the list of named folders records, the folder at each of its own copies' places too,
+  `copyFacts` — one recorded since taken as it was recorded, by its real path, there: nothing read on the main thread;
+  `recordRoot`'s `key`, `recordFolder`'s `known`) — a vault
   counted found once, its count kept with the place (`counted`, set afresh with each pass), so one being indexed when
   the TUI quit isn't counted again; home recorded as found apart from the vault being indexed, when it's walked again
   meanwhile. The place is written only when it changed: a tick waiting on the thread writes nothing. Nor does the thread
@@ -622,6 +623,24 @@ rewrites the pointer. Names are compared case aside.
   checkout.
 - **A copy gone** (moved, unplugged) stays listed, unavailable, and is no choice; lookups take another copy
   meanwhile, said so (`via: "another-copy"`).
+- **A copy's place taken** by another folder (the folder moved away and another came to its path, a drive swapped for
+  one that mounts there) is a copy not here as well (D279). A copy counts only while the folder at its path is still
+  that folder: its key, the `.slipbox/` id else the remote, or a copy of its repository whatever its `.slipbox/` calls
+  it (DF-D30) (`copyAt`, `isCopyOf`, `copyHere` in `core/workspace/vaults/folders.ts`). So nothing is opened or written
+  under its name in a folder that isn't it: another copy answers, else the lookup is unavailable, said
+  (`notes was at ~/notes, which holds another folder now`). `slipbox folders`, `slipbox info`, the Info view and
+  `:folders-default` say not here, and it is no second copy to ask about (`recordFolder`, `askDefaultCopy`). What is
+  there is read from a few small files, its `.git`, its `.slipbox/` config and its git config, no git run: at once
+  for the CLI and a key, by a drawing on a disk thread with the rest it asks (`PathProbe.copyAt`; [tui.md](tui.md) § A
+  slow disk), the copy taken as recorded until it answers, and for the background index where it opened the vault
+  (`copyFacts`). A `.slipbox/` folder with neither an id nor a remote is keyed by its path: another such folder in its
+  place can't be told from it. A `.slipbox/` whose config is there but can't be read or parsed (a typo mid-edit, a
+  disk's error) says nothing of which folder it is, so it counts as the copy (`unread`; `identityIfRead` in
+  `core/workspace/vaults/registry.ts`); one with no config is a folder unnamed. A pointer's lookup keeps what it read
+  of a place for two seconds at most, a drawing's kept answers' age, forgotten as slipbox writes `folders.json`
+  (`copyAtKept`, which `DISK_PROBE` and the unmaking's pointers use): an index's pass or a command's reads each place
+  once, not once a pointer. The relink offers a pointer into a copy whose place is taken only for a link that reaches
+  nothing; one that reaches its file there is left as it is.
 - **A clone with a `.slipbox/` name of its own,** given to tell it from the repository it was cloned from, is still a
   copy of that repository: the lookup takes a repository's copies, one remote, as one folder, whatever their
   `.slipbox/` call them (`byRepository` in `core/workspace/vaults/folders.ts`). By the remote, a qualified pointer and a

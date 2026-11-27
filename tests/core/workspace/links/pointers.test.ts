@@ -480,4 +480,27 @@ describe("slipbox:// pointers (21.7)", () => {
       `[n](slipbox://rb${tag}/n.md#top) [n2](slipbox://rb${tag}/n.md)`,
     ]);
   });
+
+  test("the relink offers a pointer for a relative link into a copy's place that holds another folder now, its file not there: its copy that's here; a link that reaches its file is left alone (D279)", async () => {
+    const tag = uniq();
+    const parent = mkdtempSync(join(tmpdir(), "slipbox-ptr-t-"));
+    const b = await named(`tb${tag}`, { "n.md": "# N\n" }, parent);
+    const copy = join(mkdtempSync(join(tmpdir(), "slipbox-ptr-t2-")), `tb${tag}`);
+    mkdirSync(join(copy, ".slipbox"), { recursive: true });
+    writeFileSync(join(copy, ".slipbox", "config.toml"), readFileSync(join(b, ".slipbox", "config.toml")));
+    writeFileSync(join(copy, "n.md"), "# N\n");
+    await cli(["--root", copy, "ls"]);
+    const a = await named(`ta${tag}`, { "a.md": `[n](../tb${tag}/n.md)\n` }, parent);
+    const offered = async () =>
+      JSON.parse((await cli(["--root", a, "relink", "--dry-run", "--json"])).out).data.files.flatMap(
+        (f: { edits: { after: string }[] }) => f.edits.map((e) => e.after),
+      );
+    // Its first copy's place taken by a folder with no name, a note of that name in it: the link reaches that note,
+    // and works — left as it is.
+    fs.rmSync(join(b, ".slipbox"), { recursive: true });
+    expect(await offered()).toEqual([]);
+    // That note gone too: the link reaches nothing, and the folder's copy that's here has it.
+    fs.rmSync(join(b, "n.md"));
+    expect(await offered()).toEqual([`[n](slipbox://tb${tag}/n.md)`]);
+  });
 });

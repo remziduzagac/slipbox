@@ -1,7 +1,8 @@
 // What drawing asks of the disk (SD-T11, SD-D13): a note's links — what's at a path, a folder's names on a disk that
-// folds case — an embedded note's text, a picture's file, the scratch's places' files and the Problems panel's. A draw
-// never reads the disk and never waits. Each is answered from what's kept — the walk's notes, files and folders, what a
-// disk thread answered before — and, when it isn't, asked of a disk thread in the background, one batch a request,
+// folds case, the named folders and what's at their copies' places — an embedded note's text, a picture's file, the
+// scratch's places' files and the Problems panel's. A draw never reads the disk and never waits. Each is answered from
+// what's kept — the walk's notes, files and folders, what a disk thread answered before — and, when it isn't, asked of
+// a disk thread in the background, one batch a request,
 // meanwhile a link drawn as resolved (SD-D12), a picture's or an embed's place said, a place or a finding as if read;
 // the layouts drawn again when an answer changes what was drawn, from their anchors (D98). A kept answer drawn two
 // seconds after it was read is asked again, drawn as it was until the new one comes; one drawn sooner is asked again
@@ -12,7 +13,7 @@
 import { dirname, isAbsolute, relative } from "node:path";
 import { type ParsedNote, parseMarkdown } from "../../../core/documents/markdown/parse.ts";
 import type { Graph } from "../../../core/workspace/graph/graph.ts";
-import type { NamedFolder } from "../../../core/workspace/vaults/folders.ts";
+import type { CopyAt, NamedFolder } from "../../../core/workspace/vaults/folders.ts";
 import { answering, type PathProbe } from "../../../core/workspace/links/path-probe.ts";
 import { type DrawAnswer, type DrawAsk, type TextRead, textRead } from "../../../core/workspace/walk/draw-jobs.ts";
 import { type PathStat, statOf } from "../../../core/workspace/walk/io/stamps.ts";
@@ -30,8 +31,15 @@ const NOTE_MAX = Number.MAX_SAFE_INTEGER;
 /** An answer kept, and when it was read. */
 type Kept<T> = { value: T; at: number };
 
-/** What's to be asked in the next batch: paths, folders' names, files and the most read of each, the named folders. */
-type Asked = { stat: Set<string>; names: Set<string>; texts: Map<string, number>; folders: boolean };
+/** What's to be asked in the next batch: paths, folders' names, files and the most read of each, the named folders,
+ *  copies' places. */
+type Asked = {
+  stat: Set<string>;
+  names: Set<string>;
+  texts: Map<string, number>;
+  folders: boolean;
+  copies: Set<string>;
+};
 
 /** What drawing needs of the App. */
 export interface DrawnApp {
@@ -71,6 +79,8 @@ export class Drawn implements PathProbe {
   private readonly listings = new Map<string, Kept<string[] | null>>();
   /** The machine's named folders, as a disk thread last read them. */
   private readonly named = new Map<string, Kept<NamedFolder[]>>();
+  /** What's at each of their copies' places a lookup asked of, as a disk thread last read it. */
+  private readonly copies = new Map<string, Kept<CopyAt>>();
   private readonly texts = new Map<string, Kept<TextRead | null>>();
   private readonly parses = new Map<string, { stamp: string; parsed: ParsedNote | null }>();
   private asked: Asked = this.none();
@@ -117,6 +127,12 @@ export class Drawn implements PathProbe {
    *  and a hosting URL as a web link meanwhile, a moment on a disk that answers. */
   folders(): NamedFolder[] {
     return this.kept(this.named, "", () => (this.asked.folders = true)) ?? [];
+  }
+
+  /** The folder at a named folder's copy's place (D279), as last read: undefined till the first answer — the copy taken
+   *  as recorded meanwhile, a pointer drawn as it was. */
+  copyAt(path: string): CopyAt | undefined {
+    return this.kept(this.copies, path, () => this.asked.copies.add(path));
   }
 
   /** A picture's file's mtime (12.x): null when it isn't a file; undefined while it's read. */
@@ -193,8 +209,8 @@ export class Drawn implements PathProbe {
 
   /** `key`, drawn from an answer `ms` short of two seconds old, asked again then. */
   private askLater(map: Map<string, Kept<unknown>>, key: string, ask: () => void, ms: number): void {
-    const kind = map === this.stats ? "s" : map === this.listings ? "n" : map === this.named ? "f" : "t";
-    this.later.set(`${kind}${key}`, { map, key, ask });
+    const kinds = [this.stats, this.listings, this.named, this.copies, this.texts] as Map<string, Kept<unknown>>[];
+    this.later.set(`${kinds.indexOf(map)}${key}`, { map, key, ask });
     const at = this.app.now() + ms;
     if (this.laterTimer && this.laterAt <= at) return;
     if (this.laterTimer) clearTimeout(this.laterTimer);
@@ -227,12 +243,12 @@ export class Drawn implements PathProbe {
   }
 
   private none(): Asked {
-    return { stat: new Set(), names: new Set(), texts: new Map(), folders: false };
+    return { stat: new Set(), names: new Set(), texts: new Map(), folders: false, copies: new Set() };
   }
 
   /** Whether anything's to be asked. */
   private any(a: Asked): boolean {
-    return a.stat.size > 0 || a.names.size > 0 || a.texts.size > 0 || a.folders;
+    return a.stat.size > 0 || a.names.size > 0 || a.texts.size > 0 || a.folders || a.copies.size > 0;
   }
 
   /** The next batch asked `ms` from now, unless one is set to be. */
@@ -258,6 +274,7 @@ export class Drawn implements PathProbe {
       names: [...a.names],
       texts: [...a.texts].map(([path, max]) => ({ path, max })),
       ...(a.folders ? { folders: true } : {}),
+      ...(a.copies.size ? { copies: [...a.copies] } : {}),
     };
     this.out = true;
     try {
@@ -270,6 +287,7 @@ export class Drawn implements PathProbe {
       for (const d of ask.names) this.asked.names.add(d);
       for (const t of ask.texts) this.asked.texts.set(t.path, t.max);
       this.asked.folders ||= a.folders;
+      for (const c of ask.copies ?? []) this.asked.copies.add(c);
     } finally {
       this.out = false;
     }
@@ -293,6 +311,9 @@ export class Drawn implements PathProbe {
     );
     ask.texts.forEach((t, i) => put(this.texts, t.path, answer.texts[i] ?? null, (a, b) => a?.stamp === b?.stamp));
     if (answer.folders) put(this.named, "", answer.folders, (a, b) => JSON.stringify(a) === JSON.stringify(b));
+    ask.copies?.forEach((c, i) =>
+      put(this.copies, c, answer.copies?.[i] ?? null, (a, b) => JSON.stringify(a) === JSON.stringify(b)),
+    );
     if (!changed) return;
     this.epoch++;
     // The peek's too: a link in another vault's note asks of the disk as much as one here.

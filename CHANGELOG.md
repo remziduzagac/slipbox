@@ -299,6 +299,14 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ### Fixed
 
+- A named vault is no longer opened, or written to, in a folder that has taken its old place. When a vault moves away
+  and another folder comes to its path, as when a vault is renamed in a shell, a drive is swapped, or a folder holding
+  a vault is moved from the explorer, slipbox counts that copy as not here. A pointer, a link from another vault and
+  a command that names the vault use another copy, or say `notes was at ~/notes, which holds another folder now`.
+  `slipbox folders`, `slipbox info`, the Info view and `:folders-default` mark that copy not here, and slipbox no
+  longer asks which copy links open because of it. A clone of the same repository in that place still counts as a
+  copy.
+
 - A forced save (`:w!`) now refuses a read-only tab, as a save does, and says why: another vault's note kept from a
   peek with `t`, or a file you may not write, is no longer written over the file on disk. Reverting a change in the
   review, discarding one in source control, and saving or editing from the merge screen refuse a file you may not

@@ -563,7 +563,8 @@ Anything less sure — an unnamed vault, two copies gone — starts fresh.
 here too — one
 `.slipbox/` id, or one remote — the TUI asks once "`<name>`: 2 copies on this machine — which do links to it open?",
 the first found marked `links open it now`; the answer is remembered, and `esc` keeps the first, not asking again. A
-copy gone (moved here, a drive unplugged) is no choice: not asked.
+copy gone (moved here, a drive unplugged) is no choice: not asked; nor is one whose place holds another folder now
+(D279, [roots.md](roots.md) § Named folders), which `:folders-default` and the vault's Info mark `not here`.
 
 **A git repository is a vault by itself** (`20.3`), and so are an Obsidian vault and a zk notebook (`21.1`; D69): any
 folder holding a vault marker (`walk.root_markers`). Opening a file in a repository opens the repository, from its top
@@ -3269,8 +3270,11 @@ runs the binding.
     (`catchUpWithGit`) and the branch it reads (`branchNow`);
   - whether a tab's file, or one a switch opens or offers a peek at, is there (`tui/workspace/vaults/vaults.ts`);
   - a link a key follows, resolved through the seam at once: its file statted and, on macOS, the folders on its way
-    listed for its name's case (`onDisk`); a link's way checked for `t` in a peek (`peekKeep`) and for a claim through
-    a link (`claimThroughLink`); a file read for its diff from the git panel (`readForDiff`);
+    listed for its name's case (`onDisk`), and for a pointer what's at its folder's copy's place (`copyAt`); a link's
+    way checked for `t` in a peek (`peekKeep`) and for a claim through a link (`claimThroughLink`); a file read for its
+    diff from the git panel (`readForDiff`);
+  - what's at a named folder's copies' places (`copyHere`, a few small files each) for `:folders-default` and the
+    vault's Info, and for the question asked once a second copy comes (`askDefaultCopy`), only while it's to be asked;
   - the explorer's words for a busy folder selected (`Marks.leftOutWords` → `busyWhy`: a folder's note looked for), and
     its breadcrumb's `isVaultRoot`, kept per folder;
   - what drawing still asks as it's drawn, measured in SD-T11's log at about 340 reads over the demo vault's and the
@@ -3581,14 +3585,16 @@ the second is let go of.
   drawn again when it comes; its read given up too, both said, nothing opened. A restart is brought back the same way.
 - **What's drawn** (SD-D13, SD-D17; SD-T11). A draw never reads the disk and never waits. What a layout asks of the
   disk — a link's path (a `/…` link's first folder, a nested vault's file, a file outside the vault), a name's case on
-  a disk that folds it, the machine's named folders for a pointer or a hosting link, an embedded note's text, a
+  a disk that folds it, the machine's named folders for a pointer or a hosting link and what's at a copy's place it
+  would open (whether it's still that folder: [roots.md](roots.md) § Named folders, D279), an embedded note's text, a
   picture's file and an SVG's text — the scratch's places' files and the notes the Problems panel's vault lint names
   are answered from what's kept (`Drawn`, `tui/app/runtime/drawn.ts`): a path of the vault open from the walk, the
   rest from what a disk thread last answered. What isn't kept is asked of a disk thread in the background, one `draw`
   batch out at a time with a look's minute (`core/workspace/walk/draw-jobs.ts`), and the layouts — the tabs' and the
   peek's — are drawn again from their anchors (D98) when an answer changes what was drawn. Meanwhile a link is drawn as
   resolved — but one to a path the walk didn't give in a folder it listed, drawn broken as the walk says (a note not
-  written yet) — a pointer as not found until the named folders come, a picture's or an embedded note's place is said,
+  written yet) — a pointer as not found until the named folders come and its copy as recorded until its place answers,
+  a picture's or an embedded note's place is said,
   a scratch place is said nothing of, and the vault's lint findings are shown unfiltered. A kept answer drawn two
   seconds after it was read is asked again, drawn as it was until the new one comes; one drawn sooner, once it's two
   seconds old, though nothing draws it then, so a file come where no watcher looks is drawn within two seconds of a

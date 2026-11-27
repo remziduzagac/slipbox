@@ -5,7 +5,7 @@
 // tui/app/runtime/drawn.ts).
 
 import * as disk from "../../foundation/platform/disk.ts";
-import { type NamedFolder, readFolders } from "../vaults/folders.ts";
+import { type CopyAt, copyAtKept, type NamedFolder, readFolders } from "../vaults/folders.ts";
 
 /** What a link asks of the disk about a path, as `links.ts`, the graph's resolver and its lookups ask it. */
 export interface PathProbe {
@@ -19,6 +19,9 @@ export interface PathProbe {
   names(dir: string): string[] | null;
   /** The folders this machine has named (21.6), in slipbox's state folder. */
   folders(): NamedFolder[];
+  /** The folder at a named folder's copy's place now (`copyAt`), whether it's still that folder (D279); undefined
+   *  while it's read. */
+  copyAt(path: string): CopyAt | undefined;
 }
 
 /** A path statted through the seam: null when it can't be. */
@@ -43,6 +46,8 @@ export const DISK_PROBE: PathProbe = {
     }
   },
   folders: () => readFolders(),
+  // Kept a moment: an index's or a command's pointers into one folder read its place once (D279).
+  copyAt: (path) => copyAtKept(path),
 };
 
 let current: PathProbe = DISK_PROBE;
@@ -50,6 +55,12 @@ let current: PathProbe = DISK_PROBE;
 /** What answers a link's questions of the disk now: the seam's, unless something answers for a while (`answering`). */
 export function probe(): PathProbe {
   return current;
+}
+
+/** The folder at a named folder's copy's place, as whatever answers now reads it: the lookup's `at` (`lookupFolder`)
+ *  where a link is resolved, so a drawing reads none of it here. */
+export function probedCopyAt(path: string): CopyAt | undefined {
+  return current.copyAt(path);
 }
 
 /** `run`, its links' questions of the disk answered by `by` (a TUI's drawing); none given, by whatever answers now. */

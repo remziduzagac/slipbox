@@ -178,6 +178,42 @@ describe("a folder made a vault, and a vault made a plain folder again (18.11)",
       ["folder", "box"],
     ]);
   });
+
+  test("deinit reads the folder's place once for the pointers into it, not once a pointer (D279)", async () => {
+    const { openVault } = await import("../../../../src/core/workspace/links/reach.ts");
+    const { planUnmakeVault } = await import("../../../../src/core/workspace/mutations/rename/rename.ts");
+    const { setReadWait } = await import("../../../../src/core/foundation/platform/disk.ts");
+    /** The reads of its folder's config as a plan of `deinit box` reads `links` pointers into it from apart. */
+    const reads = (links: number) => {
+      const at = mkdtempSync(join(tmpdir(), "slipbox-deinit-reads-"));
+      const id = basename(at).slice(-6).toLowerCase();
+      const tree: Record<string, string> = {
+        "named/.slipbox/config.toml": `[vault]\nid = "drn${id}"\nname = "drn${id}"\n`,
+        "named/box/.slipbox/config.toml": `[vault]\nid = "drb${id}"\nname = "drb${id}"\n`,
+        "named/box/x.md": "# X\n",
+        "far/.slipbox/config.toml": `[vault]\nid = "drf${id}"\nname = "drf${id}"\n`,
+        "far/links.md": `${Array.from({ length: links }, (_, i) => `[${i}](slipbox://drb${id}/x.md)`).join("\n")}\n`,
+      };
+      for (const [rel, text] of Object.entries(tree)) {
+        mkdirSync(join(at, rel, ".."), { recursive: true });
+        writeFileSync(join(at, rel), text);
+      }
+      for (const r of ["far", "named/box", "named"]) openVault(join(at, r)).ensureAll();
+      const parent = openVault(join(at, "named"));
+      const cfg = join(at, "named", "box", ".slipbox", "config.toml");
+      let n = 0;
+      setReadWait((path) => {
+        if (path === cfg) n++;
+      });
+      try {
+        expect(planUnmakeVault(parent, "box").files.map((f) => f.edits.length)).toEqual([links]);
+      } finally {
+        setReadWait(null);
+      }
+      return n;
+    };
+    expect(reads(40)).toBe(reads(2));
+  });
 });
 
 describe("review cycle 3 (core)", () => {

@@ -282,4 +282,38 @@ describe("what drawing reads, off the screen's thread (SD-T11)", () => {
     noneGaveUp(hold);
     h.app.quit();
   });
+
+  test("held: a pointer whose folder's place under `held` holds another folder now — drawn at once, a key handled meanwhile; let go, drawn not found (D279)", async () => {
+    const tag = basename(mkdtempSync(join(sandbox, "tk-")))
+      .replace(/[^a-z0-9]/gi, "")
+      .toLowerCase();
+    const place = join(mkdtempSync(join(sandbox, "named-")), "held", "notes");
+    const config = (name: string) =>
+      writeFileSync(join(place, ".slipbox/config.toml"), `[vault]\nname = "${name}"\nid = "${name}"\n`);
+    mkdirSync(join(place, ".slipbox"), { recursive: true });
+    config(`left${tag}`);
+    writeFileSync(join(place, "plan.md"), "# Plan\n");
+    expect(recordFolder(place)?.name).toBe(`left${tag}`);
+    // It left its place, and another folder came there, a plan of its own in it.
+    config(`came${tag}`);
+    const root = makeVault();
+    writeFileSync(join(root, "p.md"), `# P\n\n[the plan](slipbox://left${tag}/plan.md)\n`);
+    const h = await drawing(root);
+    try {
+      const warned = () => /⚠ +the plan/.test(h.frame());
+      const why = () => h.app.problems.ofView(h.app.view!).map((p) => p.message);
+      const hold = holding();
+      await h.app.open(join(root, "p.md"));
+      // Not found till the named folders come; then, its place not read yet, drawn as recorded — what's at its place
+      // asked of a disk thread meanwhile, and held there, the keys answered.
+      await until(() => !warned() && hold.waiting > 0, "drawn as recorded, its place asked of a disk thread");
+      await keyMeanwhile(h);
+      hold.release();
+      await until(warned, "the pointer drawn not found once its place answers");
+      expect(why()).toEqual([`left${tag} was at ${place}, which holds another folder now`]);
+      noneGaveUp(hold);
+    } finally {
+      h.app.quit();
+    }
+  });
 });

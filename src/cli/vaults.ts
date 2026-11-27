@@ -6,7 +6,7 @@ import { knownVaults } from "../core/workspace/vaults/vault-list.ts";
 import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import {
-  copyAvailable,
+  copyHere,
   folderNamed,
   lookupFolder,
   pointerName,
@@ -207,7 +207,7 @@ export const VAULT_COMMANDS: Record<string, Handler> = {
       aliases: f.aliases,
       old: f.old,
       default: f.default,
-      copies: f.copies.map((c) => ({ path: c.path, seen: c.seen, found: !!c.found, available: copyAvailable(c.path) })),
+      copies: f.copies.map((c) => ({ path: c.path, seen: c.seen, found: !!c.found, available: copyHere(f, c.path) })),
     }));
     // A default that is another copy of the repository, a clone with a .slipbox/ of its own (DF-D30): listed here too,
     // its name said where it has another.

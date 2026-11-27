@@ -1,6 +1,15 @@
 import { UNIT_TIMEOUT_MS } from "../../../support/timeouts.ts";
-import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { describe, expect, setDefaultTimeout, setSystemTime, test } from "bun:test";
+import {
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../src/core/application/config/config.ts";
@@ -130,6 +139,172 @@ describe("named folders (21.6)", () => {
       status: "unknown",
       reason: expect.stringContaining("isn't on this machine yet: open it, or let the index find it"),
     });
+  });
+
+  test("a copy counts while the folder at its place is still that folder: another folder there isn't here — another copy answers, else it's unavailable (D279)", async () => {
+    const { lookupFolder, recordFolder } = await import("../../../../src/core/workspace/vaults/folders.ts");
+    const name = `m${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    const b = folder({ name, id });
+    recordFolder(a);
+    recordFolder(b);
+    expect(lookupFolder(name)).toMatchObject({ status: "found", path: a });
+    // It left its place, and a different .slipbox/ folder came there: not that folder, so another copy answers.
+    const other = `${name}-other`;
+    writeFileSync(join(a, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "${other}"\n`);
+    expect(lookupFolder(name)).toMatchObject({ status: "found", path: b, via: "another-copy" });
+    // A folder with no name there: no more that folder.
+    rmSync(join(a, ".slipbox"), { recursive: true });
+    expect(lookupFolder(name)).toMatchObject({ status: "found", path: b, via: "another-copy" });
+    // No copy of it left here: unavailable, its place said to hold another folder.
+    rmSync(b, { recursive: true });
+    expect(lookupFolder(name)).toMatchObject({ status: "unavailable", path: a, other: true });
+    // Still listed, as a copy unplugged is: back at its place, it's found there again.
+    mkdirSync(join(a, ".slipbox"));
+    writeFileSync(join(a, ".slipbox", "config.toml"), `[vault]\nid = "${id}"\nname = "${name}"\n`);
+    expect(lookupFolder(name)).toMatchObject({ status: "found", path: a });
+    expect(lookupFolder(name)).not.toHaveProperty("via");
+    // Its default gone, and its other copy's place another folder's: no copy of it is here.
+    const two = `${name}-two`;
+    const tid = uniq();
+    const c = folder({ name: two, id: tid });
+    const d = folder({ name: two, id: tid });
+    recordFolder(c);
+    recordFolder(d);
+    rmSync(c, { recursive: true });
+    writeFileSync(join(d, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "${two}-came"\n`);
+    expect(lookupFolder(two)).toEqual(expect.objectContaining({ status: "unavailable", path: c }));
+    expect(lookupFolder(two)).not.toHaveProperty("other");
+
+    // A repository's copy, by its remote: another repository at its place isn't it.
+    const short = `q${uniq()}`;
+    const repo = folder({ remote: `git@github.com:me/${short}.git` });
+    recordFolder(repo);
+    const origin = (url: string) => writeFileSync(join(repo, ".git", "config"), `[remote "origin"]\n\turl = ${url}\n`);
+    origin(`git@github.com:me/not-${short}.git`);
+    expect(lookupFolder(short)).toMatchObject({ status: "unavailable", path: repo, other: true });
+    expect(lookupFolder(`github.com/me/${short}`)).toMatchObject({ status: "unavailable", path: repo, other: true });
+    // A clone of it there, given a .slipbox/ name of its own: a copy of its repository still (DF-D30).
+    origin(`https://github.com/me/${short}`);
+    mkdirSync(join(repo, ".slipbox"));
+    writeFileSync(join(repo, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "${short}-spike"\n`);
+    expect(lookupFolder(short)).toMatchObject({ status: "found", path: repo });
+  });
+
+  test("a copy whose .slipbox/ config can't be read is still the copy — a typo mid-edit, a disk's error; one with no config is a folder unnamed (D279)", async () => {
+    const { copyAt, copyHere, lookupFolder, recordFolder } = await import(
+      "../../../../src/core/workspace/vaults/folders.ts"
+    );
+    const { parsePointer, resolvePointer } = await import("../../../../src/core/workspace/links/pointer.ts");
+    const name = `u${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    writeFileSync(join(a, "n.md"), "# N\n");
+    recordFolder(a);
+    const cfg = join(a, ".slipbox", "config.toml");
+    const good = readFileSync(cfg, "utf8");
+    // A typo mid-edit: what it says isn't known, so it's no other folder — found there, as it was.
+    writeFileSync(cfg, `[vault\nid = "${id}"\nname = "${name}"\n`);
+    expect(copyAt(a)).toEqual({ key: null, remote: null, unread: true });
+    expect(lookupFolder(name)).toEqual(expect.objectContaining({ status: "found", path: a }));
+    expect(lookupFolder(name)).not.toHaveProperty("via");
+    expect(copyHere({ key: `slipbox:${id}`, remote: null }, a)).toBe(true);
+    expect(resolvePointer(parsePointer(`slipbox://${name}/n.md`)!)).toMatchObject({ status: "found", root: a });
+    // A disk's error reading it (here, no leave to): the same. Root reads it anyway, so that part is for the rest.
+    writeFileSync(cfg, good);
+    if (process.getuid?.() !== 0) {
+      chmodSync(cfg, 0o000);
+      try {
+        expect(copyAt(a)).toMatchObject({ unread: true });
+        expect(lookupFolder(name)).toMatchObject({ status: "found", path: a });
+      } finally {
+        chmodSync(cfg, 0o644);
+      }
+    }
+    // Its .slipbox/ with no config at all: a folder with no name, read as it is — not this folder.
+    rmSync(cfg);
+    expect(copyAt(a)).toEqual({ key: null, remote: null });
+    expect(lookupFolder(name)).toMatchObject({ status: "unavailable", path: a, other: true });
+  });
+
+  test("pointers into one folder read its place once a moment: kept no longer than a drawing keeps it, forgotten as a folder's recorded; copyFacts reads it as it is (D279)", async () => {
+    const { copyFacts, recordFolder } = await import("../../../../src/core/workspace/vaults/folders.ts");
+    const { parsePointer, resolvePointer } = await import("../../../../src/core/workspace/links/pointer.ts");
+    const { setReadWait } = await import("../../../../src/core/foundation/platform/disk.ts");
+    const name = `k${uniq()}`;
+    const id = uniq();
+    const a = folder({ name, id });
+    writeFileSync(join(a, "n.md"), "# N\n");
+    recordFolder(a);
+    const cfg = join(a, ".slipbox", "config.toml");
+    const good = readFileSync(cfg, "utf8");
+    const p = parsePointer(`slipbox://${name}/n.md`)!;
+    let reads = 0;
+    setReadWait((path) => {
+      if (path === cfg) reads++;
+    });
+    const now = Date.now();
+    setSystemTime(new Date(now));
+    try {
+      // An index's pass, a command's: fifty pointers into it, its place read once.
+      for (let i = 0; i < 50; i++) expect(resolvePointer(p)).toMatchObject({ status: "found", root: a });
+      expect(reads).toBe(1);
+      // Another folder at its place meanwhile: a pointer reads what was kept for a moment; where a vault is recorded,
+      // copyFacts reads the place as it is.
+      writeFileSync(cfg, `[vault]\nid = "${uniq()}"\nname = "${name}-came"\n`);
+      expect(resolvePointer(p)).toMatchObject({ status: "found", root: a });
+      expect(copyFacts(`slipbox:${id}`)[a]?.at?.key).not.toBe(`slipbox:${id}`);
+      // As old as a drawing's kept answers (two seconds): read again — not here.
+      setSystemTime(new Date(now + 2000));
+      expect(resolvePointer(p)).toMatchObject({ reason: expect.stringContaining("holds another folder now") });
+      // Back at its place, and a folder recorded: what was kept is forgotten, read again — found.
+      writeFileSync(cfg, good);
+      expect(resolvePointer(p).status).toBe("unresolved");
+      recordFolder(folder({ name: `${name}-new`, id: uniq() }));
+      expect(resolvePointer(p)).toMatchObject({ status: "found", root: a });
+    } finally {
+      setSystemTime();
+      setReadWait(null);
+    }
+  });
+
+  test("a second copy isn't asked about while the first's place holds another folder: read at once, or where the vault was opened (T12)", async () => {
+    const { copyFacts, folderIdentity, readFolders, recordFolder } = await import(
+      "../../../../src/core/workspace/vaults/folders.ts"
+    );
+    const name = `s${uniq()}`;
+    const id = uniq();
+    const first = folder({ name, id });
+    recordFolder(first);
+    // Its place taken by a folder with no name: the copy there is gone, not a second one.
+    rmSync(join(first, ".slipbox"), { recursive: true });
+    const second = folder({ name, id });
+    const seen = recordFolder(second);
+    expect(seen).toMatchObject({ default: first, copies: [{ path: first }, { path: second }] });
+    expect(seen?.ask).toBeUndefined();
+    // Read on the index's thread, as the background index records a vault it found: a third copy, and two are here.
+    const third = folder({ name, id });
+    const ident = folderIdentity(third);
+    const copies = copyFacts(ident?.key);
+    expect(copies[first]).toMatchObject({ available: true, at: { key: null, remote: null } });
+    expect(copies[second]).toMatchObject({ available: true, at: { key: `slipbox:${id}` } });
+    expect(recordFolder(third, { found: true, known: { ident, real: third, copies } })?.ask).toBe(true);
+    expect(
+      readFolders()
+        .find((f) => f.name === name)
+        ?.copies.map((c) => c.path),
+    ).toEqual([first, second, third]);
+    // Only one here, the first's place another folder's: nothing to choose between.
+    const lone = `t${uniq()}`;
+    const lid = uniq();
+    const was = folder({ name: lone, id: lid });
+    recordFolder(was);
+    writeFileSync(join(was, ".slipbox", "config.toml"), `[vault]\nid = "${uniq()}"\nname = "${lone}-came"\n`);
+    const now = folder({ name: lone, id: lid });
+    const nowIdent = folderIdentity(now);
+    const known = { ident: nowIdent, real: now, copies: copyFacts(nowIdent?.key) };
+    expect(recordFolder(now, { found: true, known })?.ask).toBeUndefined();
   });
 
   test("different folders of one name: repositories by their qualified names, .slipbox/ folders until one is renamed; old names still find", async () => {
@@ -400,6 +575,42 @@ describe("named folders' words (21.10)", () => {
     ).toBe(two);
     expect((await cli(["folders", "default", `f${tag}`, "/not/a/copy"])).code).toBe(5);
     expect((await cli(["folders", "default", `nope${tag}`, two])).code).toBe(3);
+  });
+
+  test("a folder's place taken by another folder: nothing read or written there under its name; folders and info say not here (D279)", async () => {
+    const tag = uniq();
+    const config = (dir: string, id: string) =>
+      writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${id}${tag}"\nname = "${id}${tag}"\n`);
+    const place = join(mkdtempSync(join(tmpdir(), "slipbox-words-p-")), "notes");
+    mkdirSync(join(place, ".slipbox"), { recursive: true });
+    config(place, "p");
+    writeFileSync(join(place, "x.md"), "# X\n");
+    await cli(["--root", place, "ls"]);
+    // It moved away, and a different folder came to its place, a note of the same name in it.
+    config(place, "q");
+    const write = await cli(["write", `slipbox://p${tag}/x.md`, "--append", "--", "- added"]);
+    expect(write.code).toBe(3);
+    expect(write.err).toContain(`p${tag} was at ${place}, which holds another folder now`);
+    expect(readFileSync(join(place, "x.md"), "utf8")).toBe("# X\n");
+    expect((await cli(["read", `slipbox://p${tag}/x.md`])).code).toBe(3);
+    const listed = async () =>
+      JSON.parse((await cli(["folders", "--json"])).out).data.find((x: { name: string }) => x.name === `p${tag}`);
+    expect((await listed()).copies).toEqual([expect.objectContaining({ path: place, available: false })]);
+    expect((await cli(["folders"])).out).toContain(`* ${place}  (not here)`);
+    // Another copy of it, opened: the one that answers, and info says which isn't here.
+    const copy = join(mkdtempSync(join(tmpdir(), "slipbox-words-p-")), "notes");
+    mkdirSync(join(copy, ".slipbox"), { recursive: true });
+    config(copy, "p");
+    writeFileSync(join(copy, "x.md"), "# X\n");
+    const info = JSON.parse((await cli(["--root", copy, "info", "--json"])).out).data.folder;
+    expect(info.copies).toEqual([
+      expect.objectContaining({ path: place, here: false, available: false }),
+      expect.objectContaining({ path: copy, here: true, available: true }),
+    ]);
+    expect((await cli(["--root", copy, "info"])).out).toContain(`copy      ${place} (not here)`);
+    expect((await cli(["write", `slipbox://p${tag}/x.md`, "--append", "--", "- added"])).code).toBe(0);
+    expect(readFileSync(join(copy, "x.md"), "utf8")).toBe("# X\n- added\n");
+    expect(readFileSync(join(place, "x.md"), "utf8")).toBe("# X\n");
   });
 });
 

@@ -109,6 +109,53 @@ describe("git worktrees in the TUI (17.19)", () => {
     expect(recordFolder(g.b)?.ask).toBe(true);
     rmSync(g.a, { recursive: true });
     expect((await harness({ root: g.b, open: "n.md" })).app.overlay).toBeNull();
+    // Or another folder at its place since (D279): no copy of it there, so no choice either.
+    const t = copies("taken");
+    recordFolder(t.a);
+    expect(recordFolder(t.b)?.ask).toBe(true);
+    writeFileSync(join(t.a, ".slipbox", "config.toml"), `[vault]\nid = "came${t.name}"\nname = "came${t.name}"\n`);
+    expect((await harness({ root: t.b, open: "n.md" })).app.overlay).toBeNull();
+    // Asked while it's open, the second copy recorded since and its place another folder's by then: still none.
+    const s = copies("since");
+    const open = await harness({ root: s.b, open: "n.md" });
+    expect(recordFolder(s.a)?.ask).toBe(true);
+    writeFileSync(join(s.a, ".slipbox", "config.toml"), `[vault]\nid = "came${s.name}"\nname = "came${s.name}"\n`);
+    open.app.vaults.askDefaultCopy();
+    expect(open.app.overlay).toBeNull();
+  });
+
+  test("a copy whose place holds another folder now: :folders-default and the vault's Info say it isn't here (D279)", async () => {
+    const { recordFolder, setDefaultCopy } = await import("../../../../src/core/workspace/vaults/folders.ts");
+    const tag = basename(mkdtempSync(join(sandbox, "tk-")))
+      .replace(/[^a-z0-9]/gi, "")
+      .toLowerCase();
+    const config = (dir: string, id: string) =>
+      writeFileSync(join(dir, ".slipbox", "config.toml"), `[vault]\nid = "${id}"\nname = "${id}"\n`);
+    const mk = () => {
+      const dir = mkdtempSync(join(sandbox, "tk-c-"));
+      mkdirSync(join(dir, ".slipbox"));
+      config(dir, `k${tag}`);
+      writeFileSync(join(dir, "n.md"), "# N\n");
+      recordFolder(dir);
+      return dir;
+    };
+    const one = mk();
+    const two = mk();
+    setDefaultCopy(`slipbox:k${tag}`, two);
+    config(one, `other${tag}`);
+    const h = await harness({ root: two, open: "n.md" });
+    expect(h.app.overlay).toBeNull();
+    await h.app.run("vault.default");
+    expect((h.app.overlay as ListOverlay).items.map((i) => [i.label, i.hint])).toEqual([
+      [one, "not here"],
+      [two, "links open it"],
+    ]);
+    await h.keys("escape");
+    await h.app.run("vault.info");
+    const rows = (h.app.overlay as ListOverlay).items.map((i) => i.label);
+    expect(rows.filter((r) => r.startsWith("copy")).map((r) => r.replace(/^copy +/, ""))).toEqual([
+      `${one} (not here)`,
+    ]);
   });
 
   test("named folders' words (21.10): :folders goes into one; :folders-default sets the copy links open; :name names a repository; :open takes a pointer", async () => {

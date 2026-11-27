@@ -1278,3 +1278,41 @@ A vault nested in what's left out moves with its folder as plain files, the mach
 **Not chosen:** only `walk.exclude`'s rows, the user's own setting (the issue's first reading); the explorer alone, the
 CLI still saying `no folder tmp`; every target allowed for any source, which would take indexed notes out of the index
 with nothing said.
+
+## D279: A named folder's copy counts only while the folder at its place is still that folder (#309, 2026-11-27)
+
+**Decision:** A copy the lookup records for a named folder counts as here only while the folder at its path is still
+that folder: by its key, the `.slipbox/` id, else the remote (an id-less `.slipbox/` with no remote, its path), or as
+a copy of the same repository whatever its `.slipbox/` calls it (DF-D30). A place that holds another folder, named or
+not, reads as not here, as an unplugged drive does: another copy answers, said so, else the lookup is unavailable and
+says the place holds another folder now. Nothing is opened or written under the name in a folder that isn't it.
+`slipbox folders`, `slipbox info`, the Info view and `:folders-default` say not here, and such a copy is no second
+copy to ask about. What's at the place is read as `folderIdentity` reads it, a few small files and no git run: at once
+for the CLI and a key; for a drawing, on a disk thread with the rest of its batch, the copy taken as recorded until it
+answers; for the background index, where it opened the vault, for that vault's own copies. A `.slipbox/` config there
+that can't be read or parsed says nothing either way, so that copy counts, as it did. A pointer's lookup keeps what it
+read of a place two seconds at most, so a pass over many pointers into one folder reads it once. As built: `copyAt`,
+`isCopyOf`, `copyHere`, `copyAtKept`, `lookupFolder`'s `at` and `FolderLookup`'s `other`, `copyFacts(key)`
+(`core/workspace/vaults/folders.ts`), `identityIfRead` (`registry.ts`); `PathProbe.copyAt` and `probedCopyAt`
+(`core/workspace/links/path-probe.ts`), `Drawn.copyAt`, `DrawAsk.copies`; design/roots.md § Named folders,
+design/tui.md § A slow disk.
+
+**Why:** A recorded place counted as the folder as soon as anything was at its path (#309). Once a vault left its
+place and another folder took it, as a vault renamed in a shell, a drive swapped for another at the same mount, or a
+folder holding a vault moved from the explorer (D278) leaves it, a pointer, a link from another vault or a command
+naming the vault opened the other folder under its name and could change files in it. The key is what already tells
+copies from different folders (the table in design/roots.md § Named folders), so the lookup asks it of the place.
+A clone of the same repository in that place is a copy of it by DF-D30, which the repository's name, its full name
+and its hosting already open: keeping it a copy means a `.slipbox/` committed to a repository later, or kept on a
+worktree's branch alone, doesn't make its recorded copy read as gone.
+
+**Cost:** A lookup reads a few small files of the copy it would open, not one stat: the CLI's and a key's at once, as
+they read the rest. A pointer drawn before its copy's place answers is drawn as recorded for a moment, then again. Two
+`.slipbox/` folders with neither an id nor a remote, one in the other's place, can't be told apart. The place stays in
+`folders.json` as a copy not here until the folder is seen elsewhere, as an unplugged drive's does.
+
+**Not chosen:** the key alone, which would make a repository's copy read as gone once a `.slipbox/` with an id came
+to it, until it was opened again; reading the place on the screen's thread as it's drawn, which a slow disk would
+hold; dropping the copy from `folders.json` when its place holds another folder, which would write in a lookup and
+forget a drive swapped back; checking only that a named folder is there, or one of the same name, which a different
+folder of that name passes.

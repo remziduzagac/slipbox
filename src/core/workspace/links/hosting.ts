@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { lookupFolder, type NamedFolder } from "../vaults/folders.ts";
+import { probedCopyAt } from "./path-probe.ts";
 import { readRegular, SMALL_FILE } from "../../foundation/platform/fsutil.ts";
 import { type Checkout, checkoutOf, headOf } from "../git/git.ts";
 import { branchesOf } from "../git/branches/gitops.ts";
@@ -151,7 +152,7 @@ export function hostedHere(
     if (own && (given.remotes ?? checkoutRemotes(own)).includes(remote)) top = own.root;
   }
   if (!top) {
-    const l = lookupFolder(h.remote, given.folders);
+    const l = lookupFolder(h.remote, given.folders, probedCopyAt);
     if (l.status === "found") top = checkoutOf(l.path)?.root ?? l.path;
   }
   if (!top) return null;
