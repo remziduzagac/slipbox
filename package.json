@@ -1,6 +1,6 @@
 {
   "name": "slipbox",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Read, review and edit what your coding agent writes, in your terminal, with Markdown and code rendered cleanly, an editor that's necessary and sufficient, and agent integration built in.",
   "type": "module",
   "private": true,

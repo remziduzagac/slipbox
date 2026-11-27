@@ -6,6 +6,8 @@ The format is [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/); wh
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-27
+
 ### Added
 
 - SOURCE view shows a note's inline styles as they read, with the markers kept: the text between `**` is bold, between
@@ -918,5 +920,6 @@ The first release. 0.2.0 was tagged but never released: its build failed a test 
   `slipbox uninstall`; Windows through WSL.
 - `slipbox skill`: the skill for agents carried by the binary, printed or installed where an agent reads skills.
 
-[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/remziduzagac/slipbox/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/remziduzagac/slipbox/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/remziduzagac/slipbox/releases/tag/v0.5.0
