@@ -344,8 +344,10 @@ tells search engines and agents).
 Every other run — a release published, a run by hand on another ref — does nothing but start a run by hand on `main`
 (`redeploy`, `actions: write`), its log saying so, with a link to the runs on `main`. A deployment is named by its
 commit, and one of a commit deployed before is reported a success and never served when it's made under a `release` or a
-`push` (issue #7, actions/deploy-pages#383); a run by hand's is served (D258, D265). A release's commit always was
-deployed, by its preview (D251); a preview's is its commit's first. **Every deployment is read back:** the site holds a
+`push` (issue #7, actions/deploy-pages#383); a run by hand's was served (D258, D265), until 0.6.0's two weren't
+(research `github-behaviour.md` § Pages). A release's commit always was deployed, by its preview (D251); a preview's is
+its commit's first, so the preview made after a release, of the version bumped to the next, puts the release on the
+site (`MAINTAINING.md` § Releasing). **Every deployment is read back:** the site holds a
 marker of the run's own, `deployment` (its ID and attempt), and once deployed, it, `stable` and `preview` are fetched
 from the site until they're what the build wrote (an empty line for a channel with none, which the site answers with a
 404), for eleven minutes and a last round, past the ten the site's cache keeps a file, and the run fails if they never

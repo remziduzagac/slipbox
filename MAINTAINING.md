@@ -195,8 +195,14 @@ and `.github/workflows/pages.yml` the installer's site once it's published. The 
     D265: moving `main` in step 7 deploys nothing, so the release's docs go live now, unless a preview came first); that
     run passes once the site serves the deployment's own marker and the channels it built, its `stable` naming the
     release. Check the tap's new commit, then `brew upgrade slipbox` on a machine that has it; and that
-    `https://remziduzagac.github.io/slipbox/stable` names the new tag.
-12. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
+    `https://remziduzagac.github.io/slipbox/stable` names the new tag. 0.6.0's run, and one more by hand, weren't
+    served: both deployed the commit its preview had, and the site kept the preview's files (research
+    `github-behaviour.md` § Pages). The next step puts the release on the site then.
+12. **Bump the version to the next and make a preview:** a pull request, `chore: 0.3.1 next`, as [Previews](#previews)
+    says, then `git push origin origin/dev:test` once its run on `dev` has ended. The preview's deployment is its
+    commit's first, which Pages serves, and its `stable` names the release. Check the site's `stable` again if step 11's
+    run failed.
+13. **Try it as a user would:** `curl -fsSL https://remziduzagac.github.io/slipbox/install.sh | sh` on a clean machine,
     `slipbox upgrade --check` from the version before, and `slipbox --version` after.
 
 If the draft is wrong, delete it, fix the cause through a pull request, and release the next patch version. A tag is

@@ -6,7 +6,8 @@ created: "2026-10-23"
 # Research: what GitHub does that the release flow and the upkeep rely on
 
 What releasing 0.5.0 (#28), the fix after it (#30) and the example projects' Dependabot alerts showed about GitHub's
-rulesets, Pages and Dependabot, read and run on 2026-10-22 and 2026-10-23; and, for #7, Pages again on 2026-10-24.
+rulesets, Pages and Dependabot, read and run on 2026-10-22 and 2026-10-23; and, for #7, Pages again on 2026-10-24;
+and Pages once more, when 0.6.0's site wasn't served, on 2026-11-27.
 Each claim is marked with its provenance, as the blueprint's README says.
 
 ## Summary
@@ -16,7 +17,9 @@ Each claim is marked with its provenance, as the blueprint's README says.
 - **A Pages deployment of a commit deployed before is reported a success and not served under a `release` or a `push`
   event;** a `workflow_dispatch` run's is, here from `main` and from `test`, whatever deployed the commit before, the
   commit the site serves included. Informed D258 and D265. Until 2026-10-24 this line had a `push` repeat served too,
-  which no report showed, and #7 contradicts.
+  which no report showed, and #7 contradicts. **Not for 0.6.0's, on 2026-11-27:** neither of two runs by hand on `main`,
+  of the commit its preview deployed, was served, and why they differ from 2026-10-24's isn't known; a commit's first
+  deployment still was (§ Pages).
 - **The site keeps a file for ten minutes, whatever the query string,** so a deployment can be read back for certain
   only after that. Informed D258's eleven minutes.
 - **`dependabot.yml` doesn't keep Dependabot's alerts off a folder;** a repository's auto-triage rule can dismiss them
@@ -83,6 +86,19 @@ Each claim is marked with its provenance, as the blueprint's README says.
   random queries were all hits, their age growing (*ran*, curl, 2026-10-23). A deployment purges it (*memory*).
 - The first deployment to read its channels back, the preview of 71313f3 (run 39964133295), found both served at the
   first read (*ran*, 2026-10-23).
+- **0.6.0's runs by hand, not served** (*ran*, 2026-11-27): its commit, 6d657e4, was deployed first by its preview
+  (run 45929996588, a `push` on `test`), served at the first read, 02:46:16. Publishing the release started the run by
+  hand on `main` (45934613968, by `redeploy`), and a second was started by hand by a person (45935908353). Each said
+  "Reported success!" five seconds after its deployment was created, and the site went on serving the preview's
+  marker, `45929996588.1`, its files' `last-modified` 02:46:12, for the eleven minutes each read back, and still at
+  18:21 (*ran*, curl). So neither who starts the run nor the cache explains it.
+- Two things differ from 2026-10-24's served runs by hand: the date, and the artifact's name, `github-pages-1` since
+  D265 (named by the attempt; `github-pages` then), with no run by hand between them. Which one matters isn't known.
+  actions/deploy-pages#383 has no report after 2026-07-28, and in its reports every `workflow_dispatch` repeat was
+  served (*read*, the issue's comments, 2026-11-27).
+- **And a commit's first deployment, served** (*ran*, 2026-11-28): the preview of cc3c39a, the version bumped to
+  0.6.1 (run 46138871713), was deployed at 11:15:55 and served at the first read, 11:16:01, its `stable` naming
+  v0.6.0. That put 0.6.0 on the site.
 - A called workflow's jobs get no more than the caller grants, and GitHub checks each called job's grants when the run
   starts, whether the job runs or not (*memory*). So `preview.yml`'s call grants `actions: write`, for `redeploy`,
   which never runs for a preview.
